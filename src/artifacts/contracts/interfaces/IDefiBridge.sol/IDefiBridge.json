@@ -1,0 +1,181 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IDefiBridge",
+  "sourceName": "contracts/interfaces/IDefiBridge.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "interactionNonce",
+          "type": "uint256"
+        }
+      ],
+      "name": "canFinalise",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum Types.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct Types.AztecAsset",
+          "name": "inputAssetA",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum Types.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct Types.AztecAsset",
+          "name": "inputAssetB",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum Types.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct Types.AztecAsset",
+          "name": "outputAssetA",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum Types.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct Types.AztecAsset",
+          "name": "outputAssetB",
+          "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "inputValue",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "interactionNonce",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint64",
+          "name": "auxData",
+          "type": "uint64"
+        }
+      ],
+      "name": "convert",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "outputValueA",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "outputValueB",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "interactionNonce",
+          "type": "uint256"
+        }
+      ],
+      "name": "finalise",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "outputValueA",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "outputValueB",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

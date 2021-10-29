@@ -1,0 +1,55 @@
+{
+  "name": "@aztec/defi-bridge-starter",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "GPLv2",
+  "private": true,
+  "scripts": {
+    "build": "yarn clean && yarn compile",
+    "compile": "node ./ensure_versions && yarn hardhat compile",
+    "clean": "rm -rf ./cache ./src/artifacts",
+    "test": "yarn compile && NODE_NO_WARNINGS=1 yarn jest --runInBand",
+    "deploy": "ts-node ./src/deploy/index.ts"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "testRegex": ".*\\.test\\.ts$",
+    "rootDir": "./src",
+    "testTimeout": 20000,
+    "slowTestThreshold": 60
+  },
+  "dependencies": {
+    "@ethersproject/experimental": "5.0.9",
+    "@ethersproject/providers": "5.0.18",
+    "@uniswap/v2-core": "^1.0.1",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
+    "dotenv": "^8.2.0",
+    "ethers": "5.0.29",
+    "typescript": "^3.5.3"
+  },
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "2.0.1",
+    "@nomiclabs/hardhat-waffle": "^2.0.0",
+    "@openzeppelin/contracts": "^3.3.0",
+    "@types/jest": "^26.0.15",
+    "@types/mocha": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^4.1.1",
+    "@typescript-eslint/parser": "^4.1.1",
+    "eslint": "^7.9.0",
+    "eslint-config-prettier": "^6.11.0",
+    "ethereum-waffle": "3.0.0",
+    "ethereumjs-util": "^7.0.7",
+    "hardhat": "^2.4.3",
+    "jest": "^27.0.6",
+    "prettier": "^2.2.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.3",
+    "ts-jest": "^27.0.3",
+    "ts-node": "^8.9.1"
+  },
+  "resolutions": {
+    "ethers": "5.0.29",
+    "@ethersproject/abstract-signer": "5.0.13"
+  }
+}
