@@ -1,12 +1,4 @@
-# Aztec Technical Challenge
-
-**WARNING: Do not fork this repository or make a public repository containing your solution. Either copy it to a private repository or submit your solution via other means.**
-
-Links to solutions may be sent to charlie@aztecprotocol.com.
-
-# UNICode x Aztec Connect
-
-![](https://i.imgur.com/ig94Xoa.jpg)
+# Aztec Connect Starter Kit
 
 ### What is Aztec?
 
@@ -20,15 +12,13 @@ A bridge contract models any layer 1 DeFi protocol as an asynchronous asset swap
 
 #### How does this work?
 
-Users who have shielded funds on Aztec can construct a zero-knowledge proof instructing the Aztec rollup contract to make an external L1 contract call.
+Users who have shielded fuassetsnds on Aztec can construct a zero-knowledge proof instructing the Aztec rollup contract to make an external L1 contract call.
 
-Aztec connect works by batching L2 transaction intents on the Aztec Network together in a rollup. A user and batch executing them against L1 DeFi contracts.
-
-Your task is to use the bridge interface and the Aztec SDK to create a privacy preserving Uniswap V3 dapp.
+Rollup providers batch multiple L2 transaction intents on the Aztec Network together in a rollup. The rollup contract then makes aggregate transaction against L1 DeFi contracts and returns the funds pro-rata to the users on L2.
 
 #### How much does this cost?
 
-Aztec connect transactions can be batched together into one rollup. Each user in the batch has to split the gas cost of the L1 Bridge contract, and the verification of the rollup proof.
+Aztec connect transactions can be batched together into one rollup. Each user in the batch pays a base fee to cover the verification of the rollup proof and their share of the L1 DeFi transaction gas cost.
 
 The largest batch size is 256 transactions. The cost to verify a rollup is fixed at ~400,000 gas, with a variable amount of gas for each transaction in the batch of ~3,500 gas.
 
@@ -71,44 +61,35 @@ Aztec's Connect has been deployed to the Goerli testnet in Alpha. Your bridge co
 pragma solidity >=0.6.6 <0.8.0;
 pragma experimental ABIEncoderV2;
 
+import { Types } from "../Types.sol";
+
 interface IDefiBridge {
-  enum AztecAssetType {
-    ETH,
-    ERC20,
-    VIRTUAL
-  }
-
-  struct AztecAsset {
-    uint256 id;
-    address erc20Address;
-    uint256 gas;
-    AztecAssetType assetType;
-  }
-
-  // Input cases:
-  // Case1: 1 real input.
-  // Case2: 1 virtual asset input.
-  // Case3: 1 real 1 virtual input.
-
-  // Output cases:
-  // 1 real
-  // 2 real
-  // 1 real 1 virtual
-  // 1 virtual
-
-  // Example use cases with asset mappings
-  // 1 1: Swapping.
-  // 1 2: Swapping with incentives (2nd output reward token).
-  // 1 3: Borrowing. Lock up collateral, get back loan asset and virtual position asset.
-  // 1 4: Opening lending position OR Purchasing NFT. Input real asset, get back virtual asset representing NFT or position.
-  // 2 1: Selling NFT. Input the virtual asset, get back a real asset.
-  // 2 2: Closing a lending position. Get back original asset and reward asset.
-  // 2 3: Claiming fees from an open position.
-  // 2 4: Voting on a 1 4 case.
-  // 3 1: Repaying a borrow. Return loan plus interest. Get collateral back.
-  // 3 2: Repaying a borrow. Return loan plus interest. Get collateral plus reward token. (AAVE)
-  // 3 3: Partial loan repayment.
-  // 3 4: DAO voting stuff.
+  /**
+   * Input cases:
+   * Case1: 1 real input.
+   * Case2: 1 virtual asset input.
+   * Case3: 1 real 1 virtual input.
+   *
+   * Output cases:
+   * Case1: 1 real
+   * Case2: 2 real
+   * Case3: 1 real 1 virtual
+   * Case4: 1 virtual
+   *
+   * Example use cases with asset mappings
+   * 1 1: Swapping.
+   * 1 2: Swapping with incentives (2nd output reward token).
+   * 1 3: Borrowing. Lock up collateral, get back loan asset and virtual position asset.
+   * 1 4: Opening lending position OR Purchasing NFT. Input real asset, get back virtual asset representing NFT or position.
+   * 2 1: Selling NFT. Input the virtual asset, get back a real asset.
+   * 2 2: Closing a lending position. Get back original asset and reward asset.
+   * 2 3: Claiming fees from an open position.
+   * 2 4: Voting on a 1 4 case.
+   * 3 1: Repaying a borrow. Return loan plus interest. Get collateral back.
+   * 3 2: Repaying a borrow. Return loan plus interest. Get collateral plus reward token. (AAVE)
+   * 3 3: Partial loan repayment.
+   * 3 4: DAO voting stuff.
+   */
 
   // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy. It receives the aggreagte sum of all users funds for the input assets.
   // @param AztecAsset inputAssetA a struct detailing the first input asset, this will always be set
@@ -121,12 +102,11 @@ interface IDefiBridge {
   // @return uint256 outputValueA the amount of outputAssetA returned from this interaction, should be 0 if async
   // @return uint256 outputValueB the amount of outputAssetB returned from this interaction, should be 0 if async or bridge only returns 1 asset.
   // @return bool isAsync a flag to toggle if this bridge interaction will return assets at a later date after some third party contract has interacted with it via finalise()
-
   function convert(
-    AztecAsset calldata inputAssetA,
-    AztecAsset calldata inputAssetB,
-    AztecAsset calldata outputAssetA,
-    AztecAsset calldata outputAssetB,
+    Types.AztecAsset calldata inputAssetA,
+    Types.AztecAsset calldata inputAssetB,
+    Types.AztecAsset calldata outputAssetA,
+    Types.AztecAsset calldata outputAssetB,
     uint256 inputValue,
     uint256 interactionNonce,
     uint64 auxData
@@ -136,24 +116,43 @@ interface IDefiBridge {
     returns (
       uint256 outputValueA,
       uint256 outputValueB,
-      bool
+      bool isAsync
     );
 
   // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy
   // @param uint256 interactionNonce
+
   function canFinalise(uint256 interactionNonce) external view returns (bool);
 
   // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy. It receives the aggreagte sum of all users funds for the input assets.
-  // @param uint256 interactionNonce the unique interaction nonce of an async defi interaction (previous call to convert)
+  // @param AztecAsset inputAssetA a struct detailing the first input asset, this will always be set
+  // @param AztecAsset inputAssetB an optional struct detailing the second input asset, this is used for repaying borrows and should be virtual
+  // @param AztecAsset outputAssetA a struct detailing the first output asset, this will always be set
+  // @param AztecAsset outputAssetB a struct detailing an optional second output asset
+  // @param uint256 interactionNonce
+  // @param uint64 auxData other data to be passed into the bridge contract (slippage / nftID etc)
   // @return uint256 outputValueA the return value of output asset A
   // @return uint256 outputValueB optional return value of output asset B
   // @dev this function should have a modifier on it to ensure it can only be called by the Rollup Contract
-  function finalise(uint256 interactionNonce) external payable returns (uint256 outputValueA, uint256 outputValueB);
+  function finalise(
+    Types.AztecAsset calldata inputAssetA,
+    Types.AztecAsset calldata inputAssetB,
+    Types.AztecAsset calldata outputAssetA,
+    Types.AztecAsset calldata outputAssetB,
+    uint256 interactionNonce,
+    uint64 auxData
+  ) external payable returns (uint256 outputValueA, uint256 outputValueB);
 }
 
 ```
 
-### function convert()
+### Async flow explainer
+
+If a Defi Bridge interaction is asynchronous, it must be finalised at a later date once the DeFi interaction has completed.
+
+This is acheived by calling `RollupProcessor.processAsyncDefiInteraction(uint256 interactionNonce)`. This internally will call finalise and ensure the correct amount of tokens have been transferred.
+
+#### convert()
 
 This function is called from the Aztec Rollup Contract via the DeFi Bridge Proxy. Before this function on your bridge contract is called the rollup contract will have sent you ETH or Tokens defined by the input params.
 
@@ -163,10 +162,10 @@ If the DeFi interaction is ASYNC i.e it does not settle in the same block, the c
 
 At a later date, this interaction can be finalised by proding the rollup contract to call finalise on the bridge.
 
-### function canFinalise(uint256 interactionNonce)
+#### canFinalise()
 
 This function checks to see if an async interaction is ready to settle. It should return true if it is.
 
-### function finalise(uint256 interactionNonce) returns (uint256 outputValueA, uint256 outputValueB)
+#### function finalise()
 
 This function will be called from the Azte Rollup contract. The Aztec rollup contract will check that it received the correct amount of ETH and Tokens specified by the return values, and trigger the settlement step on Aztec.

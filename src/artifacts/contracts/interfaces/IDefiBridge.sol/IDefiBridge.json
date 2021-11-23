@@ -142,7 +142,7 @@
         },
         {
           "internalType": "bool",
-          "name": "",
+          "name": "isAsync",
           "type": "bool"
         }
       ],
@@ -152,9 +152,102 @@
     {
       "inputs": [
         {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum Types.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct Types.AztecAsset",
+          "name": "inputAssetA",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum Types.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct Types.AztecAsset",
+          "name": "inputAssetB",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum Types.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct Types.AztecAsset",
+          "name": "outputAssetA",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum Types.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct Types.AztecAsset",
+          "name": "outputAssetB",
+          "type": "tuple"
+        },
+        {
           "internalType": "uint256",
           "name": "interactionNonce",
           "type": "uint256"
+        },
+        {
+          "internalType": "uint64",
+          "name": "auxData",
+          "type": "uint64"
         }
       ],
       "name": "finalise",

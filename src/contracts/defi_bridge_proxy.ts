@@ -1,11 +1,17 @@
-import { Provider, Web3Provider } from '@ethersproject/providers';
-import { Contract, ContractFactory, Signer } from 'ethers';
-import abi from '../artifacts/contracts/DefiBridgeProxy.sol/DefiBridgeProxy.json';
+import { Provider, Web3Provider } from "@ethersproject/providers";
+import { Contract, ContractFactory, Signer } from "ethers";
+import abi from "../artifacts/contracts/DefiBridgeProxy.sol/DefiBridgeProxy.json";
 
 export interface SendTxOptions {
   gasPrice?: bigint;
   gasLimit?: number;
 }
+
+const assetToArray = (asset: AztecAsset) => [
+  asset.id || 0,
+  asset.erc20Address || "0x0000000000000000000000000000000000000000",
+  asset.assetType || 0,
+];
 
 export enum AztecAssetType {
   NOT_USED,
@@ -43,10 +49,36 @@ export class DefiBridgeProxy {
     return await this.contract.canFinalise(bridgeAddress, interactionNonce);
   }
 
-  async finalise(signer: Signer, bridgeAddress: string, interactionNonce: number, options: SendTxOptions = {}) {
-    const contract = new Contract(this.contract.address, this.contract.interface, signer);
+  async finalise(
+    signer: Signer,
+    bridgeAddress: string,
+    inputAssetA: AztecAsset,
+    inputAssetB: AztecAsset,
+    outputAssetA: AztecAsset,
+    outputAssetB: AztecAsset,
+    interactionNonce: bigint,
+    auxInputData: bigint,
+    options: SendTxOptions = {}
+  ) {
+    const contract = new Contract(
+      this.contract.address,
+      this.contract.interface,
+      signer
+    );
     const { gasLimit, gasPrice } = options;
-    const tx = await contract.finalise(bridgeAddress, interactionNonce, { gasLimit, gasPrice });
+    const tx = await contract.finalise(
+      bridgeAddress,
+      assetToArray(inputAssetA),
+      assetToArray(inputAssetB),
+      assetToArray(outputAssetA),
+      assetToArray(outputAssetB),
+      interactionNonce,
+      auxInputData,
+      {
+        gasLimit,
+        gasPrice,
+      }
+    );
     const receipt = await tx.wait();
 
     const parsedLogs = receipt.logs
@@ -72,15 +104,13 @@ export class DefiBridgeProxy {
     totalInputValue: bigint,
     interactionNonce: bigint,
     auxInputData: bigint,
-    options: SendTxOptions = {},
+    options: SendTxOptions = {}
   ) {
-    const assetToArray = (asset: AztecAsset) => [
-      asset.id || 0,
-      asset.erc20Address || '0x0000000000000000000000000000000000000000',
-      asset.assetType || 0,
-    ];
-
-    const contract = new Contract(this.contract.address, this.contract.interface, signer);
+    const contract = new Contract(
+      this.contract.address,
+      this.contract.interface,
+      signer
+    );
     const { gasLimit, gasPrice } = options;
 
     const tx = await contract.convert(
@@ -92,7 +122,7 @@ export class DefiBridgeProxy {
       totalInputValue,
       interactionNonce,
       auxInputData,
-      { gasLimit, gasPrice },
+      { gasLimit, gasPrice }
     );
     const receipt = await tx.wait();
 
