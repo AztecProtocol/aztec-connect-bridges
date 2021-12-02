@@ -12,7 +12,7 @@ A bridge contract models any layer 1 DeFi protocol as an asynchronous asset swap
 
 #### How does this work?
 
-Users who have shielded fuassetsnds on Aztec can construct a zero-knowledge proof instructing the Aztec rollup contract to make an external L1 contract call.
+Users who have shielded assets on Aztec can construct a zero-knowledge proof instructing the Aztec rollup contract to make an external L1 contract call.
 
 Rollup providers batch multiple L2 transaction intents on the Aztec Network together in a rollup. The rollup contract then makes aggregate transaction against L1 DeFi contracts and returns the funds pro-rata to the users on L2.
 
