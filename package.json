@@ -22,11 +22,12 @@
   },
   "dependencies": {
     "@ethersproject/experimental": "5.0.9",
-    "@ethersproject/providers": "5.0.18",
+    "@ethersproject/providers": "^5.5.1",
     "@uniswap/v2-core": "^1.0.1",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
+    "compound-protocol": "https://github.com/compound-finance/compound-protocol",
     "dotenv": "^8.2.0",
-    "ethers": "5.0.29",
+    "ethers": "^5.5.2",
     "typescript": "^3.5.3"
   },
   "devDependencies": {
@@ -41,7 +42,7 @@
     "eslint-config-prettier": "^6.11.0",
     "ethereum-waffle": "3.0.0",
     "ethereumjs-util": "^7.0.7",
-    "hardhat": "^2.4.3",
+    "hardhat": "^2.7.1",
     "jest": "^27.0.6",
     "prettier": "^2.2.1",
     "prettier-plugin-solidity": "^1.0.0-beta.3",
