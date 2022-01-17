@@ -230,7 +230,7 @@ export class DefiBridgeProxy {
         deadline: `0x${BigInt(
           Date.now() + 3600000000000000000000000000
         ).toString(16)}`,
-        amountInMaximum: 1,
+        amountInMaximum: 100000,
         sqrtPriceLimitX96: 0,
       };
       console.log(params);
@@ -243,12 +243,26 @@ export class DefiBridgeProxy {
         ]),
       ];
 
-      console.log(Object.values(params));
+      // const swapTx = await this.uniswapContract
+      //   .connect(signer)
+      //   .exactOutputSingle(params);
 
-      data.push(
-        this.uniswapPaymentsContract.interface.encodeFunctionData("refundETH")
-      );
-      console.log(data);
+      // console.log(swapTx);
+
+      // data.push(
+      //   this.uniswapPaymentsContract.interface.encodeFunctionData("refundETH")
+      // );
+
+      const refundTx = await this.uniswapPaymentsContract
+        .connect(signer)
+        .refundETH();
+      console.log(refundTx);
+
+      const swapTx = await this.uniswapContract
+        .connect(signer)
+        .exactOutputSingle(Object.values(params));
+      console.log(swapTx);
+
       // ensure that the swap fails if the limit is any tighter
       const uniswapRouter = new Contract(
         this.uniswapMultiCall.address,
