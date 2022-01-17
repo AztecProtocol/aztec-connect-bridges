@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IDefiBridge } from "./interfaces/IDefiBridge.sol";
-import { Types } from "./Types.sol";
+import { AztecTypes } from "./Types.sol";
 
 // import 'hardhat/console.sol';
 
@@ -70,10 +70,10 @@ contract DefiBridgeProxy {
 
   function convert(
     address bridgeAddress,
-    Types.AztecAsset calldata inputAssetA,
-    Types.AztecAsset calldata inputAssetB,
-    Types.AztecAsset calldata outputAssetA,
-    Types.AztecAsset calldata outputAssetB,
+    AztecTypes.AztecAsset calldata inputAssetA,
+    AztecTypes.AztecAsset calldata inputAssetB,
+    AztecTypes.AztecAsset calldata outputAssetA,
+    AztecTypes.AztecAsset calldata outputAssetB,
     uint256 totalInputValue,
     uint256 interactionNonce,
     uint256 auxInputData // (auxData)
@@ -85,12 +85,12 @@ contract DefiBridgeProxy {
       bool isAsync
     )
   {
-    if (inputAssetA.assetType == Types.AztecAssetType.ERC20) {
+    if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
       // Transfer totalInputValue to the bridge contract if erc20. ETH is sent on call to convert.
       transferTokens(inputAssetA.erc20Address, bridgeAddress, totalInputValue);
     }
 
-    if (inputAssetB.assetType == Types.AztecAssetType.ERC20) {
+    if (inputAssetB.assetType == AztecTypes.AztecAssetType.ERC20) {
       // Transfer totalInputValue to the bridge contract if erc20. ETH is sent on call to convert.
       transferTokens(inputAssetB.erc20Address, bridgeAddress, totalInputValue);
     }
@@ -98,11 +98,11 @@ contract DefiBridgeProxy {
     uint256 tempValueA;
     uint256 tempValueB;
 
-    if (outputAssetA.assetType != Types.AztecAssetType.VIRTUAL) {
+    if (outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL) {
       tempValueA = getBalance(outputAssetA.erc20Address);
     }
 
-    if (outputAssetB.assetType != Types.AztecAssetType.VIRTUAL) {
+    if (outputAssetB.assetType != AztecTypes.AztecAssetType.VIRTUAL) {
       tempValueB = getBalance(outputAssetB.erc20Address);
     }
 
@@ -110,7 +110,7 @@ contract DefiBridgeProxy {
     // If input is ETH, send it along with call to convert.
     IDefiBridge bridgeContract = IDefiBridge(bridgeAddress);
     (outputValueA, outputValueB, isAsync) = bridgeContract.convert{
-      value: inputAssetA.assetType == Types.AztecAssetType.ETH
+      value: inputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ? totalInputValue
         : 0
     }(
@@ -124,8 +124,8 @@ contract DefiBridgeProxy {
     );
 
     if (
-      outputAssetA.assetType != Types.AztecAssetType.VIRTUAL &&
-      outputAssetA.assetType != Types.AztecAssetType.NOT_USED
+      outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL &&
+      outputAssetA.assetType != AztecTypes.AztecAssetType.NOT_USED
     ) {
       require(
         outputValueA ==
@@ -135,8 +135,8 @@ contract DefiBridgeProxy {
     }
 
     if (
-      outputAssetB.assetType != Types.AztecAssetType.VIRTUAL &&
-      outputAssetB.assetType != Types.AztecAssetType.NOT_USED
+      outputAssetB.assetType != AztecTypes.AztecAssetType.VIRTUAL &&
+      outputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED
     ) {
       require(
         outputValueB ==
@@ -171,20 +171,20 @@ contract DefiBridgeProxy {
 
   function finalise(
     address bridgeAddress,
-    Types.AztecAsset calldata inputAssetA,
-    Types.AztecAsset calldata inputAssetB,
-    Types.AztecAsset calldata outputAssetA,
-    Types.AztecAsset calldata outputAssetB,
+    AztecTypes.AztecAsset calldata inputAssetA,
+    AztecTypes.AztecAsset calldata inputAssetB,
+    AztecTypes.AztecAsset calldata outputAssetA,
+    AztecTypes.AztecAsset calldata outputAssetB,
     uint256 interactionNonce,
     uint256 auxInputData // (auxData)
   ) external returns (uint256 outputValueA, uint256 outputValueB) {
     uint256 tempValueA;
     uint256 tempValueB;
-    if (outputAssetA.assetType != Types.AztecAssetType.VIRTUAL) {
+    if (outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL) {
       tempValueA = getBalance(outputAssetA.erc20Address);
     }
 
-    if (outputAssetB.assetType != Types.AztecAssetType.VIRTUAL) {
+    if (outputAssetB.assetType != AztecTypes.AztecAssetType.VIRTUAL) {
       tempValueB = getBalance(outputAssetB.erc20Address);
     }
 
@@ -205,8 +205,8 @@ contract DefiBridgeProxy {
     );
 
     if (
-      outputAssetA.assetType != Types.AztecAssetType.VIRTUAL &&
-      outputAssetA.assetType != Types.AztecAssetType.NOT_USED
+      outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL &&
+      outputAssetA.assetType != AztecTypes.AztecAssetType.NOT_USED
     ) {
       require(
         outputValueA ==
@@ -216,8 +216,8 @@ contract DefiBridgeProxy {
     }
 
     if (
-      outputAssetB.assetType != Types.AztecAssetType.VIRTUAL &&
-      outputAssetB.assetType != Types.AztecAssetType.NOT_USED
+      outputAssetB.assetType != AztecTypes.AztecAssetType.VIRTUAL &&
+      outputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED
     ) {
       require(
         outputValueB ==

@@ -10,7 +10,7 @@ import { UniswapV2Library } from "@uniswap/v2-periphery/contracts/libraries/Unis
 import { IUniswapV2Router02 } from "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 import { IDefiBridge } from "./interfaces/IDefiBridge.sol";
-import { Types } from "./Types.sol";
+import { AztecTypes } from "./Types.sol";
 
 // import 'hardhat/console.sol';
 
@@ -31,10 +31,10 @@ contract UniswapBridge is IDefiBridge {
   receive() external payable {}
 
   function convert(
-    Types.AztecAsset calldata inputAssetA,
-    Types.AztecAsset calldata,
-    Types.AztecAsset calldata outputAssetA,
-    Types.AztecAsset calldata,
+    AztecTypes.AztecAsset calldata inputAssetA,
+    AztecTypes.AztecAsset calldata,
+    AztecTypes.AztecAsset calldata outputAssetA,
+    AztecTypes.AztecAsset calldata,
     uint256 inputValue,
     uint256,
     uint64
@@ -55,8 +55,8 @@ contract UniswapBridge is IDefiBridge {
     // TODO This should check the pair exists on UNISWAP instead of blindly trying to swap.
 
     if (
-      inputAssetA.assetType == Types.AztecAssetType.ETH &&
-      outputAssetA.assetType == Types.AztecAssetType.ERC20
+      inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
+      outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
     ) {
       address[] memory path = new address[](2);
       path[0] = weth;
@@ -69,8 +69,8 @@ contract UniswapBridge is IDefiBridge {
       );
       outputValueA = amounts[1];
     } else if (
-      inputAssetA.assetType == Types.AztecAssetType.ERC20 &&
-      outputAssetA.assetType == Types.AztecAssetType.ETH
+      inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 &&
+      outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
     ) {
       address[] memory path = new address[](2);
       path[0] = inputAssetA.erc20Address;
@@ -100,10 +100,10 @@ contract UniswapBridge is IDefiBridge {
   }
 
   function finalise(
-    Types.AztecAsset calldata,
-    Types.AztecAsset calldata,
-    Types.AztecAsset calldata,
-    Types.AztecAsset calldata,
+    AztecTypes.AztecAsset calldata,
+    AztecTypes.AztecAsset calldata,
+    AztecTypes.AztecAsset calldata,
+    AztecTypes.AztecAsset calldata,
     uint256,
     uint64
   ) external payable override returns (uint256, uint256) {

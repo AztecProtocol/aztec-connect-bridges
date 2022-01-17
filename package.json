@@ -16,15 +16,16 @@
       "^.+\\.ts$": "ts-jest"
     },
     "testRegex": ".*\\.test\\.ts$",
-    "rootDir": "./src",
+    "rootDir": "./contracts",
     "testTimeout": 20000,
     "slowTestThreshold": 60
   },
   "dependencies": {
     "@ethersproject/experimental": "5.0.9",
     "@ethersproject/providers": "5.0.18",
-    "@uniswap/v2-core": "^1.0.1",
+    "@uniswap/swap-router-contracts": "^1.1.0",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
+    "@uniswap/v3-periphery": "^1.4.0",
     "dotenv": "^8.2.0",
     "ethers": "5.0.29",
     "typescript": "^3.5.3"

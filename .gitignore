@@ -11,3 +11,5 @@ yarn.lock
 *.log
 *.swp
 .next
+cache
+src/artifacts

@@ -3,7 +3,7 @@
 pragma solidity >=0.6.6 <0.8.0;
 pragma experimental ABIEncoderV2;
 
-import { Types } from "../Types.sol";
+import { AztecTypes } from "../Types.sol";
 
 interface IDefiBridge {
   /**
@@ -45,10 +45,10 @@ interface IDefiBridge {
   // @return uint256 outputValueB the amount of outputAssetB returned from this interaction, should be 0 if async or bridge only returns 1 asset.
   // @return bool isAsync a flag to toggle if this bridge interaction will return assets at a later date after some third party contract has interacted with it via finalise()
   function convert(
-    Types.AztecAsset calldata inputAssetA,
-    Types.AztecAsset calldata inputAssetB,
-    Types.AztecAsset calldata outputAssetA,
-    Types.AztecAsset calldata outputAssetB,
+    AztecTypes.AztecAsset calldata inputAssetA,
+    AztecTypes.AztecAsset calldata inputAssetB,
+    AztecTypes.AztecAsset calldata outputAssetA,
+    AztecTypes.AztecAsset calldata outputAssetB,
     uint256 inputValue,
     uint256 interactionNonce,
     uint64 auxData
@@ -77,10 +77,10 @@ interface IDefiBridge {
   // @return uint256 outputValueB optional return value of output asset B
   // @dev this function should have a modifier on it to ensure it can only be called by the Rollup Contract
   function finalise(
-    Types.AztecAsset calldata inputAssetA,
-    Types.AztecAsset calldata inputAssetB,
-    Types.AztecAsset calldata outputAssetA,
-    Types.AztecAsset calldata outputAssetB,
+    AztecTypes.AztecAsset calldata inputAssetA,
+    AztecTypes.AztecAsset calldata inputAssetB,
+    AztecTypes.AztecAsset calldata outputAssetA,
+    AztecTypes.AztecAsset calldata outputAssetB,
     uint256 interactionNonce,
     uint64 auxData
   ) external payable returns (uint256 outputValueA, uint256 outputValueB);

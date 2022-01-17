@@ -37,12 +37,12 @@
               "type": "address"
             },
             {
-              "internalType": "enum Types.AztecAssetType",
+              "internalType": "enum AztecTypes.AztecAssetType",
               "name": "assetType",
               "type": "uint8"
             }
           ],
-          "internalType": "struct Types.AztecAsset",
+          "internalType": "struct AztecTypes.AztecAsset",
           "name": "inputAssetA",
           "type": "tuple"
         },
@@ -59,12 +59,12 @@
               "type": "address"
             },
             {
-              "internalType": "enum Types.AztecAssetType",
+              "internalType": "enum AztecTypes.AztecAssetType",
               "name": "assetType",
               "type": "uint8"
             }
           ],
-          "internalType": "struct Types.AztecAsset",
+          "internalType": "struct AztecTypes.AztecAsset",
           "name": "inputAssetB",
           "type": "tuple"
         },
@@ -81,12 +81,12 @@
               "type": "address"
             },
             {
-              "internalType": "enum Types.AztecAssetType",
+              "internalType": "enum AztecTypes.AztecAssetType",
               "name": "assetType",
               "type": "uint8"
             }
           ],
-          "internalType": "struct Types.AztecAsset",
+          "internalType": "struct AztecTypes.AztecAsset",
           "name": "outputAssetA",
           "type": "tuple"
         },
@@ -103,12 +103,12 @@
               "type": "address"
             },
             {
-              "internalType": "enum Types.AztecAssetType",
+              "internalType": "enum AztecTypes.AztecAssetType",
               "name": "assetType",
               "type": "uint8"
             }
           ],
-          "internalType": "struct Types.AztecAsset",
+          "internalType": "struct AztecTypes.AztecAsset",
           "name": "outputAssetB",
           "type": "tuple"
         },
@@ -164,12 +164,12 @@
               "type": "address"
             },
             {
-              "internalType": "enum Types.AztecAssetType",
+              "internalType": "enum AztecTypes.AztecAssetType",
               "name": "assetType",
               "type": "uint8"
             }
           ],
-          "internalType": "struct Types.AztecAsset",
+          "internalType": "struct AztecTypes.AztecAsset",
           "name": "inputAssetA",
           "type": "tuple"
         },
@@ -186,12 +186,12 @@
               "type": "address"
             },
             {
-              "internalType": "enum Types.AztecAssetType",
+              "internalType": "enum AztecTypes.AztecAssetType",
               "name": "assetType",
               "type": "uint8"
             }
           ],
-          "internalType": "struct Types.AztecAsset",
+          "internalType": "struct AztecTypes.AztecAsset",
           "name": "inputAssetB",
           "type": "tuple"
         },
@@ -208,12 +208,12 @@
               "type": "address"
             },
             {
-              "internalType": "enum Types.AztecAssetType",
+              "internalType": "enum AztecTypes.AztecAssetType",
               "name": "assetType",
               "type": "uint8"
             }
           ],
-          "internalType": "struct Types.AztecAsset",
+          "internalType": "struct AztecTypes.AztecAsset",
           "name": "outputAssetA",
           "type": "tuple"
         },
@@ -230,12 +230,12 @@
               "type": "address"
             },
             {
-              "internalType": "enum Types.AztecAssetType",
+              "internalType": "enum AztecTypes.AztecAssetType",
               "name": "assetType",
               "type": "uint8"
             }
           ],
-          "internalType": "struct Types.AztecAsset",
+          "internalType": "struct AztecTypes.AztecAsset",
           "name": "outputAssetB",
           "type": "tuple"
         },
