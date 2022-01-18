@@ -12,4 +12,4 @@ yarn.lock
 *.swp
 .next
 cache
-src/artifacts/
+

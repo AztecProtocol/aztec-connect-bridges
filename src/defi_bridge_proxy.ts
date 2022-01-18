@@ -1,12 +1,16 @@
 import { Provider, Web3Provider } from "@ethersproject/providers";
-import { Contract, ContractFactory, Signer } from "ethers";
-import abi from "./artifacts/contracts/DefiBridgeProxy.sol/DefiBridgeProxy.json";
-
-import UniswapV3Router03Json from "@uniswap/swap-router-contracts/artifacts/contracts/interfaces/IV3SwapRouter.sol/IV3SwapRouter.json";
-import UniswapMulticallJson from "@uniswap/swap-router-contracts/artifacts/contracts/interfaces/IMulticallExtended.sol/IMulticallExtended.json";
-import UniswapPaymentsJson from "@uniswap/swap-router-contracts/artifacts/contracts/interfaces/IPeripheryPaymentsExtended.sol/IPeripheryPaymentsExtended.json";
+import { Contract, ContractFactory, ethers, Signer } from "ethers";
 
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
+import abi from "./artifacts/contracts/DefiBridgeProxy.sol/DefiBridgeProxy.json";
+
+import ISwapRouter from "./artifacts/contracts/interfaces/ISwapRouter.sol/ISwapRouter.json";
+import WETH from "./artifacts/contracts/interfaces/IWETH.sol/WETH.json";
+
+const fixEthersStackTrace = (err: Error) => {
+  err.stack! += new Error().stack;
+  throw err;
+};
 
 export interface SendTxOptions {
   gasPrice?: bigint;
@@ -32,43 +36,31 @@ export interface AztecAsset {
   erc20Address?: string;
 }
 
-export interface Token {
-  amount: number;
+export interface MyToken {
+  amount: bigint;
   erc20Address: string;
 }
 
 export class DefiBridgeProxy {
   private contract: Contract;
   private uniswapContract: Contract;
-  private uniswapMultiCall: Contract;
-  private uniswapPaymentsContract: Contract;
   private WETH9: string;
 
-  constructor(public address: string, provider: Provider) {
-    this.contract = new Contract(this.address, abi.abi, provider);
+  constructor(public address: string, signer: Signer) {
+    this.contract = new Contract(this.address, abi.abi, signer);
     this.WETH9 = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
 
     this.uniswapContract = new Contract(
       "0xe592427a0aece92de3edee1f18e0157c05861564",
-      UniswapV3Router03Json.abi,
-      provider
-    );
-    this.uniswapMultiCall = new Contract(
-      "0xe592427a0aece92de3edee1f18e0157c05861564",
-      UniswapMulticallJson.abi,
-      provider
-    );
-    this.uniswapPaymentsContract = new Contract(
-      "0xe592427a0aece92de3edee1f18e0157c05861564",
-      UniswapPaymentsJson.abi,
-      provider
+      ISwapRouter.abi,
+      signer
     );
   }
 
   static async deploy(signer: Signer) {
     const factory = new ContractFactory(abi.abi, abi.bytecode, signer);
     const contract = await factory.deploy();
-    return new DefiBridgeProxy(contract.address, signer.provider!);
+    return new DefiBridgeProxy(contract.address, signer);
   }
 
   async deployBridge(signer: Signer, abi: any, args: any[]) {
@@ -179,7 +171,7 @@ export class DefiBridgeProxy {
     };
   }
 
-  async preFundRollupWithTokens(signer: Signer, tokens: Token[]) {
+  async preFundRollupWithTokens(signer: Signer, tokens: MyToken[]) {
     // we need to do a setup step here
     // assume that the passed in signer has unlimted ETH on our ganache mainnet fork.
     // we can use the mainnet uniswap address to swap from ETH to any token we require.
@@ -204,85 +196,55 @@ export class DefiBridgeProxy {
 
     */
 
-    const WETH9Contract = new Contract(this.WETH9, ERC20.abi, signer);
+    const WETH9Contract = new Contract(this.WETH9, WETH.abi, signer);
+    const amount = 1n * 10n ** 21n;
+
+    const depositTx = await WETH9Contract.deposit({ value: amount });
+    await depositTx.wait();
+    console.log(
+      `Balance of: ${await WETH9Contract.balanceOf(signer.getAddress())}`
+    );
+
+    console.log(
+      `Approving ${amount} WETH transfer to ${this.contract.address}`
+    );
 
     const approveWethTx = await WETH9Contract.approve(
       this.uniswapContract.address,
-      10 ^ 18
+      amount
     );
+    console.log("Approval tx ", approveWethTx);
     await approveWethTx.wait();
+    console.log("Approved");
+    // const transferTx = await WETH9Contract.transfer(this.contract.address, amount);
+    // console.log("Transfer tx: ", transferTx);
+    // await transferTx.wait();
 
-    const asyncCalls = tokens.map(async (token: Token) => {
-      // approve the tokens
-      const tokenContract = new Contract(token.erc20Address, ERC20.abi, signer);
-      const approveTokenTx = await tokenContract.approve(
-        this.uniswapMultiCall.address,
-        10 ^ 18
-      );
-      console.log(approveTokenTx);
-      await approveTokenTx.wait();
+    for (const token of tokens) {
       const params = {
-        tokenOut: this.WETH9,
-        tokenIn: token.erc20Address,
-        fee: 3000,
+        tokenIn: this.WETH9,
+        tokenOut: token.erc20Address,
+        fee: 3000n,
         recipient: this.address,
-        amountOut: 1,
-        deadline: `0x${BigInt(
-          Date.now() + 3600000000000000000000000000
-        ).toString(16)}`,
-        amountInMaximum: 100000,
-        sqrtPriceLimitX96: 0,
+        deadline: `0x${BigInt(Date.now() + 36000000).toString(16)}`,
+        amountOut: token.amount,
+        amountInMaximum: 1n * 10n ** 18n,
+        sqrtPriceLimitX96: 0n,
       };
-      console.log(params);
 
       console.log("Prefunding Rollup with", token.erc20Address, token.amount);
 
-      const data = [
-        this.uniswapContract.interface.encodeFunctionData("exactOutputSingle", [
-          params,
-        ]),
-      ];
+      const tempContract = await this.uniswapContract.connect(signer);
 
-      // const swapTx = await this.uniswapContract
+      const swapTx = await tempContract
+        .exactOutputSingle(params)
+        .catch(fixEthersStackTrace);
+      await swapTx.wait();
+
+      // const refundTx = await this.uniswapPaymentsContract
       //   .connect(signer)
-      //   .exactOutputSingle(params);
-
-      // console.log(swapTx);
-
-      // data.push(
-      //   this.uniswapPaymentsContract.interface.encodeFunctionData("refundETH")
-      // );
-
-      const refundTx = await this.uniswapPaymentsContract
-        .connect(signer)
-        .refundETH();
-      console.log(refundTx);
-
-      const swapTx = await this.uniswapContract
-        .connect(signer)
-        .exactOutputSingle(Object.values(params));
-      console.log(swapTx);
-
-      // ensure that the swap fails if the limit is any tighter
-      const uniswapRouter = new Contract(
-        this.uniswapMultiCall.address,
-        UniswapMulticallJson.abi,
-        signer
-      );
-
-      const multiCallData = uniswapRouter.interface.encodeFunctionData(
-        "multicall(bytes[])",
-        [data]
-      );
-      console.log(multiCallData);
-
-      const tx = await signer.sendTransaction({
-        to: uniswapRouter.address,
-        data: multiCallData,
-        value: 100n,
-      });
-      console.log(tx);
-    });
-    await Promise.all(asyncCalls);
+      //   .refundETH();
+      // await refundTx.wait();
+    }
   }
 }

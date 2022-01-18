@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.6.10 <0.8.0;
+pragma solidity >=0.6.10 <0.8.11;
 pragma experimental ABIEncoderV2;
 
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+//import { IV3SwapRouter as ISwapRouter } from "@uniswap/swap-router-contracts/contracts/interfaces/IV3SwapRouter.sol";
+import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import { IDefiBridge } from "./interfaces/IDefiBridge.sol";
 import { AztecTypes } from "./Types.sol";
 
-// import 'hardhat/console.sol';
+import 'hardhat/console.sol';
 
 contract DefiBridgeProxy {
   using SafeMath for uint256;
@@ -232,5 +235,47 @@ contract DefiBridgeProxy {
       outputValueB,
       false
     );
+  }
+
+  // This example swaps DAI/WETH9 for single path swaps and DAI/USDC/WETH9 for multi path swaps.
+
+  address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+  address public constant WETH9 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+  address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+
+  // For this example, we will set the pool fee to 0.3%.
+  uint24 public constant poolFee = 3000;
+
+  function convertEthToExactDai() external payable {
+      //require(daiAmount > 0, "Must pass non 0 DAI amount");
+      //require(msg.value > 0, "Must pass non 0 ETH amount");
+
+      console.log("Received request with value: %s", msg.value);
+      ISwapRouter uniswapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+      console.log("Uniswap Router: ", address(uniswapRouter));
+        
+      uint256 deadline = block.timestamp + 15; // using 'now' for convenience, for mainnet pass deadline from frontend!
+      address tokenIn = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+      address tokenOut = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+      uint24 fee = 3000;
+      address recipient = address(this);
+      uint256 amountOut = 1000000000000000000;
+      uint256 amountInMaximum = msg.value;
+      uint160 sqrtPriceLimitX96 = 0;
+      
+      ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams(
+          tokenIn,
+          tokenOut,
+          fee,
+          recipient,
+          deadline,
+          amountOut,
+          amountInMaximum,
+          sqrtPriceLimitX96
+      );
+      
+      uint256 amountSpent = uniswapRouter.exactOutputSingle{ value: msg.value }(params);
+      console.log("Amount spent ", amountSpent);
+      
   }
 }
