@@ -1,10 +1,10 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
-    "/home/tkowalcz/Source/web3/aztec-connect-starter/contracts/CompoundERC20Bridge.sol": {
-      "lastModificationDate": 1639282673660,
-      "contentHash": "43a769355b8d73657a85e0b4714a8309",
-      "sourceName": "contracts/CompoundERC20Bridge.sol",
+    "/home/tkowalcz/Source/web3/aztec-connect-starter/contracts/CompoundBridge.sol": {
+      "lastModificationDate": 1642655771805,
+      "contentHash": "08d8b59581180ba84a860e44a0f8ae95",
+      "sourceName": "contracts/CompoundBridge.sol",
       "solcConfig": {
         "version": "0.6.10",
         "settings": {
@@ -32,6 +32,7 @@
       "imports": [
         "@openzeppelin/contracts/math/SafeMath.sol",
         "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "@openzeppelin/contracts/token/ERC20/SafeERC20.sol",
         "./interfaces/IDefiBridge.sol",
         "./Types.sol"
       ],
@@ -39,8 +40,9 @@
         ">=0.6.6 <0.8.0"
       ],
       "artifacts": [
-        "CompoundERC20Bridge",
-        "ICERC20"
+        "CompoundBridge",
+        "ICERC20",
+        "ICETH"
       ]
     },
     "/home/tkowalcz/Source/web3/aztec-connect-starter/node_modules/@openzeppelin/contracts/math/SafeMath.sol": {
@@ -115,6 +117,46 @@
         "IERC20"
       ]
     },
+    "/home/tkowalcz/Source/web3/aztec-connect-starter/node_modules/@openzeppelin/contracts/token/ERC20/SafeERC20.sol": {
+      "lastModificationDate": 1639283711528,
+      "contentHash": "33e22842646d746e5c4124c2fdc051aa",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/SafeERC20.sol",
+      "solcConfig": {
+        "version": "0.6.10",
+        "settings": {
+          "evmVersion": "berlin",
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./IERC20.sol",
+        "../../math/SafeMath.sol",
+        "../../utils/Address.sol"
+      ],
+      "versionPragmas": [
+        ">=0.6.0 <0.8.0"
+      ],
+      "artifacts": [
+        "SafeERC20"
+      ]
+    },
     "/home/tkowalcz/Source/web3/aztec-connect-starter/contracts/interfaces/IDefiBridge.sol": {
       "lastModificationDate": 1639167194222,
       "contentHash": "957b82797ea738a163606638a256c4e2",
@@ -187,6 +229,42 @@
       ],
       "artifacts": [
         "Types"
+      ]
+    },
+    "/home/tkowalcz/Source/web3/aztec-connect-starter/node_modules/@openzeppelin/contracts/utils/Address.sol": {
+      "lastModificationDate": 1639283710560,
+      "contentHash": "7aa46886ff5abe7515496208a5e2ce5a",
+      "sourceName": "@openzeppelin/contracts/utils/Address.sol",
+      "solcConfig": {
+        "version": "0.6.10",
+        "settings": {
+          "evmVersion": "berlin",
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.6.2 <0.8.0"
+      ],
+      "artifacts": [
+        "Address"
       ]
     },
     "/home/tkowalcz/Source/web3/aztec-connect-starter/contracts/UniswapBridge.sol": {
@@ -346,7 +424,7 @@
       ]
     },
     "/home/tkowalcz/Source/web3/aztec-connect-starter/node_modules/@uniswap/v2-periphery/contracts/libraries/SafeMath.sol": {
-      "lastModificationDate": 1639283784345,
+      "lastModificationDate": 1642665632224,
       "contentHash": "a9f6fd2d01210e9aa4951fcdf11bbea9",
       "sourceName": "@uniswap/v2-periphery/contracts/libraries/SafeMath.sol",
       "solcConfig": {
@@ -573,6 +651,48 @@
       "artifacts": [
         "CompoundEthBridge",
         "ICETH"
+      ]
+    },
+    "/home/tkowalcz/Source/web3/aztec-connect-starter/contracts/CompoundERC20Bridge.sol": {
+      "lastModificationDate": 1639282673660,
+      "contentHash": "43a769355b8d73657a85e0b4714a8309",
+      "sourceName": "contracts/CompoundERC20Bridge.sol",
+      "solcConfig": {
+        "version": "0.6.10",
+        "settings": {
+          "evmVersion": "berlin",
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/math/SafeMath.sol",
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "./interfaces/IDefiBridge.sol",
+        "./Types.sol"
+      ],
+      "versionPragmas": [
+        ">=0.6.6 <0.8.0"
+      ],
+      "artifacts": [
+        "CompoundERC20Bridge",
+        "ICERC20"
       ]
     },
     "/home/tkowalcz/Source/web3/aztec-connect-starter/contracts/ERC20Mintable.sol": {
