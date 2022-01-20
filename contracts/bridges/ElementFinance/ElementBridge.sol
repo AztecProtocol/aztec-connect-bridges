@@ -50,7 +50,7 @@ contract ElementBridge is IDefiBridge {
     address _trancheFactory,
     bytes32 _trancheBytecodeHash,
     address _balancerVaultAddress
-  ) public {
+  ) {
     rollupProcessor = _rollupProcessor;
     trancheFactory = _trancheFactory;
     trancheBytecodeHash = _trancheBytecodeHash;
@@ -96,7 +96,7 @@ contract ElementBridge is IDefiBridge {
     bytes32 poolId;
   }
 
-  function checkFunction(
+  function checkContractCall(
     address contractAddress,
     string memory signature,
     string memory errorMsg
@@ -121,7 +121,7 @@ contract ElementBridge is IDefiBridge {
     poolSpec.trancheAddress = deriveTranche(wrappedPositionAddress, expiry);
 
     // get the wrapped position held in the tranche to cross check against that provided
-    bytes memory returnData = checkFunction(
+    bytes memory returnData = checkContractCall(
       poolSpec.trancheAddress,
       "position()",
       "ElementBridge: TRANCHE_POSITION_FAILED"
@@ -133,7 +133,7 @@ contract ElementBridge is IDefiBridge {
     );
 
     // get the underlying held in the tranche to cross check against that provided
-    returnData = checkFunction(
+    returnData = checkContractCall(
       poolSpec.trancheAddress,
       "underlying()",
       "ElementBridge: TRANCHE_UNDERLYING_FAILED"
@@ -145,7 +145,7 @@ contract ElementBridge is IDefiBridge {
     );
 
     // get the pool underlying to cross check against that provided
-    returnData = checkFunction(
+    returnData = checkContractCall(
       poolAddress,
       "underlying()",
       "ElementBridge: POOL_UNDERLYING_FAILED"
@@ -157,7 +157,7 @@ contract ElementBridge is IDefiBridge {
     );
 
     // get the pool expiry to cross check against that provided
-    returnData = checkFunction(
+    returnData = checkContractCall(
       poolAddress,
       "expiration()",
       "ElementBridge: POOL_EXPIRATION_FAILED"
@@ -169,14 +169,14 @@ contract ElementBridge is IDefiBridge {
     );
 
     // get the vault associated with the pool and the pool id
-    returnData = checkFunction(
+    returnData = checkContractCall(
       poolAddress,
       "getVault()",
       "ElementBridge: POOL_VAULT_FAILED"
     );
     poolSpec.poolVaultAddress = abi.decode(returnData, (address));
 
-    returnData = checkFunction(
+    returnData = checkContractCall(
       poolAddress,
       "getPoolId()",
       "ElementBridge: POOL_ID_FAILED"
@@ -210,9 +210,9 @@ contract ElementBridge is IDefiBridge {
 
   function convert(
     AztecTypes.AztecAsset memory inputAssetA,
-    AztecTypes.AztecAsset memory inputAssetB,
+    AztecTypes.AztecAsset memory,
     AztecTypes.AztecAsset memory outputAssetA,
-    AztecTypes.AztecAsset memory outputAssetB,
+    AztecTypes.AztecAsset memory,
     uint256 totalInputValue,
     uint256 interactionNonce,
     uint64 auxData
@@ -309,12 +309,12 @@ contract ElementBridge is IDefiBridge {
   }
 
   function finalise(
-    AztecTypes.AztecAsset calldata inputAssetA,
-    AztecTypes.AztecAsset calldata inputAssetB,
+    AztecTypes.AztecAsset calldata,
+    AztecTypes.AztecAsset calldata,
     AztecTypes.AztecAsset calldata outputAssetA,
-    AztecTypes.AztecAsset calldata outputAssetB,
+    AztecTypes.AztecAsset calldata,
     uint256 interactionNonce,
-    uint64 auxData
+    uint64
   ) external payable returns (uint256 outputValueA, uint256 outputValueB) {
     Interaction storage interaction = interactions[interactionNonce];
     require(interaction.expiry != 0, "ElementBridge: UNKNOWN_NONCE");
