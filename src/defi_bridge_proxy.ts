@@ -1,7 +1,6 @@
 import { Provider, Web3Provider } from "@ethersproject/providers";
 import { Contract, ContractFactory, ethers, Signer } from "ethers";
 
-import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import abi from "./artifacts/contracts/DefiBridgeProxy.sol/DefiBridgeProxy.json";
 
 import ISwapRouter from "./artifacts/contracts/interfaces/ISwapRouter.sol/ISwapRouter.json";
@@ -63,13 +62,13 @@ export class DefiBridgeProxy {
     return new DefiBridgeProxy(contract.address, signer);
   }
 
-  async deployBridge(signer: Signer, abi: any, args: any[]) {
-    const factory = new ContractFactory(abi.abi, abi.bytecode, signer);
-    const contract = await factory.deploy(this.contract.address, ...args);
+  async deployBridge(signer: Signer, bridgeAbi: any, args: any[]) {
+    const factory = new ContractFactory(bridgeAbi.abi, bridgeAbi.bytecode, signer);
+    const contract = await factory.deploy(...args);
     return contract.address;
   }
 
-  async canFinalise(bridgeAddress: string, interactionNonce: number) {
+  async canFinalise(bridgeAddress: string, interactionNonce: bigint) {
     return await this.contract.canFinalise(bridgeAddress, interactionNonce);
   }
 
@@ -109,10 +108,9 @@ export class DefiBridgeProxy {
       .filter((l: any) => l.address == contract.address)
       .map((l: any) => contract.interface.parseLog(l));
 
-    const { outputValueA, outputValueB, isAsync } = parsedLogs[0].args;
+    const { outputValueA, outputValueB } = parsedLogs[0].args;
 
     return {
-      isAsync,
       outputValueA: BigInt(outputValueA.toString()),
       outputValueB: BigInt(outputValueB.toString()),
     };
@@ -172,53 +170,18 @@ export class DefiBridgeProxy {
   }
 
   async preFundRollupWithTokens(signer: Signer, tokens: MyToken[]) {
-    // we need to do a setup step here
-    // assume that the passed in signer has unlimted ETH on our ganache mainnet fork.
-    // we can use the mainnet uniswap address to swap from ETH to any token we require.
-    // 1. we need to call exactOutputSingle which is a payble function on the UNIV3 router
-    // V3 Router Address: 0xE592427A0AEce92De3Edee1F18E0157C05861564
-    /*
-     ISwapRouter.ExactOutputSingleParams memory params =
-            ISwapRouter.ExactOutputSingleParams({
-                tokenIn: WETH9,
-                tokenOut: TBC,
-                fee: poolFee,
-                recipient: msg.sender,
-                deadline: block.timestamp,
-                amountOut: amountOut,
-                amountInMaximum: amountInMaximum,
-                sqrtPriceLimitX96: 0
-            });
-
-        // Executes the swap returning the amountIn needed to spend to receive the desired amountOut.
-        amountIn = swapRouter.exactOutputSingle(params);
-        WETH9= 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2
-
-    */
 
     const WETH9Contract = new Contract(this.WETH9, WETH.abi, signer);
     const amount = 1n * 10n ** 21n;
 
     const depositTx = await WETH9Contract.deposit({ value: amount });
     await depositTx.wait();
-    console.log(
-      `Balance of: ${await WETH9Contract.balanceOf(signer.getAddress())}`
-    );
-
-    console.log(
-      `Approving ${amount} WETH transfer to ${this.contract.address}`
-    );
 
     const approveWethTx = await WETH9Contract.approve(
       this.uniswapContract.address,
       amount
     );
-    console.log("Approval tx ", approveWethTx);
     await approveWethTx.wait();
-    console.log("Approved");
-    // const transferTx = await WETH9Contract.transfer(this.contract.address, amount);
-    // console.log("Transfer tx: ", transferTx);
-    // await transferTx.wait();
 
     for (const token of tokens) {
       const params = {
@@ -232,19 +195,12 @@ export class DefiBridgeProxy {
         sqrtPriceLimitX96: 0n,
       };
 
-      console.log("Prefunding Rollup with", token.erc20Address, token.amount);
-
       const tempContract = await this.uniswapContract.connect(signer);
 
       const swapTx = await tempContract
         .exactOutputSingle(params)
         .catch(fixEthersStackTrace);
       await swapTx.wait();
-
-      // const refundTx = await this.uniswapPaymentsContract
-      //   .connect(signer)
-      //   .refundETH();
-      // await refundTx.wait();
     }
   }
 }

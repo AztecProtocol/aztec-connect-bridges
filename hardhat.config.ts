@@ -3,7 +3,7 @@ import "@nomiclabs/hardhat-waffle";
 import "@nomiclabs/hardhat-ethers";
 
 const getBlockNumber = () => {
-  let blockNumber;
+  let blockNumber = 14036938;
   if (process.env.BLOCK_NUMBER) {
     blockNumber = +process.env.BLOCK_NUMBER;
   }
@@ -12,7 +12,11 @@ const getBlockNumber = () => {
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.10",
+    compilers: [
+      {
+        version: "0.8.10",
+      },
+    ],
     settings: {
       evmVersion: "london",
       optimizer: { enabled: true, runs: 200 },
@@ -29,7 +33,7 @@ const config: HardhatUserConfig = {
         url:
           process.env.MAINNET_RPC_HOST ||
           "https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c",
-        // blockNumber: getBlockNumber(),
+        blockNumber: getBlockNumber(),
       },
     },
   },

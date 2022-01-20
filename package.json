@@ -8,7 +8,7 @@
     "build": "yarn clean && yarn compile",
     "compile": "node ./ensure_versions && yarn hardhat compile",
     "clean": "rm -rf ./cache ./src/artifacts",
-    "test": "yarn compile && NODE_NO_WARNINGS=1 && HARDHAT_VERBOSE=true DEBUG=* yarn jest --runInBand",
+    "test": "yarn compile && NODE_NO_WARNINGS=1 && HARDHAT_VERBOSE=true DEBUG=* BLOCK_NUMBER=14036940 yarn jest --runInBand",
     "test:debug": "yarn compile && NODE_NO_WARNINGS=1 node --inspect-brk=0.0.0.0:9221 ./node_modules/.bin/jest",
     "deploy": "ts-node ./src/deploy/index.ts"
   },
