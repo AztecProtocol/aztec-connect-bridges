@@ -464,7 +464,7 @@ contract ElementBridge is IDefiBridge {
   }
 
   // clean an interaction from the heap
-  // optimised to remove the last interaction for a given expiry but will work in all cases (just at the expense of gas)
+  // optimised to remove the last interaction for the earliest expiry but will work in all cases (just at the expense of gas)
   function popInteraction(
     Interaction storage interaction,
     uint256 interactionNonce
