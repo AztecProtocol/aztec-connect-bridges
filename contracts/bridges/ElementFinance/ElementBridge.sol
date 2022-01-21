@@ -19,6 +19,8 @@ import { AztecTypes } from "../../Types.sol";
 import "hardhat/console.sol";
 
 contract ElementBridge is IDefiBridge {
+
+  // capture the minimum info required to recall a deposit
   struct Interaction {
     address trancheAddress;
     uint64 expiry;
@@ -26,6 +28,7 @@ contract ElementBridge is IDefiBridge {
     bool finalised;
   }
 
+  // minimum info required to execute a deposit
   struct Pool {
     address trancheAddress;
     address poolAddress;
@@ -38,12 +41,16 @@ contract ElementBridge is IDefiBridge {
   // This is constant as long as Tranche does not implement non-constant constructor arguments.
   bytes32 private immutable trancheBytecodeHash; // = 0xf481a073666136ab1f5e93b296e84df58092065256d0db23b2d22b62c68e978d;
 
+  // cache of all of our Defi interactions. keyed on nonce
   mapping(uint256 => Interaction) private interactions;
 
+  // cahce of all pools we are able to interact with
   mapping(uint256 => Pool) private pools;
 
+  // the aztec rollup processor contract
   address public immutable rollupProcessor;
 
+  // the balancer contract
   address private immutable balancerAddress;
 
   constructor(
@@ -58,6 +65,7 @@ contract ElementBridge is IDefiBridge {
     balancerAddress = _balancerVaultAddress;
   }
 
+  // this function allows for the dynamic addition of new asset/expiry combinations as they come online
   function registerConvergentPoolAddress(
     address _convergentPool,
     address _wrappedPosition,
@@ -97,6 +105,7 @@ contract ElementBridge is IDefiBridge {
     bytes32 poolId;
   }
 
+  // verify that a contract has the required function and returns the appropriate data
   function checkContractCall(
     address contractAddress,
     string memory signature,
@@ -109,6 +118,8 @@ contract ElementBridge is IDefiBridge {
     returnData = data;
   }
 
+  // function to validate a pool specification
+  // do the wrapped position address, the pool address and the expiry cross reference with one another
   function checkAndStorePoolSpecification(
     address wrappedPositionAddress,
     uint256 expiry,
@@ -122,7 +133,6 @@ contract ElementBridge is IDefiBridge {
     poolSpec.trancheAddress = deriveTranche(wrappedPositionAddress, expiry);
 
     // get the wrapped position held in the tranche to cross check against that provided
-
     bytes memory returnData = checkContractCall(
       poolSpec.trancheAddress,
       "position()",
@@ -191,6 +201,7 @@ contract ElementBridge is IDefiBridge {
       "ElementBridge: VAULT_ADDRESS_VERIFICATION_FAILED"
     );
 
+    // we store the pool information against a hash of the asset and expiry
     uint256 assetExpiryHash = hashAssetAndExpiry(
       poolSpec.underlyingAsset,
       expiry
@@ -210,6 +221,8 @@ contract ElementBridge is IDefiBridge {
     return uint256(keccak256(abi.encodePacked(asset, expiry)));
   }
 
+  // convert the input asset to the output asset
+  // serves as the 'on ramp' to the interaction
   function convert(
     AztecTypes.AztecAsset memory inputAssetA,
     AztecTypes.AztecAsset memory,
@@ -246,17 +259,21 @@ contract ElementBridge is IDefiBridge {
       "ElementBridge: INTERACTION_ALREADY_EXISTS"
     );
 
+    // operation is asynchronous
     isAsync = true;
+    // retrieve the appropriate pool for this interaction and verify that it exists
     Pool storage pool = pools[
       hashAssetAndExpiry(inputAssetA.erc20Address, auxData)
     ];
     require(pool.trancheAddress != address(0), "ElementBridge: POOL_NOT_FOUND");
 
+    // approve the transfer of tokens to the balancer address
     ERC20(inputAssetA.erc20Address).approve(
       address(balancerAddress),
       totalInputValue
     );
 
+    // execute the swap on balancer
     uint256 principalTokensAmount = IVault(balancerAddress).swap(
       IVault.SingleSwap({
         poolId: pool.poolId,
@@ -275,8 +292,8 @@ contract ElementBridge is IDefiBridge {
       0, // TODO use the auxData to set this, in the short term allow infinite slippage.
       block.timestamp
     );
-    // 3. Record the amount of purchased principal tokens against the interaction nonce for this interaction.
-    // 4. Record the maturity date against the interaction nonce so this async transaction can be finalised at a later date
+    
+    // store the tranche that underpins our interaction, the expiry and the number of received tokens against the nonce
     interactions[interactionNonce] = Interaction(
       pool.trancheAddress,
       auxData,
@@ -284,9 +301,12 @@ contract ElementBridge is IDefiBridge {
       false
     );
 
+    // add the nonce and expiry to our expiry heap
     addNonceAndExpiry(interactionNonce, auxData);
+    // check the heap to see if we can finalise an expired transaction
     (bool expiryAvailable, uint64 expiry, uint256 nonce) = checkNextExpiry();
     if (expiryAvailable) {
+      // another position is available for finalising, inform the rollup contract
       IRollupProcessor(rollupProcessor).processAsyncDeFiInteraction(nonce);
     }
   }
@@ -297,11 +317,14 @@ contract ElementBridge is IDefiBridge {
     override
     returns (bool)
   {
+    // retrieve the interaction given and check if it's ready
     Interaction storage interaction = interactions[interactionNonce];
     require(interaction.expiry != 0, "ElementBridge: UNKNOWN_NONCE");
     return interaction.expiry <= block.timestamp && !interaction.finalised;
   }
 
+  // serves as the 'off ramp' for the transaction
+  // converts the principal tokens back to the underlying asset
   function finalise(
     AztecTypes.AztecAsset calldata,
     AztecTypes.AztecAsset calldata,
@@ -310,6 +333,8 @@ contract ElementBridge is IDefiBridge {
     uint256 interactionNonce,
     uint64
   ) external payable returns (uint256 outputValueA, uint256 outputValueB) {
+
+    // retrieve the interaction and verify it's ready for finalising
     Interaction storage interaction = interactions[interactionNonce];
     require(interaction.expiry != 0, "ElementBridge: UNKNOWN_NONCE");
     require(
@@ -318,24 +343,25 @@ contract ElementBridge is IDefiBridge {
     );
     require(!interaction.finalised, "ElementBridge: ALREADY_FINALISED");
 
+    // convert the tokens back to underlying using the tranche
     outputValueA = ITranche(interaction.trancheAddress).withdrawPrincipal(
       interaction.quantityPT,
       address(this)
     );
-
-    // Check and call RollupContract.processAsyncDefiInteraction(interactionNonce) in convert.
-
-    // In an asnyc defi interaction, the rollup has to call transferFrom() on the token. This is so a bridge can finanlise another bridge.
-    // Therefore to transfer to the rollup, we just need to approve outputValueA for spending by the rollup.
+    // approve the transfer of funds back to the rollup contract
     ERC20(outputAssetA.erc20Address).approve(rollupProcessor, outputValueA);
 
+    // interaction is completed. clean up the expiry heap
     interaction.finalised = true;
     popInteraction(interaction, interactionNonce);
   }
 
+  // the following code uses a combination of a min-heap and hash table data structures to
+  // efficiently manage ongoing expiries
   uint64[] heap;
   mapping(uint64 => uint256[]) expiryToNonce;
 
+  // add an interaction nonce and expiry to the expiry heap
   function addNonceAndExpiry(uint256 nonce, uint64 expiry) internal {
     // get the set of nonces already against this expiry
     uint256[] storage nonces = expiryToNonce[expiry];
@@ -348,6 +374,7 @@ contract ElementBridge is IDefiBridge {
     }
   }
 
+  // move and expiry up through the heap to the correct position
   function siftUp(uint256 index) internal {
     while (index > 0) {
       uint256 parentIndex = index / 2;
@@ -361,6 +388,7 @@ contract ElementBridge is IDefiBridge {
     }
   }
 
+  // add a new expiry to the heap
   function addToHeap(uint64 expiry) internal {
     // standard min-heap insertion
     // push to the end of the heap and sift up.
@@ -378,6 +406,7 @@ contract ElementBridge is IDefiBridge {
     printHeap();
   }
 
+  // remove the root expiry from the heap
   function popFromHeap() internal {
     // if the heap is empty then nothing to do
     if (heap.length == 0) {
@@ -434,6 +463,8 @@ contract ElementBridge is IDefiBridge {
     }
   }
 
+  // clean an interaction from the heap
+  // optimised to remove the last interaction for a given expiry but will work in all cases (just at the expense of gas)
   function popInteraction(
     Interaction storage interaction,
     uint256 interactionNonce
@@ -459,6 +490,7 @@ contract ElementBridge is IDefiBridge {
     console.log("Popped interaction: %s", interactionNonce);
   }
 
+  // will remove an expiry from the min-heap
   function removeExpiryFromHeap(uint64 expiry) internal {
     uint256 index = 0;
     while (index < heap.length && heap[index] != expiry) {
@@ -472,6 +504,7 @@ contract ElementBridge is IDefiBridge {
     popFromHeap();
   }
 
+  // fast lookup to determine if we have an interaction that can be finalised
   function checkNextExpiry()
     internal
     returns (
