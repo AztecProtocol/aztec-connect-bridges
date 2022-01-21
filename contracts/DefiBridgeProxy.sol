@@ -6,14 +6,17 @@ pragma experimental ABIEncoderV2;
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IDefiBridge } from "./interfaces/IDefiBridge.sol";
 import { AztecTypes } from "./Types.sol";
+import { IERC20 } from "./interfaces/IERC20Permit.sol";
 
-import 'hardhat/console.sol';
+import "hardhat/console.sol";
 
 contract DefiBridgeProxy {
   using SafeMath for uint256;
 
   bytes4 private constant BALANCE_OF_SELECTOR = 0x70a08231; // bytes4(keccak256('balanceOf(address)'));
   bytes4 private constant TRANSFER_SELECTOR = 0xa9059cbb; // bytes4(keccak256('transfer(address,uint256)'));
+  // bytes4 private constant TRANSFER_FROM_SELECTOR = 0xa9059cbb; // bytes4(keccak256('transferFrom(address,uint256)'));
+
   bytes4 private constant DEPOSIT_SELECTOR = 0xb6b55f25; // bytes4(keccak256('deposit(uint256)'));
   bytes4 private constant WITHDRAW_SELECTOR = 0x2e1a7d4d; // bytes4(keccak256('withdraw(uint256)'));
 
@@ -23,8 +26,6 @@ contract DefiBridgeProxy {
     uint256 outputValueB,
     bool isAsync
   );
-
-  receive() external payable {}
 
   function getBalance(address assetAddress)
     internal
@@ -160,77 +161,5 @@ contract DefiBridgeProxy {
     );
   }
 
-  function canFinalise(address bridgeAddress, uint256 interactionNonce)
-    external
-    view
-    returns (bool ready)
-  {
-    IDefiBridge bridgeContract = IDefiBridge(bridgeAddress);
-    (ready) = bridgeContract.canFinalise(interactionNonce);
-  }
-
-  function finalise(
-    address bridgeAddress,
-    AztecTypes.AztecAsset calldata inputAssetA,
-    AztecTypes.AztecAsset calldata inputAssetB,
-    AztecTypes.AztecAsset calldata outputAssetA,
-    AztecTypes.AztecAsset calldata outputAssetB,
-    uint256 interactionNonce,
-    uint256 auxInputData // (auxData)
-  ) external returns (uint256 outputValueA, uint256 outputValueB) {
-    uint256 tempValueA;
-    uint256 tempValueB;
-    if (outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL) {
-      tempValueA = getBalance(outputAssetA.erc20Address);
-    }
-
-    if (outputAssetB.assetType != AztecTypes.AztecAssetType.VIRTUAL) {
-      tempValueB = getBalance(outputAssetB.erc20Address);
-    }
-
-    IDefiBridge bridgeContract = IDefiBridge(bridgeAddress);
-
-    require(
-      bridgeContract.canFinalise(interactionNonce),
-      "DefiBridgeProxy: NOT_READY"
-    );
-
-    (outputValueA, outputValueB) = bridgeContract.finalise(
-      inputAssetA,
-      inputAssetB,
-      outputAssetA,
-      outputAssetB,
-      interactionNonce,
-      uint64(auxInputData)
-    );
-
-    if (
-      outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL &&
-      outputAssetA.assetType != AztecTypes.AztecAssetType.NOT_USED
-    ) {
-      require(
-        outputValueA ==
-          SafeMath.sub(getBalance(outputAssetA.erc20Address), tempValueA),
-        "DefiBridgeProxy: INCORRECT_ASSET_VALUE"
-      );
-    }
-
-    if (
-      outputAssetB.assetType != AztecTypes.AztecAssetType.VIRTUAL &&
-      outputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED
-    ) {
-      require(
-        outputValueB ==
-          SafeMath.sub(getBalance(outputAssetB.erc20Address), tempValueB),
-        "DefiBridgeProxy: INCORRECT_ASSET_VALUE"
-      );
-    }
-
-    emit AztecBridgeInteraction(
-      bridgeAddress,
-      outputValueA,
-      outputValueB,
-      false
-    );
-  }
+  
 }

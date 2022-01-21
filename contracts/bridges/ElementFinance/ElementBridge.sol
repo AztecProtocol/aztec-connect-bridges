@@ -10,6 +10,7 @@ import { IPool } from "../../interfaces/IPool.sol";
 import { ITranche } from "../../interfaces/ITranche.sol";
 import { IERC20Permit, IERC20 } from "../../interfaces/IERC20Permit.sol";
 import { IWrappedPosition } from "../../interfaces/IWrappedPosition.sol";
+import { IRollupProcessor } from "../../interfaces/IRollupProcessor.sol";
 
 import { IDefiBridge } from "../../interfaces/IDefiBridge.sol";
 
@@ -121,6 +122,7 @@ contract ElementBridge is IDefiBridge {
     poolSpec.trancheAddress = deriveTranche(wrappedPositionAddress, expiry);
 
     // get the wrapped position held in the tranche to cross check against that provided
+
     bytes memory returnData = checkContractCall(
       poolSpec.trancheAddress,
       "position()",
@@ -244,25 +246,11 @@ contract ElementBridge is IDefiBridge {
       "ElementBridge: INTERACTION_ALREADY_EXISTS"
     );
 
-    // check expired
-
-    // ### ASYNC BRIDGE LOGIC
-
     isAsync = true;
-
-    // outputValueA and outputValueB are already initialised as 0 so no need to set.
-    // 1. If there are multiple Element pools for the input asset, the DBC should use the value in the auxData to pick the correct pool expiry.
-
-    // auxData should be a unix timestamp (seconds since 01 Jan 1970)
     Pool storage pool = pools[
       hashAssetAndExpiry(inputAssetA.erc20Address, auxData)
     ];
     require(pool.trancheAddress != address(0), "ElementBridge: POOL_NOT_FOUND");
-    // 2. Will purchase totalInputValue principal tokens via the Element AMM with the given input asset ERC20
-
-    // Does Balancer require us to approve the tokens being swapped?
-    // TODO doesn't work for ETH ???
-    // Should we minus a fee here for finalising the bridge at a later date ???
 
     ERC20(inputAssetA.erc20Address).approve(
       address(balancerAddress),
@@ -295,6 +283,12 @@ contract ElementBridge is IDefiBridge {
       principalTokensAmount,
       false
     );
+
+    addNonceAndExpiry(interactionNonce, auxData);
+    (bool expiryAvailable, uint64 expiry, uint256 nonce) = checkNextExpiry();
+    if (expiryAvailable) {
+      IRollupProcessor(rollupProcessor).processAsyncDeFiInteraction(nonce);
+    }
   }
 
   function canFinalise(uint256 interactionNonce)
@@ -328,15 +322,178 @@ contract ElementBridge is IDefiBridge {
       interaction.quantityPT,
       address(this)
     );
-    // 1. Call RollupContract.processAsyncDefiInteraction(interactionNonce) with an EOA
 
-    // 2. Incentivise a miner /keeper to call RollupContract.processAsyncDefiInteraction(interactionNonce)
-
-    // 3. Check and call RollupContract.processAsyncDefiInteraction(interactionNonce) in convert.
+    // Check and call RollupContract.processAsyncDefiInteraction(interactionNonce) in convert.
 
     // In an asnyc defi interaction, the rollup has to call transferFrom() on the token. This is so a bridge can finanlise another bridge.
     // Therefore to transfer to the rollup, we just need to approve outputValueA for spending by the rollup.
     ERC20(outputAssetA.erc20Address).approve(rollupProcessor, outputValueA);
+
     interaction.finalised = true;
+    popInteraction(interaction, interactionNonce);
+  }
+
+  uint64[] heap;
+  mapping(uint64 => uint256[]) expiryToNonce;
+
+  function addNonceAndExpiry(uint256 nonce, uint64 expiry) internal {
+    // get the set of nonces already against this expiry
+    uint256[] storage nonces = expiryToNonce[expiry];
+    nonces.push(nonce);
+    console.log("Added nonce %s to expiry %s", nonce, expiry);
+    // is this the first time this expiry has been requested?
+    // if so then add it to our expiry heap
+    if (nonces.length == 1) {
+      addToHeap(expiry);
+    }
+  }
+
+  function siftUp(uint256 index) internal {
+    while (index > 0) {
+      uint256 parentIndex = index / 2;
+      if (heap[parentIndex] <= heap[index]) {
+        break;
+      }
+      uint64 temp = heap[index];
+      heap[index] = heap[parentIndex]; // update
+      heap[parentIndex] = temp; // update
+      index = index / 2;
+    }
+  }
+
+  function addToHeap(uint64 expiry) internal {
+    // standard min-heap insertion
+    // push to the end of the heap and sift up.
+    // there is a high probability that the expiry being added will remain where it is
+    // so this operation will end up being O(1)
+    heap.push(expiry); // write
+    uint256 index = heap.length - 1;
+
+    // assuming 5k gas per update, this loop will use ~10k gas per iteration plus the logic
+    // if we add in 100k gas for variable heap updates, we can have 1024 active different expiries
+    // TODO test this
+
+    siftUp(index);
+    console.log("Added expiry %s to heap", expiry);
+    printHeap();
+  }
+
+  function popFromHeap() internal {
+    // if the heap is empty then nothing to do
+    if (heap.length == 0) {
+      return;
+    }
+    // slightly modified algorithm for popping from min-heap
+    // writes to storage are expensive so we want to do as few as possible
+    // read the value in the last position and shrink the array by 1
+    uint64 last = heap[heap.length - 1];
+    heap.pop();
+    // now sift down but no need to swap parent and child nodes
+    // we just write the child value into the parent each time
+    // then once we no longer have any smaller children, we write the 'last' value into place
+    // requires a total of O(logN) updates
+    uint256 index = 0;
+    while (index < heap.length) {
+      // get the indices of the child values
+      uint256 leftChildIndex = (index * 2) + 1;
+      uint256 rightChildIndex = leftChildIndex + 1;
+      uint256 swapIndex = index;
+      uint64 smallestValue = last;
+
+      // identify the smallest child, first check the left
+      if (
+        leftChildIndex < heap.length && heap[leftChildIndex] < smallestValue
+      ) {
+        swapIndex = leftChildIndex;
+        smallestValue = heap[leftChildIndex];
+      }
+      // then check the right
+      if (
+        rightChildIndex < heap.length && heap[rightChildIndex] < smallestValue
+      ) {
+        swapIndex = rightChildIndex;
+      }
+      // if neither child was smaller then nothing more to do
+      if (swapIndex == index) {
+        heap[index] = smallestValue;
+        break;
+      }
+      // swap with the smallest child
+      heap[index] = heap[swapIndex];
+      index = swapIndex;
+    }
+    console.log("Popped heap");
+    printHeap();
+  }
+
+  function printHeap() internal {
+    uint256 index = 0;
+    while (index < heap.length) {
+      console.log("Heap at index %s: %s", index, heap[index]);
+      index++;
+    }
+  }
+
+  function popInteraction(
+    Interaction storage interaction,
+    uint256 interactionNonce
+  ) internal {
+    uint256[] storage nonces = expiryToNonce[interaction.expiry];
+    if (nonces.length == 0) {
+      return;
+    }
+    uint256 index = nonces.length - 1;
+    while (index > 0 && nonces[index] != interactionNonce) {
+      --index;
+    }
+    if (nonces[index] != interactionNonce) {
+      return;
+    }
+    nonces[index] = nonces[nonces.length - 1];
+    nonces.pop();
+
+    // if there are no more nonces left for this expiry then remove it from the heap
+    if (nonces.length == 0) {
+      removeExpiryFromHeap(interaction.expiry);
+    }
+    console.log("Popped interaction: %s", interactionNonce);
+  }
+
+  function removeExpiryFromHeap(uint64 expiry) internal {
+    uint256 index = 0;
+    while (index < heap.length && heap[index] != expiry) {
+      ++index;
+    }
+    if (index == heap.length) {
+      return;
+    }
+    heap[index] = 0;
+    siftUp(index);
+    popFromHeap();
+  }
+
+  function checkNextExpiry()
+    internal
+    returns (
+      bool expiryAvailable,
+      uint64 expiry,
+      uint256 nonce
+    )
+  {
+    // do we have any expiries and if so is the earliest expiry now expired
+    if (heap.length != 0 && heap[0] <= block.timestamp) {
+      // we have some expired interactions
+      uint256[] storage nonces = expiryToNonce[heap[0]];
+      // it shouldn't be possible for the length of this to be 0 but check just in case
+      if (nonces.length == 0) {
+        // we should pop the heap as it is clearly has the wrong expiry at the root
+        popFromHeap();
+      } else {
+        // grab the nonce at the end
+        nonce = nonces[nonces.length - 1];
+        expiryAvailable = true;
+        expiry = heap[0];
+      }
+    }
   }
 }

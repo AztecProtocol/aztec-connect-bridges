@@ -1,7 +1,7 @@
 import { Provider, Web3Provider } from "@ethersproject/providers";
 import { Contract, ContractFactory, ethers, Signer } from "ethers";
 
-import abi from "./artifacts/contracts/DefiBridgeProxy.sol/DefiBridgeProxy.json";
+import abi from "./artifacts/contracts/MockRollupProcessor.sol/MockRollupProcessor.json";
 
 import ISwapRouter from "./artifacts/contracts/interfaces/ISwapRouter.sol/ISwapRouter.json";
 import WETH from "./artifacts/contracts/interfaces/IWETH.sol/WETH.json";
@@ -40,7 +40,7 @@ export interface MyToken {
   erc20Address: string;
 }
 
-export class DefiBridgeProxy {
+export class RollupProcessor {
   private contract: Contract;
   private uniswapContract: Contract;
   private WETH9: string;
@@ -56,10 +56,10 @@ export class DefiBridgeProxy {
     );
   }
 
-  static async deploy(signer: Signer) {
+  static async deploy(signer: Signer, args: any[]) {
     const factory = new ContractFactory(abi.abi, abi.bytecode, signer);
-    const contract = await factory.deploy();
-    return new DefiBridgeProxy(contract.address, signer);
+    const contract = await factory.deploy(...args);
+    return new RollupProcessor(contract.address, signer);
   }
 
   async deployBridge(signer: Signer, bridgeAbi: any, args: any[]) {
