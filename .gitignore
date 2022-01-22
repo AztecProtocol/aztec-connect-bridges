@@ -4,6 +4,7 @@
 .yarn
 dest*
 dist
+hardhat.config.ts
 node_modules
 .terraform
 yarn.lock

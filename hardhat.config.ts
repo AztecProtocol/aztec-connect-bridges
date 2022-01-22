@@ -33,6 +33,7 @@ const config: HardhatUserConfig = {
       gasPrice: 10,
       hardfork: 'berlin',
       forking: {
+        enabled: true,
         url: `https://eth-mainnet.alchemyapi.io/v2/c6mJUMYwFkgKswQHD-PpOdKltefxsx8c`
       }
     },
