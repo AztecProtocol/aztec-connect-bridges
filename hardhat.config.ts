@@ -4,7 +4,10 @@ import '@nomiclabs/hardhat-ethers';
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: '0.6.10',
+    compilers: [
+      { version: "0.6.6"},
+      { version: "0.7.0"}
+    ],
     settings: {
       evmVersion: 'berlin',
       optimizer: { enabled: true, runs: 200 },
