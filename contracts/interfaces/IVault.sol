@@ -6,6 +6,8 @@ interface IAsset {
     // solhint-disable-previous-line no-empty-blocks
 }
 
+enum PoolSpecialization { GENERAL, MINIMAL_SWAP_INFO, TWO_TOKEN }
+
 interface IVault {
     enum SwapKind { GIVEN_IN, GIVEN_OUT }
 /**
@@ -70,4 +72,7 @@ interface IVault {
         address payable recipient;
         bool toInternalBalance;
     }
+
+    // will revert if poolId is not a registered pool
+    function getPool(bytes32 poolId) external view returns (address, PoolSpecialization);
 }

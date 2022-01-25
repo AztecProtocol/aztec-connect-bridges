@@ -14,7 +14,8 @@
     "experimentalDecorators": true,
     "inlineSourceMap": true,
     "declarationMap": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "suppressImplicitAnyIndexErrors": true
   },
   "include": ["src"],
   "files": ["./hardhat.config.ts"]

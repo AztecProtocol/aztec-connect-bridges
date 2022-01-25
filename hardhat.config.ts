@@ -3,7 +3,7 @@ import "@nomiclabs/hardhat-waffle";
 import "@nomiclabs/hardhat-ethers";
 
 const getBlockNumber = () => {
-  let blockNumber = 14036938;
+  let blockNumber = 14000000;
   if (process.env.BLOCK_NUMBER) {
     blockNumber = +process.env.BLOCK_NUMBER;
   }

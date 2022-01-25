@@ -10,7 +10,7 @@ import { IERC20 } from "./interfaces/IERC20Permit.sol";
 
 import "hardhat/console.sol";
 
-contract DefiBridgeProxy {
+contract DefiBridgeProxy{
   using SafeMath for uint256;
 
   bytes4 private constant BALANCE_OF_SELECTOR = 0x70a08231; // bytes4(keccak256('balanceOf(address)'));
@@ -56,7 +56,7 @@ contract DefiBridgeProxy {
     address to,
     uint256 amount
   ) internal {
-    assembly {
+    assembly {      
       let ptr := mload(0x40)
       mstore(ptr, TRANSFER_SELECTOR)
       mstore(add(ptr, 0x4), to)
@@ -95,10 +95,8 @@ contract DefiBridgeProxy {
       // Transfer totalInputValue to the bridge contract if erc20. ETH is sent on call to convert.
       transferTokens(inputAssetB.erc20Address, bridgeAddress, totalInputValue);
     }
-
     uint256 tempValueA;
     uint256 tempValueB;
-
     if (outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL) {
       tempValueA = getBalance(outputAssetA.erc20Address);
     }
@@ -123,6 +121,7 @@ contract DefiBridgeProxy {
       interactionNonce,
       uint64(auxInputData)
     );
+
 
     if (
       outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL &&
@@ -159,7 +158,5 @@ contract DefiBridgeProxy {
       outputValueB,
       isAsync
     );
-  }
-
-  
+  }  
 }
