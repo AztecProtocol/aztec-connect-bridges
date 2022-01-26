@@ -8,7 +8,6 @@ import { IDefiBridge } from "./interfaces/IDefiBridge.sol";
 import { DefiBridgeProxy } from "./DefiBridgeProxy.sol";
 import { AztecTypes } from "./Types.sol";
 import { IERC20 } from "./interfaces/IERC20Permit.sol";
-// import { IRollupProcessor } from "./interfaces/IRollupProcessor.sol";
 
 import "hardhat/console.sol";
 
@@ -17,7 +16,6 @@ contract MockRollupProcessor {
 
   struct DefiInteraction {
     address bridgeAddress;
-
     AztecTypes.AztecAsset inputAssetA;
     AztecTypes.AztecAsset inputAssetB;
     AztecTypes.AztecAsset outputAssetA;
@@ -28,7 +26,7 @@ contract MockRollupProcessor {
   }
 
   bytes4 private constant TRANSFER_FROM_SELECTOR = 0x23b872dd; // bytes4(keccak256('transferFrom(address,address,uint256)'));
-  mapping(address => mapping(uint256 => uint256)) ethPayments;
+  mapping(uint256 => uint256) ethPayments;
   // We need to cap the amount of gas sent to the DeFi bridge contract for two reasons.
   // 1: To provide consistency to rollup providers around costs.
   // 2: To prevent griefing attacks where a bridge consumes all our gas.
@@ -43,9 +41,9 @@ contract MockRollupProcessor {
     bool isAsync
   );
 
-  // function receiveEthFromBridge(uint256 interactionNonce) external payable {
-  //   ethPayments[interactionNonce] += msg.value;
-  // }
+  function receiveEthFromBridge(uint256 interactionNonce) external payable {
+    ethPayments[interactionNonce] += msg.value;
+  }
 
   mapping(uint256 => DefiInteraction) private defiInteractions;
 
@@ -60,11 +58,11 @@ contract MockRollupProcessor {
     uint256 interactionNonce
   ) internal {
     if (asset.assetType == AztecTypes.AztecAssetType.ETH) {
-      // require(
-      //   outputValue == ethPayments[interactionNonce],
-      //   "Rollup Processor: INSUFFICEINT_ETH_PAYMENT"
-      // );
-      // ethPayments[interactionNonce] = 0;
+      require(
+        outputValue == ethPayments[interactionNonce],
+        "Rollup Processor: INSUFFICEINT_ETH_PAYMENT"
+      );
+      ethPayments[interactionNonce] = 0;
     } else if (
       asset.assetType == AztecTypes.AztecAssetType.ERC20 && outputValue > 0
     ) {
@@ -193,18 +191,21 @@ contract MockRollupProcessor {
     );
     (bool success, bytes memory result) = address(bridgeProxy).delegatecall(
       abi.encodeWithSelector(
-        DEFI_BRIDGE_PROXY_CONVERT_SELECTOR, 
-        bridgeAddress, 
-        inputAssetA, 
-        inputAssetB, 
-        outputAssetA, 
-        outputAssetB, 
-        totalInputValue, 
-        interactionNonce, 
+        DEFI_BRIDGE_PROXY_CONVERT_SELECTOR,
+        bridgeAddress,
+        inputAssetA,
+        inputAssetB,
+        outputAssetA,
+        outputAssetB,
+        totalInputValue,
+        interactionNonce,
         uint64(auxInputData)
       )
     );
-    (uint256 outputValueA, uint256 outputValueB, bool isAsync) = abi.decode(result, (uint256, uint256, bool));
+    (outputValueA, outputValueB, isAsync) = abi.decode(
+      result,
+      (uint256, uint256, bool)
+    );
 
     emit AztecBridgeInteraction(
       bridgeAddress,
