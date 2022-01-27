@@ -8,7 +8,7 @@ import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IDefiBridge } from "../../interfaces/IDefiBridge.sol";
 import { IERC20Detailed, IERC20 } from "./IERC20.sol";
 
-import { IAaveAddressProvider } from "./IAaveAddressProvider.sol";
+import { ILendingPoolAddressesProvider } from "./ILendingPoolAddressesProvider.sol";
 
 import { WadRayMath } from "./WadRayMath.sol";
 
@@ -94,21 +94,18 @@ contract AaveLendingBridge is IDefiBridge {
   address public immutable rollupProcessor;
   address public weth;
 
-  IAaveAddressProvider addressesProvider;
+  ILendingPoolAddressesProvider addressesProvider;
 
   mapping(address => address) underlyingToZkAToken;
 
   constructor(address _rollupProcessor, address _addressesProvider) public {
     rollupProcessor = _rollupProcessor;
     // needed in case AAVE governance changes the lending pool address
-    addressesProvider = IAaveAddressProvider(_addressesProvider);
+    addressesProvider = ILendingPoolAddressesProvider(_addressesProvider);
   }
 
   function setUnderlyingToZkAToken(address underlyingAsset) external {
-    console.log("here", underlyingAsset);
-
-    IPool pool = IPool(addressesProvider.getPool());
-    console.log("here", underlyingAsset);
+    IPool pool = IPool(addressesProvider.getLendingPool());
 
     IERC20Detailed aToken = IERC20Detailed(
       pool.getReserveData(underlyingAsset).aTokenAddress
@@ -172,7 +169,7 @@ contract AaveLendingBridge is IDefiBridge {
     internal
     returns (uint256)
   {
-    IPool pool = IPool(addressesProvider.getPool());
+    IPool pool = IPool(addressesProvider.getLendingPool());
     IScaledBalanceToken aToken = IScaledBalanceToken(
       pool.getReserveData(inputAsset).aTokenAddress
     );
@@ -213,7 +210,7 @@ contract AaveLendingBridge is IDefiBridge {
     internal
     returns (uint256)
   {
-    IPool pool = IPool(addressesProvider.getPool());
+    IPool pool = IPool(addressesProvider.getLendingPool());
     IERC20 aToken = IERC20(pool.getReserveData(outputAsset).aTokenAddress);
     // 1. Compute the amount from the scaledAmount supplied
 
