@@ -28,13 +28,15 @@
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "@uniswap/v3-periphery": "^1.4.0",
     "dotenv": "^8.2.0",
-    "ethers": "5.0.29",
+    "ethers": "5.4.0",
     "typescript": "^3.5.3"
   },
   "devDependencies": {
-    "@nomiclabs/hardhat-ethers": "2.0.1",
-    "@nomiclabs/hardhat-waffle": "^2.0.0",
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "*",
+    "@typechain/ethers-v5": "^9.0.0",
+    "@typechain/hardhat": "^4.0.0",
     "@types/jest": "^26.0.15",
     "@types/mocha": "^9.0.0",
     "@typescript-eslint/eslint-plugin": "^4.1.1",
@@ -51,10 +53,13 @@
     "prettier": "^2.2.1",
     "prettier-plugin-solidity": "^1.0.0-beta.3",
     "ts-jest": "^27.0.3",
-    "ts-node": "^8.9.1"
+    "ts-node": "^8.9.1",
+    "typechain": "^7.0.0"
   },
   "resolutions": {
-    "ethers": "5.0.29",
-    "@ethersproject/abstract-signer": "5.0.13"
+    "ethers": "5.4.0",
+    "@ethersproject/providers": "5.4.0",
+    "@ethersproject/contracts": "5.4.0",
+    "@ethersproject/abi": "5.4.0"
   }
 }

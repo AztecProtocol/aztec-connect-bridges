@@ -1,9 +1,7 @@
 {
   "compilerOptions": {
     "target": "esnext",
-    "moduleResolution": "node",
-    "lib": ["dom", "esnext", "es2017.object"],
-    "outDir": "dest",
+    "outDir": "dist",
     "module": "commonjs",
     "strict": true,
     "noImplicitAny": true,
@@ -17,6 +15,6 @@
     "resolveJsonModule": true,
     "suppressImplicitAnyIndexErrors": true
   },
-  "include": ["src"],
+  "include": ["./src", "./contracts/bridges", "./typechain-types"],
   "files": ["./hardhat.config.ts"]
 }

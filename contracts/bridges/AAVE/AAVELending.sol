@@ -96,7 +96,7 @@ contract AaveLendingBridge is IDefiBridge {
 
   ILendingPoolAddressesProvider addressesProvider;
 
-  mapping(address => address) underlyingToZkAToken;
+  mapping(address => address) public underlyingToZkAToken;
 
   constructor(address _rollupProcessor, address _addressesProvider) public {
     rollupProcessor = _rollupProcessor;

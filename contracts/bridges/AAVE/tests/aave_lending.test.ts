@@ -1,6 +1,5 @@
 import { ethers } from "hardhat";
 import DefiBridgeProxy from "../../../../src/artifacts/contracts/DefiBridgeProxy.sol/DefiBridgeProxy.json";
-import AAVELendingBridge from "../../../../src/artifacts/contracts/bridges/AAVE/AAVELending.sol/AaveLendingBridge.json";
 import { Contract, Signer, ContractFactory } from "ethers";
 import {
   TestToken,
@@ -8,9 +7,9 @@ import {
   AztecAsset,
   RollupProcessor,
 } from "../../../../src/rollup_processor";
-import { AaveBridge } from "../aave_bridge";
 
-import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
+import type { AaveLendingBridge } from "../../../../typechain-types";
+
 import { randomBytes } from "crypto";
 
 const fixEthersStackTrace = (err: Error) => {
@@ -27,8 +26,7 @@ describe("defi bridge", function () {
   const aaveAddressProvider = "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5";
 
   let signer: Signer;
-  let aaveBridge: AaveBridge;
-  let aaveBridgeContract: Contract;
+  let aaveBridgeContract: AaveLendingBridge;
 
   const randomAddress = () => randomBytes(20).toString("hex");
 
@@ -48,22 +46,25 @@ describe("defi bridge", function () {
 
   beforeEach(async () => {
     // deploy the bridge and pass in any args
-    const args = [rollupContract.address, aaveAddressProvider];
-    aaveBridge = await AaveBridge.deploy(signer, args);
-    aaveBridgeContract = new Contract(
-      aaveBridge.address,
-      AAVELendingBridge.abi,
-      signer
+    const aaveFactory = await ethers.getContractFactory("AaveLendingBridge");
+    aaveBridgeContract = await aaveFactory.deploy(
+      rollupContract.address,
+      aaveAddressProvider
     );
+    await aaveBridgeContract.deployed();
   });
 
   it("should allow us to configure a new zkAToken ", async () => {
     const func = async () => {
-      const txResponse = await aaveBridge
-        .setUnderlyingToZkAToken(signer, daiAddress)
+      const txResponse = await aaveBridgeContract
+        .setUnderlyingToZkAToken(daiAddress)
         .catch(fixEthersStackTrace);
       await txResponse.wait();
     };
+
     await expect(func()).resolves.toBe(undefined);
+    const zkAToken = await aaveBridgeContract.underlyingToZkAToken(daiAddress);
+
+    expect(zkAToken);
   });
 });

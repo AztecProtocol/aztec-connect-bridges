@@ -1,6 +1,6 @@
-import { HardhatUserConfig } from "hardhat/config";
 import "@nomiclabs/hardhat-waffle";
-import "@nomiclabs/hardhat-ethers";
+import "@typechain/hardhat";
+import { HardhatUserConfig } from "hardhat/config";
 
 const getBlockNumber = () => {
   let blockNumber = 14000000;
@@ -21,6 +21,9 @@ const config: HardhatUserConfig = {
       evmVersion: "london",
       optimizer: { enabled: true, runs: 200 },
     },
+  },
+  typechain: {
+    target: "ethers-v5",
   },
   networks: {
     ganache: {

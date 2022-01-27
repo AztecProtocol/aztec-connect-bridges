@@ -13,3 +13,4 @@ yarn.lock
 .next
 cache
 src/artifacts
+typechain-types
