@@ -6,6 +6,8 @@ import abi from "./artifacts/contracts/MockRollupProcessor.sol/MockRollupProcess
 import ISwapRouter from "./artifacts/contracts/interfaces/ISwapRouter.sol/ISwapRouter.json";
 import WETH from "./artifacts/contracts/interfaces/IWETH.sol/WETH.json";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
+import { Uniswap } from "./uniswap";
+import { Curve } from "./curve";
 
 const fixEthersStackTrace = (err: Error) => {
   err.stack! += new Error().stack;
@@ -58,7 +60,7 @@ export class RollupProcessor {
       signer
     );
 
-    this.wethContract = new Contract(this.WETH9, WETH.abi, signer); 
+    this.wethContract = new Contract(this.WETH9, WETH.abi, signer);
   }
 
   static async deploy(signer: Signer, args: any[]) {
@@ -155,65 +157,33 @@ export class RollupProcessor {
   }
 
   async getTokenBalance(address: string, signer: Signer) {
-    const tokenContract = new Contract(
-      address,
-      ERC20.abi,
-      signer
-    );
+    const tokenContract = new Contract(address, ERC20.abi, signer);
     const currentBalance = await tokenContract.balanceOf(this.address);
     return currentBalance.toBigInt();
   }
 
-  async preFundContractWithTokens(
+  async preFundContractWithToken(
     signer: Signer,
-    tokens: TestToken[],
+    token: TestToken,
     to?: string
   ) {
-      
-    const amount = 1n * 10n ** 18n;
-    const balance = await this.getWethBalance();
-    if (balance < amount) {
-      console.log(`Depositing ${amount} of WETH`);      
-      const depositTx = await this.wethContract.deposit({ value: amount });
-      await depositTx.wait();
-      const newBalance = await this.getWethBalance();
+    const amount = 1n * 10n ** 21n;
+
+    if (
+      token.erc20Address.toLowerCase() ===
+      this.wethContract.address.toLowerCase()
+    ) {
+      return;
     }
 
-    const amountInMaximum = 1n * 10n ** 18n;
-
-    for (const token of tokens) {
-      if (token.erc20Address.toLowerCase() === this.wethContract.address.toLowerCase()) {
-        continue;
-      }
-      const params = {
-        tokenIn: this.WETH9,
-        tokenOut: token.erc20Address,
-        fee: 3000n,
-        recipient: to ?? this.address,
-        deadline: `0x${BigInt(Date.now() + 36000000).toString(16)}`,
-        amountOut: token.amount,
-        amountInMaximum: amountInMaximum,
-        sqrtPriceLimitX96: 0n,
-      };
-
-      console.log(
-        `Funding ${this.address} with ${token.amount} of ${token.erc20Address}, name: ${token.name}`
-      );
-
-      const approveWethTx = await this.wethContract.approve(
-        this.uniswapContract.address,
-        params.amountInMaximum
-      );
-      await approveWethTx.wait();
-
-      const tempContract = await this.uniswapContract.connect(signer);
-
-      const swapTx = await tempContract
-        .exactOutputSingle(params)
-        .catch(fixEthersStackTrace);
-      await swapTx.wait();
-
-      console.log(`After swap, contract now has ${await this.getWethBalance()} WETH and ${await this.getTokenBalance(token.erc20Address, signer)} ${token.name}`);
-    }
+    const swapper = new Curve(signer);
+    await swapper.init();
+    await swapper.swap(to ?? this.address, token, amount);
+    console.log(
+      `After swap, contract now has ${await this.getWethBalance()} WETH and ${await this.getTokenBalance(
+        token.erc20Address,
+        signer
+      )} ${token.name}`
+    );
   }
 }
