@@ -54,17 +54,26 @@ describe("defi bridge", function () {
     await aaveBridgeContract.deployed();
   });
 
-  it("should allow us to configure a new zkAToken ", async () => {
-    const func = async () => {
-      const txResponse = await aaveBridgeContract
-        .setUnderlyingToZkAToken(daiAddress)
-        .catch(fixEthersStackTrace);
-      await txResponse.wait();
-    };
+  it("should allow us to configure a new underlying to zkAToken mapping", async () => {
+    const txResponse = await aaveBridgeContract
+      .setUnderlyingToZkAToken(daiAddress)
+      .catch(fixEthersStackTrace);
+    await txResponse.wait();
 
-    await expect(func()).resolves.toBe(undefined);
     const zkAToken = await aaveBridgeContract.underlyingToZkAToken(daiAddress);
+    expect(zkAToken).toBeDefined;
+  });
 
-    expect(zkAToken);
+  it("should not allow us to configure a new zkAToken if the underlying exists ", async () => {
+    const addDai = async () => {
+      return await aaveBridgeContract.setUnderlyingToZkAToken(daiAddress);
+    };
+    const txResponse = await addDai();
+    await txResponse.wait();
+    const zkAToken = await aaveBridgeContract.underlyingToZkAToken(daiAddress);
+    expect(zkAToken).toBeDefined;
+    await expect(addDai()).rejects.toThrow("AaveLendingBridge: ZK_TOKEN_SET");
+    const zkAToken2 = await aaveBridgeContract.underlyingToZkAToken(daiAddress);
+    expect(zkAToken).toBe(zkAToken2);
   });
 });
