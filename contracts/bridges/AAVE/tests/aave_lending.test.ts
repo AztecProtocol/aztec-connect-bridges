@@ -78,7 +78,7 @@ describe("defi bridge", function () {
     expect(zkAToken).toBe(zkAToken2);
   });
 
-  it("should correctly mint zkATokens and send them back to the rollup when convery is called with the underlying asset", async () => {
+  it("should correctly mint zkATokens and send them back to the rollup when convert is called with the underlying asset", async () => {
     const addDai = async () => {
       return await aaveBridgeContract.setUnderlyingToZkAToken(daiAddress);
     };
@@ -101,16 +101,14 @@ describe("defi bridge", function () {
 
     const quantityOfDaiToDeposit = 1n * 10n ** 21n;
     const interactionNonce = 1n;
-    // get 1 DAI into the rollup contract
-    const requiredTokens = [
-      {
-        erc20Address: daiAddress,
-        amount: quantityOfDaiToDeposit,
-      } as TestToken,
-    ];
+    // get  DAI into the rollup contract
 
-    await rollupContract.preFundContractWithTokens(signer, requiredTokens);
-    const provider = ethers.getDefaultProvider();
+    await rollupContract.preFundContractWithToken(signer, {
+      erc20Address: daiAddress,
+      amount: quantityOfDaiToDeposit,
+      name: "DAI",
+    });
+
     const DAIContract = await ethers.getContractAt("ERC20", daiAddress, signer);
     const aDAIContract = await ethers.getContractAt(
       "ERC20",
@@ -165,9 +163,9 @@ describe("defi bridge", function () {
     expect(before.rollupContract.DAI).toBe(quantityOfDaiToDeposit);
     expect(before.rollupContract.zkAToken).toBe(0n);
     expect(before.bridgeContract.aToken).toBe(0n);
-
     expect(after.rollupContract.DAI).toBe(0n);
-    expect(after.rollupContract.zkAToken).toBe(100n);
     expect(after.bridgeContract.aToken).toBe(quantityOfDaiToDeposit);
+
+    expect(after.rollupContract.zkAToken).toBe(940034212570988344321n);
   });
 });

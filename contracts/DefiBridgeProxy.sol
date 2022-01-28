@@ -123,7 +123,6 @@ contract DefiBridgeProxy {
       bool isAsync
     )
   {
-    console.log("here", totalInputValue);
     if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
       // Transfer totalInputValue to the bridge contract if erc20. ETH is sent on call to convert.
       TokenTransfers.safeTransferTo(

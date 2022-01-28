@@ -1,3 +1,100 @@
+# Contributing a bridge
+
+Developing a bridge is permisionless, simply follow the steps below to get started.
+
+1. Fork this repository
+2. All bridges need to be submitted via PR's to this repo, we expect developers to do the following:
+3. Write a solidity bridge that interfaces with the protocol you are bridging e.g AAVE
+4. Write tests that use the fork from mainnet code to test the bridge with production values.
+5. Write an explination of the flows your bridge supports and the different combinations of params you can pass into the convert function,
+6. TBC Implement the BridgeData class in typescript so the UI can display important bridge data to end users
+7. Deploy your bridge! Steps coming soon.
+
+## Getting started
+
+Clone the repo with:
+
+`git clone git@github.com:AztecProtocol/aztec-connect-bridges.git`
+
+Build the repo with:
+
+```
+cd aztec-connect-bridges
+yarn
+
+```
+
+Copy and rename the example bridge folder.
+
+To test run:
+
+```
+yarn test bridges/yourbridgename
+```
+
+## Testing methodolgy
+
+This repo includes an infura key that allows forking from mainnet. We have included some helpers to make testing easier.
+
+In production a bridge is called by a user creating a client side proof via the Aztec Sdk, these are sent to a rollup provider for aggregation and a rollup proof is created with the aggregate sum of all users proofs for a given bridgeId.
+
+A bridgeId consists of the below schema. The rollup contract uses this to construct the function parameters to pass into your bridge contract. It calls your bridge with a fixed amount of gas via a `delegateCall` to the `DefiBridgeProxy.sol` contract.
+
+To test a bridge, we have added a `MockRollupProcessor` that simulates a rollup. You can call this in your tests by simply calling `rollupContract.convert()` with the deconstructed bridgeId fields.
+
+In production, the rollup contract will supply `totalInputValue` as the aggregate sum of the input assets, and `interactionNonce` as a globally unique id. For testing you can provide this.
+
+The rollup contract will send `totalInputValue` of `inputAssetA` and `inputAssetB` ahead of the call to convert. In production, the rollup contract has these tokens as they are the users funds. For testing there is a helper to prefund the rollup with sufficient tokens to enable the transfer.
+
+Simply call:
+
+```
+ const requiredTokens = [
+      {
+        erc20Address: daiAddress,
+        amount: quantityOfDaiToDeposit,
+      } as TestToken,
+    ];
+
+    await rollupContract.preFundContractWithTokens(signer, requiredTokens);
+
+```
+
+This will send the rollup all tokens in the `requiredTokens` array to make testing simple.
+
+The rollup contract expects a bridge to have approved for transfer by the `rollupAddress` and ERC20 tokens that are returned via `outputValueA` or `outputValueB` for a given asset. The DeFiBridgeProxy.sol will call `transferFrom` for these values once `bridge.convert()` or `bridge.finalise()` have executed.
+
+ETH is returned to the rollup from a bridge by calling the payable function with a msg.value `rollupContract.receiveETH(uint256 interactionNonce)`.
+
+This repo supports TypeChain so all typescript bindings will be auto generated and added to the `typechain-types` folder. See the example tests for more info.
+
+### Bridge Id Structure
+
+```
+[^1]: Bridge id is a 250-bit concatenation of the following data (starting at the most significant bit position):
+
+| bit position | bit length | definition | description |
+| --- | --- | --- | --- |
+| 0 | 64 | `auxData` | custom auxiliary data for bridge-specific logic |
+| 64 | 32 | `bitConfig` | flags that describe asset types |
+| 96 | 32 | `openingNonce` | (optional) reference to a previous defi interaction nonce (used for virtual assets) |
+| 128 | 30 |  `outputAssetB` | asset id of 2nd output asset |
+| 158 | 30 | `outputAssetA` | asset id of 1st output asset |
+| 188 | 30 | `inputAsset` | asset id of 1st input asset |
+| 218 | 32 | `bridgeAddressId` | id of bridge smart contract address |
+
+
+Bit Config Definition
+| bit | meaning |
+| --- | --- |
+| 0   | firstInputAssetVirtual |
+| 1   | secondInputAssetVirtual |
+| 2   | firstOutputAssetVirtual |
+| 3   | secondOutputAssetVirtual |
+| 4   | secondInputValid |
+| 5   | secondOutputValid |
+```
+
 # Aztec Connect Starter Kit
 
 ### What is Aztec?
