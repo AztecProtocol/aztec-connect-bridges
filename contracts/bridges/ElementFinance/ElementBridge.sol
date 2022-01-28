@@ -1,4 +1,4 @@
- // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
 pragma solidity >=0.6.10 <=0.8.10;
 pragma experimental ABIEncoderV2;
@@ -14,7 +14,7 @@ import { IRollupProcessor } from "../../interfaces/IRollupProcessor.sol";
 
 import { IDefiBridge } from "../../interfaces/IDefiBridge.sol";
 
-import { AztecTypes } from "../../Types.sol";
+import { AztecTypes } from "../../AztecTypes.sol";
 
 import "hardhat/console.sol";
 
@@ -162,8 +162,14 @@ contract ElementBridge is IDefiBridge {
     // retrieve the pool address for the given pool id from balancer
     // then test it against that given to us
     IVault balancerVault = IVault(balancerAddress);
-    (address balancersPoolAddress, PoolSpecialization balancersPoolSpec) = balancerVault.getPool(poolSpec.poolId);
-    require(poolAddress == balancersPoolAddress, "ElementBridge: VAULT_ADDRESS_MISMATCH");
+    (
+      address balancersPoolAddress,
+      PoolSpecialization balancersPoolSpec
+    ) = balancerVault.getPool(poolSpec.poolId);
+    require(
+      poolAddress == balancersPoolAddress,
+      "ElementBridge: VAULT_ADDRESS_MISMATCH"
+    );
 
     // TODO: Further pool validation
 
@@ -256,7 +262,11 @@ contract ElementBridge is IDefiBridge {
       totalInputValue, // discuss with ELement on the likely slippage for a large trade e.g $1M Dai
       block.timestamp
     );
-    console.log("Received %s tokens for input of %s", principalTokensAmount, totalInputValue);
+    console.log(
+      "Received %s tokens for input of %s",
+      principalTokensAmount,
+      totalInputValue
+    );
     // store the tranche that underpins our interaction, the expiry and the number of received tokens against the nonce
     interactions[interactionNonce] = Interaction(
       pool.trancheAddress,
@@ -267,12 +277,24 @@ contract ElementBridge is IDefiBridge {
     // add the nonce and expiry to our expiry heap
     addNonceAndExpiry(interactionNonce, auxData);
     // check the heap to see if we can finalise an expired transaction
-    (bool expiryAvailable, uint64 expiry, uint256 nonce) = checkNextArrayExpiry();//checkNextExpiry();
+    (
+      bool expiryAvailable,
+      uint64 expiry,
+      uint256 nonce
+    ) = checkNextArrayExpiry(); //checkNextExpiry();
     if (expiryAvailable) {
       // another position is available for finalising, inform the rollup contract
       IRollupProcessor(rollupProcessor).processAsyncDeFiInteraction(nonce);
     }
   }
+
+  // 1. How many expiries can there be?
+  // 2. Why are the expiries all different?
+  // 3. Slippage issues - how does this work?
+  // 4. Speed bump / negative interest rates.
+  // 5. Test - zk.money
+
+  // 6. gas costs - can we set the gas limit.
 
   function canFinalise(uint256 interactionNonce)
     external
@@ -308,7 +330,10 @@ contract ElementBridge is IDefiBridge {
 
     // convert the tokens back to underlying using the tranche
     console.log("Withdrawing %s principal tokens", interaction.quantityPT);
-    console.log("Total supply %s", ITranche(interaction.trancheAddress).totalSupply());
+    console.log(
+      "Total supply %s",
+      ITranche(interaction.trancheAddress).totalSupply()
+    );
     outputValueA = ITranche(interaction.trancheAddress).withdrawPrincipal(
       interaction.quantityPT,
       address(this)
@@ -361,9 +386,9 @@ contract ElementBridge is IDefiBridge {
     // push to the end of the heap and sift up.
     // there is a high probability that the expiry being added will remain where it is
     // so this operation will end up being O(1)
-    heap.push(expiry); // write    
+    heap.push(expiry); // write
     uint256 index = heap.length - 1;
-    
+
     // assuming 5k gas per update, this loop will use ~10k gas per iteration plus the logic
     // if we add in 100k gas for variable heap updates, we can have 1024 active different expiries
     // TODO test this
@@ -452,7 +477,7 @@ contract ElementBridge is IDefiBridge {
     }
     if (index != nonces.length - 1) {
       nonces[index] = nonces[nonces.length - 1];
-    }    
+    }
     nonces.pop();
 
     // if there are no more nonces left for this expiry then remove it from the heap
@@ -481,7 +506,7 @@ contract ElementBridge is IDefiBridge {
 
   function removeExpiryFromArray(uint64 expiry) internal {
     uint256 index = 0;
-    while(index < expiries.length && expiries[index] != expiry) {
+    while (index < expiries.length && expiries[index] != expiry) {
       ++index;
     }
     if (index < expiries.length) {
@@ -511,7 +536,8 @@ contract ElementBridge is IDefiBridge {
       bool expiryAvailable,
       uint64 expiry,
       uint256 nonce
-    ) {
+    )
+  {
     // do we have any expiries and if so is the earliest expiry now expired
     if (expiries.length != 0) {
       uint256 smallestIndex = findSmallestExpiryIndex();

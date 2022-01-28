@@ -3,7 +3,7 @@
 pragma solidity >=0.6.6 <0.8.11;
 pragma experimental ABIEncoderV2;
 
-import { AztecTypes } from "../Types.sol";
+import { AztecTypes } from "../AztecTypes.sol";
 
 interface IDefiBridge {
   /**

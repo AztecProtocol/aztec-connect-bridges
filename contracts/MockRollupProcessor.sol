@@ -6,7 +6,7 @@ pragma abicoder v2;
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IDefiBridge } from "./interfaces/IDefiBridge.sol";
 import { DefiBridgeProxy } from "./DefiBridgeProxy.sol";
-import { AztecTypes } from "./Types.sol";
+import { AztecTypes } from "./AztecTypes.sol";
 import { IERC20 } from "./interfaces/IERC20Permit.sol";
 
 import "hardhat/console.sol";
@@ -32,8 +32,20 @@ contract MockRollupProcessor {
   // 2: To prevent griefing attacks where a bridge consumes all our gas.
   uint256 private gasSentToBridgeProxy = 300000;
 
-  bytes4 private constant DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = 0xd9b5fb79;
-
+  // DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = function signature of:
+  //   function convert(
+  //       address,
+  //       AztecTypes.AztecAsset memory inputAssetA,
+  //       AztecTypes.AztecAsset memory inputAssetB,
+  //       AztecTypes.AztecAsset memory outputAssetA,
+  //       AztecTypes.AztecAsset memory outputAssetB,
+  //       uint256 totalInputValue,
+  //       uint256 interactionNonce,
+  //       uint256 auxData,
+  //       uint256 ethPaymentsSlot)
+  // N.B. this is the selector of the 'convert' function of the DefiBridgeProxy contract.
+  //      This has a different interface to the IDefiBridge.convert function
+  bytes4 private constant DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = 0xffd8e7b7;
   event AztecBridgeInteraction(
     address indexed bridgeAddress,
     uint256 outputValueA,
@@ -189,6 +201,12 @@ contract MockRollupProcessor {
       interactionNonce,
       auxInputData
     );
+
+    uint256 ethPayments_slot;
+
+    assembly {
+      ethPayments_slot := ethPayments.slot
+    }
     (bool success, bytes memory result) = address(bridgeProxy).delegatecall(
       abi.encodeWithSelector(
         DEFI_BRIDGE_PROXY_CONVERT_SELECTOR,
@@ -199,7 +217,8 @@ contract MockRollupProcessor {
         outputAssetB,
         totalInputValue,
         interactionNonce,
-        uint64(auxInputData)
+        auxInputData,
+        ethPayments_slot
       )
     );
     (outputValueA, outputValueB, isAsync) = abi.decode(

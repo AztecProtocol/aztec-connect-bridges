@@ -4,10 +4,7 @@ pragma solidity >=0.6.10 <=0.8.10;
 pragma experimental ABIEncoderV2;
 
 interface IERC20 {
-  function approve(address spender, uint256 amount)
-    external
-    view
-    returns (bool);
+  function approve(address spender, uint256 amount) external returns (bool);
 
   function balanceOf(address user) external view returns (uint256);
 
