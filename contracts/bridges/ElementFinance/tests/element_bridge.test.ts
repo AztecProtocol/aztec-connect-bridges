@@ -11,6 +11,7 @@ import { ElementBridge } from "../../../../src/element_bridge";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { randomBytes } from "crypto";
 import * as VaultConfig from "./VaultConfig.json";
+import { Curve } from "../../../../src/curve";
 
 const fixEthersStackTrace = (err: Error) => {
   err.stack! += new Error().stack;
@@ -55,35 +56,106 @@ function buildPoolSpecs(asset: string, config: any) {
       poolAddress: tranche.ptPool.address,
       expiry: tranche.expiration,
       trancheAddress: tranche.address,
-      name: asset
+      name: asset,
     } as ElementPoolSpec;
     return spec;
   });
 }
 
-const decimalConfig = {
-  "usdc": 6n,
-  "wbtc": 8n
-};
-const divisors = {
-  "wbtc": 3n
-}
-
 const assetSpecs: AssetSpecs = {
   specs: new Map<string, AssetSpec>([
-		["usdc", {decimals: 6n, quantityExponent: 6n, disabled: false }],
-		["weth", {decimals: 18n, quantityExponent: 18n, disabled: false }],
-		["dai", {decimals: 18n, quantityExponent: 18n, disabled: false }],
-		["lusd3crv-f", {decimals: 18n, quantityExponent: 18n, disabled: false }],
-		["crvtricrypto", {decimals: 18n, quantityExponent: 18n, disabled: false }],
-		["stecrv", {decimals: 18n, quantityExponent: 18n, disabled: false }],
-		["crv3crypto", {decimals: 18n, quantityExponent: 18n, disabled: false }],
-		["wbtc", {decimals: 8n, quantityExponent: 5n, disabled: false }],
-		["alusd3crv-f", {decimals: 18n, quantityExponent: 18n, disabled: false }],
-		["mim-3lp3crv-f", {decimals: 18n, quantityExponent: 18n, disabled: false }],
-		["eurscrv", {decimals: 18n, quantityExponent: 18n, disabled: false }],
-  ])
-}
+    [
+      "usdc",
+      {
+        decimals: 6n,
+        quantityExponent: 6n,
+        disabled: false,
+      },
+    ], // working
+    [
+      "weth", // no tranches
+      {
+        decimals: 18n,
+        quantityExponent: 18n,
+        disabled: true,
+      },
+    ],
+    [
+      "dai",
+      {
+        decimals: 18n,
+        quantityExponent: 18n,
+        disabled: false,
+      },
+    ],
+    [
+      "lusd3crv-f",
+      {
+        decimals: 18n,
+        quantityExponent: 9n,
+        disabled: false,
+      },
+    ],
+    [
+      "crvtricrypto", // expiry too old
+      {
+        decimals: 18n,
+        quantityExponent: 18n,
+        disabled: true,
+      },
+    ],
+    [
+      "stecrv",
+      {
+        decimals: 18n,
+        quantityExponent: 6n,
+        disabled: false,
+      },
+    ],
+    [
+      "crv3crypto", // doesn't seem to have a pool associated with it
+      {
+        decimals: 18n,
+        quantityExponent: 18n,
+        disabled: true,
+      },
+    ],
+    [
+      "wbtc",
+      {
+        decimals: 8n,
+        quantityExponent: 5n,
+        disabled: false,
+      },
+    ],
+    [
+      "alusd3crv-f",
+      {
+        decimals: 18n,
+        quantityExponent: 18n,
+        disabled: false,
+      },
+    ],
+    [
+      "mim-3lp3crv-f",
+      {
+        decimals: 18n,
+        quantityExponent: 18n,
+        disabled: false,
+      },
+    ],
+    [
+      "eurscrv", // needs EURS which we can't seem to get on uniswap
+      {
+        decimals: 18n,
+        quantityExponent: 18n,
+        disabled: false,
+      },
+    ],
+  ]),
+};
+
+jest.setTimeout(240000);
 
 describe("defi bridge", function () {
   const vaultConfig = VaultConfig;
@@ -353,13 +425,12 @@ describe("defi bridge", function () {
     const quantityOfDaiToDeposit = 1n * 10n ** 21n;
     const interactionNonce = 1n;
     // get 1 DAI into the rollup contract
-    const requiredTokens = [
-      {
-        erc20Address: contractSpec.underlyingAddress,
-        amount: quantityOfDaiToDeposit,
-      } as TestToken,
-    ];
-    await rollupContract.preFundContractWithTokens(signer, requiredTokens);
+    const daiAsset = assetSpecs.specs.get("dai")!;
+    await rollupContract.preFundContractWithToken(signer, {
+      erc20Address: contractSpec.underlyingAddress,
+      amount: quantityOfDaiToDeposit,
+      name: "dai",
+    });
 
     const register = async () => {
       await elementBridge
@@ -459,13 +530,12 @@ describe("defi bridge", function () {
     const quantityOfDaiToDeposit = 1n * 10n ** 21n;
     const interactionNonce = 1n;
     // get 1 DAI into the rollup contract
-    const requiredTokens = [
-      {
-        erc20Address: contractSpec.underlyingAddress,
-        amount: quantityOfDaiToDeposit,
-      } as TestToken,
-    ];
-    await rollupContract.preFundContractWithTokens(signer, requiredTokens);
+    const daiAsset = assetSpecs.specs.get("dai")!;
+    await rollupContract.preFundContractWithToken(signer, {
+      erc20Address: contractSpec.underlyingAddress,
+      amount: quantityOfDaiToDeposit,
+      name: "dai",
+    });
 
     const register = async () => {
       await elementBridge
@@ -564,13 +634,12 @@ describe("defi bridge", function () {
 
     const quantityOfDaiToDeposit = 1n * 10n ** 21n;
     // get 1 DAI into the rollup contract
-    const requiredTokens = [
-      {
-        erc20Address: contractSpec.underlyingAddress,
-        amount: quantityOfDaiToDeposit,
-      } as TestToken,
-    ];
-    await rollupContract.preFundContractWithTokens(signer, requiredTokens);
+    const daiAsset = assetSpecs.specs.get("dai")!;
+    await rollupContract.preFundContractWithToken(signer, {
+      erc20Address: contractSpec.underlyingAddress,
+      amount: quantityOfDaiToDeposit,
+      name: "dai",
+    });
 
     const register = async () => {
       await elementBridge
@@ -685,13 +754,12 @@ describe("defi bridge", function () {
 
     const quantityOfDaiToDeposit = 1n * 10n ** 21n;
     // get 1 DAI into the rollup contract
-    const requiredTokens = [
-      {
-        erc20Address: contractSpec.underlyingAddress,
-        amount: quantityOfDaiToDeposit,
-      } as TestToken,
-    ];
-    await rollupContract.preFundContractWithTokens(signer, requiredTokens);
+    const daiAsset = assetSpecs.specs.get("dai")!;
+    await rollupContract.preFundContractWithToken(signer, {
+      erc20Address: contractSpec.underlyingAddress,
+      amount: quantityOfDaiToDeposit,
+      name: "dai",
+    });
 
     const register = async () => {
       await elementBridge
@@ -739,13 +807,12 @@ describe("defi bridge", function () {
     const quantityOfDaiToDeposit = 1n * 10n ** 21n;
     const interactionNonce = 1n;
     // get 1 DAI into the rollup contract
-    const requiredTokens = [
-      {
-        erc20Address: contractSpec.underlyingAddress,
-        amount: quantityOfDaiToDeposit,
-      } as TestToken,
-    ];
-    await rollupContract.preFundContractWithTokens(signer, requiredTokens);
+    const daiAsset = assetSpecs.specs.get("dai")!;
+    await rollupContract.preFundContractWithToken(signer, {
+      erc20Address: contractSpec.underlyingAddress,
+      amount: quantityOfDaiToDeposit,
+      name: "dai",
+    });
 
     const register = async () => {
       await elementBridge
@@ -825,13 +892,13 @@ describe("defi bridge", function () {
     const quantityOfDaiToDeposit = 1n * 10n ** 21n;
     const interactionNonce = 1n;
     // get 1 DAI into the rollup contract
-    const requiredTokens = [
-      {
-        erc20Address: contractSpec.underlyingAddress,
-        amount: quantityOfDaiToDeposit,
-      } as TestToken,
-    ];
-    await rollupContract.preFundContractWithTokens(signer, requiredTokens);
+    // get 1 DAI into the rollup contract
+    const daiAsset = assetSpecs.specs.get("dai")!;
+    await rollupContract.preFundContractWithToken(signer, {
+      erc20Address: contractSpec.underlyingAddress,
+      amount: quantityOfDaiToDeposit,
+      name: "dai",
+    });
 
     const register = async () => {
       await elementBridge
@@ -886,13 +953,12 @@ describe("defi bridge", function () {
     const quantityOfDaiToDeposit = 1n * 10n ** 21n;
     const interactionNonce = 68n;
     // get 1 DAI into the rollup contract
-    const requiredTokens = [
-      {
-        erc20Address: contractSpec.underlyingAddress,
-        amount: quantityOfDaiToDeposit,
-      } as TestToken,
-    ];
-    await rollupContract.preFundContractWithTokens(signer, requiredTokens);
+    const daiAsset = assetSpecs.specs.get("dai")!;
+    await rollupContract.preFundContractWithToken(signer, {
+      erc20Address: contractSpec.underlyingAddress,
+      amount: quantityOfDaiToDeposit,
+      name: "dai",
+    });
 
     const register = async () => {
       await elementBridge
@@ -1016,17 +1082,20 @@ describe("defi bridge", function () {
           continue;
         }
         const requiredToken = {
-          amount: 10n ** assetSpec.quantityExponent,
+          amount: 10n * 10n ** assetSpec.quantityExponent,
           erc20Address: tokens[assetName],
-          name: assetName
-        }
+          name: assetName,
+        };
         try {
-          await rollupContract.preFundContractWithTokens(signer, [requiredToken]);
-          goodSpecs.push(buildPoolSpecs(assetName, vaultConfig));
+          await rollupContract.preFundContractWithToken(signer, requiredToken);
+          goodSpecs.push(...buildPoolSpecs(assetName, vaultConfig));
         } catch (e) {
-          console.log(`Failed to fund rollup with ${requiredToken.amount} tokens of ${requiredToken.name}`, e);
-          failedSpecs.push(buildPoolSpecs(assetName, vaultConfig));
-        }        
+          console.log(
+            `Failed to fund rollup with ${requiredToken.amount} tokens of ${requiredToken.name}`,
+            e
+          );
+          failedSpecs.push(...buildPoolSpecs(assetName, vaultConfig));
+        }
       }
     }
 
@@ -1051,9 +1120,17 @@ describe("defi bridge", function () {
       try {
         await register(currentSpec);
         tempSpecs.push(currentSpec);
-        console.log(`Successfully registered ${currentSpec.name}: ${new Date(currentSpec.expiry * 1000)}`);
-      } catch(e) {       
-        console.log(`Failed to register ${currentSpec.name}: ${new Date(currentSpec.expiry * 1000)}`);
+        console.log(
+          `Successfully registered ${currentSpec.name}: ${new Date(
+            currentSpec.expiry * 1000
+          )}`
+        );
+      } catch (e) {
+        console.log(
+          `Failed to register ${currentSpec.name}: ${new Date(
+            currentSpec.expiry * 1000
+          )}`
+        );
         failedSpecs.push(currentSpec);
       }
     }
@@ -1067,12 +1144,10 @@ describe("defi bridge", function () {
       const inputAsset = {
         assetType: AztecAssetType.ERC20,
         id: 1,
-        erc20Address: currentSpec.underlyingAddress
+        erc20Address: currentSpec.underlyingAddress,
       } as AztecAsset;
       const outputAsset = inputAsset;
       const name = currentSpec.name;
-
-      const assetSpec = assetSpecs.specs.get(name)!;
 
       const trancheTokenContract = new Contract(
         currentSpec.trancheAddress,
@@ -1101,10 +1176,16 @@ describe("defi bridge", function () {
         ),
       } as SwapQuantities;
       beforeQuantities.push(before);
-      const quantity = 10n ** assetSpec.quantityExponent;
+      const quantity =
+        BigInt(await underlyingContract.balanceOf(rollupContract.address)) /
+        10n;
 
-      console.log(`Attempting to deposit ${quantity} of ${currentSpec.name}: ${new Date(currentSpec.expiry * 1000)}`);
-    
+      console.log(
+        `Attempting to deposit ${quantity} of ${currentSpec.name}: ${new Date(
+          currentSpec.expiry * 1000
+        )}`
+      );
+
       const { outputValueA, outputValueB, isAsync } =
         await rollupContract.convert(
           signer,
@@ -1117,14 +1198,21 @@ describe("defi bridge", function () {
           BigInt(i + 1),
           BigInt(currentSpec.expiry)
         );
-      console.log(`Successfully deposited ${quantity} of ${currentSpec.name}: ${new Date(currentSpec.expiry * 1000)}`);
+      console.log(
+        `Successfully deposited ${quantity} of ${currentSpec.name}: ${new Date(
+          currentSpec.expiry * 1000
+        )}`
+      );
 
       expect(outputValueA).toBe(0n);
       expect(outputValueB).toBe(0n);
       expect(isAsync).toBe(true);
     }
 
-    const maxExpiry = goodSpecs.map(x => x.expiry).sort()[goodSpecs.length - 1];
+    expect(goodSpecs.length).toBeTruthy();
+    const maxExpiry = goodSpecs.map((x) => x.expiry).sort()[
+      goodSpecs.length - 1
+    ];
     console.log(`Max expiry ${maxExpiry}`);
     const timeIncrease = maxExpiry - blockBefore.timestamp;
 
@@ -1140,14 +1228,18 @@ describe("defi bridge", function () {
         ERC20.abi,
         signer
       );
-  
+
       const underlyingContract = new Contract(
         currentSpec.underlyingAddress,
         ERC20.abi,
         signer
       );
 
-      console.log(`Finalising deposit of ${currentSpec.name}: ${new Date(currentSpec.expiry * 1000)}`);
+      console.log(
+        `Finalising deposit of ${currentSpec.name}: ${new Date(
+          currentSpec.expiry * 1000
+        )}`
+      );
 
       await expect(elementBridge.canFinalise(interactionNonce)).resolves.toBe(
         true
@@ -1174,7 +1266,9 @@ describe("defi bridge", function () {
       } as SwapQuantities;
 
       expect(after.inputBridge).toBe(0n);
-      expect(after.outputBridge - beforeQuantities[i].inputBridge).toBeLessThan(1000n); // account for small slippage
+      expect(after.outputBridge - beforeQuantities[i].inputBridge).toBeLessThan(
+        1000n
+      ); // account for small slippage
 
       await expect(elementBridge.canFinalise(interactionNonce)).resolves.toBe(
         false
