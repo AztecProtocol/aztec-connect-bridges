@@ -160,12 +160,12 @@ contract AaveLendingBridge is IDefiBridge {
     if (zkAtokenAddress == address(0)) {
       // we are withdrawing zkATokens for underlying
       console.log("exit", zkAtokenAddress);
-      _exit(outputAssetA.erc20Address, totalInputValue);
+      outputValueA = _exit(outputAssetA.erc20Address, totalInputValue);
     } else {
       // we are depositing underlying for zkATokens
       console.log("enter", zkAtokenAddress);
 
-      _enter(inputAssetA.erc20Address, totalInputValue);
+      outputValueA = _enter(inputAssetA.erc20Address, totalInputValue);
     }
   }
 
@@ -209,7 +209,7 @@ contract AaveLendingBridge is IDefiBridge {
       rollupProcessor,
       diff
     );
-
+    console.log("approved", diff);
     return diff;
   }
 
