@@ -8,8 +8,8 @@ pragma solidity >=0.8.4 <0.8.11;
  * as well as the ability to call `transfer` and `transferFrom` without bubbling up errors
  */
 library TokenTransfers {
-  bytes4 private constant TRANSFER_SELECTOR = 0xa9059cbb; // bytes4(keccak256('transfer(address,uint256)'));
-  bytes4 private constant TRANSFER_FROM_SELECTOR = 0x23b872dd; // bytes4(keccak256('transferFrom(address,address,uint256)'));
+  bytes4 private constant TRANSFER_SELECTOR = bytes4(keccak256('transfer(address,uint256)'));
+  bytes4 private constant TRANSFER_FROM_SELECTOR = bytes4(keccak256('transferFrom(address,address,uint256)'));
 
   /**
    * @dev Safely call ERC20.transfer, handles tokens that do not throw on transfer failure or do not return transfer result

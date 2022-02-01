@@ -12,11 +12,11 @@ import { TokenTransfers } from "./libraries/TokenTransfers.sol";
 import "hardhat/console.sol";
 
 contract DefiBridgeProxy {
-  bytes4 private constant BALANCE_OF_SELECTOR = 0x70a08231; // bytes4(keccak256('balanceOf(address)'));
-  bytes4 private constant TRANSFER_SELECTOR = 0xa9059cbb; // bytes4(keccak256('transfer(address,uint256)'));
-  bytes4 private constant DEPOSIT_SELECTOR = 0xb6b55f25; // bytes4(keccak256('deposit(uint256)'));
-  bytes4 private constant WITHDRAW_SELECTOR = 0x2e1a7d4d; // bytes4(keccak256('withdraw(uint256)'));
-  bytes4 private constant TRANSFER_FROM_SELECTOR = 0x23b872dd; // bytes4(keccak256('transferFrom(address,address,uint256)'));
+  bytes4 private constant BALANCE_OF_SELECTOR = bytes4(keccak256('balanceOf(address)'));
+  bytes4 private constant TRANSFER_SELECTOR = bytes4(keccak256('transfer(address,uint256)'));
+  bytes4 private constant DEPOSIT_SELECTOR = bytes4(keccak256('deposit(uint256)'));
+  bytes4 private constant WITHDRAW_SELECTOR = bytes4(keccak256('withdraw(uint256)'));
+  bytes4 private constant TRANSFER_FROM_SELECTOR = bytes4(keccak256('transferFrom(address,address,uint256)'));
 
   error DEFI_BRIDGE_PROXY_TRANSFER_FAILED();
   error INCORRECT_ASSET_VALUE();
