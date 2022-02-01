@@ -156,6 +156,15 @@ contract AaveTest is DSTest {
 
     /// Helpers
 
+    function assertNotEq(address a, address b) internal {
+        if (a == b) {
+            emit log("Error: a != b not satisfied [address]");
+            emit log_named_address("  Expected", b);
+            emit log_named_address("    Actual", a);
+            fail();
+        }
+    }
+
     function _setupDai() internal {
         aaveLendingBridge.setUnderlyingToZkAToken(address(dai));
     }
