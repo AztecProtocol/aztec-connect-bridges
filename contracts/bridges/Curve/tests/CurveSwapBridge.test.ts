@@ -16,6 +16,12 @@ const SWAP_AMOUNT = "100";
 const SWAPS = [
   ["WBTC", "WETH", "USDT"], // tricrypto
   ["USDC", "DAI", "USDT"], // 3crv
+  ["UST", "USDC"], // UST+3crv
+  ["UST", "USDT"], // UST+3crv
+  ["UST", "DAI"], // UST+3crv
+  ["MIM", "USDC"], // MIM+3crv
+  ["MIM", "USDT"], // MIM+3crv
+  ["MIM", "DAI"], // MIM+3crv
 ];
 
 describe("CurveSwapBridge", function () {

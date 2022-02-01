@@ -3,7 +3,7 @@ import "@typechain/hardhat";
 import { HardhatUserConfig } from "hardhat/config";
 
 const getBlockNumber = () => {
-  let blockNumber = 14000000;
+  let blockNumber = 14122469;
   if (process.env.BLOCK_NUMBER) {
     blockNumber = +process.env.BLOCK_NUMBER;
   }
