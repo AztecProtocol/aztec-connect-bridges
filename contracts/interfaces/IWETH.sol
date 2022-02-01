@@ -2,12 +2,9 @@
 pragma solidity >=0.7.5;
 pragma abicoder v2;
 
-interface WETH {
-  function deposit() external payable;
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-  function approve(address spender, uint256 amount) external returns (bool);
-
-  function transfer(address to, uint256 amount) external returns (bool);
-
-  function balanceOf(address user) external view returns (uint256);
+interface IWETH is IERC20 {
+    function deposit() external payable;
+    function withdraw(uint256 _amount) external;
 }

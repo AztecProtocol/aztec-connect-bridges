@@ -1,6 +1,6 @@
 import { Contract, Signer } from "ethers";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
-import WETH from "./artifacts/contracts/interfaces/IWETH.sol/WETH.json";
+import WETH from "./artifacts/contracts/interfaces/IWETH.sol/IWETH.json";
 
 export const addressesAreSame = (a: string, b: string) =>
   a.toLowerCase() === b.toLowerCase();
