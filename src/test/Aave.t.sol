@@ -211,11 +211,14 @@ contract AaveTest is DSTest {
             pool.getReserveNormalizedIncome(address(dai))
         );
 
-        assertGt(
-            expectedDaiAfter,
-            expectedDaiBefore,
-            "Did not earn any interest"
-        );
+        if (timeDiff > 0) {
+            assertGt(
+                expectedDaiAfter,
+                expectedDaiBefore,
+                "Did not earn any interest"
+            );
+        }
+
         assertEq(
             expectedDaiBefore,
             balancesBefore.bridgeAdai,
