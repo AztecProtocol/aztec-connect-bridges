@@ -12,8 +12,6 @@ import { IRollupProcessor } from "../../../interfaces/IRollupProcessor.sol";
 
 import { AztecTypes } from "../../../AztecTypes.sol";
 
-import "hardhat/console.sol";
-
 contract CurveSwapBridge is IDefiBridge {
   using SafeERC20 for IERC20;
 
