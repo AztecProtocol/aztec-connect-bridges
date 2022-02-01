@@ -44,6 +44,7 @@
     "@uniswap/sdk-core": "^3.0.1",
     "@uniswap/smart-order-router": "^2.5.12",
     "@uniswap/v3-sdk": "^3.8.1",
+    "chai": "^4.3.6",
     "eslint": "^7.9.0",
     "eslint-config-prettier": "^6.11.0",
     "ethereum-waffle": "3.0.0",
