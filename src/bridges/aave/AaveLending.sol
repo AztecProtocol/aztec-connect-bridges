@@ -153,14 +153,7 @@ contract AaveLendingBridge is IDefiBridge {
             pool.getReserveNormalizedIncome(outputAsset)
         );
 
-        // make sure we can always withdraw the full balance due to rounding errors in rayMul TODO: check that this is actually necessary
-        uint256 aTokenBalance = aToken.balanceOf(address(this));
-        if (underlyingAmount > aTokenBalance) {
-            underlyingAmount = type(uint256).max;
-        }
-
         // 2. Lend totalInputValue of inputAssetA on AAVE lending pool and return the amount of tokens
-
         uint256 outputValue = pool.withdraw(
             outputAsset,
             underlyingAmount,
