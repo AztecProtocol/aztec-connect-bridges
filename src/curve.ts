@@ -55,13 +55,8 @@ export class Curve {
     token: { erc20Address: string; amount: bigint; name: string },
     amountInMaximum: bigint
   ){
-    console.log(
-      `Funding ${recipient} with ${token.amount} of ${token.erc20Address}, name: ${token.name}`
-    );
-    let maxAmountToDeposit = amountInMaximum;
-    
+    let maxAmountToDeposit = amountInMaximum;    
     const poolAddress = (await this.registryContract!.get_pool_from_lp_token(token.erc20Address)).toString();
-    console.log(`Pool address: ${poolAddress}`);
     const numCoinsResult = await this.registryContract!.get_n_coins(poolAddress);
     const numCoins = numCoinsResult[1].toNumber();
     const coins = await this.registryContract!.get_coins(poolAddress);
@@ -118,14 +113,7 @@ export class Curve {
     token: { erc20Address: string; amount: bigint; name: string },
     amountInMaximum: bigint,
   ) {
-    console.log(
-      `Funding ${recipient} with ${token.amount} of ${token.erc20Address}, name: ${token.name}`
-    );
-
     let maxAmountToDeposit = amountInMaximum;
-    // const getNumCoinsFunc = this.factoryContract!.functions["get_n_coins(address)"];
-    // const getCoinsFunc = this.factoryContract!.functions["get_underlying_coins(address)"];
-    //const numCoinsResult = await getNumCoinsFunc(token.erc20Address);
     const numCoinsResult = await this.factoryContract!.get_n_coins(token.erc20Address);
     const numCoins = numCoinsResult[1].toNumber();
     const coins = await this.factoryContract!.get_underlying_coins(token.erc20Address);

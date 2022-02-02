@@ -1,42 +1,14 @@
-import { Provider, Web3Provider } from "@ethersproject/providers";
-import { Contract, ContractFactory, ethers, Signer } from "ethers";
+import { Contract, ContractFactory, Signer } from "ethers";
 
 import abi from "./artifacts/contracts/MockRollupProcessor.sol/MockRollupProcessor.json";
 
 import ISwapRouter from "./artifacts/contracts/interfaces/ISwapRouter.sol/ISwapRouter.json";
 import WETH from "./artifacts/contracts/interfaces/IWETH.sol/WETH.json";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
-import { Uniswap } from "./uniswap";
 import { Curve } from "./curve";
+import {AztecAsset, AztecAssetType, SendTxOptions, assetToArray } from './utils';
 
-const fixEthersStackTrace = (err: Error) => {
-  err.stack! += new Error().stack;
-  throw err;
-};
 
-export interface SendTxOptions {
-  gasPrice?: bigint;
-  gasLimit?: number;
-}
-
-const assetToArray = (asset: AztecAsset) => [
-  asset.id || 0,
-  asset.erc20Address || "0x0000000000000000000000000000000000000000",
-  asset.assetType || 0,
-];
-
-export enum AztecAssetType {
-  NOT_USED,
-  ETH,
-  ERC20,
-  VIRTUAL,
-}
-
-export interface AztecAsset {
-  id?: number;
-  assetType?: AztecAssetType;
-  erc20Address?: string;
-}
 
 export interface TestToken {
   amount: bigint;
@@ -113,12 +85,17 @@ export class RollupProcessor {
       .filter((l: any) => l.address == contract.address)
       .map((l: any) => contract.interface.parseLog(l));
 
-    const { outputValueA, outputValueB, isAsync } = parsedLogs[0].args;
+    const results = parsedLogs.map((log: any) => {
+      return {
+        outputValueA: log.args.outputValueA.toBigInt(),
+        outputValueB: log.args.outputValueB.toBigInt(),
+        isAsync: log.args.isAsync,
+      };
+    });
 
     return {
-      isAsync,
-      outputValueA: BigInt(outputValueA.toString()),
-      outputValueB: BigInt(outputValueB.toString()),
+      results,
+      gasUsed: receipt.gasUsed.toBigInt(),
     };
   }
 
@@ -148,6 +125,7 @@ export class RollupProcessor {
     return {
       outputValueA: BigInt(outputValueA.toString()),
       outputValueB: BigInt(outputValueB.toString()),
+      gasUsed: receipt.gasUsed.toBigInt(),
     };
   }
 
@@ -168,22 +146,8 @@ export class RollupProcessor {
     to?: string
   ) {
     const amount = 1n * 10n ** 21n;
-
-    if (
-      token.erc20Address.toLowerCase() ===
-      this.wethContract.address.toLowerCase()
-    ) {
-      return;
-    }
-
     const swapper = new Curve(signer);
     await swapper.init();
     await swapper.swap(to ?? this.address, token, amount);
-    console.log(
-      `After swap, contract now has ${await this.getWethBalance()} WETH and ${await this.getTokenBalance(
-        token.erc20Address,
-        signer
-      )} ${token.name}`
-    );
   }
 }

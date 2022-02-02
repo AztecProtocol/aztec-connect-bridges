@@ -1,28 +1,65 @@
-import { ethers } from "hardhat";
+import { ethers, config as hardhatConfig, network as hardhatNetwork } from "hardhat";
 import DefiBridgeProxy from "../../../../src/artifacts/contracts/DefiBridgeProxy.sol/DefiBridgeProxy.json";
 import { Contract, Signer, ContractFactory } from "ethers";
 import {
-  TestToken,
   AztecAssetType,
   AztecAsset,
-  RollupProcessor,
-} from "../../../../src/rollup_processor";
+} from "../../../../src/utils";
+import { RollupProcessor } from "../../../../src/rollup_processor";
 import { ElementBridge } from "../../../../src/element_bridge";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { randomBytes } from "crypto";
 import * as VaultConfig from "./VaultConfig.json";
-import { Curve } from "../../../../src/curve";
+
+const REQUIRED_BLOCK = 14000001;
 
 const fixEthersStackTrace = (err: Error) => {
   err.stack! += new Error().stack;
   throw err;
 };
 
+const getCurrentBlockTime = async () => {
+  const blockNumBefore = await ethers.provider.getBlockNumber();
+  const blockBefore = await ethers.provider.getBlock(blockNumBefore);
+  return blockBefore.timestamp;
+};
+
+const setBlockchainTime = async (timestamp: number) => {
+  const blockTimestamp = await getCurrentBlockTime();
+  await ethers.provider.send("evm_increaseTime", [
+    timestamp - blockTimestamp,
+  ]);
+  await ethers.provider.send("evm_mine", []);
+};
+
+const ensureCorrectBlock = async (expectedBlock: number) => {
+  const blockNumber = await ethers.provider.getBlockNumber();
+  expect(blockNumber).toEqual(expectedBlock);
+};
+
+const resetBlock = async () => {
+  try{
+    await hardhatNetwork.provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: hardhatConfig.networks.hardhat.forking!.url!,
+            blockNumber: hardhatConfig.networks.hardhat.forking!.blockNumber!
+          },
+        },
+      ],
+    });
+  } catch(e) {
+    console.log("Failed to reset hardhat", e);
+  }
+}
+
 interface SwapQuantities {
-  inputBridge: bigint;
-  inputBalancer: bigint;
-  outputBridge: bigint;
-  outputBalancer: bigint;
+  trancheBridge: bigint;
+  trancheBalancer: bigint;
+  underlyingRollup: bigint;
+  underlyingBalancer: bigint;
 }
 
 interface ElementPoolSpec {
@@ -44,7 +81,7 @@ interface AssetSpecs {
   specs: Map<string, AssetSpec>;
 }
 
-function buildPoolSpecs(asset: string, config: any) {
+function buildPoolSpecs(asset: string, config: any): ElementPoolSpec[] {
   const tranches = config.tranches[asset];
   if (!tranches) {
     return [];
@@ -93,7 +130,7 @@ const assetSpecs: AssetSpecs = {
       {
         decimals: 18n,
         quantityExponent: 9n,
-        disabled: false,
+        disabled: true,
       },
     ],
     [
@@ -125,7 +162,7 @@ const assetSpecs: AssetSpecs = {
       {
         decimals: 8n,
         quantityExponent: 5n,
-        disabled: false,
+        disabled: true,
       },
     ],
     [
@@ -149,13 +186,106 @@ const assetSpecs: AssetSpecs = {
       {
         decimals: 18n,
         quantityExponent: 18n,
-        disabled: false,
+        disabled: true,
       },
     ],
   ]),
 };
 
-jest.setTimeout(240000);
+const getBalances = async (
+  trancheAddress: string,
+  underlyingAddress: string,
+  signer: Signer,
+  balancerAddress: string,
+  bridgeAddress: string,
+  rollupAddress: string
+) => {
+  const trancheTokenContract = new Contract(trancheAddress, ERC20.abi, signer);
+
+  const underlyingContract = new Contract(underlyingAddress, ERC20.abi, signer);
+
+  const quantities = {
+    underlyingBalancer: BigInt(
+      await underlyingContract.balanceOf(balancerAddress)
+    ),
+    underlyingRollup: BigInt(await underlyingContract.balanceOf(rollupAddress)),
+    trancheBalancer: BigInt(
+      await trancheTokenContract.balanceOf(balancerAddress)
+    ),
+    trancheBridge: BigInt(await trancheTokenContract.balanceOf(bridgeAddress)),
+  } as SwapQuantities;
+  return {
+    quantities: quantities,
+  };
+};
+
+const checkBalances = (
+  beforeConvert: SwapQuantities,
+  afterConvert: SwapQuantities,
+  beforeFinalise: SwapQuantities,
+  afterFinalise: SwapQuantities
+) => {
+  const changeInRollupUnderlyingOnConvert =
+    afterConvert.underlyingRollup - beforeConvert.underlyingRollup;
+  const changeInBalancerUnderlyingOnConvert =
+    afterConvert.underlyingBalancer - beforeConvert.underlyingBalancer;
+  const changeInBridgeTrancheOnConvert =
+    afterConvert.trancheBridge - beforeConvert.trancheBridge;
+  const changeInBalancerTrancheOnConvert =
+    afterConvert.trancheBalancer - beforeConvert.trancheBalancer;
+  expect(changeInRollupUnderlyingOnConvert).toEqual(
+    changeInBalancerUnderlyingOnConvert * -1n
+  );
+  expect(changeInBridgeTrancheOnConvert).toEqual(
+    changeInBalancerTrancheOnConvert * -1n
+  );
+  expect(changeInBridgeTrancheOnConvert).toBeGreaterThan(
+    changeInBalancerUnderlyingOnConvert
+  );
+
+  const changeInRollupUnderlyingOnFinalise =
+    afterFinalise.underlyingRollup - beforeFinalise.underlyingRollup;
+  const changeInBridgeTrancheOnFinalise =
+    afterFinalise.trancheBridge - beforeFinalise.trancheBridge;
+  expect(changeInBridgeTrancheOnFinalise).toBe(
+    changeInBridgeTrancheOnConvert * -1n
+  );
+  expect(changeInRollupUnderlyingOnFinalise).toBeGreaterThan(
+    changeInRollupUnderlyingOnConvert * -1n
+  );
+};
+
+interface Interaction {
+  amount: bigint;
+  spec: ElementPoolSpec;
+  nonce: bigint;
+  gasUsedConvert: bigint;
+  gasUsedFinalise: bigint;
+  finalised: boolean;
+  beforeConvert: SwapQuantities;
+  afterConvert: SwapQuantities;
+  beforefinalise?: SwapQuantities;
+  afterFinalise?: SwapQuantities;
+  finalisedNonce?: bigint;
+}
+
+const logInteractions = (interactions: Interaction[], prefix: string) => {
+  const interactionsCopy = [...interactions];
+  while (interactionsCopy.length) {
+    const interactionsToLog = interactionsCopy.splice(0, 50);
+    const gasUsage = interactionsToLog.flatMap((interaction) => {
+      const nonceFinalised = interaction.finalisedNonce == undefined ? '' : `, nonce finalised: ${interaction.finalisedNonce}`;
+      return `Interaction ${interaction.nonce}, asset ${
+        interaction.spec.name
+      }, expiry ${new Date(interaction.spec.expiry * 1000)}, gas to convert: ${
+        interaction.gasUsedConvert
+      }, gas to finalise: ${interaction.gasUsedFinalise}${nonceFinalised}`;
+    });
+    console.log([prefix, ...gasUsage]);
+  }
+}
+
+jest.setTimeout(6000000);
 
 describe("defi bridge", function () {
   const vaultConfig = VaultConfig;
@@ -192,11 +322,10 @@ describe("defi bridge", function () {
 
   const randomAddress = () => randomBytes(20).toString("hex");
 
-  beforeAll(async () => {
-    [signer] = await ethers.getSigners();
-  });
-
   beforeEach(async () => {
+    [signer] = await ethers.getSigners();
+    await resetBlock();
+    ensureCorrectBlock(REQUIRED_BLOCK);
     const factory = new ContractFactory(
       DefiBridgeProxy.abi,
       DefiBridgeProxy.bytecode,
@@ -425,7 +554,6 @@ describe("defi bridge", function () {
     const quantityOfDaiToDeposit = 1n * 10n ** 21n;
     const interactionNonce = 1n;
     // get 1 DAI into the rollup contract
-    const daiAsset = assetSpecs.specs.get("dai")!;
     await rollupContract.preFundContractWithToken(signer, {
       erc20Address: contractSpec.underlyingAddress,
       amount: quantityOfDaiToDeposit,
@@ -458,16 +586,16 @@ describe("defi bridge", function () {
     );
 
     const before = {
-      inputBalancer: BigInt(
+      trancheBalancer: BigInt(
         await underlyingContract.balanceOf(balancerAddress)
       ),
-      inputBridge: BigInt(
+      trancheBridge: BigInt(
         await underlyingContract.balanceOf(elementBridge.address)
       ),
-      outputBalancer: BigInt(
+      underlyingBalancer: BigInt(
         await trancheTokenContract.balanceOf(balancerAddress)
       ),
-      outputBridge: BigInt(
+      underlyingRollup: BigInt(
         await trancheTokenContract.balanceOf(elementBridge.address)
       ),
     } as SwapQuantities;
@@ -480,7 +608,7 @@ describe("defi bridge", function () {
     } as AztecAsset;
     const outputAsset = inputAsset;
 
-    const { outputValueA, outputValueB, isAsync } =
+    const { results, gasUsed } =
       await rollupContract.convert(
         signer,
         elementBridge.address,
@@ -492,36 +620,36 @@ describe("defi bridge", function () {
         interactionNonce,
         BigInt(contractSpec.expiry)
       );
-
-    expect(outputValueA).toBe(0n);
-    expect(outputValueB).toBe(0n);
-    expect(isAsync).toBe(true);
+    expect(results.length).toBe(1);
+    expect(results[0].outputValueA).toBe(0n);
+    expect(results[0].outputValueB).toBe(0n);
+    expect(results[0].isAsync).toBe(true);
 
     const after = {
-      inputBalancer: BigInt(
+      trancheBalancer: BigInt(
         await underlyingContract.balanceOf(balancerAddress)
       ),
-      inputBridge: BigInt(
+      trancheBridge: BigInt(
         await underlyingContract.balanceOf(elementBridge.address)
       ),
-      outputBalancer: BigInt(
+      underlyingBalancer: BigInt(
         await trancheTokenContract.balanceOf(balancerAddress)
       ),
-      outputBridge: BigInt(
+      underlyingRollup: BigInt(
         await trancheTokenContract.balanceOf(elementBridge.address)
       ),
     } as SwapQuantities;
 
     // balancer should have our dai deposit
-    expect(after.inputBalancer).toEqual(
-      before.inputBalancer + quantityOfDaiToDeposit
+    expect(after.trancheBalancer).toEqual(
+      before.trancheBalancer + quantityOfDaiToDeposit
     );
     // the increase of principal tokens in the bridge should be the same as the decrease in the balancer
-    expect(before.outputBalancer - after.outputBalancer).toEqual(
-      after.outputBridge - before.outputBridge
+    expect(before.underlyingBalancer - after.underlyingBalancer).toEqual(
+      after.underlyingRollup - before.underlyingRollup
     );
     // no dai should be left in the bridge
-    expect(after.inputBridge).toEqual(0n);
+    expect(after.trancheBridge).toEqual(0n);
   });
 
   it("should take DAI and swap for ePyDAI via the bridge for the given expiry in the aux data 2", async () => {
@@ -563,16 +691,16 @@ describe("defi bridge", function () {
     );
 
     const before = {
-      inputBalancer: BigInt(
+      trancheBalancer: BigInt(
         await underlyingContract.balanceOf(balancerAddress)
       ),
-      inputBridge: BigInt(
+      trancheBridge: BigInt(
         await underlyingContract.balanceOf(elementBridge.address)
       ),
-      outputBalancer: BigInt(
+      underlyingBalancer: BigInt(
         await trancheTokenContract.balanceOf(balancerAddress)
       ),
-      outputBridge: BigInt(
+      underlyingRollup: BigInt(
         await trancheTokenContract.balanceOf(elementBridge.address)
       ),
     } as SwapQuantities;
@@ -585,7 +713,7 @@ describe("defi bridge", function () {
     } as AztecAsset;
     const outputAsset = inputAsset;
 
-    const { outputValueA, outputValueB, isAsync } =
+    const { results, gasUsed } =
       await rollupContract.convert(
         signer,
         elementBridge.address,
@@ -598,35 +726,36 @@ describe("defi bridge", function () {
         BigInt(contractSpec.expiry)
       );
 
-    expect(outputValueA).toBe(0n);
-    expect(outputValueB).toBe(0n);
-    expect(isAsync).toBe(true);
+      expect(results.length).toBe(1);
+      expect(results[0].outputValueA).toBe(0n);
+      expect(results[0].outputValueB).toBe(0n);
+      expect(results[0].isAsync).toBe(true);
 
     const after = {
-      inputBalancer: BigInt(
+      trancheBalancer: BigInt(
         await underlyingContract.balanceOf(balancerAddress)
       ),
-      inputBridge: BigInt(
+      trancheBridge: BigInt(
         await underlyingContract.balanceOf(elementBridge.address)
       ),
-      outputBalancer: BigInt(
+      underlyingBalancer: BigInt(
         await trancheTokenContract.balanceOf(balancerAddress)
       ),
-      outputBridge: BigInt(
+      underlyingRollup: BigInt(
         await trancheTokenContract.balanceOf(elementBridge.address)
       ),
     } as SwapQuantities;
 
     // balancer should have our dai deposit
-    expect(after.inputBalancer).toEqual(
-      before.inputBalancer + quantityOfDaiToDeposit
+    expect(after.trancheBalancer).toEqual(
+      before.trancheBalancer + quantityOfDaiToDeposit
     );
     // the increase of principal tokens in the bridge should be the same as the decrease in the balancer
-    expect(before.outputBalancer - after.outputBalancer).toEqual(
-      after.outputBridge - before.outputBridge
+    expect(before.underlyingBalancer - after.underlyingBalancer).toEqual(
+      after.underlyingRollup - before.underlyingRollup
     );
     // no dai should be left in the bridge
-    expect(after.inputBridge).toEqual(0n);
+    expect(after.trancheBridge).toEqual(0n);
   });
 
   it("should accept multiple deposits", async () => {
@@ -667,16 +796,16 @@ describe("defi bridge", function () {
     );
 
     const before = {
-      inputBalancer: BigInt(
+      trancheBalancer: BigInt(
         await underlyingContract.balanceOf(balancerAddress)
       ),
-      inputBridge: BigInt(
+      trancheBridge: BigInt(
         await underlyingContract.balanceOf(elementBridge.address)
       ),
-      outputBalancer: BigInt(
+      underlyingBalancer: BigInt(
         await trancheTokenContract.balanceOf(balancerAddress)
       ),
-      outputBridge: BigInt(
+      underlyingRollup: BigInt(
         await trancheTokenContract.balanceOf(elementBridge.address)
       ),
     } as SwapQuantities;
@@ -689,7 +818,7 @@ describe("defi bridge", function () {
     } as AztecAsset;
     const outputAsset = inputAsset;
 
-    const result1 = await rollupContract.convert(
+    let results = await rollupContract.convert(
       signer,
       elementBridge.address,
       inputAsset,
@@ -701,12 +830,13 @@ describe("defi bridge", function () {
       BigInt(contractSpec.expiry)
     );
 
-    expect(result1.outputValueA).toBe(0n);
-    expect(result1.outputValueB).toBe(0n);
-    expect(result1.isAsync).toBe(true);
+    expect(results.results.length).toBe(1);
+    expect(results.results[0].outputValueA).toBe(0n);
+    expect(results.results[0].outputValueB).toBe(0n);
+    expect(results.results[0].isAsync).toBe(true);
 
     // second deposit
-    const result2 = await rollupContract.convert(
+    results = await rollupContract.convert(
       signer,
       elementBridge.address,
       inputAsset,
@@ -718,35 +848,36 @@ describe("defi bridge", function () {
       BigInt(contractSpec.expiry)
     );
 
-    expect(result2.outputValueA).toBe(0n);
-    expect(result2.outputValueB).toBe(0n);
-    expect(result2.isAsync).toBe(true);
+    expect(results.results.length).toBe(1);
+    expect(results.results[0].outputValueA).toBe(0n);
+    expect(results.results[0].outputValueB).toBe(0n);
+    expect(results.results[0].isAsync).toBe(true);
 
     const after = {
-      inputBalancer: BigInt(
+      trancheBalancer: BigInt(
         await underlyingContract.balanceOf(balancerAddress)
       ),
-      inputBridge: BigInt(
+      trancheBridge: BigInt(
         await underlyingContract.balanceOf(elementBridge.address)
       ),
-      outputBalancer: BigInt(
+      underlyingBalancer: BigInt(
         await trancheTokenContract.balanceOf(balancerAddress)
       ),
-      outputBridge: BigInt(
+      underlyingRollup: BigInt(
         await trancheTokenContract.balanceOf(elementBridge.address)
       ),
     } as SwapQuantities;
 
     // balancer should have our dai deposit
-    expect(after.inputBalancer).toEqual(
-      before.inputBalancer + quantityOfDaiToDeposit
+    expect(after.trancheBalancer).toEqual(
+      before.trancheBalancer + quantityOfDaiToDeposit
     );
     // the increase of principal tokens in the bridge should be the same as the decrease in the balancer
-    expect(before.outputBalancer - after.outputBalancer).toEqual(
-      after.outputBridge - before.outputBridge
+    expect(before.underlyingBalancer - after.underlyingBalancer).toEqual(
+      after.underlyingRollup - before.underlyingRollup
     );
     // no dai should be left in the bridge
-    expect(after.inputBridge).toEqual(0n);
+    expect(after.trancheBridge).toEqual(0n);
   });
 
   it("should reject duplicate nonce", async () => {
@@ -754,7 +885,6 @@ describe("defi bridge", function () {
 
     const quantityOfDaiToDeposit = 1n * 10n ** 21n;
     // get 1 DAI into the rollup contract
-    const daiAsset = assetSpecs.specs.get("dai")!;
     await rollupContract.preFundContractWithToken(signer, {
       erc20Address: contractSpec.underlyingAddress,
       amount: quantityOfDaiToDeposit,
@@ -807,7 +937,6 @@ describe("defi bridge", function () {
     const quantityOfDaiToDeposit = 1n * 10n ** 21n;
     const interactionNonce = 1n;
     // get 1 DAI into the rollup contract
-    const daiAsset = assetSpecs.specs.get("dai")!;
     await rollupContract.preFundContractWithToken(signer, {
       erc20Address: contractSpec.underlyingAddress,
       amount: quantityOfDaiToDeposit,
@@ -835,7 +964,7 @@ describe("defi bridge", function () {
     } as AztecAsset;
     const outputAsset = inputAsset;
 
-    const { outputValueA, outputValueB, isAsync } =
+    const results =
       await rollupContract.convert(
         signer,
         elementBridge.address,
@@ -848,9 +977,10 @@ describe("defi bridge", function () {
         BigInt(contractSpec.expiry)
       );
 
-    expect(outputValueA).toBe(0n);
-    expect(outputValueB).toBe(0n);
-    expect(isAsync).toBe(true);
+    expect(results.results.length).toBe(1);
+    expect(results.results[0].outputValueA).toBe(0n);
+    expect(results.results[0].outputValueB).toBe(0n);
+    expect(results.results[0].isAsync).toBe(true);
 
     const canFinalise = await elementBridge.canFinalise(1n);
     expect(canFinalise).toEqual(false);
@@ -864,18 +994,7 @@ describe("defi bridge", function () {
   });
 
   it("should reject finalise on non-existent nonce", async () => {
-    const contractSpec = elementDaiApr2022Spec;
-
-    const quantityOfDaiToDeposit = 1n * 10n ** 21n;
     const interactionNonce = 1n;
-
-    // for the element bridge, input assets and output assets are the same
-    const inputAsset = {
-      assetType: AztecAssetType.ERC20,
-      id: 1,
-      erc20Address: contractSpec.underlyingAddress,
-    } as AztecAsset;
-    const outputAsset = inputAsset;
 
     const finalise = async () => {
       await rollupContract.processAsyncDefiInteraction(
@@ -892,8 +1011,6 @@ describe("defi bridge", function () {
     const quantityOfDaiToDeposit = 1n * 10n ** 21n;
     const interactionNonce = 1n;
     // get 1 DAI into the rollup contract
-    // get 1 DAI into the rollup contract
-    const daiAsset = assetSpecs.specs.get("dai")!;
     await rollupContract.preFundContractWithToken(signer, {
       erc20Address: contractSpec.underlyingAddress,
       amount: quantityOfDaiToDeposit,
@@ -921,7 +1038,7 @@ describe("defi bridge", function () {
     } as AztecAsset;
     const outputAsset = inputAsset;
 
-    const { outputValueA, outputValueB, isAsync } =
+    const results =
       await rollupContract.convert(
         signer,
         elementBridge.address,
@@ -934,9 +1051,10 @@ describe("defi bridge", function () {
         BigInt(contractSpec.expiry)
       );
 
-    expect(outputValueA).toBe(0n);
-    expect(outputValueB).toBe(0n);
-    expect(isAsync).toBe(true);
+    expect(results.results.length).toBe(1);
+    expect(results.results[0].outputValueA).toBe(0n);
+    expect(results.results[0].outputValueB).toBe(0n);
+    expect(results.results[0].isAsync).toBe(true);
 
     const finalise = async () => {
       await rollupContract.processAsyncDefiInteraction(
@@ -947,133 +1065,152 @@ describe("defi bridge", function () {
     await expect(finalise()).rejects.toThrow("BRIDGE_NOT_READY");
   });
 
-  it("finalising interaction should succeed once term is reached", async () => {
-    const contractSpec = elementDaiApr2022Spec;
 
-    const quantityOfDaiToDeposit = 1n * 10n ** 21n;
-    const interactionNonce = 68n;
-    // get 1 DAI into the rollup contract
-    const daiAsset = assetSpecs.specs.get("dai")!;
-    await rollupContract.preFundContractWithToken(signer, {
-      erc20Address: contractSpec.underlyingAddress,
-      amount: quantityOfDaiToDeposit,
-      name: "dai",
-    });
+  (Object.keys(vaultConfig.tokens).flatMap(x => {
+    const assetSpec = assetSpecs.specs.get(x);
+    if (!assetSpec || assetSpec.disabled) {
+      return [];
+    }
+    return buildPoolSpecs(x, vaultConfig);
+  })).forEach((poolSpec: ElementPoolSpec) => {
+    it(`finalising interaction for ${poolSpec.name} - ${new Date(poolSpec.expiry * 1000)} should succeed once term is reached`, async () => {
+      const contractSpec = poolSpec;
+      const currentTimestamp = await getCurrentBlockTime();
+      if (currentTimestamp >= poolSpec.expiry) {
+        return;
+      }
+  
+      const quantityExponent = assetSpecs.specs.get(poolSpec.name)!.quantityExponent;
+      const quantityToDeposit = 1n * 10n ** quantityExponent;
+      const interactionNonce = 68n;
 
-    const register = async () => {
-      await elementBridge
-        .registerConvergentPoolAddress(
-          signer,
-          contractSpec.poolAddress,
-          contractSpec.wrappedPositionAddress,
-          contractSpec.expiry
-        )
-        .catch(fixEthersStackTrace);
-    };
-
-    await expect(register()).resolves.not.toThrow();
-
-    // for the element bridge, input assets and output assets are the same
-    const inputAsset = {
-      assetType: AztecAssetType.ERC20,
-      id: 1,
-      erc20Address: contractSpec.underlyingAddress,
-    } as AztecAsset;
-    const outputAsset = inputAsset;
-
-    const trancheTokenContract = new Contract(
-      contractSpec.trancheAddress,
-      ERC20.abi,
-      signer
-    );
-
-    const underlyingContract = new Contract(
-      contractSpec.underlyingAddress,
-      ERC20.abi,
-      signer
-    );
-
-    const { outputValueA, outputValueB, isAsync } =
-      await rollupContract.convert(
+      try {
+        await rollupContract.preFundContractWithToken(signer, {
+          erc20Address: contractSpec.underlyingAddress,
+          amount: quantityToDeposit,
+          name: poolSpec.name
+        });
+    
+        const register = async () => {
+          await elementBridge
+            .registerConvergentPoolAddress(
+              signer,
+              contractSpec.poolAddress,
+              contractSpec.wrappedPositionAddress,
+              contractSpec.expiry
+            )
+            .catch(fixEthersStackTrace);
+        };
+    
+        await register();
+      } catch (e) {
+        return;
+      }
+  
+      // for the element bridge, input assets and output assets are the same
+      const inputAsset = {
+        assetType: AztecAssetType.ERC20,
+        id: 1,
+        erc20Address: contractSpec.underlyingAddress,
+      } as AztecAsset;
+      const outputAsset = inputAsset;
+  
+      const beforeConvert = await getBalances(
+        contractSpec.trancheAddress,
+        contractSpec.underlyingAddress,
         signer,
+        balancerAddress,
         elementBridge.address,
-        inputAsset,
-        {},
-        outputAsset,
-        {},
-        quantityOfDaiToDeposit,
-        interactionNonce,
-        BigInt(contractSpec.expiry)
+        rollupContract.address
+      );
+  
+      const results =
+        await rollupContract.convert(
+          signer,
+          elementBridge.address,
+          inputAsset,
+          {},
+          outputAsset,
+          {},
+          quantityToDeposit,
+          interactionNonce,
+          BigInt(contractSpec.expiry)
+        );
+  
+      const afterConvert = await getBalances(
+        contractSpec.trancheAddress,
+        contractSpec.underlyingAddress,
+        signer,
+        balancerAddress,
+        elementBridge.address,
+        rollupContract.address
+      );
+  
+      expect(results.results.length).toBe(1);
+      expect(results.results[0].outputValueA).toBe(0n);
+      expect(results.results[0].outputValueB).toBe(0n);
+      expect(results.results[0].isAsync).toBe(true);
+      const gasToConvert = results.gasUsed;
+  
+      const beforeFinalise = await getBalances(
+        contractSpec.trancheAddress,
+        contractSpec.underlyingAddress,
+        signer,
+        balancerAddress,
+        elementBridge.address,
+        rollupContract.address
+      );
+  
+      await setBlockchainTime(contractSpec.expiry);
+  
+      await expect(elementBridge.canFinalise(interactionNonce)).resolves.toBe(
+        true
+      );
+  
+      const result = await rollupContract.processAsyncDefiInteraction(
+        signer,
+        interactionNonce
+      );
+  
+      const gasToFinalise = result.gasUsed;
+  
+      const afterFinalise = await getBalances(
+        contractSpec.trancheAddress,
+        contractSpec.underlyingAddress,
+        signer,
+        balancerAddress,
+        elementBridge.address,
+        rollupContract.address
       );
 
-    expect(outputValueA).toBe(0n);
-    expect(outputValueB).toBe(0n);
-    expect(isAsync).toBe(true);
+      checkBalances(beforeConvert.quantities, afterConvert.quantities, beforeFinalise.quantities, afterFinalise.quantities);
+  
+      await expect(elementBridge.canFinalise(interactionNonce)).resolves.toBe(
+        false
+      );
 
-    const before = {
-      outputBalancer: BigInt(
-        await underlyingContract.balanceOf(balancerAddress)
-      ),
-      outputBridge: BigInt(
-        await underlyingContract.balanceOf(elementBridge.address)
-      ),
-      inputBalancer: BigInt(
-        await trancheTokenContract.balanceOf(balancerAddress)
-      ),
-      inputBridge: BigInt(
-        await trancheTokenContract.balanceOf(elementBridge.address)
-      ),
-    } as SwapQuantities;
-
-    const blockNumBefore = await ethers.provider.getBlockNumber();
-    const blockBefore = await ethers.provider.getBlock(blockNumBefore);
-    const timeIncrease = contractSpec.expiry - blockBefore.timestamp;
-
-    await ethers.provider.send("evm_increaseTime", [timeIncrease]);
-    await ethers.provider.send("evm_mine", []);
-
-    await expect(elementBridge.canFinalise(interactionNonce)).resolves.toBe(
-      true
-    );
-
-    const result = await rollupContract.processAsyncDefiInteraction(
-      signer,
-      interactionNonce
-    );
-
-    const after = {
-      outputBalancer: BigInt(
-        await underlyingContract.balanceOf(balancerAddress)
-      ),
-      outputBridge: BigInt(
-        await underlyingContract.balanceOf(elementBridge.address)
-      ),
-      inputBalancer: BigInt(
-        await trancheTokenContract.balanceOf(balancerAddress)
-      ),
-      inputBridge: BigInt(
-        await trancheTokenContract.balanceOf(elementBridge.address)
-      ),
-    } as SwapQuantities;
-
-    expect(after.inputBridge).toBe(0n);
-    expect(after.outputBridge - before.inputBridge).toBeLessThan(1000n); // account for small slippage
-
-    await expect(elementBridge.canFinalise(interactionNonce)).resolves.toBe(
-      false
-    );
+      const gasUsage = `Asset ${
+        poolSpec.name
+      }, expiry ${new Date(poolSpec.expiry * 1000)}, gas to convert: ${
+        gasToConvert
+      }, gas to finalise: ${gasToFinalise}`
+      console.log(gasUsage);
+    });
   });
 
+
   it("all assets and all expiries", async () => {
+    const numInteractionsPerExpiry = 10n;
     const tokens = vaultConfig.tokens;
 
     const blockNumBefore = await ethers.provider.getBlockNumber();
     const blockBefore = await ethers.provider.getBlock(blockNumBefore);
     const currentTime = blockBefore.timestamp;
-    console.log(`Current time: ${currentTime}`);
     let goodSpecs: ElementPoolSpec[] = [];
     const failedSpecs: ElementPoolSpec[] = [];
     const assetNames = Object.keys(tokens);
+    const depositPerInteraction = new Map<string, bigint>();
+
     for (let i = 0; i < assetNames.length; i++) {
       const assetName = assetNames[i];
       if (assetSpecs.specs.has(assetName)) {
@@ -1082,13 +1219,32 @@ describe("defi bridge", function () {
           continue;
         }
         const requiredToken = {
-          amount: 10n * 10n ** assetSpec.quantityExponent,
+          amount: numInteractionsPerExpiry * 10n ** assetSpec.quantityExponent,
           erc20Address: tokens[assetName],
           name: assetName,
         };
         try {
           await rollupContract.preFundContractWithToken(signer, requiredToken);
-          goodSpecs.push(...buildPoolSpecs(assetName, vaultConfig));
+          const poolSpecs = buildPoolSpecs(assetName, vaultConfig);
+          if (!poolSpecs.length) {
+            continue;
+          }
+          goodSpecs.push(...poolSpecs);
+          const underlyingContract = new Contract(
+            requiredToken.erc20Address,
+            ERC20.abi,
+            signer
+          );
+          const balance = await underlyingContract.balanceOf(
+            rollupContract.address
+          );
+          const numInteractions =
+            numInteractionsPerExpiry * BigInt(poolSpecs.length);
+          const amountPerInteraction = balance.toBigInt() / numInteractions;
+          depositPerInteraction.set(
+            requiredToken.erc20Address,
+            amountPerInteraction
+          );
         } catch (e) {
           console.log(
             `Failed to fund rollup with ${requiredToken.amount} tokens of ${requiredToken.name}`,
@@ -1120,11 +1276,6 @@ describe("defi bridge", function () {
       try {
         await register(currentSpec);
         tempSpecs.push(currentSpec);
-        console.log(
-          `Successfully registered ${currentSpec.name}: ${new Date(
-            currentSpec.expiry * 1000
-          )}`
-        );
       } catch (e) {
         console.log(
           `Failed to register ${currentSpec.name}: ${new Date(
@@ -1137,142 +1288,560 @@ describe("defi bridge", function () {
 
     goodSpecs = tempSpecs;
 
-    const beforeQuantities: SwapQuantities[] = [];
+    const interactions: Interaction[] = [];
 
-    for (let i = 0; i < goodSpecs.length; i++) {
-      const currentSpec = goodSpecs[i];
-      const inputAsset = {
-        assetType: AztecAssetType.ERC20,
-        id: 1,
-        erc20Address: currentSpec.underlyingAddress,
-      } as AztecAsset;
-      const outputAsset = inputAsset;
-      const name = currentSpec.name;
+    let interactionNonce = 1n;
+    for (let i = 0; i < numInteractionsPerExpiry; i++) {
+      for (let j = 0; j < goodSpecs.length; j++) {
+        const currentSpec = goodSpecs[j];
+        const inputAsset = {
+          assetType: AztecAssetType.ERC20,
+          id: 1,
+          erc20Address: currentSpec.underlyingAddress,
+        } as AztecAsset;
+        const outputAsset = inputAsset;
 
-      const trancheTokenContract = new Contract(
-        currentSpec.trancheAddress,
-        ERC20.abi,
-        signer
-      );
-
-      const underlyingContract = new Contract(
-        currentSpec.underlyingAddress,
-        ERC20.abi,
-        signer
-      );
-
-      const before = {
-        outputBalancer: BigInt(
-          await underlyingContract.balanceOf(balancerAddress)
-        ),
-        outputBridge: BigInt(
-          await underlyingContract.balanceOf(elementBridge.address)
-        ),
-        inputBalancer: BigInt(
-          await trancheTokenContract.balanceOf(balancerAddress)
-        ),
-        inputBridge: BigInt(
-          await trancheTokenContract.balanceOf(elementBridge.address)
-        ),
-      } as SwapQuantities;
-      beforeQuantities.push(before);
-      const quantity =
-        BigInt(await underlyingContract.balanceOf(rollupContract.address)) /
-        10n;
-
-      console.log(
-        `Attempting to deposit ${quantity} of ${currentSpec.name}: ${new Date(
-          currentSpec.expiry * 1000
-        )}`
-      );
-
-      const { outputValueA, outputValueB, isAsync } =
-        await rollupContract.convert(
+        const balancesBefore = await getBalances(
+          currentSpec.trancheAddress,
+          currentSpec.underlyingAddress,
           signer,
+          balancerAddress,
           elementBridge.address,
-          inputAsset,
-          {},
-          outputAsset,
-          {},
-          quantity,
-          BigInt(i + 1),
-          BigInt(currentSpec.expiry)
+          rollupContract.address
         );
-      console.log(
-        `Successfully deposited ${quantity} of ${currentSpec.name}: ${new Date(
-          currentSpec.expiry * 1000
-        )}`
-      );
+        const quantity = depositPerInteraction.get(
+          currentSpec.underlyingAddress
+        )!;
 
-      expect(outputValueA).toBe(0n);
-      expect(outputValueB).toBe(0n);
-      expect(isAsync).toBe(true);
+
+        const results =
+          await rollupContract.convert(
+            signer,
+            elementBridge.address,
+            inputAsset,
+            {},
+            outputAsset,
+            {},
+            quantity,
+            interactionNonce,
+            BigInt(currentSpec.expiry)
+          );
+
+        const balancesAfter = await getBalances(
+          currentSpec.trancheAddress,
+          currentSpec.underlyingAddress,
+          signer,
+          balancerAddress,
+          elementBridge.address,
+          rollupContract.address
+        );
+
+        interactions.push({
+          amount: quantity,
+          spec: currentSpec,
+          nonce: interactionNonce,
+          gasUsedConvert: results.gasUsed,
+          gasUsedFinalise: 0n,
+          finalised: false,
+          beforeConvert: balancesBefore.quantities,
+          afterConvert: balancesAfter.quantities,
+        });
+
+        expect(results.results.length).toBe(1);
+        expect(results.results[0].outputValueA).toBe(0n);
+        expect(results.results[0].outputValueB).toBe(0n);
+        expect(results.results[0].isAsync).toBe(true);
+        interactionNonce++;
+      }
     }
 
     expect(goodSpecs.length).toBeTruthy();
     const maxExpiry = goodSpecs.map((x) => x.expiry).sort()[
       goodSpecs.length - 1
     ];
-    console.log(`Max expiry ${maxExpiry}`);
-    const timeIncrease = maxExpiry - blockBefore.timestamp;
 
-    await ethers.provider.send("evm_increaseTime", [timeIncrease]);
-    await ethers.provider.send("evm_mine", []);
+    await setBlockchainTime(maxExpiry);
 
-    for (let i = 0; i < goodSpecs.length; i++) {
-      const currentSpec = goodSpecs[i];
-      const interactionNonce = BigInt(i + 1);
+    for (let i = 0; i < interactions.length; i++) {
+      const interaction = interactions[i];
+      const currentSpec = interaction.spec;
 
-      const trancheTokenContract = new Contract(
-        currentSpec.trancheAddress,
-        ERC20.abi,
-        signer
-      );
-
-      const underlyingContract = new Contract(
-        currentSpec.underlyingAddress,
-        ERC20.abi,
-        signer
-      );
-
-      console.log(
-        `Finalising deposit of ${currentSpec.name}: ${new Date(
-          currentSpec.expiry * 1000
-        )}`
-      );
-
-      await expect(elementBridge.canFinalise(interactionNonce)).resolves.toBe(
+      await expect(elementBridge.canFinalise(interaction.nonce)).resolves.toBe(
         true
       );
 
+      const balancesBefore = await getBalances(
+        currentSpec.trancheAddress,
+        currentSpec.underlyingAddress,
+        signer,
+        balancerAddress,
+        elementBridge.address,
+        rollupContract.address
+      );
+      interaction.beforefinalise = balancesBefore.quantities;
       const result = await rollupContract.processAsyncDefiInteraction(
         signer,
-        interactionNonce
+        interaction.nonce
+      );
+      interaction.gasUsedFinalise = result.gasUsed;
+      expect(result.outputValueB).toEqual(0n);
+      expect(result.outputValueA).toBeGreaterThan(0n);
+
+      const balancesAfter = await getBalances(
+        currentSpec.trancheAddress,
+        currentSpec.underlyingAddress,
+        signer,
+        balancerAddress,
+        elementBridge.address,
+        rollupContract.address
+      );
+      interaction.afterFinalise = balancesAfter.quantities;
+
+      checkBalances(
+        interaction.beforeConvert,
+        interaction.afterConvert,
+        interaction.beforefinalise!,
+        interaction.afterFinalise!
       );
 
-      const after = {
-        outputBalancer: BigInt(
-          await underlyingContract.balanceOf(balancerAddress)
-        ),
-        outputBridge: BigInt(
-          await underlyingContract.balanceOf(elementBridge.address)
-        ),
-        inputBalancer: BigInt(
-          await trancheTokenContract.balanceOf(balancerAddress)
-        ),
-        inputBridge: BigInt(
-          await trancheTokenContract.balanceOf(elementBridge.address)
-        ),
-      } as SwapQuantities;
-
-      expect(after.inputBridge).toBe(0n);
-      expect(after.outputBridge - beforeQuantities[i].inputBridge).toBeLessThan(
-        1000n
-      ); // account for small slippage
-
-      await expect(elementBridge.canFinalise(interactionNonce)).resolves.toBe(
+      await expect(elementBridge.canFinalise(interaction.nonce)).resolves.toBe(
         false
       );
     }
+
+    logInteractions(interactions, 'All in - all out');
+  });
+
+  it("finalises an eligible interaction after each convert", async () => {
+    const numInteractionsPerExpiry = 10n;
+    const tokens = vaultConfig.tokens;
+
+    const blockNumBefore = await ethers.provider.getBlockNumber();
+    const blockBefore = await ethers.provider.getBlock(blockNumBefore);
+    const currentTime = blockBefore.timestamp;
+    let goodSpecs: ElementPoolSpec[] = [];
+    const failedSpecs: ElementPoolSpec[] = [];
+    const assetNames = Object.keys(tokens);
+    const depositPerInteraction = new Map<string, bigint>();
+
+    for (let i = 0; i < assetNames.length; i++) {
+      const assetName = assetNames[i];
+      if (assetSpecs.specs.has(assetName)) {
+        const assetSpec = assetSpecs.specs.get(assetName)!;
+        if (assetSpec.disabled) {
+          continue;
+        }
+        const requiredToken = {
+          amount: numInteractionsPerExpiry * 10n ** assetSpec.quantityExponent,
+          erc20Address: tokens[assetName],
+          name: assetName,
+        };
+        try {
+          await rollupContract.preFundContractWithToken(signer, requiredToken);
+          const poolSpecs = buildPoolSpecs(assetName, vaultConfig);
+          if (!poolSpecs.length) {
+            continue;
+          }
+          goodSpecs.push(...poolSpecs);
+          const underlyingContract = new Contract(
+            requiredToken.erc20Address,
+            ERC20.abi,
+            signer
+          );
+          const balance = await underlyingContract.balanceOf(
+            rollupContract.address
+          );
+          const numInteractions =
+            numInteractionsPerExpiry * BigInt(poolSpecs.length);
+          const amountPerInteraction = balance.toBigInt() / numInteractions;
+          depositPerInteraction.set(
+            requiredToken.erc20Address,
+            amountPerInteraction
+          );
+        } catch (e) {
+          console.log(
+            `Failed to fund rollup with ${requiredToken.amount} tokens of ${requiredToken.name}`,
+            e
+          );
+          failedSpecs.push(...buildPoolSpecs(assetName, vaultConfig));
+        }
+      }
+    }
+
+    const register = async (spec: ElementPoolSpec) => {
+      await elementBridge
+        .registerConvergentPoolAddress(
+          signer,
+          spec.poolAddress,
+          spec.wrappedPositionAddress,
+          spec.expiry
+        )
+        .catch(fixEthersStackTrace);
+    };
+
+    const tempSpecs: ElementPoolSpec[] = [];
+    for (let i = 0; i < goodSpecs.length; i++) {
+      const currentSpec = goodSpecs[i];
+      if (currentSpec.expiry <= currentTime) {
+        failedSpecs.push(currentSpec);
+        continue;
+      }
+      try {
+        await register(currentSpec);
+        tempSpecs.push(currentSpec);
+      } catch (e) {
+        console.log(
+          `Failed to register ${currentSpec.name}: ${new Date(
+            currentSpec.expiry * 1000
+          )}`
+        );
+        failedSpecs.push(currentSpec);
+      }
+    }
+
+    //     console.log
+    //     Current time: 1642114798
+
+    //       at Object.<anonymous> (bridges/ElementFinance/tests/element_bridge.test.ts:1071:13)
+
+    //   console.log
+    //     Epirations  [
+    //       1628997564, 1632834462, 1634325622,
+    //       1634346845, 1635528110, 1636746083,
+    //       1637941844, 1639727861, 1640620258,
+
+    // 	Jan 28
+    //       1643382446, 1643382460, 1643382476,
+    //       1643382514,
+
+    // 	1644601070, 1644604852, // Feb 11
+    // Apr 15
+    //       1650025565,
+
+    // Apr 29
+    // 	1651240496, 1651247155,
+    //       1651253068, 1651264326, 1651265241,
+    //       1651267340, 1651275535
+    //     ]
+
+    goodSpecs = tempSpecs;
+    const interactions: Interaction[] = [];
+
+    const sortedSpecs = goodSpecs.sort((a, b) => {
+      if (a.expiry < b.expiry) return -1;
+      if (a.expiry > a.expiry) return 1;
+      return 0;
+    });
+    const expirySet1 = sortedSpecs.splice(0, 3);
+    const expirySet2 = sortedSpecs.splice(0, 3);
+    const expirySet3 = sortedSpecs.splice(0, 3);
+    let interactionNonce = 1n;
+    let finaliseIndex = 0;
+    const convertExpirySet = async (
+      expirySet: ElementPoolSpec[],
+      willFinalise: boolean
+    ) => {
+      for (let i = 0; i < expirySet.length; i++) {
+        const interactionsForThisExpiry: Interaction[] = [];
+        for (let j = 0; j < numInteractionsPerExpiry; j++) {
+          const currentSpec = expirySet[i];
+          const inputAsset = {
+            assetType: AztecAssetType.ERC20,
+            id: 1,
+            erc20Address: currentSpec.underlyingAddress,
+          } as AztecAsset;
+          const outputAsset = inputAsset;
+
+          const balancesBefore = await getBalances(
+            currentSpec.trancheAddress,
+            currentSpec.underlyingAddress,
+            signer,
+            balancerAddress,
+            elementBridge.address,
+            rollupContract.address
+          );
+
+          if (willFinalise) {
+            const balancesBeforeFinalise = await getBalances(
+              interactions[finaliseIndex].spec.trancheAddress,
+              interactions[finaliseIndex].spec.underlyingAddress,
+              signer,
+              balancerAddress,
+              elementBridge.address,
+              rollupContract.address
+            );
+            interactions[finaliseIndex].beforefinalise = balancesBeforeFinalise.quantities;
+            
+          }
+
+          const quantity = depositPerInteraction.get(
+            currentSpec.underlyingAddress
+          )!;
+
+          const results =
+            await rollupContract.convert(
+              signer,
+              elementBridge.address,
+              inputAsset,
+              {},
+              outputAsset,
+              {},
+              quantity,
+              interactionNonce,
+              BigInt(currentSpec.expiry)
+            );
+
+          const balancesAfter = await getBalances(
+            currentSpec.trancheAddress,
+            currentSpec.underlyingAddress,
+            signer,
+            balancerAddress,
+            elementBridge.address,
+            rollupContract.address
+          );
+
+          if (willFinalise) {
+            const balancesAfterFinalise = await getBalances(
+              interactions[finaliseIndex].spec.trancheAddress,
+              interactions[finaliseIndex].spec.underlyingAddress,
+              signer,
+              balancerAddress,
+              elementBridge.address,
+              rollupContract.address
+            );
+            interactions[finaliseIndex].afterFinalise = balancesAfterFinalise.quantities;
+            interactions[finaliseIndex].finalised = true;
+          }
+
+          interactionsForThisExpiry.unshift({
+            amount: quantity,
+            spec: currentSpec,
+            nonce: interactionNonce,
+            gasUsedConvert: results.gasUsed,
+            gasUsedFinalise: 0n,
+            finalised: false,
+            beforeConvert: balancesBefore.quantities,
+            afterConvert: balancesAfter.quantities,
+            finalisedNonce: willFinalise ? interactions[finaliseIndex].nonce : undefined
+          });
+
+          expect(results.results.length).toBe(willFinalise ? 2 : 1);
+
+          let resultIndex = 0;
+          if (willFinalise) {
+            expect(results.results[resultIndex].outputValueA).toBeGreaterThan(interactions[finaliseIndex].amount);
+            expect(results.results[resultIndex].outputValueB).toBe(0n);
+            expect(results.results[resultIndex].isAsync).toBe(false);
+            resultIndex++;
+          }
+          expect(results.results[resultIndex].outputValueA).toBe(0n);
+          expect(results.results[resultIndex].outputValueB).toBe(0n);
+          expect(results.results[resultIndex].isAsync).toBe(true);
+          interactionNonce++;
+          if (willFinalise) {
+            finaliseIndex++;
+          }
+        }
+        interactions.push(...interactionsForThisExpiry);
+      }
+    };
+
+    await convertExpirySet(expirySet1, false);
+    await setBlockchainTime(expirySet1[expirySet1.length - 1].expiry);
+    await convertExpirySet(expirySet2, true);
+    await setBlockchainTime(expirySet2[expirySet2.length - 1].expiry);
+    await convertExpirySet(expirySet3, true);
+    await setBlockchainTime(expirySet3[expirySet3.length - 1].expiry);
+
+    for (let i = 0; i < interactions.length; i++) {
+      const interaction = interactions[i];
+      const currentSpec = interaction.spec;
+
+      if (!interaction.finalised) {
+        await expect(elementBridge.canFinalise(interaction.nonce)).resolves.toBe(
+          true
+        );
+  
+        const balancesBefore = await getBalances(
+          currentSpec.trancheAddress,
+          currentSpec.underlyingAddress,
+          signer,
+          balancerAddress,
+          elementBridge.address,
+          rollupContract.address
+        );
+        interaction.beforefinalise = balancesBefore.quantities;
+        
+        const result = await rollupContract.processAsyncDefiInteraction(
+          signer,
+          interaction.nonce
+        );
+        interaction.gasUsedFinalise = result.gasUsed;
+        expect(result.outputValueB).toEqual(0n);
+        expect(result.outputValueA).toBeGreaterThan(0n);
+  
+        const balancesAfter = await getBalances(
+          currentSpec.trancheAddress,
+          currentSpec.underlyingAddress,
+          signer,
+          balancerAddress,
+          elementBridge.address,
+          rollupContract.address
+        );
+        interaction.afterFinalise = balancesAfter.quantities;
+      }
+
+      checkBalances(
+        interaction.beforeConvert,
+        interaction.afterConvert,
+        interaction.beforefinalise!,
+        interaction.afterFinalise!
+      );
+
+      await expect(elementBridge.canFinalise(interaction.nonce)).resolves.toBe(
+        false
+      );
+    }
+
+    logInteractions(interactions, 'One in - one out');
+  });
+
+  (Object.keys(vaultConfig.tokens).flatMap(x => {
+    const assetSpec = assetSpecs.specs.get(x);
+    if (!assetSpec || assetSpec.disabled) {
+      return [];
+    }
+    return buildPoolSpecs(x, vaultConfig);
+  })).forEach((poolSpec: ElementPoolSpec) => {
+    it(`directly finalising for ${poolSpec.name} - ${new Date(poolSpec.expiry * 1000)} should succeed`, async () => {
+      const contractSpec = poolSpec;
+      const currentTimestamp = await getCurrentBlockTime();
+      if (currentTimestamp >= poolSpec.expiry) {
+        return;
+      }
+  
+      const quantityExponent = assetSpecs.specs.get(poolSpec.name)!.quantityExponent;
+      const quantityToDeposit = 1n * 10n ** quantityExponent;
+      const interactionNonce = 68n;
+
+      try {
+        await rollupContract.preFundContractWithToken(signer, {
+          erc20Address: contractSpec.underlyingAddress,
+          amount: quantityToDeposit,
+          name: poolSpec.name
+        }, elementBridge.address);
+    
+        const register = async () => {
+          await elementBridge
+            .registerConvergentPoolAddress(
+              signer,
+              contractSpec.poolAddress,
+              contractSpec.wrappedPositionAddress,
+              contractSpec.expiry
+            )
+            .catch(fixEthersStackTrace);
+        };
+    
+        await register();
+      } catch (e) {
+        return;
+      }
+  
+      // for the element bridge, input assets and output assets are the same
+      const inputAsset = {
+        assetType: AztecAssetType.ERC20,
+        id: 1,
+        erc20Address: contractSpec.underlyingAddress,
+      } as AztecAsset;
+      const outputAsset = inputAsset;
+  
+      const beforeConvert = await getBalances(
+        contractSpec.trancheAddress,
+        contractSpec.underlyingAddress,
+        signer,
+        balancerAddress,
+        elementBridge.address,
+        rollupContract.address
+      );
+
+  
+      const results =
+        await elementBridge.convert(
+          signer,
+          elementBridge.address,
+          inputAsset,
+          {},
+          outputAsset,
+          {},
+          quantityToDeposit,
+          interactionNonce,
+          BigInt(contractSpec.expiry)
+        );
+  
+      const afterConvert = await getBalances(
+        contractSpec.trancheAddress,
+        contractSpec.underlyingAddress,
+        signer,
+        balancerAddress,
+        elementBridge.address,
+        rollupContract.address
+      );
+  
+      //expect(results.results.length).toBe(1);
+      //expect(results.results[0].outputValueA).toBe(0n);
+      //expect(results.results[0].outputValueB).toBe(0n);
+      //expect(results.results[0].isAsync).toBe(true);
+      const gasToConvert = results.gasUsed;
+  
+      const beforeFinalise = await getBalances(
+        contractSpec.trancheAddress,
+        contractSpec.underlyingAddress,
+        signer,
+        balancerAddress,
+        elementBridge.address,
+        rollupContract.address
+      );
+  
+      await setBlockchainTime(contractSpec.expiry);
+  
+      await expect(elementBridge.canFinalise(interactionNonce)).resolves.toBe(
+        true
+      );
+  
+      const result = await elementBridge.finalise(
+        signer,
+        elementBridge.address,
+        inputAsset,
+        {},
+        outputAsset,
+        {},
+        interactionNonce,
+        BigInt(contractSpec.expiry)
+      );
+  
+      const gasToFinalise = result.gasUsed;
+  
+      const afterFinalise = await getBalances(
+        contractSpec.trancheAddress,
+        contractSpec.underlyingAddress,
+        signer,
+        balancerAddress,
+        elementBridge.address,
+        rollupContract.address
+      );
+  
+      // await expect(elementBridge.canFinalise(interactionNonce)).resolves.toBe(
+      //   false
+      // );
+
+      const gasUsage = `Asset ${
+        poolSpec.name
+      }, expiry ${new Date(poolSpec.expiry * 1000)}, gas to convert: ${
+        gasToConvert
+      }, gas to finalise: ${gasToFinalise}`
+      console.log(gasUsage);
+    });
   });
 });
+
+

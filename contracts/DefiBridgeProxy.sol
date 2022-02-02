@@ -104,7 +104,6 @@ contract DefiBridgeProxy{
     if (outputAssetB.assetType != AztecTypes.AztecAssetType.VIRTUAL) {
       tempValueB = getBalance(outputAssetB.erc20Address);
     }
-
     // Call bridge.convert(), which will return output values for the two output assets.
     // If input is ETH, send it along with call to convert.
     IDefiBridge bridgeContract = IDefiBridge(bridgeAddress);
@@ -152,11 +151,11 @@ contract DefiBridgeProxy{
       );
     }
 
-    emit AztecBridgeInteraction(
-      bridgeAddress,
-      outputValueA,
-      outputValueB,
-      isAsync
-    );
+    // emit AztecBridgeInteraction(
+    //   bridgeAddress,
+    //   outputValueA,
+    //   outputValueB,
+    //   isAsync
+    // );
   }  
 }

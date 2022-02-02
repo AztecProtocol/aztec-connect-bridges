@@ -19,6 +19,30 @@ export class Constants {
   static readonly ETH = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
 }
 
+export interface SendTxOptions {
+  gasPrice?: bigint;
+  gasLimit?: number;
+}
+
+export const assetToArray = (asset: AztecAsset) => [
+  asset.id || 0,
+  asset.erc20Address || "0x0000000000000000000000000000000000000000",
+  asset.assetType || 0,
+];
+
+export enum AztecAssetType {
+  NOT_USED,
+  ETH,
+  ERC20,
+  VIRTUAL,
+}
+
+export interface AztecAsset {
+  id?: number;
+  assetType?: AztecAssetType;
+  erc20Address?: string;
+}
+
 export async function getTokenBalance(
   tokenAddress: string,
   address: string,

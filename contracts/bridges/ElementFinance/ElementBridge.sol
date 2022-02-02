@@ -23,15 +23,16 @@ contract ElementBridge is IDefiBridge {
   struct Interaction {
     address trancheAddress;
     uint64 expiry;
-    uint256 quantityPT;
     bool finalised;
+    uint256 quantityPT;    
   }
 
   // minimum info required to execute a deposit
   struct Pool {
-    address trancheAddress;
-    address poolAddress;
     bytes32 poolId;
+    address trancheAddress;
+    address poolAddress;    
+    address wrappedPositionAddress;
   }
 
   // Tranche factory address for Tranche contract address derivation
@@ -40,10 +41,13 @@ contract ElementBridge is IDefiBridge {
   // This is constant as long as Tranche does not implement non-constant constructor arguments.
   bytes32 private immutable trancheBytecodeHash; // = 0xf481a073666136ab1f5e93b296e84df58092065256d0db23b2d22b62c68e978d;
 
-  // cache of all of our Defi interactions. keyed on nonce
+  // cache of all of our pending Defi interactions. keyed on nonce
   mapping(uint256 => Interaction) private interactions;
 
-  // cahce of all pools we are able to interact with
+  // cache of failed Defi interactions
+  mapping(uint256 => Interaction) private failedInteractions;
+
+  // cache of all pools we are able to interact with
   mapping(uint256 => Pool) private pools;
 
   // the aztec rollup processor contract
@@ -53,8 +57,11 @@ contract ElementBridge is IDefiBridge {
   address private immutable balancerAddress;
 
   uint64[] private heap;
-  uint32[] private expiries;
+  //uint32[] private expiries;
   mapping(uint64 => uint256[]) private expiryToNonce;
+
+  // 48 hours in seconds, usd for calculating speeedbump expiries
+  uint256 internal constant _FORTY_EIGHT_HOURS = 172800;
 
   constructor(
     address _rollupProcessor,
@@ -117,7 +124,6 @@ contract ElementBridge is IDefiBridge {
   ) internal {
     PoolSpec memory poolSpec;
     IWrappedPosition wrappedPosition = IWrappedPosition(wrappedPositionAddress);
-    console.log("WP: total %s", wrappedPosition.token().totalSupply());
     // this underlying asset should be the real asset i.e. DAI stablecoin etc
     poolSpec.underlyingAsset = address(wrappedPosition.token());
     // this should be the address of the Element tranche for the asset/expiry pair
@@ -162,7 +168,7 @@ contract ElementBridge is IDefiBridge {
     // retrieve the pool address for the given pool id from balancer
     // then test it against that given to us
     IVault balancerVault = IVault(balancerAddress);
-    (address balancersPoolAddress, PoolSpecialization balancersPoolSpec) = balancerVault.getPool(poolSpec.poolId);
+    (address balancersPoolAddress, ) = balancerVault.getPool(poolSpec.poolId);
     require(poolAddress == balancersPoolAddress, "ElementBridge: VAULT_ADDRESS_MISMATCH");
 
     // TODO: Further pool validation
@@ -173,9 +179,10 @@ contract ElementBridge is IDefiBridge {
       expiry
     );
     pools[assetExpiryHash] = Pool(
+      poolSpec.poolId,
       poolSpec.trancheAddress,
       poolAddress,
-      poolSpec.poolId
+      wrappedPositionAddress
     );
   }
 
@@ -256,18 +263,18 @@ contract ElementBridge is IDefiBridge {
       totalInputValue, // discuss with ELement on the likely slippage for a large trade e.g $1M Dai
       block.timestamp
     );
-    console.log("Received %s tokens for input of %s", principalTokensAmount, totalInputValue);
+    //console.log("Received %s tokens for input of %s", principalTokensAmount, totalInputValue);
     // store the tranche that underpins our interaction, the expiry and the number of received tokens against the nonce
     interactions[interactionNonce] = Interaction(
       pool.trancheAddress,
       auxData,
-      principalTokensAmount,
-      false
+      false,
+      principalTokensAmount
     );
     // add the nonce and expiry to our expiry heap
     addNonceAndExpiry(interactionNonce, auxData);
     // check the heap to see if we can finalise an expired transaction
-    (bool expiryAvailable, uint64 expiry, uint256 nonce) = checkNextArrayExpiry();//checkNextExpiry();
+    (bool expiryAvailable, uint64 expiry, uint256 nonce) = checkNextExpiry();
     if (expiryAvailable) {
       // another position is available for finalising, inform the rollup contract
       IRollupProcessor(rollupProcessor).processAsyncDeFiInteraction(nonce);
@@ -282,8 +289,11 @@ contract ElementBridge is IDefiBridge {
   {
     // retrieve the interaction given and check if it's ready
     Interaction storage interaction = interactions[interactionNonce];
+    if (interaction.expiry == 0) {
+      interaction = failedInteractions[interactionNonce];
+    }
     require(interaction.expiry != 0, "ElementBridge: UNKNOWN_NONCE");
-    return interaction.expiry <= block.timestamp && !interaction.finalised;
+    return interaction.expiry <= block.timestamp && !interaction.finalised && interacionCanBeFinalised(interaction);
   }
 
   // serves as the 'off ramp' for the transaction
@@ -299,6 +309,9 @@ contract ElementBridge is IDefiBridge {
     require(msg.sender == rollupProcessor, "ElementBridge: INVALID_CALLER");
     // retrieve the interaction and verify it's ready for finalising
     Interaction storage interaction = interactions[interactionNonce];
+    if (interaction.expiry == 0) {
+      interaction = failedInteractions[interactionNonce];
+    }
     require(interaction.expiry != 0, "ElementBridge: UNKNOWN_NONCE");
     require(
       interaction.expiry <= block.timestamp,
@@ -307,19 +320,29 @@ contract ElementBridge is IDefiBridge {
     require(!interaction.finalised, "ElementBridge: ALREADY_FINALISED");
 
     // convert the tokens back to underlying using the tranche
-    console.log("Withdrawing %s principal tokens", interaction.quantityPT);
-    console.log("Total supply %s", ITranche(interaction.trancheAddress).totalSupply());
-    outputValueA = ITranche(interaction.trancheAddress).withdrawPrincipal(
-      interaction.quantityPT,
-      address(this)
-    );
-    // approve the transfer of funds back to the rollup contract
-    ERC20(outputAssetA.erc20Address).approve(rollupProcessor, outputValueA);
+    //console.log("Total supply %s", ITranche(interaction.trancheAddress).totalSupply());
+    ITranche tranche = ITranche(interaction.trancheAddress);
+    try tranche.withdrawPrincipal(interaction.quantityPT, address(this)) returns (uint256 valueRedeemed) {
+      outputValueA = valueRedeemed;
+      // approve the transfer of funds back to the rollup contract
+      ERC20(outputAssetA.erc20Address).approve(rollupProcessor, outputValueA);
+      interaction.finalised = true;
+      popInteraction(interaction, interactionNonce);
+    } catch {
+      addInteractionAsFailure(interaction, interactionNonce);
+    } 
+  }
 
-    // interaction is completed. clean up the expiry heap
-    interaction.finalised = true;
-    popInteraction(interaction, interactionNonce);
-    console.log("Successfully finalised interaction: ", interactionNonce);
+  function addInteractionAsFailure(Interaction storage interaction, uint256 interactionNonce) internal {
+    // copy the interaction over to the failed interactions store
+    failedInteractions[interactionNonce] = Interaction(
+      interaction.trancheAddress,
+      interaction.expiry,
+      false,
+      interaction.quantityPT
+    );
+    // delete from the original mapping
+    delete interactions[interactionNonce];
   }
 
   // add an interaction nonce and expiry to the expiry heap
@@ -330,30 +353,28 @@ contract ElementBridge is IDefiBridge {
     // is this the first time this expiry has been requested?
     // if so then add it to our expiry heap
     if (nonces.length == 1) {
-      //addToHeap(expiry);
-      addToArray(expiry);
+      addToHeap(expiry);
     }
   }
 
   // move an expiry up through the heap to the correct position
   function siftUp(uint256 index) internal {
+    uint64 value = heap[index];
     while (index > 0) {
       uint256 parentIndex = index / 2;
-      if (heap[parentIndex] <= heap[index]) {
+      if (heap[parentIndex] <= value) {
         break;
       }
-      uint64 temp = heap[index];
       heap[index] = heap[parentIndex]; // update
-      heap[parentIndex] = temp; // update
       index = index / 2;
     }
+    heap[index] = value;
   }
 
-  function addToArray(uint64 expiry) internal {
-    expiries.push(uint32(expiry));
-    console.log("Added expiry %s to array", expiry);
-    printArray();
-  }
+  // function addToArray(uint64 expiry) internal {
+  //   expiries.push(uint32(expiry));
+  //   //printArray();
+  // }
 
   // add a new expiry to the heap
   function addToHeap(uint64 expiry) internal {
@@ -369,7 +390,6 @@ contract ElementBridge is IDefiBridge {
     // TODO test this
 
     siftUp(index);
-    printHeap();
   }
 
   // remove the root expiry from the heap
@@ -378,8 +398,6 @@ contract ElementBridge is IDefiBridge {
     if (heap.length == 0) {
       return;
     }
-    // slightly modified algorithm for popping from min-heap
-    // writes to storage are expensive so we want to do as few as possible
     // read the value in the last position and shrink the array by 1
     uint64 last = heap[heap.length - 1];
     heap.pop();
@@ -413,23 +431,9 @@ contract ElementBridge is IDefiBridge {
         heap[index] = smallestValue;
         break;
       }
-      // swap with the smallest child
+      // take the value from the smallest child and write in into our slot
       heap[index] = heap[swapIndex];
       index = swapIndex;
-    }
-  }
-
-  function printHeap() internal {
-    uint256 index = 0;
-    while (index < heap.length) {
-      index++;
-    }
-  }
-
-  function printArray() internal {
-    uint256 index = 0;
-    while (index < expiries.length) {
-      index++;
     }
   }
 
@@ -457,10 +461,9 @@ contract ElementBridge is IDefiBridge {
 
     // if there are no more nonces left for this expiry then remove it from the heap
     if (nonces.length == 0) {
-      //removeExpiryFromHeap(interaction.expiry);
-      removeExpiryFromArray(interaction.expiry);
+      removeExpiryFromHeap(interaction.expiry);
+      delete expiryToNonce[interaction.expiry];
     }
-    console.log("Popped interaction: %s", interactionNonce);
   }
 
   // will remove an expiry from the min-heap
@@ -479,58 +482,56 @@ contract ElementBridge is IDefiBridge {
     popFromHeap();
   }
 
-  function removeExpiryFromArray(uint64 expiry) internal {
-    uint256 index = 0;
-    while(index < expiries.length && expiries[index] != expiry) {
-      ++index;
-    }
-    if (index < expiries.length) {
-      expiries[index] = expiries[expiries.length - 1];
-      expiries.pop();
-    }
-    console.log("Removed expiry %s from array", expiry);
-    printArray();
-  }
+  // function removeExpiryFromArray(uint64 expiry) internal {
+  //   uint256 index = 0;
+  //   while(index < expiries.length && expiries[index] != expiry) {
+  //     ++index;
+  //   }
+  //   if (index < expiries.length) {
+  //     expiries[index] = expiries[expiries.length - 1];
+  //     expiries.pop();
+  //   }
+  //   //printArray();
+  // }
 
-  function findSmallestExpiryIndex() internal returns (uint256 smallestIndex) {
-    uint32 smallest = expiries[0];
-    uint256 smallestIndex = 0;
-    uint256 index = 1;
-    while (index < expiries.length) {
-      if (expiries[index] < smallest) {
-        smallest = expiries[index];
-        smallestIndex = index;
-      }
-      ++index;
-    }
-  }
+  // function findSmallestExpiryIndex() internal returns (uint256 indexOfSmallest) {
+  //   uint256 smallestIndex = 0;
+  //   uint256 index = 1;
+  //   while (index < expiries.length) {
+  //     if (expiries[index] < expiries[smallestIndex]) {
+  //       smallestIndex = index;
+  //     }
+  //     ++index;
+  //   }
+  //   indexOfSmallest = smallestIndex;
+  // }
 
-  function checkNextArrayExpiry()
-    internal
-    returns (
-      bool expiryAvailable,
-      uint64 expiry,
-      uint256 nonce
-    ) {
-    // do we have any expiries and if so is the earliest expiry now expired
-    if (expiries.length != 0) {
-      uint256 smallestIndex = findSmallestExpiryIndex();
-      uint64 smallestExpiry = expiries[smallestIndex];
-      if (smallestExpiry <= block.timestamp) {
-        uint256[] storage nonces = expiryToNonce[smallestExpiry];
-        // it shouldn't be possible for the length of this to be 0 but check just in case
-        if (nonces.length == 0) {
-          // we should pop the heap as it is clearly has the wrong expiry at the root
-          removeExpiryFromArray(smallestExpiry);
-        } else {
-          // grab the nonce at the end
-          nonce = nonces[nonces.length - 1];
-          expiryAvailable = true;
-          expiry = smallestExpiry;
-        }
-      }
-    }
-  }
+  // function checkNextArrayExpiry()
+  //   internal
+  //   returns (
+  //     bool expiryAvailable,
+  //     uint64 expiry,
+  //     uint256 nonce
+  //   ) {
+  //   // do we have any expiries and if so is the earliest expiry now expired
+  //   if (expiries.length != 0) {
+  //     uint256 smallestIndex = findSmallestExpiryIndex();
+  //     uint64 smallestExpiry = expiries[smallestIndex];
+  //     if (smallestExpiry <= block.timestamp) {
+  //       uint256[] storage nonces = expiryToNonce[smallestExpiry];
+  //       // it shouldn't be possible for the length of this to be 0 but check just in case
+  //       if (nonces.length == 0) {
+  //         // we should pop the heap as it is clearly has the wrong expiry at the root
+  //         removeExpiryFromArray(smallestExpiry);
+  //       } else {
+  //         // grab the nonce at the end
+  //         nonce = nonces[nonces.length - 1];
+  //         expiryAvailable = true;
+  //         expiry = smallestExpiry;
+  //       }
+  //     }
+  //   }
+  // }
 
   // fast lookup to determine if we have an interaction that can be finalised
   function checkNextExpiry()
@@ -542,19 +543,61 @@ contract ElementBridge is IDefiBridge {
     )
   {
     // do we have any expiries and if so is the earliest expiry now expired
-    if (heap.length != 0 && heap[0] <= block.timestamp) {
-      // we have some expired interactions
-      uint256[] storage nonces = expiryToNonce[heap[0]];
-      // it shouldn't be possible for the length of this to be 0 but check just in case
+    if (heap.length == 0) {
+      return (false, 0, 0);
+    }
+    uint64 nextExpiry = heap[0];
+    if (nextExpiry > block.timestamp) {
+      // oldest expiry is still not expired
+      return (false, 0, 0);
+    }
+    // we have some expired interactions
+    uint256[] storage nonces = expiryToNonce[nextExpiry];
+    // it shouldn't be possible for the length of this to be 0 but check just in case
+    if (nonces.length == 0) {
+      // we should pop the heap as it is clearly has the wrong expiry at the root
+      popFromHeap();
+      return (false, 0, 0);
+    }
+    uint256 nextNonce = nonces[nonces.length - 1];
+    Interaction storage interaction = interactions[nextNonce];
+    if (interaction.expiry == 0) {
+      // this shouldn't happen, suggests the interaction has been finalised already but not removed from the expiry heap
+      // clean up here
+      nonces.pop();
       if (nonces.length == 0) {
-        // we should pop the heap as it is clearly has the wrong expiry at the root
+        // that was the only nonce for this expiry, remove the expiry
         popFromHeap();
-      } else {
-        // grab the nonce at the end
-        nonce = nonces[nonces.length - 1];
-        expiryAvailable = true;
-        expiry = heap[0];
+      }
+      return (false, 0, 0);
+    }
+    // we have valid interaction for the next expiry, check if it can be finalised
+    if (!interacionCanBeFinalised(interaction)) {
+      // can't be finalised, add to failures
+      addInteractionAsFailure(interaction, nextNonce);
+      return (false, 0, 0);
+    }
+    // grab the nonce at the end
+    nonce = nextNonce;
+    expiryAvailable = true;
+    expiry = nextExpiry;
+  }
+
+  function interacionCanBeFinalised(Interaction storage interaction) internal view returns (bool) {
+    ITranche tranche = ITranche(interaction.trancheAddress);
+    uint256 speedbump = tranche.speedbump();
+    if (speedbump != 0) {
+      uint256 newExpiry = speedbump + _FORTY_EIGHT_HOURS;
+      if (newExpiry > block.timestamp) {
+        // a speedbump is in force for this tranche and it is beyond the current time
+        return false;
       }
     }
+    address wpAddress = address(tranche.position());
+    IWrappedPosition wrappedPosition = IWrappedPosition(wpAddress);
+    address underlyingAddress = address(wrappedPosition.token());
+    address yearnVaultAddress = address(wrappedPosition.vault());
+    uint256 vaultQuantity = ERC20(underlyingAddress).balanceOf(yearnVaultAddress);
+    return interaction.quantityPT <= vaultQuantity;
   }
 }

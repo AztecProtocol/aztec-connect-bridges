@@ -6,6 +6,8 @@ import "./IERC20Permit.sol";
 interface IWrappedPosition is IERC20Permit {
     function token() external view returns (IERC20);
 
+    function vault() external view returns (IERC20);
+
     function balanceOfUnderlying(address who) external view returns (uint256);
 
     function getSharesToUnderlying(uint256 shares)
