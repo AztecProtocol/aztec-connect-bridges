@@ -143,11 +143,11 @@ export class RollupProcessor {
   async preFundContractWithToken(
     signer: Signer,
     token: TestToken,
-    to?: string
+    to?: string,
+    amountInMaximum = 1n * 10n ** 21n
   ) {
-    const amount = 1n * 10n ** 21n;
     const swapper = new Curve(signer);
     await swapper.init();
-    await swapper.swap(to ?? this.address, token, amount);
+    await swapper.swap(to ?? this.address, token, amountInMaximum);
   }
 }
