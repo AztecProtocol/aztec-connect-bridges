@@ -14,7 +14,7 @@ import {ElementBridge} from "./../../bridges/element/ElementBridge.sol";
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 
 
-contract BridgeTest is DSTest {
+contract ElementTest is DSTest {
 
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 

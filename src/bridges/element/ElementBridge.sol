@@ -274,18 +274,6 @@ contract ElementBridge is IDefiBridge {
     }
   }
 
-  function canFinalise(uint256 interactionNonce)
-    external
-    view
-    override
-    returns (bool)
-  {
-    // retrieve the interaction given and check if it's ready
-    Interaction storage interaction = interactions[interactionNonce];
-    require(interaction.expiry != 0, "ElementBridge: UNKNOWN_NONCE");
-    return interaction.expiry <= block.timestamp && !interaction.finalised;
-  }
-
   // serves as the 'off ramp' for the transaction
   // converts the principal tokens back to the underlying asset
   function finalise(
@@ -295,7 +283,8 @@ contract ElementBridge is IDefiBridge {
     AztecTypes.AztecAsset calldata,
     uint256 interactionNonce,
     uint64
-  ) external payable returns (uint256 outputValueA, uint256 outputValueB) {
+  ) external payable returns (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) {
+
     require(msg.sender == rollupProcessor, "ElementBridge: INVALID_CALLER");
     // retrieve the interaction and verify it's ready for finalising
     Interaction storage interaction = interactions[interactionNonce];
@@ -320,6 +309,7 @@ contract ElementBridge is IDefiBridge {
     interaction.finalised = true;
     popInteraction(interaction, interactionNonce);
     console.log("Successfully finalised interaction: ", interactionNonce);
+    interactionComplete = true;
   }
 
   // add an interaction nonce and expiry to the expiry heap

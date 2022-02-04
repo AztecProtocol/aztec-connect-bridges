@@ -168,11 +168,7 @@ contract AaveLendingBridge is IDefiBridge {
         return outputValue;
     }
 
-    function canFinalise(
-        uint256 /*interactionNonce*/
-    ) external view override returns (bool) {
-        return false;
-    }
+
 
     function finalise(
         AztecTypes.AztecAsset calldata inputAssetA,
@@ -181,7 +177,7 @@ contract AaveLendingBridge is IDefiBridge {
         AztecTypes.AztecAsset calldata outputAssetB,
         uint256 interactionNonce,
         uint64 auxData
-    ) external payable override returns (uint256, uint256) {
+    ) external payable override returns (uint256, uint256, bool) {
         require(false);
     }
 

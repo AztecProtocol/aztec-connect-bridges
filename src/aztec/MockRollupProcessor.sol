@@ -106,11 +106,8 @@ contract MockRollupProcessor is DSTest {
             interaction.bridgeAddress != address(0),
             "Rollup Contract: UNKNOWN_NONCE"
         );
-        bool isReady = IDefiBridge(interaction.bridgeAddress).canFinalise(
-            interaction.interactionNonce
-        );
-        require(isReady, "Rollup Contract: BRIDGE_NOT_READY");
-        (uint256 outputValueA, uint256 outputValueB) = IDefiBridge(
+
+        (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = IDefiBridge(
             interaction.bridgeAddress
         ).finalise(
                 interaction.inputAssetA,

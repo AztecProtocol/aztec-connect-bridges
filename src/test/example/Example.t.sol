@@ -14,7 +14,7 @@ import {ExampleBridgeContract} from "./../../bridges/example/ExampleBridge.sol";
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 
 
-contract AaveTest is DSTest {
+contract ExampleTest is DSTest {
 
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
@@ -74,11 +74,11 @@ contract AaveTest is DSTest {
                 0
             );
 
-        uint256 bridgeDai = dai.balanceOf(address(exampleBridge));
+        uint256 rollupDai = dai.balanceOf(address(rollupProcessor));
 
         assertEq(
             depositAmount,
-            bridgeDai,
+            rollupDai,
             "Balances must match"
         );
 

@@ -38,16 +38,11 @@ contract ExampleBridgeContract is IDefiBridge {
     )
   {
     // // ### INITIALIZATION AND SANITY CHECKS
-    // require(msg.sender == rollupProcessor, "ExampleBridge: INVALID_CALLER");
-    // outputValueA = totalInputValue;
-    // IERC20(inputAssetA.erc20Address).approve(rollupProcessor, totalInputValue);
+    require(msg.sender == rollupProcessor, "ExampleBridge: INVALID_CALLER");
+    outputValueA = totalInputValue;
+    IERC20(inputAssetA.erc20Address).approve(rollupProcessor, totalInputValue);
   }
 
-  function canFinalise(
-    uint256 /*interactionNonce*/
-  ) external view override returns (bool) {
-    return false;
-  }
 
   function finalise(
     AztecTypes.AztecAsset calldata inputAssetA,
@@ -56,7 +51,7 @@ contract ExampleBridgeContract is IDefiBridge {
     AztecTypes.AztecAsset calldata outputAssetB,
     uint256 interactionNonce,
     uint64 auxData
-  ) external payable override returns (uint256, uint256) {
+  ) external payable override returns (uint256, uint256, bool) {
     require(false);
   }
 }
