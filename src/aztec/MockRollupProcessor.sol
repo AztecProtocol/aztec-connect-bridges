@@ -27,10 +27,6 @@ contract MockRollupProcessor is DSTest {
 
     bytes4 private constant TRANSFER_FROM_SELECTOR = 0x23b872dd; // bytes4(keccak256('transferFrom(address,address,uint256)'));
     mapping(uint256 => uint256) ethPayments;
-    // We need to cap the amount of gas sent to the DeFi bridge contract for two reasons.
-    // 1: To provide consistency to rollup providers around costs.
-    // 2: To prevent griefing attacks where a bridge consumes all our gas.
-    uint256 private gasSentToBridgeProxy = 300000;
 
     // DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = function signature of:
     //   function convert(

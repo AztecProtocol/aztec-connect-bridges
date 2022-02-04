@@ -2,20 +2,20 @@
 pragma solidity 0.8.10;
 
 import "ds-test/test.sol";
-import {Vm} from "./Vm.sol";
+import {Vm} from "../Vm.sol";
 
-import {DefiBridgeProxy} from "./../aztec/DefiBridgeProxy.sol";
-import {MockRollupProcessor} from "./../aztec/MockRollupProcessor.sol";
+import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
+import {MockRollupProcessor} from "./../../aztec/MockRollupProcessor.sol";
 
 // Aave-specific imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {AaveLendingBridge} from "./../bridges/aave/AaveLending.sol";
-import {IPool} from "./../bridges/aave/interfaces/IPool.sol";
-import {ILendingPoolAddressesProvider} from "./../bridges/aave/interfaces/ILendingPoolAddressesProvider.sol";
-import {IAToken} from "./../bridges/aave/interfaces/IAToken.sol";
-import {ZkAToken} from "./../bridges/aave/ZkAToken.sol";
-import {AztecTypes} from "./../aztec/AztecTypes.sol";
-import {WadRayMath} from "./../bridges/aave/libraries/WadRayMath.sol";
+import {AaveLendingBridge} from "./../../bridges/aave/AaveLending.sol";
+import {IPool} from "./../../bridges/aave/interfaces/IPool.sol";
+import {ILendingPoolAddressesProvider} from "./../../bridges/aave/interfaces/ILendingPoolAddressesProvider.sol";
+import {IAToken} from "./../../bridges/aave/interfaces/IAToken.sol";
+import {ZkAToken} from "./../../bridges/aave/ZkAToken.sol";
+import {AztecTypes} from "./../../aztec/AztecTypes.sol";
+import {WadRayMath} from "./../../bridges/aave/libraries/WadRayMath.sol";
 
 contract AaveTest is DSTest {
     using WadRayMath for uint256;
@@ -74,7 +74,7 @@ contract AaveTest is DSTest {
 
     function testEnterWithDai(uint128 depositAmount, uint16 timeDiff) public {
         _setupDai();
-        _enterWithDai(depositAmount);
+        _enterWithDai(1000000);
         _accrueInterest(timeDiff);
     }
 

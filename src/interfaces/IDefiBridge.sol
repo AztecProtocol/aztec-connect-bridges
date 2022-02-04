@@ -61,11 +61,6 @@ interface IDefiBridge {
       bool isAsync
     );
 
-  // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy
-  // @param uint256 interactionNonce
-
-  function canFinalise(uint256 interactionNonce) external view returns (bool);
-
   // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy. It receives the aggreagte sum of all users funds for the input assets.
   // @param AztecAsset inputAssetA a struct detailing the first input asset, this will always be set
   // @param AztecAsset inputAssetB an optional struct detailing the second input asset, this is used for repaying borrows and should be virtual
@@ -83,5 +78,7 @@ interface IDefiBridge {
     AztecTypes.AztecAsset calldata outputAssetB,
     uint256 interactionNonce,
     uint64 auxData
-  ) external payable returns (uint256 outputValueA, uint256 outputValueB);
+  ) external payable returns (uint256 outputValueA, uint256 outputValueB, bool interactionComplete);
+
+
 }

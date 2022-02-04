@@ -3,7 +3,7 @@ pragma solidity 0.8.10;
 
 import "ds-test/test.sol";
 
-import {WadRayMath} from "./../bridges/aave/libraries/WadRayMath.sol";
+import {WadRayMath} from "./../../bridges/aave/libraries/WadRayMath.sol";
 
 contract RoundingTest is DSTest {
     using WadRayMath for uint256;
