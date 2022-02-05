@@ -1,17 +1,17 @@
 # How to contribute
 
-This repo has been built with Foundry. Given the inter-connected nature of building bridges with existing main-net protocols. Foundry / forge offered the best support for debugging, mainnet forking, impersonation and gas profiling. We beleive that it makes sense to test solidity with solidty not with an added complication of Ethers / Typescript.
+This repo has been built with Foundry. Given the inter-connected nature of Aztec Connect Bridges with existing main-net protocols, we decided Foundry / forge offered the best support for testing. This repo should make debugging, mainnet-forking, impersonation and gas profiling simple. It makes sense to test Solidity contracts with Solidty not with the added complication of Ethers / Typescript.
 
 # Writing a bridge
 
-Developing a bridge is permisionless, simply follow the steps below to get started.
+Developing a bridge is simple and permissionless. It is done entirely in solidity and without any knowledge of the underlying crpytograpy Aztec uses. Users of your bridge will get the full benefits of ironclad privacy and 10-30x gas savings. Simply follow the steps below to get started.
 
-1. Fork this repository
-2. All bridges need to be submitted via PR's to this repo, we expect developers to do the following as part of their PR.
-3. Write a solidity bridge that interfaces with the protocol you are bridging e.g AAVE
-4. Write tests in solidity that use the fork from mainnet code to test the bridge with production values and a range of assets and edge cases.
-5. Write an explanation of the flows your bridge supports.
-6. Implement the typescript bridge-data.ts class that tells an integrator how to use your bridge.
+1. Fork / close this repository
+2. All bridges need to be submitted via PR's to this repo, we expect developers to include the following as part of their PR and for a grant payment.
+3. Write a Solidity bridge that interfaces with the protocol you are bridging e.g AAVE
+4. Write tests in Solidity that test the bridge with production values and the deployed protocol that is currently on mainnet. You should test a range of assets and edge cases and use Forge's fuzzing abilities.
+5. Write an explanation of the flows your bridge supports to be included as spec.md
+6. Implement the typescript bridge-data.ts class that tells a front-end developer how to use your bridge.
 7. Deploy your bridge! Instructions coming soon.
 
 ## Getting started
@@ -114,7 +114,18 @@ Bit Config Definition
 | 5   | secondOutputValid |
 ```
 
-###
+### bridge-data.ts
+
+This is a typescript class designed to help a developer on the frontend use your bridge. There are 4 variants of the class:
+
+```
+BridgeData
+AsyncBridgeData
+YieldBridgeData
+AsyncYieldBridgeData
+```
+
+You should pick the class that describes the functionality of your bridge and implement the functions to fetch data from your bridge / L1.
 
 # Aztec Connect Background
 
