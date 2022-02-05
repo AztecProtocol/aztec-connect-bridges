@@ -23,22 +23,12 @@ Clone the repo with:
 Build the repo with:
 
 ```
-yarn setup
-yarn
-yarn compile // builds the type-chain mappings
-
-```
-
-```
 cd aztec-connect-bridges
-./bootstrap.sh
+yarn setup
 
 ```
 
-Copy and rename the following folders:
-
-`src/bridges/example`
-`src/bridges/example`
+Copy and rename the following folders to the bridge you are building:
 
 ```
 src/bridges/example
@@ -122,7 +112,9 @@ Bit Config Definition
 | 5   | secondOutputValid |
 ```
 
-# Aztec Connect Starter Kit
+###
+
+# Aztec Connect Background
 
 ### What is Aztec?
 
@@ -142,18 +134,9 @@ Rollup providers batch multiple L2 transaction intents on the Aztec Network toge
 
 #### How much does this cost?
 
-Aztec connect transactions can be batched together into one rollup. Each user in the batch pays a base fee to cover the verification of the rollup proof and their share of the L1 DeFi transaction gas cost.
+Aztec connect transactions can be batched together into one rollup. Each user in the batch pays a base fee to cover the verification of the rollup proof and their share of the L1 DeFi transaction gas cost. A single Aztec Connect transaction requires 3 base fees or aproximatley ~8000 gas.
 
-The largest batch size is 256 transactions. The cost to verify a rollup is fixed at ~400,000 gas, with a variable amount of gas for each transaction in the batch of ~3,500 gas.
-
-Assuming 256 transactions in a batch each user would pay:
-
-Rollup Verification gas cost: (400,000 / 256) + 3,500= 5062 gas
-Claim Rollup Verification gas cost: (400,000 / 256) + 3,500 = 5062 gas
-
-Uniswap bridge gas cost: 180,000 / 256 = 703 gas
-
-**Total = ~11,000 gas for a Uniswap trade**
+The user then pays their share of the L1 Defi transaction. The rollup will call a bridge contract with a fixed deterministic amount of gas so the total fee is simple ~8000 gas + BRIDGE_GAS / BATCH_SIZE.
 
 #### What is private?
 
@@ -171,11 +154,7 @@ If the output asset of any interaction is specified as "VIRTUAL", the user will 
 
 ## Aux Input Data
 
-If the output asset of any interaction is specified as "VIRTUAL", the user will receive encrypted notes on Aztec representing their share of the position, but no Tokens or ETH need to be transfered. The position tokens have an `assetId` that is the `interactionNonce` of the DeFi Bridge call. This is globably unique. Virtual assets can be used to construct complex flows, such as entering or exiting LP positions. i.e one bridge contract can have multiple flows which are triggered using different input assets.
-
-### Developer Test Network
-
-Aztec's Connect has been deployed to the Goerli testnet in Alpha. Your bridge contract needs to conform to the following interface. If so you can contact us for access to the SDK to create proofs.
+The auxData field can be used to provide data to the bridge contract, such as slippage, tokenIds etc.
 
 #### Bridge Contract Interface
 
@@ -260,7 +239,7 @@ interface IDefiBridge {
     Types.AztecAsset calldata outputAssetB,
     uint256 interactionNonce,
     uint64 auxData
-  ) external payable returns (uint256 outputValueA, uint256 outputValueB);
+  ) external payable returns (uint256 outputValueA, uint256 outputValueB, bool interactionComplete);
 }
 
 ```
@@ -280,10 +259,6 @@ This function should interact with the DeFi protocol e.g Uniswap, and transfer t
 If the DeFi interaction is ASYNC i.e it does not settle in the same block, the call to convert should return (0,0 true). The contract should record the interaction nonce for any Async position or if virtual assets are returned.
 
 At a later date, this interaction can be finalised by proding the rollup contract to call finalise on the bridge.
-
-#### canFinalise()
-
-This function checks to see if an async interaction is ready to settle. It should return true if it is.
 
 #### function finalise()
 
