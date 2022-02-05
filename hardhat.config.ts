@@ -1,17 +1,20 @@
 import { HardhatUserConfig } from 'hardhat/config';
-import '@nomiclabs/hardhat-waffle';
-import '@nomiclabs/hardhat-ethers';
+import '@typechain/hardhat';
 
 const config: HardhatUserConfig = {
   solidity: {
     compilers: [
-      { version: "0.6.6"},
-      { version: "0.7.0"}
+      {
+        version: '0.8.10',
+      },
     ],
     settings: {
-      evmVersion: 'berlin',
+      evmVersion: 'london',
       optimizer: { enabled: true, runs: 200 },
     },
+  },
+  typechain: {
+    target: 'ethers-v5',
   },
   networks: {
     ganache: {
@@ -19,12 +22,11 @@ const config: HardhatUserConfig = {
     },
     hardhat: {
       blockGasLimit: 15000000,
-      gasPrice: 10,
-      hardfork: 'berlin',
     },
   },
   paths: {
-    artifacts: './src/artifacts',
+    sources: 'src/bridges/',
+    artifacts: './artifacts',
   },
 };
 

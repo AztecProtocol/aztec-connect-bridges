@@ -1,4 +1,122 @@
-# Aztec Connect Starter Kit
+# How to contribute
+
+This repo has been built with Foundry. Given the inter-connected nature of building bridges with existing main-net protocols. Foundry / forge offered the best support for debugging, mainnet forking, impersonation and gas profiling. We beleive that it makes sense to test solidity with solidty not with an added complication of Ethers / Typescript.
+
+# Writing a bridge
+
+Developing a bridge is permisionless, simply follow the steps below to get started.
+
+1. Fork this repository
+2. All bridges need to be submitted via PR's to this repo, we expect developers to do the following as part of their PR.
+3. Write a solidity bridge that interfaces with the protocol you are bridging e.g AAVE
+4. Write tests in solidity that use the fork from mainnet code to test the bridge with production values and a range of assets and edge cases.
+5. Write an explanation of the flows your bridge supports.
+6. Implement the typescript bridge-data.ts class that tells an integrator how to use your bridge.
+7. Deploy your bridge! Instructions coming soon.
+
+## Getting started
+
+Clone the repo with:
+
+`git clone git@github.com:AztecProtocol/aztec-connect-bridges.git`
+
+Build the repo with:
+
+```
+cd aztec-connect-bridges
+yarn
+git submodule update --init
+yarn setup
+
+```
+
+Copy and rename the following folders to the bridge you are building:
+
+```
+src/bridges/example
+src/test/example
+src/client/example
+
+```
+
+To test run:
+
+```
+yarn test --match YourBridge
+```
+
+To get a gas report run:
+
+```
+yarn test --match YourBridge --gas-report
+```
+
+To debug:
+
+```
+yarn test --match YourBridge -vvvv
+```
+
+## Testing methodolgy
+
+This repo includes an infura key that allows forking from mainnet. We have included some helpers to make testing easier.
+
+In production a bridge is called by a user creating a client side proof via the Aztec Sdk. These transaction proofs are sent to a rollup provider for aggregation. The rollup provider then sends the aggregate rollup proof with the sum of all users proofs for a given bridgeId to your bridge contract.
+
+A bridgeId consists of the below schema. The rollup contract uses this to construct the function parameters to pass into your bridge contract. It calls your bridge with a fixed amount of gas via a `delegateCall` via the `DefiBridgeProxy.sol` contract.
+
+To test a bridge, we have added a `MockRollupProcessor` that simulates a rollup. You can call this in your tests by simply calling `rollupContract.convert()` with the deconstructed bridgeId fields.
+
+In production, the rollup contract will supply `totalInputValue` as the aggregate sum of the input assets, and `interactionNonce` as a globally unique id. For testing you can provide this.
+
+The rollup contract will send `totalInputValue` of `inputAssetA` and `inputAssetB` ahead of the call to convert. In production, the rollup contract has these tokens as they are the users funds. For testing there is a helper to prefund the rollup with sufficient tokens to enable the transfer.
+
+Simply call:
+
+```solidity
+  _setTokenBalance(address(dai), address(rollupProcessor), depositAmount);
+```
+
+This will set the balance of the rollup to the amount required.
+
+## Sending Tokens Back to the Rollup
+
+The rollup contract expects a bridge to have approved for transfer by the `rollupAddress` the ERC20 tokens that are returned via `outputValueA` or `outputValueB` for a given asset. The DeFiBridgeProxy.sol will attempt to recover by calling `transferFrom(bridgeAddress, rollupAddress, amount)` for these values once `bridge.convert()` or `bridge.finalise()` have executed.
+
+ETH is returned to the rollup from a bridge by calling the payable function with a msg.value `rollupContract.receiveETH(uint256 interactionNonce)`. You must also set the `outputValue` of the corresponding `outputAsset` to be the amount of ETH sent.
+
+This repo supports TypeChain so all typescript bindings will be auto generated and added to the `typechain-types` folder. See the example tests for more info.
+
+### Bridge Id Structure
+
+```
+[^1]: Bridge id is a 250-bit concatenation of the following data (starting at the most significant bit position):
+
+| bit position | bit length | definition | description |
+| --- | --- | --- | --- |
+| 0 | 64 | `auxData` | custom auxiliary data for bridge-specific logic |
+| 64 | 32 | `bitConfig` | flags that describe asset types |
+| 96 | 32 | `openingNonce` | (optional) reference to a previous defi interaction nonce (used for virtual assets) |
+| 128 | 30 |  `outputAssetB` | asset id of 2nd output asset |
+| 158 | 30 | `outputAssetA` | asset id of 1st output asset |
+| 188 | 30 | `inputAsset` | asset id of 1st input asset |
+| 218 | 32 | `bridgeAddressId` | id of bridge smart contract address |
+
+
+Bit Config Definition
+| bit | meaning |
+| --- | --- |
+| 0   | firstInputAssetVirtual |
+| 1   | secondInputAssetVirtual |
+| 2   | firstOutputAssetVirtual |
+| 3   | secondOutputAssetVirtual |
+| 4   | secondInputValid |
+| 5   | secondOutputValid |
+```
+
+###
+
+# Aztec Connect Background
 
 ### What is Aztec?
 
@@ -12,24 +130,15 @@ A bridge contract models any layer 1 DeFi protocol as an asynchronous asset swap
 
 #### How does this work?
 
-Users who have shielded assets on Aztec can construct a zero-knowledge proof instructing the Aztec rollup contract to make an external L1 contract call.
+Users who have shielded fuassetsnds on Aztec can construct a zero-knowledge proof instructing the Aztec rollup contract to make an external L1 contract call.
 
 Rollup providers batch multiple L2 transaction intents on the Aztec Network together in a rollup. The rollup contract then makes aggregate transaction against L1 DeFi contracts and returns the funds pro-rata to the users on L2.
 
 #### How much does this cost?
 
-Aztec connect transactions can be batched together into one rollup. Each user in the batch pays a base fee to cover the verification of the rollup proof and their share of the L1 DeFi transaction gas cost.
+Aztec connect transactions can be batched together into one rollup. Each user in the batch pays a base fee to cover the verification of the rollup proof and their share of the L1 DeFi transaction gas cost. A single Aztec Connect transaction requires 3 base fees or aproximatley ~8000 gas.
 
-The largest batch size is 256 transactions. The cost to verify a rollup is fixed at ~400,000 gas, with a variable amount of gas for each transaction in the batch of ~3,500 gas.
-
-Assuming 256 transactions in a batch each user would pay:
-
-Rollup Verification gas cost: (400,000 / 256) + 3,500= 5062 gas
-Claim Rollup Verification gas cost: (400,000 / 256) + 3,500 = 5062 gas
-
-Uniswap bridge gas cost: 180,000 / 256 = 703 gas
-
-**Total = ~11,000 gas for a Uniswap trade**
+The user then pays their share of the L1 Defi transaction. The rollup will call a bridge contract with a fixed deterministic amount of gas so the total fee is simple ~8000 gas + BRIDGE_GAS / BATCH_SIZE.
 
 #### What is private?
 
@@ -47,11 +156,7 @@ If the output asset of any interaction is specified as "VIRTUAL", the user will 
 
 ## Aux Input Data
 
-If the output asset of any interaction is specified as "VIRTUAL", the user will receive encrypted notes on Aztec representing their share of the position, but no Tokens or ETH need to be transfered. The position tokens have an `assetId` that is the `interactionNonce` of the DeFi Bridge call. This is globably unique. Virtual assets can be used to construct complex flows, such as entering or exiting LP positions. i.e one bridge contract can have multiple flows which are triggered using different input assets.
-
-### Developer Test Network
-
-Aztec's Connect has been deployed to the Goerli testnet in Alpha. Your bridge contract needs to conform to the following interface. If so you can contact us for access to the SDK to create proofs.
+The auxData field can be used to provide data to the bridge contract, such as slippage, tokenIds etc.
 
 #### Bridge Contract Interface
 
@@ -119,11 +224,6 @@ interface IDefiBridge {
       bool isAsync
     );
 
-  // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy
-  // @param uint256 interactionNonce
-
-  function canFinalise(uint256 interactionNonce) external view returns (bool);
-
   // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy. It receives the aggreagte sum of all users funds for the input assets.
   // @param AztecAsset inputAssetA a struct detailing the first input asset, this will always be set
   // @param AztecAsset inputAssetB an optional struct detailing the second input asset, this is used for repaying borrows and should be virtual
@@ -141,7 +241,7 @@ interface IDefiBridge {
     Types.AztecAsset calldata outputAssetB,
     uint256 interactionNonce,
     uint64 auxData
-  ) external payable returns (uint256 outputValueA, uint256 outputValueB);
+  ) external payable returns (uint256 outputValueA, uint256 outputValueB, bool interactionComplete);
 }
 
 ```
@@ -161,10 +261,6 @@ This function should interact with the DeFi protocol e.g Uniswap, and transfer t
 If the DeFi interaction is ASYNC i.e it does not settle in the same block, the call to convert should return (0,0 true). The contract should record the interaction nonce for any Async position or if virtual assets are returned.
 
 At a later date, this interaction can be finalised by proding the rollup contract to call finalise on the bridge.
-
-#### canFinalise()
-
-This function checks to see if an async interaction is ready to settle. It should return true if it is.
 
 #### function finalise()
 
