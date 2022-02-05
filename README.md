@@ -1,17 +1,18 @@
 # How to contribute
 
-This repo has been built with Foundry. We found that given the interconected nature of building bridges with existing mainnet protocols. Foundry / forge offered the best support for debugging, mainnet forking, impersonation and gas profiling. After all it makes sense to test solidity with solidty not with an added complication of ETHERS / Typescript.
+This repo has been built with Foundry. Given the inter-connected nature of building bridges with existing main-net protocols. Foundry / forge offered the best support for debugging, mainnet forking, impersonation and gas profiling. We beleive that it makes sense to test solidity with solidty not with an added complication of Ethers / Typescript.
 
-# Contributing a bridge
+# Writing a bridge
 
 Developing a bridge is permisionless, simply follow the steps below to get started.
 
 1. Fork this repository
-2. All bridges need to be submitted via PR's to this repo, we expect developers to do the following:
+2. All bridges need to be submitted via PR's to this repo, we expect developers to do the following as part of their PR.
 3. Write a solidity bridge that interfaces with the protocol you are bridging e.g AAVE
-4. Write tests that use the fork from mainnet code to test the bridge with production values.
-5. Write an explination of the flows your bridge supports and the different combinations of params you can pass into the convert function,
-6. Deploy your bridge! Steps coming soon.
+4. Write tests in solidity that use the fork from mainnet code to test the bridge with production values and a range of assets and edge cases.
+5. Write an explanation of the flows your bridge supports.
+6. Implement the typescript bridge-data.ts class that tells an integrator how to use your bridge.
+7. Deploy your bridge! Instructions coming soon.
 
 ## Getting started
 
@@ -22,26 +23,55 @@ Clone the repo with:
 Build the repo with:
 
 ```
-cd aztec-connect-bridges
+yarn setup
 yarn
+yarn compile // builds the type-chain mappings
 
 ```
 
-Copy and rename the example bridge folder.
+```
+cd aztec-connect-bridges
+./bootstrap.sh
+
+```
+
+Copy and rename the following folders:
+
+`src/bridges/example`
+`src/bridges/example`
+
+```
+src/bridges/example
+src/test/example
+src/client/example
+
+```
 
 To test run:
 
 ```
-yarn test bridges/yourbridgename
+yarn test --match YourBridge
+```
+
+To get a gas report run:
+
+```
+yarn test --match YourBridge --gas-report
+```
+
+To debug:
+
+```
+yarn test --match YourBridge -vvvv
 ```
 
 ## Testing methodolgy
 
 This repo includes an infura key that allows forking from mainnet. We have included some helpers to make testing easier.
 
-In production a bridge is called by a user creating a client side proof via the Aztec Sdk, these are sent to a rollup provider for aggregation and a rollup proof is created with the aggregate sum of all users proofs for a given bridgeId.
+In production a bridge is called by a user creating a client side proof via the Aztec Sdk. These transaction proofs are sent to a rollup provider for aggregation. The rollup provider then sends the aggregate rollup proof with the sum of all users proofs for a given bridgeId to your bridge contract.
 
-A bridgeId consists of the below schema. The rollup contract uses this to construct the function parameters to pass into your bridge contract. It calls your bridge with a fixed amount of gas via a `delegateCall` to the `DefiBridgeProxy.sol` contract.
+A bridgeId consists of the below schema. The rollup contract uses this to construct the function parameters to pass into your bridge contract. It calls your bridge with a fixed amount of gas via a `delegateCall` via the `DefiBridgeProxy.sol` contract.
 
 To test a bridge, we have added a `MockRollupProcessor` that simulates a rollup. You can call this in your tests by simply calling `rollupContract.convert()` with the deconstructed bridgeId fields.
 
@@ -51,23 +81,17 @@ The rollup contract will send `totalInputValue` of `inputAssetA` and `inputAsset
 
 Simply call:
 
-```
- const requiredTokens = [
-      {
-        erc20Address: daiAddress,
-        amount: quantityOfDaiToDeposit,
-      } as TestToken,
-    ];
-
-    await rollupContract.preFundContractWithTokens(signer, requiredTokens);
-
+```solidity
+  _setTokenBalance(address(dai), address(rollupProcessor), depositAmount);
 ```
 
-This will send the rollup all tokens in the `requiredTokens` array to make testing simple.
+This will set the balance of the rollup to the amount required.
 
-The rollup contract expects a bridge to have approved for transfer by the `rollupAddress` and ERC20 tokens that are returned via `outputValueA` or `outputValueB` for a given asset. The DeFiBridgeProxy.sol will call `transferFrom` for these values once `bridge.convert()` or `bridge.finalise()` have executed.
+## Sending Tokens Back to the Rollup
 
-ETH is returned to the rollup from a bridge by calling the payable function with a msg.value `rollupContract.receiveETH(uint256 interactionNonce)`.
+The rollup contract expects a bridge to have approved for transfer by the `rollupAddress` the ERC20 tokens that are returned via `outputValueA` or `outputValueB` for a given asset. The DeFiBridgeProxy.sol will attempt to recover by calling `transferFrom(bridgeAddress, rollupAddress, amount)` for these values once `bridge.convert()` or `bridge.finalise()` have executed.
+
+ETH is returned to the rollup from a bridge by calling the payable function with a msg.value `rollupContract.receiveETH(uint256 interactionNonce)`. You must also set the `outputValue` of the corresponding `outputAsset` to be the amount of ETH sent.
 
 This repo supports TypeChain so all typescript bindings will be auto generated and added to the `typechain-types` folder. See the example tests for more info.
 

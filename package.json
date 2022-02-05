@@ -1,17 +1,29 @@
 {
   "scripts": {
-    "build": "yarn clean && yarn compile && tsc -p tsconfig.dest.json && node ./package.js && chmod +x ./dest/deploy/index.js",
-    "build:dev": "tsc -p tsconfig.dest.json --watch",
-    "compile": "forge build",
-    "clean": "rm -rf ./cache ./dest ./out",
+    "setup": "curl -L https://foundry.paradigm.xyz && foundryup",
+    "compile:contracts": "forge build",
+    "compile:typechain": "hardhat compile",
+    "clean": "rm -rf ./cache ./dest ./out ./artifacts ./typechain-types",
     "test": "forge test"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.4.2"
+    "@nomiclabs/hardhat-ethers": "^2.0.4",
+    "@nomiclabs/hardhat-waffle": "^2.0.2",
+    "@openzeppelin/contracts": "^4.4.2",
+    "@typechain/ethers-v4": "^7.0.0",
+    "ethers": "^5.5.4",
+    "hardhat": "^2.8.3",
+    "typescript": "^4.5.5"
   },
   "name": "aztec-connect-bridges",
   "version": "1.0.0",
   "description": "This repo contains the solidity files and typescript helper class for all of the Aztec Connect Bridge Contracts",
   "repository": "git@github.com:AztecProtocol/aztec-connect-bridges.git",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@typechain/ethers-v5": "^9.0.0",
+    "@typechain/hardhat": "^4.0.0",
+    "ts-node": "^10.4.0",
+    "typechain": "^7.0.0"
+  }
 }
