@@ -24,6 +24,8 @@ Build the repo with:
 
 ```
 cd aztec-connect-bridges
+yarn
+git submodule update --init
 yarn setup
 
 ```
