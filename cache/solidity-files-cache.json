@@ -1,16 +1,15 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
-    "/mnt/user-data/joe/aztec2-internal/interview-tests/solidity/contracts/ERC20Mintable.sol": {
-      "lastModificationDate": 1635526785896,
-      "contentHash": "391354a4ccf8eff4978321f813db11af",
-      "sourceName": "contracts/ERC20Mintable.sol",
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/aave/AaveLending.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "2b1acbc67302df6e66329afa9e3bb411",
+      "sourceName": "src/bridges/aave/AaveLending.sol",
       "solcConfig": {
-        "version": "0.6.10",
+        "version": "0.8.10",
         "settings": {
-          "evmVersion": "berlin",
           "optimizer": {
-            "enabled": true,
+            "enabled": false,
             "runs": 200
           },
           "outputSelection": {
@@ -19,7 +18,8 @@
                 "abi",
                 "evm.bytecode",
                 "evm.deployedBytecode",
-                "evm.methodIdentifiers"
+                "evm.methodIdentifiers",
+                "metadata"
               ],
               "": [
                 "ast"
@@ -29,25 +29,33 @@
         }
       },
       "imports": [
-        "@openzeppelin/contracts/token/ERC20/ERC20.sol"
+        "@openzeppelin/contracts/utils/math/SafeMath.sol",
+        "../../interfaces/IDefiBridge.sol",
+        "./interfaces/ILendingPoolAddressesProvider.sol",
+        "./interfaces/IERC20.sol",
+        "./interfaces/IPool.sol",
+        "./interfaces/IScaledBalanceToken.sol",
+        "../../aztec/AztecTypes.sol",
+        "./ZkAToken.sol",
+        "./libraries/WadRayMath.sol",
+        "./DataTypes.sol"
       ],
       "versionPragmas": [
-        ">=0.6.10 <0.8.0"
+        ">=0.6.10 <=0.8.10"
       ],
       "artifacts": [
-        "ERC20Mintable"
+        "AaveLendingBridge"
       ]
     },
-    "/mnt/user-data/joe/aztec2-internal/interview-tests/solidity/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol": {
-      "lastModificationDate": 1635513764473,
-      "contentHash": "8065b340476f61365c076897199425f1",
-      "sourceName": "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+    "/mnt/user-data/joe/aztec-connect-bridges/node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol": {
+      "lastModificationDate": 1644078429920,
+      "contentHash": "a6a9d6c1f662e922b82c1ba4d81cdd48",
+      "sourceName": "@openzeppelin/contracts/utils/math/SafeMath.sol",
       "solcConfig": {
-        "version": "0.6.10",
+        "version": "0.8.10",
         "settings": {
-          "evmVersion": "berlin",
           "optimizer": {
-            "enabled": true,
+            "enabled": false,
             "runs": 200
           },
           "outputSelection": {
@@ -56,46 +64,8 @@
                 "abi",
                 "evm.bytecode",
                 "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "../../utils/Context.sol",
-        "./IERC20.sol",
-        "../../math/SafeMath.sol"
-      ],
-      "versionPragmas": [
-        ">=0.6.0 <0.8.0"
-      ],
-      "artifacts": [
-        "ERC20"
-      ]
-    },
-    "/mnt/user-data/joe/aztec2-internal/interview-tests/solidity/node_modules/@openzeppelin/contracts/utils/Context.sol": {
-      "lastModificationDate": 1635513762273,
-      "contentHash": "2adbd82f6d055a4751566d4671512b03",
-      "sourceName": "@openzeppelin/contracts/utils/Context.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
+                "evm.methodIdentifiers",
+                "metadata"
               ],
               "": [
                 "ast"
@@ -106,92 +76,21 @@
       },
       "imports": [],
       "versionPragmas": [
-        ">=0.6.0 <0.8.0"
-      ],
-      "artifacts": [
-        "Context"
-      ]
-    },
-    "/mnt/user-data/joe/aztec2-internal/interview-tests/solidity/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol": {
-      "lastModificationDate": 1635513764473,
-      "contentHash": "e0a41531d159d3a32f84b7a3ecf9fabb",
-      "sourceName": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.6.0 <0.8.0"
-      ],
-      "artifacts": [
-        "IERC20"
-      ]
-    },
-    "/mnt/user-data/joe/aztec2-internal/interview-tests/solidity/node_modules/@openzeppelin/contracts/math/SafeMath.sol": {
-      "lastModificationDate": 1635513762257,
-      "contentHash": "e03e12206057e809eb76c5f681170c32",
-      "sourceName": "@openzeppelin/contracts/math/SafeMath.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.6.0 <0.8.0"
+        "^0.8.0"
       ],
       "artifacts": [
         "SafeMath"
       ]
     },
-    "/mnt/user-data/joe/aztec2-internal/interview-tests/solidity/contracts/UniswapBridge.sol": {
-      "lastModificationDate": 1635528933324,
-      "contentHash": "3068c4d4ad15890b7f12ae243f6c4f12",
-      "sourceName": "contracts/UniswapBridge.sol",
+    "/mnt/user-data/joe/aztec-connect-bridges/src/interfaces/IDefiBridge.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "178d9abb37ffbc4319ce56fe46b421b2",
+      "sourceName": "src/interfaces/IDefiBridge.sol",
       "solcConfig": {
-        "version": "0.6.10",
+        "version": "0.8.10",
         "settings": {
-          "evmVersion": "berlin",
           "optimizer": {
-            "enabled": true,
+            "enabled": false,
             "runs": 200
           },
           "outputSelection": {
@@ -200,7 +99,8 @@
                 "abi",
                 "evm.bytecode",
                 "evm.deployedBytecode",
-                "evm.methodIdentifiers"
+                "evm.methodIdentifiers",
+                "metadata"
               ],
               "": [
                 "ast"
@@ -210,142 +110,24 @@
         }
       },
       "imports": [
-        "@openzeppelin/contracts/math/SafeMath.sol",
-        "@openzeppelin/contracts/token/ERC20/IERC20.sol",
-        "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol",
-        "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol",
-        "./interfaces/IDefiBridge.sol",
-        "./Types.sol"
+        "../aztec/AztecTypes.sol"
       ],
       "versionPragmas": [
-        ">=0.6.6 <0.8.0"
-      ],
-      "artifacts": [
-        "UniswapBridge"
-      ]
-    },
-    "/mnt/user-data/joe/aztec2-internal/interview-tests/solidity/node_modules/@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol": {
-      "lastModificationDate": 1635513764617,
-      "contentHash": "b545c97573c8aa5876a4f9e25f28a732",
-      "sourceName": "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol",
-        "./SafeMath.sol"
-      ],
-      "versionPragmas": [
-        ">=0.5.0"
-      ],
-      "artifacts": [
-        "UniswapV2Library"
-      ]
-    },
-    "/mnt/user-data/joe/aztec2-internal/interview-tests/solidity/node_modules/@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol": {
-      "lastModificationDate": 1635513764617,
-      "contentHash": "3fd36426274a5b35f7e702f87ba08a8e",
-      "sourceName": "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "./IUniswapV2Router01.sol"
-      ],
-      "versionPragmas": [
-        ">=0.6.2"
-      ],
-      "artifacts": [
-        "IUniswapV2Router02"
-      ]
-    },
-    "/mnt/user-data/joe/aztec2-internal/interview-tests/solidity/contracts/interfaces/IDefiBridge.sol": {
-      "lastModificationDate": 1635528817927,
-      "contentHash": "2dcb814e967f3a6fd278b5a3e4d50a77",
-      "sourceName": "contracts/interfaces/IDefiBridge.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "../Types.sol"
-      ],
-      "versionPragmas": [
-        ">=0.6.6 <0.8.0"
+        ">=0.6.6 <0.8.11"
       ],
       "artifacts": [
         "IDefiBridge"
       ]
     },
-    "/mnt/user-data/joe/aztec2-internal/interview-tests/solidity/node_modules/@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol": {
-      "lastModificationDate": 1635513764613,
-      "contentHash": "3fa31c3860f2b9585c3a98c64850829e",
-      "sourceName": "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol",
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/aave/interfaces/ILendingPoolAddressesProvider.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "b87dd49ce4603f9d32ab828e48ff085e",
+      "sourceName": "src/bridges/aave/interfaces/ILendingPoolAddressesProvider.sol",
       "solcConfig": {
-        "version": "0.6.10",
+        "version": "0.8.10",
         "settings": {
-          "evmVersion": "berlin",
           "optimizer": {
-            "enabled": true,
+            "enabled": false,
             "runs": 200
           },
           "outputSelection": {
@@ -354,7 +136,8 @@
                 "abi",
                 "evm.bytecode",
                 "evm.deployedBytecode",
-                "evm.methodIdentifiers"
+                "evm.methodIdentifiers",
+                "metadata"
               ],
               "": [
                 "ast"
@@ -365,22 +148,21 @@
       },
       "imports": [],
       "versionPragmas": [
-        ">=0.5.0"
+        ">=0.6.10 <=0.8.10"
       ],
       "artifacts": [
-        "IUniswapV2Pair"
+        "ILendingPoolAddressesProvider"
       ]
     },
-    "/mnt/user-data/joe/aztec2-internal/interview-tests/solidity/node_modules/@uniswap/v2-periphery/contracts/libraries/SafeMath.sol": {
-      "lastModificationDate": 1635530974403,
-      "contentHash": "a9f6fd2d01210e9aa4951fcdf11bbea9",
-      "sourceName": "@uniswap/v2-periphery/contracts/libraries/SafeMath.sol",
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/aave/interfaces/IERC20.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "8dd377d14e85a7e88b981d0511fbf11a",
+      "sourceName": "src/bridges/aave/interfaces/IERC20.sol",
       "solcConfig": {
-        "version": "0.6.10",
+        "version": "0.8.10",
         "settings": {
-          "evmVersion": "berlin",
           "optimizer": {
-            "enabled": true,
+            "enabled": false,
             "runs": 200
           },
           "outputSelection": {
@@ -389,7 +171,8 @@
                 "abi",
                 "evm.bytecode",
                 "evm.deployedBytecode",
-                "evm.methodIdentifiers"
+                "evm.methodIdentifiers",
+                "metadata"
               ],
               "": [
                 "ast"
@@ -400,22 +183,22 @@
       },
       "imports": [],
       "versionPragmas": [
-        ">=0.6.6"
+        ">=0.6.10 <=0.8.10"
       ],
       "artifacts": [
-        "SafeMath"
+        "IERC20",
+        "IERC20Detailed"
       ]
     },
-    "/mnt/user-data/joe/aztec2-internal/interview-tests/solidity/node_modules/@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol": {
-      "lastModificationDate": 1635513764617,
-      "contentHash": "95d8729b2c698dc663322167b3c085fe",
-      "sourceName": "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol",
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/aave/interfaces/IPool.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "878e68c87bba2c16868105ddb8218477",
+      "sourceName": "src/bridges/aave/interfaces/IPool.sol",
       "solcConfig": {
-        "version": "0.6.10",
+        "version": "0.8.10",
         "settings": {
-          "evmVersion": "berlin",
           "optimizer": {
-            "enabled": true,
+            "enabled": false,
             "runs": 200
           },
           "outputSelection": {
@@ -424,7 +207,45 @@
                 "abi",
                 "evm.bytecode",
                 "evm.deployedBytecode",
-                "evm.methodIdentifiers"
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./../DataTypes.sol"
+      ],
+      "versionPragmas": [
+        ">=0.6.10 <=0.8.10"
+      ],
+      "artifacts": [
+        "IPool"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/aave/interfaces/IScaledBalanceToken.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "707f40eb3bf63cf5a46a055f96373ab2",
+      "sourceName": "src/bridges/aave/interfaces/IScaledBalanceToken.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
               ],
               "": [
                 "ast"
@@ -435,22 +256,21 @@
       },
       "imports": [],
       "versionPragmas": [
-        ">=0.6.2"
+        ">=0.6.10 <=0.8.10"
       ],
       "artifacts": [
-        "IUniswapV2Router01"
+        "IScaledBalanceToken"
       ]
     },
-    "/mnt/user-data/joe/aztec2-internal/interview-tests/solidity/node_modules/hardhat/console.sol": {
-      "lastModificationDate": 1635513760933,
-      "contentHash": "cc4777addd464ea56fa35b1c45df0591",
-      "sourceName": "hardhat/console.sol",
+    "/mnt/user-data/joe/aztec-connect-bridges/src/aztec/AztecTypes.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "89c5c817c0fbf2444915b03ce4a4ddb5",
+      "sourceName": "src/aztec/AztecTypes.sol",
       "solcConfig": {
-        "version": "0.6.10",
+        "version": "0.8.10",
         "settings": {
-          "evmVersion": "berlin",
           "optimizer": {
-            "enabled": true,
+            "enabled": false,
             "runs": 200
           },
           "outputSelection": {
@@ -459,7 +279,603 @@
                 "abi",
                 "evm.bytecode",
                 "evm.deployedBytecode",
-                "evm.methodIdentifiers"
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.6.10 <=0.8.10"
+      ],
+      "artifacts": [
+        "AztecTypes"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/aave/ZkAToken.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "cddc3a1b070006544174f02e09f45c3a",
+      "sourceName": "src/bridges/aave/ZkAToken.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol",
+        "@openzeppelin/contracts/token/ERC20/ERC20.sol"
+      ],
+      "versionPragmas": [
+        ">=0.6.10 <=0.8.10"
+      ],
+      "artifacts": [
+        "IZkAToken",
+        "ZkAToken"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/aave/libraries/WadRayMath.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "5a1897eec542152688a15b14464aef0e",
+      "sourceName": "src/bridges/aave/libraries/WadRayMath.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.6.10 <=0.8.10"
+      ],
+      "artifacts": [
+        "WadRayMath"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/aave/DataTypes.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "0503dd7ca17f76371fa5fc5150c0714d",
+      "sourceName": "src/bridges/aave/DataTypes.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.6.10 <=0.8.10"
+      ],
+      "artifacts": [
+        "DataTypes"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/node_modules/@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol": {
+      "lastModificationDate": 1644078430156,
+      "contentHash": "9f43a2bc39b89ae302f1727697f9c420",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../ERC20.sol",
+        "../../../utils/Context.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "ERC20Burnable"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol": {
+      "lastModificationDate": 1644078429920,
+      "contentHash": "f48de0eaae9544072b8766e2eac528a7",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./IERC20.sol",
+        "./extensions/IERC20Metadata.sol",
+        "../../utils/Context.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "ERC20"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/node_modules/@openzeppelin/contracts/utils/Context.sol": {
+      "lastModificationDate": 1644078429396,
+      "contentHash": "5f2c5c4b6af2dd4551027144797bc8be",
+      "sourceName": "@openzeppelin/contracts/utils/Context.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "Context"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol": {
+      "lastModificationDate": 1644078429920,
+      "contentHash": "302d9755e46bc69d7058b0cbe7185e37",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "IERC20"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol": {
+      "lastModificationDate": 1644078430156,
+      "contentHash": "909ab67fc5c25033fe6cd364f8c056f9",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../IERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "IERC20Metadata"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/element/ElementBridge.sol": {
+      "lastModificationDate": 1644237566525,
+      "contentHash": "25f422c6f3710da715939b69e42c8cc4",
+      "sourceName": "src/bridges/element/ElementBridge.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/utils/math/SafeMath.sol",
+        "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+        "./interfaces/IVault.sol",
+        "./interfaces/IPool.sol",
+        "./interfaces/ITranche.sol",
+        "./interfaces/IERC20Permit.sol",
+        "./interfaces/IWrappedPosition.sol",
+        "./interfaces/IRollupProcessor.sol",
+        "../../interfaces/IDefiBridge.sol",
+        "../../aztec/AztecTypes.sol",
+        "../../test/console.sol"
+      ],
+      "versionPragmas": [
+        ">=0.6.10 <=0.8.10"
+      ],
+      "artifacts": [
+        "ElementBridge"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/element/interfaces/IVault.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "53d7ce15ed9a64e56bfa662a6d2e6df7",
+      "sourceName": "src/bridges/element/interfaces/IVault.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "<=0.8.10"
+      ],
+      "artifacts": [
+        "IAsset",
+        "IVault"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/element/interfaces/IPool.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "84521f7f69df2c04f05c4fa78160d094",
+      "sourceName": "src/bridges/element/interfaces/IPool.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./IERC20Permit.sol",
+        "./IVault.sol"
+      ],
+      "versionPragmas": [
+        ">=0.7.5"
+      ],
+      "artifacts": [
+        "IPool"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/element/interfaces/ITranche.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "346e799c3e92c5d80894bdd9298cb23a",
+      "sourceName": "src/bridges/element/interfaces/ITranche.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./IERC20Permit.sol"
+      ],
+      "versionPragmas": [
+        ">=0.6.10 <=0.8.10"
+      ],
+      "artifacts": [
+        "ITranche"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/element/interfaces/IERC20Permit.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "2f171100ea310c7c552990878cfec17f",
+      "sourceName": "src/bridges/element/interfaces/IERC20Permit.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol"
+      ],
+      "versionPragmas": [
+        ">=0.6.10 <=0.8.10"
+      ],
+      "artifacts": [
+        "IERC20Permit"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/element/interfaces/IWrappedPosition.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "2a1abf592e67f5852b6c022811885592",
+      "sourceName": "src/bridges/element/interfaces/IWrappedPosition.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./IERC20Permit.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "IWrappedPosition"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/element/interfaces/IRollupProcessor.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "f335dbbb24ac52b82b8be52e46d2a6b1",
+      "sourceName": "src/bridges/element/interfaces/IRollupProcessor.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.6.10 <=0.8.10"
+      ],
+      "artifacts": [
+        "IRollupProcessor"
+      ]
+    },
+    "/mnt/user-data/joe/aztec-connect-bridges/src/test/console.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "907ccc8c5df3f256f3e4c4a215f521a1",
+      "sourceName": "src/test/console.sol",
+      "solcConfig": {
+        "version": "0.8.10",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
               ],
               "": [
                 "ast"
@@ -476,16 +892,15 @@
         "console"
       ]
     },
-    "/mnt/user-data/joe/aztec2-internal/interview-tests/solidity/contracts/DefiBridgeProxy.sol": {
-      "lastModificationDate": 1635530971159,
-      "contentHash": "0a95ae65fe6fd7805820f46d985d8066",
-      "sourceName": "contracts/DefiBridgeProxy.sol",
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/example/ExampleBridge.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "481f163d587bc864bc2f790657d7aca2",
+      "sourceName": "src/bridges/example/ExampleBridge.sol",
       "solcConfig": {
-        "version": "0.6.10",
+        "version": "0.8.10",
         "settings": {
-          "evmVersion": "berlin",
           "optimizer": {
-            "enabled": true,
+            "enabled": false,
             "runs": 200
           },
           "outputSelection": {
@@ -494,7 +909,8 @@
                 "abi",
                 "evm.bytecode",
                 "evm.deployedBytecode",
-                "evm.methodIdentifiers"
+                "evm.methodIdentifiers",
+                "metadata"
               ],
               "": [
                 "ast"
@@ -504,250 +920,27 @@
         }
       },
       "imports": [
-        "@openzeppelin/contracts/math/SafeMath.sol",
-        "./interfaces/IDefiBridge.sol",
-        "./Types.sol"
-      ],
-      "versionPragmas": [
-        ">=0.6.10 <0.8.0"
-      ],
-      "artifacts": [
-        "DefiBridgeProxy"
-      ]
-    },
-    "/mnt/user-data/joe/aztec2-internal/interview-tests/solidity/contracts/Types.sol": {
-      "lastModificationDate": 1635530805147,
-      "contentHash": "8291bbd7202826aa15bcfd8e22603612",
-      "sourceName": "contracts/Types.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.6.0 <0.8.0"
-      ],
-      "artifacts": [
-        "Types"
-      ]
-    },
-    "/mnt/user-data/joe/aztec-connect-starter/contracts/DefiBridgeProxy.sol": {
-      "lastModificationDate": 1637671257240,
-      "contentHash": "c9ed7b7bad8733ca7b6d849d758a8e38",
-      "sourceName": "contracts/DefiBridgeProxy.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "@openzeppelin/contracts/math/SafeMath.sol",
-        "./interfaces/IDefiBridge.sol",
-        "./Types.sol"
-      ],
-      "versionPragmas": [
-        ">=0.6.10 <0.8.0"
-      ],
-      "artifacts": [
-        "DefiBridgeProxy"
-      ]
-    },
-    "/mnt/user-data/joe/aztec-connect-starter/node_modules/@openzeppelin/contracts/math/SafeMath.sol": {
-      "lastModificationDate": 1635532091916,
-      "contentHash": "e03e12206057e809eb76c5f681170c32",
-      "sourceName": "@openzeppelin/contracts/math/SafeMath.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.6.0 <0.8.0"
-      ],
-      "artifacts": [
-        "SafeMath"
-      ]
-    },
-    "/mnt/user-data/joe/aztec-connect-starter/contracts/interfaces/IDefiBridge.sol": {
-      "lastModificationDate": 1637671322920,
-      "contentHash": "957b82797ea738a163606638a256c4e2",
-      "sourceName": "contracts/interfaces/IDefiBridge.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "../Types.sol"
-      ],
-      "versionPragmas": [
-        ">=0.6.6 <0.8.0"
-      ],
-      "artifacts": [
-        "IDefiBridge"
-      ]
-    },
-    "/mnt/user-data/joe/aztec-connect-starter/contracts/Types.sol": {
-      "lastModificationDate": 1635531327787,
-      "contentHash": "8291bbd7202826aa15bcfd8e22603612",
-      "sourceName": "contracts/Types.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.6.0 <0.8.0"
-      ],
-      "artifacts": [
-        "Types"
-      ]
-    },
-    "/mnt/user-data/joe/aztec-connect-starter/contracts/UniswapBridge.sol": {
-      "lastModificationDate": 1637671431948,
-      "contentHash": "3e1413231f57d991889ae0173b80ba30",
-      "sourceName": "contracts/UniswapBridge.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "@openzeppelin/contracts/math/SafeMath.sol",
+        "@openzeppelin/contracts/utils/math/SafeMath.sol",
+        "../../interfaces/IDefiBridge.sol",
         "@openzeppelin/contracts/token/ERC20/IERC20.sol",
-        "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol",
-        "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol",
-        "./interfaces/IDefiBridge.sol",
-        "./Types.sol"
+        "../../aztec/AztecTypes.sol"
       ],
       "versionPragmas": [
-        ">=0.6.6 <0.8.0"
+        ">=0.6.10 <=0.8.10"
       ],
       "artifacts": [
-        "UniswapBridge"
+        "ExampleBridgeContract"
       ]
     },
-    "/mnt/user-data/joe/aztec-connect-starter/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol": {
-      "lastModificationDate": 1635532093912,
-      "contentHash": "e0a41531d159d3a32f84b7a3ecf9fabb",
-      "sourceName": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+    "/mnt/user-data/joe/aztec-connect-bridges/src/bridges/aave/interfaces/IAToken.sol": {
+      "lastModificationDate": 1644078770742,
+      "contentHash": "f8f4f95dd41d25a2c172f821abefbc6a",
+      "sourceName": "src/bridges/aave/interfaces/IAToken.sol",
       "solcConfig": {
-        "version": "0.6.10",
+        "version": "0.8.10",
         "settings": {
-          "evmVersion": "berlin",
           "optimizer": {
-            "enabled": true,
+            "enabled": false,
             "runs": 200
           },
           "outputSelection": {
@@ -756,42 +949,8 @@
                 "abi",
                 "evm.bytecode",
                 "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.6.0 <0.8.0"
-      ],
-      "artifacts": [
-        "IERC20"
-      ]
-    },
-    "/mnt/user-data/joe/aztec-connect-starter/node_modules/@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol": {
-      "lastModificationDate": 1635532094048,
-      "contentHash": "b545c97573c8aa5876a4f9e25f28a732",
-      "sourceName": "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
+                "evm.methodIdentifiers",
+                "metadata"
               ],
               "": [
                 "ast"
@@ -801,267 +960,13 @@
         }
       },
       "imports": [
-        "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol",
-        "./SafeMath.sol"
+        "./IERC20.sol"
       ],
       "versionPragmas": [
-        ">=0.5.0"
+        ">=0.6.10 <=0.8.10"
       ],
       "artifacts": [
-        "UniswapV2Library"
-      ]
-    },
-    "/mnt/user-data/joe/aztec-connect-starter/node_modules/@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol": {
-      "lastModificationDate": 1635532094048,
-      "contentHash": "3fd36426274a5b35f7e702f87ba08a8e",
-      "sourceName": "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "./IUniswapV2Router01.sol"
-      ],
-      "versionPragmas": [
-        ">=0.6.2"
-      ],
-      "artifacts": [
-        "IUniswapV2Router02"
-      ]
-    },
-    "/mnt/user-data/joe/aztec-connect-starter/node_modules/@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol": {
-      "lastModificationDate": 1635532094044,
-      "contentHash": "3fa31c3860f2b9585c3a98c64850829e",
-      "sourceName": "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.5.0"
-      ],
-      "artifacts": [
-        "IUniswapV2Pair"
-      ]
-    },
-    "/mnt/user-data/joe/aztec-connect-starter/node_modules/@uniswap/v2-periphery/contracts/libraries/SafeMath.sol": {
-      "lastModificationDate": 1637671437300,
-      "contentHash": "a9f6fd2d01210e9aa4951fcdf11bbea9",
-      "sourceName": "@uniswap/v2-periphery/contracts/libraries/SafeMath.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.6.6"
-      ],
-      "artifacts": [
-        "SafeMath"
-      ]
-    },
-    "/mnt/user-data/joe/aztec-connect-starter/node_modules/@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol": {
-      "lastModificationDate": 1635532094048,
-      "contentHash": "95d8729b2c698dc663322167b3c085fe",
-      "sourceName": "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.6.2"
-      ],
-      "artifacts": [
-        "IUniswapV2Router01"
-      ]
-    },
-    "/mnt/user-data/joe/aztec-connect-starter/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol": {
-      "lastModificationDate": 1635532093912,
-      "contentHash": "8065b340476f61365c076897199425f1",
-      "sourceName": "@openzeppelin/contracts/token/ERC20/ERC20.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "../../utils/Context.sol",
-        "./IERC20.sol",
-        "../../math/SafeMath.sol"
-      ],
-      "versionPragmas": [
-        ">=0.6.0 <0.8.0"
-      ],
-      "artifacts": [
-        "ERC20"
-      ]
-    },
-    "/mnt/user-data/joe/aztec-connect-starter/node_modules/@openzeppelin/contracts/utils/Context.sol": {
-      "lastModificationDate": 1635532091924,
-      "contentHash": "2adbd82f6d055a4751566d4671512b03",
-      "sourceName": "@openzeppelin/contracts/utils/Context.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.6.0 <0.8.0"
-      ],
-      "artifacts": [
-        "Context"
-      ]
-    },
-    "/mnt/user-data/joe/aztec-connect-starter/contracts/ERC20Mintable.sol": {
-      "lastModificationDate": 1635531327783,
-      "contentHash": "391354a4ccf8eff4978321f813db11af",
-      "sourceName": "contracts/ERC20Mintable.sol",
-      "solcConfig": {
-        "version": "0.6.10",
-        "settings": {
-          "evmVersion": "berlin",
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "@openzeppelin/contracts/token/ERC20/ERC20.sol"
-      ],
-      "versionPragmas": [
-        ">=0.6.10 <0.8.0"
-      ],
-      "artifacts": [
-        "ERC20Mintable"
+        "IAToken"
       ]
     }
   }

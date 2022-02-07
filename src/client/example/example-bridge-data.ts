@@ -7,7 +7,7 @@ export class ExampleBridgeData implements BridgeData {
   // @dev which define how much a given interaction is worth in terms of Aztec asset ids.
   // @param bigint interactionNonce the interaction nonce to return the value for
 
-  async getCurrentInteractionValue(interactionNonce: bigint): Promise<AssetValue[]> {
+  async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
     return [
       {
         assetId: 1n,
@@ -56,7 +56,7 @@ export class ExampleBridgeData implements BridgeData {
     return [100n, 0n];
   }
 
-  async getLiquidity(
+  async getMarketSize(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,

@@ -127,6 +127,7 @@ contract DefiBridgeProxy is DSTest {
             bool isAsync
         )
     {
+
         if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
             // Transfer totalInputValue to the bridge contract if erc20. ETH is sent on call to convert.
             TokenTransfers.safeTransferTo(
@@ -134,6 +135,11 @@ contract DefiBridgeProxy is DSTest {
                 bridgeAddress,
                 totalInputValue
             );
+        }
+
+        if (inputAssetB.assetType == AztecTypes.AztecAssetType.ERC20) {
+            // Transfer totalInputValue to the bridge contract if erc20. ETH is sent on call to convert.
+            TokenTransfers.safeTransferTo(inputAssetB.erc20Address, bridgeAddress, totalInputValue);
         }
 
         // Call bridge.convert(), which will return output values for the two output assets.

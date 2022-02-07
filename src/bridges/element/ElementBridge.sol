@@ -25,6 +25,8 @@ contract ElementBridge is IDefiBridge {
     uint64 expiry;
     uint256 quantityPT;
     bool finalised;
+    uint256 inputValue,
+    uint64 startTime
   }
 
   // minimum info required to execute a deposit
@@ -41,7 +43,7 @@ contract ElementBridge is IDefiBridge {
   bytes32 private immutable trancheBytecodeHash; // = 0xf481a073666136ab1f5e93b296e84df58092065256d0db23b2d22b62c68e978d;
 
   // cache of all of our Defi interactions. keyed on nonce
-  mapping(uint256 => Interaction) private interactions;
+  mapping(uint256 => Interaction) public interactions;
 
   // cahce of all pools we are able to interact with
   mapping(uint256 => Pool) private pools;
