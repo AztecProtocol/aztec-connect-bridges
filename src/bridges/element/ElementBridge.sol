@@ -25,8 +25,6 @@ contract ElementBridge is IDefiBridge {
     uint64 expiry;
     uint256 quantityPT;
     bool finalised;
-    uint256 inputValue,
-    uint64 startTime
   }
 
   // minimum info required to execute a deposit

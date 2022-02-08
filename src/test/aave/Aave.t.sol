@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.10;
 
-import "ds-test/test.sol";
 import {Vm} from "../Vm.sol";
 
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
-import {MockRollupProcessor} from "./../../aztec/MockRollupProcessor.sol";
+import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 
 // Aave-specific imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -17,13 +16,16 @@ import {ZkAToken} from "./../../bridges/aave/ZkAToken.sol";
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 import {WadRayMath} from "./../../bridges/aave/libraries/WadRayMath.sol";
 
+import "../../../lib/ds-test/src/test.sol";
+
+
 contract AaveTest is DSTest {
     using WadRayMath for uint256;
 
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     DefiBridgeProxy defiBridgeProxy;
-    MockRollupProcessor rollupProcessor;
+    RollupProcessor rollupProcessor;
 
     AaveLendingBridge aaveLendingBridge;
     ILendingPoolAddressesProvider constant addressesProvider =
@@ -37,7 +39,7 @@ contract AaveTest is DSTest {
 
     function _aztecPreSetup() internal {
         defiBridgeProxy = new DefiBridgeProxy();
-        rollupProcessor = new MockRollupProcessor(address(defiBridgeProxy));
+        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
     }
 
     function setUp() public {

@@ -25,7 +25,7 @@ const config: HardhatUserConfig = {
     },
   },
   paths: {
-    sources: 'src/bridges/',
+    sources: 'src/',
     artifacts: './artifacts',
   },
 };
