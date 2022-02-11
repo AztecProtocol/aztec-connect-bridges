@@ -6,3 +6,4 @@ package-lock.json
 typechain-types/
 artifacts/
 yarn-error.log
+contracts
