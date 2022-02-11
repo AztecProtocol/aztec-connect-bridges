@@ -2,9 +2,12 @@
 pragma solidity <=0.8.10;
 pragma abicoder v2;
 
+import {IERC20} from './IERC20Permit.sol';
+
 interface IAsset {
     // solhint-disable-previous-line no-empty-blocks
 }
+
 
 enum PoolSpecialization { GENERAL, MINIMAL_SWAP_INFO, TWO_TOKEN }
 
@@ -75,4 +78,59 @@ interface IVault {
 
     // will revert if poolId is not a registered pool
     function getPool(bytes32 poolId) external view returns (address, PoolSpecialization);
+
+
+    /**
+     * @dev Simulates a call to `batchSwap`, returning an array of Vault asset deltas. Calls to `swap` cannot be
+     * simulated directly, but an equivalent `batchSwap` call can and will yield the exact same result.
+     *
+     * Each element in the array corresponds to the asset at the same index, and indicates the number of tokens (or ETH)
+     * the Vault would take from the sender (if positive) or send to the recipient (if negative). The arguments it
+     * receives are the same that an equivalent `batchSwap` call would receive.
+     *
+     * Unlike `batchSwap`, this function performs no checks on the sender or recipient field in the `funds` struct.
+     * This makes it suitable to be called by off-chain applications via eth_call without needing to hold tokens,
+     * approve them for the Vault, or even know a user's address.
+     *
+     * Note that this function is not 'view' (due to implementation details): the client code must explicitly execute
+     * eth_call instead of eth_sendTransaction.
+     */
+
+    struct BatchSwapStep {
+        bytes32 poolId;
+        uint256 assetInIndex;
+        uint256 assetOutIndex;
+        uint256 amount;
+        bytes userData;
+    }
+    function queryBatchSwap(
+        SwapKind kind,
+        BatchSwapStep[] memory swaps,
+        IAsset[] memory assets,
+        FundManagement memory funds
+    ) external view returns (int256[] memory assetDeltas);
+
+
+    /**
+     * @dev Returns a Pool's registered tokens, the total balance for each, and the latest block when *any* of
+     * the tokens' `balances` changed.
+     *
+     * The order of the `tokens` array is the same order that will be used in `joinPool`, `exitPool`, as well as in all
+     * Pool hooks (where applicable). Calls to `registerTokens` and `deregisterTokens` may change this order.
+     *
+     * If a Pool only registers tokens once, and these are sorted in ascending order, they will be stored in the same
+     * order as passed to `registerTokens`.
+     *
+     * Total balances include both tokens held by the Vault and those withdrawn by the Pool's Asset Managers. These are
+     * the amounts used by joins, exits and swaps. For a detailed breakdown of token balances, use `getPoolTokenInfo`
+     * instead.
+     */
+    function getPoolTokens(bytes32 poolId)
+        external
+        view
+        returns (
+            IERC20[] memory tokens,
+            uint256[] memory balances,
+            uint256 lastChangeBlock
+        );
 }

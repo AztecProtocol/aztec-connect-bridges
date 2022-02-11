@@ -43,8 +43,10 @@ contract ElementBridge is IDefiBridge {
   // cache of all of our Defi interactions. keyed on nonce
   mapping(uint256 => Interaction) public interactions;
 
+  mapping(address => uint64[]) public assetToExpirys;
+
   // cahce of all pools we are able to interact with
-  mapping(uint256 => Pool) private pools;
+  mapping(uint256 => Pool) public pools;
 
   // the aztec rollup processor contract
   address public immutable rollupProcessor;
@@ -54,6 +56,7 @@ contract ElementBridge is IDefiBridge {
 
   uint64[] private heap;
   uint32[] private expiries;
+
   mapping(uint64 => uint256[]) private expiryToNonce;
 
   constructor(
@@ -66,6 +69,10 @@ contract ElementBridge is IDefiBridge {
     trancheFactory = _trancheFactory;
     trancheBytecodeHash = _trancheBytecodeHash;
     balancerAddress = _balancerVaultAddress;
+  }
+
+  function getAssetExpiries(address asset) public view returns (uint64[] memory assetExpiries) {
+     return assetToExpirys[asset];
   }
 
   // this function allows for the dynamic addition of new asset/expiry combinations as they come online
@@ -172,15 +179,20 @@ contract ElementBridge is IDefiBridge {
       poolSpec.underlyingAsset,
       expiry
     );
+
     pools[assetExpiryHash] = Pool(
       poolSpec.trancheAddress,
       poolAddress,
       poolSpec.poolId
     );
+
+    uint64[] storage expiriesForAsset = assetToExpirys[poolSpec.underlyingAsset];
+    expiriesForAsset.push(uint64(poolSpec.poolExpiry));
+
   }
 
   function hashAssetAndExpiry(address asset, uint256 expiry)
-    internal
+    public
     pure
     returns (uint256)
   {
