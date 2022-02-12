@@ -5,4 +5,6 @@ pragma experimental ABIEncoderV2;
 
 interface ISafeEngine {
     function approveSAFEModification(address account) external;
+
+    function coinBalance(address account) external view returns (uint256);
 }
