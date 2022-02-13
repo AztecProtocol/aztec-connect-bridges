@@ -1,10 +1,12 @@
 {
   "scripts": {
-    "setup": "curl -L https://foundry.paradigm.xyz && foundryup",
+    "setup": "curl -L https://foundry.paradigm.xyz && foundryup && git submodule update --init",
     "compile:contracts": "forge build",
     "compile:typechain": "forge build && hardhat compile ",
     "clean": "rm -rf ./cache ./dest ./out ./artifacts ./typechain-types",
-    "test": "forge test"
+    "test": "yarn test:contracts && yarn test:clients",
+    "test:client": "jest test",
+    "test:contracts": "forge test"
   },
   "dependencies": {
     "@ethersproject/constants": "^5.5.0",
