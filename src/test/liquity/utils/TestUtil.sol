@@ -7,7 +7,7 @@ import "./MockPriceFeed.sol";
 import "../../Vm.sol";
 import "../../../../lib/ds-test/src/test.sol";
 import "../../../aztec/DefiBridgeProxy.sol";
-import "../../../aztec/MockRollupProcessor.sol";
+import "../../../aztec/RollupProcessor.sol";
 import "../../../bridges/liquity/interfaces/IPriceFeed.sol";
 
 
@@ -15,7 +15,7 @@ contract TestUtil is DSTest {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     DefiBridgeProxy internal defiBridgeProxy;
-    MockRollupProcessor internal rollupProcessor;
+    RollupProcessor internal rollupProcessor;
 
     struct Token {
         address addr; // ERC20 Mainnet address
@@ -80,6 +80,6 @@ contract TestUtil is DSTest {
 
     function _aztecPreSetup() internal {
         defiBridgeProxy = new DefiBridgeProxy();
-        rollupProcessor = new MockRollupProcessor(address(defiBridgeProxy));
+        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
     }
 }
