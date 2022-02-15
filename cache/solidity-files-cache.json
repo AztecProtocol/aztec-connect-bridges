@@ -784,8 +784,8 @@
       }
     },
     "/Users/diganta/Desktop/blockchain/gitcoin/aztec-connect-bridges/src/bridges/rai/RaiBridge.sol": {
-      "lastModificationDate": 1644764181133,
-      "contentHash": "bcce4fc11cecd0e61127886fd3473ab1",
+      "lastModificationDate": 1644938341210,
+      "contentHash": "3514fbab354c22f93ea1d60e01b5cc9d",
       "sourceName": "src/bridges/rai/RaiBridge.sol",
       "solcConfig": {
         "settings": {
@@ -863,8 +863,8 @@
       }
     },
     "/Users/diganta/Desktop/blockchain/gitcoin/aztec-connect-bridges/src/bridges/rai/interfaces/ICoinJoin.sol": {
-      "lastModificationDate": 1644522033725,
-      "contentHash": "ea1da5443564013653052033acc26e7e",
+      "lastModificationDate": 1644764610188,
+      "contentHash": "2f623f21a6c2f0320be527efbfedd5f2",
       "sourceName": "src/bridges/rai/interfaces/ICoinJoin.sol",
       "solcConfig": {
         "settings": {
@@ -897,8 +897,8 @@
       }
     },
     "/Users/diganta/Desktop/blockchain/gitcoin/aztec-connect-bridges/src/bridges/rai/interfaces/IEthJoin.sol": {
-      "lastModificationDate": 1644521956229,
-      "contentHash": "d95d8c7c27553123efe455aa8d2e385f",
+      "lastModificationDate": 1644924254011,
+      "contentHash": "5b14671e8e48574b6ef072c8c59317eb",
       "sourceName": "src/bridges/rai/interfaces/IEthJoin.sol",
       "solcConfig": {
         "settings": {
@@ -931,8 +931,8 @@
       }
     },
     "/Users/diganta/Desktop/blockchain/gitcoin/aztec-connect-bridges/src/bridges/rai/interfaces/ISafeEngine.sol": {
-      "lastModificationDate": 1644679178544,
-      "contentHash": "9f995ba279fe4db491bf25223812b482",
+      "lastModificationDate": 1644917142578,
+      "contentHash": "9b7d757455ab43248afe838f3ff58f1a",
       "sourceName": "src/bridges/rai/interfaces/ISafeEngine.sol",
       "solcConfig": {
         "settings": {
@@ -965,8 +965,8 @@
       }
     },
     "/Users/diganta/Desktop/blockchain/gitcoin/aztec-connect-bridges/src/bridges/rai/interfaces/ISafeManager.sol": {
-      "lastModificationDate": 1644522813800,
-      "contentHash": "3127ee4dca76e1990522d3dd9485c8f0",
+      "lastModificationDate": 1644924283442,
+      "contentHash": "e80654e9291501feda82a03d1e2da9d4",
       "sourceName": "src/bridges/rai/interfaces/ISafeManager.sol",
       "solcConfig": {
         "settings": {
@@ -999,8 +999,8 @@
       }
     },
     "/Users/diganta/Desktop/blockchain/gitcoin/aztec-connect-bridges/src/bridges/rai/interfaces/IWeth.sol": {
-      "lastModificationDate": 1644522262667,
-      "contentHash": "7bd51c898e15e9b4464824a95f858db0",
+      "lastModificationDate": 1644925615973,
+      "contentHash": "c32632150daaf3da89719968e43b2af1",
       "sourceName": "src/bridges/rai/interfaces/IWeth.sol",
       "solcConfig": {
         "settings": {
@@ -1416,8 +1416,8 @@
       }
     },
     "/Users/diganta/Desktop/blockchain/gitcoin/aztec-connect-bridges/src/test/rai/RaiBridge.t.sol": {
-      "lastModificationDate": 1644740004957,
-      "contentHash": "0f3d6036183248a90c6cb92b6ab4f7d2",
+      "lastModificationDate": 1644942393651,
+      "contentHash": "35fe12ab9538dbb8e8bcebc89d72b650",
       "sourceName": "src/test/rai/RaiBridge.t.sol",
       "solcConfig": {
         "settings": {

@@ -57,16 +57,6 @@ contract RaiBridge is IDefiBridge {
     ISafeEngine(SAFE_ENGINE).approveSAFEModification(COIN_JOIN);
   }
 
-  /// @dev initialize the safe with a starting collateral (minimum amount of RAI to be borrowed at initialization is 1469 RAI)
-  /// @param _wethAmount : amount of weth to lock as collateral (must be enough to borrow 1469 RAI)
-  /// @param _collateralRatio: the initial collateral ratio for this safe
-  function initialize(uint _wethAmount, uint _collateralRatio) external {
-    require(!isInitialized, "Already initialized");
-    isInitialized = true;
-    (, int raiToEth, , ,) = priceFeed.latestRoundData();
-    _addCollateral(_wethAmount, _collateralRatio, uint(raiToEth));
-  }
-
 
   /// @return collateralRatio = Ongoing collateral ratio of the current safe in BPS
   /// @return raiToEth = Ratio of rai to ETH
@@ -76,7 +66,11 @@ contract RaiBridge is IDefiBridge {
      // rai to Eth Ratio
     (, int x, , ,) = priceFeed.latestRoundData();
     raiToEth = uint(x);
-    collateralRatio =  safe.lockedCollateral.mul(1e22).div(raiToEth).div(safe.generatedDebt);
+    if (safe.lockedCollateral != 0 || safe.generatedDebt != 0) {
+      collateralRatio =  safe.lockedCollateral.mul(1e22).div(raiToEth).div(safe.generatedDebt);
+    } else {
+      collateralRatio = 0;
+    }
   }
 
   function convert(
@@ -98,22 +92,36 @@ contract RaiBridge is IDefiBridge {
     )
   {
     // ### INITIALIZATION AND SANITY CHECKS
-    require(isInitialized, "Not initialized");
     require(msg.sender == rollupProcessor, "RaiBridge: INVALID_CALLER");
 
-    (uint collateralRatio, uint raiToEth, ISafeEngine.SAFE memory safe) = getSafeData();
-
-    if (outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && outputAssetA.erc20Address == RAI) {
-      if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+    if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
         // transfer to weth
         IWeth(WETH).deposit{value: msg.value}();
-      }
-        outputValueA = _addCollateral(totalInputValue, collateralRatio, raiToEth);
-    } else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && inputAssetA.erc20Address == RAI) {
-        outputValueA = _removeCollateral(totalInputValue, safe);
-        if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
-          IWeth(WETH).withdraw(outputValueA);
+    }
+
+
+    if (isInitialized) {
+      (uint collateralRatio, uint raiToEth, ISafeEngine.SAFE memory safe) = getSafeData();
+      if (outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && outputAssetA.erc20Address == RAI) {
+        // deposit weth output RAI
+            outputValueA = _addCollateral(totalInputValue, collateralRatio, raiToEth);
+        } else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && inputAssetA.erc20Address == RAI) {
+          // deposit RAI output weth
+            outputValueA = _removeCollateral(totalInputValue, safe);
+            if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+              IWeth(WETH).withdraw(outputValueA);
         }
+      }
+    } else {
+        // this means the contract is still not initialized and this is the initialization 
+        require(auxData > 0, "no collateral ratio provided");
+        isInitialized = true;
+
+        (, int raiToEth, , ,) = priceFeed.latestRoundData();
+
+        // minimum amount of RAI to be borrowed at initialization is 1469 RAI
+        // please provide enough ETH for that or this method will revert
+        outputValueA = _addCollateral(totalInputValue, auxData, uint(raiToEth));
     }
   } 
 
@@ -130,7 +138,7 @@ contract RaiBridge is IDefiBridge {
 
 
   // ------------------------------- INTERNAL FUNCTIONS ------------------------------------------------- 
-  
+
    function _addCollateral(uint _wethAmount, uint _collateralRatio, uint _raiToEth) internal returns (uint outputRai) {
       IEthJoin(ETH_JOIN).join(SAFE_HANDLER, _wethAmount);
 
