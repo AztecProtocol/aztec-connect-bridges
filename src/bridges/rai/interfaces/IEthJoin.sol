@@ -5,4 +5,5 @@ pragma experimental ABIEncoderV2;
 
 interface IEthJoin {
     function join(address usr, uint wad) external;
+    function exit(address usr, uint wad) external;
 }

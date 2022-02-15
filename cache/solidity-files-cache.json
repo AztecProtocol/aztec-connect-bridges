@@ -784,8 +784,8 @@
       }
     },
     "/Users/diganta/Desktop/blockchain/gitcoin/aztec-connect-bridges/src/bridges/rai/RaiBridge.sol": {
-      "lastModificationDate": 1644684649427,
-      "contentHash": "89ae8e63f8ad2d7718743aca49a5cf4a",
+      "lastModificationDate": 1644764181133,
+      "contentHash": "bcce4fc11cecd0e61127886fd3473ab1",
       "sourceName": "src/bridges/rai/RaiBridge.sol",
       "solcConfig": {
         "settings": {
@@ -1416,8 +1416,8 @@
       }
     },
     "/Users/diganta/Desktop/blockchain/gitcoin/aztec-connect-bridges/src/test/rai/RaiBridge.t.sol": {
-      "lastModificationDate": 1644684712406,
-      "contentHash": "7ce2354d7eb7e746bf7fcbd7c3f04606",
+      "lastModificationDate": 1644740004957,
+      "contentHash": "0f3d6036183248a90c6cb92b6ab4f7d2",
       "sourceName": "src/test/rai/RaiBridge.t.sol",
       "solcConfig": {
         "settings": {

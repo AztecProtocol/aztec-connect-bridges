@@ -21,6 +21,10 @@ import {AggregatorV3Interface} from "./interfaces/AggregatorV3Interface.sol";
 // NOTE:
 // 1. Theres a minimum amount of RAI to be borrowed in the first call, which is currently 1469 RAI
 
+// TODO:
+// 1. Support both weth & eth
+// 2. Maybe move the initialization step inside the convert function
+
 contract RaiBridge is IDefiBridge {
   using SafeMath for uint256;
 
@@ -34,11 +38,10 @@ contract RaiBridge is IDefiBridge {
   address public constant RAI = 0x03ab458634910AaD20eF5f1C8ee96F1D6ac54919;
 
   address public immutable SAFE_HANDLER;
-
   uint public immutable safeId;
-  uint public constant collateralRatio = 20000; // 200%, in BPS (divide by 10000) 
+  bool private isInitialized;
 
-  constructor(address _rollupProcessor) public {
+  constructor(address _rollupProcessor) {
     rollupProcessor = _rollupProcessor;
 
     // OPEN THE SAFE
@@ -48,8 +51,32 @@ contract RaiBridge is IDefiBridge {
 
     // do all one off approvals
     require(IWeth(WETH).approve(ETH_JOIN, type(uint).max), "Weth approve failed");
+    require(IWeth(WETH).approve(rollupProcessor, type(uint).max), "Weth approve failed");
+    require(IERC20(RAI).approve(COIN_JOIN, type(uint).max), "Rai approve failed");
     require(IERC20(RAI).approve(rollupProcessor, type(uint).max), "Rai approve failed");
-    ISafeEngine(SAFE_ENGINE).approveSAFEModification(COIN_JOIN);   
+    ISafeEngine(SAFE_ENGINE).approveSAFEModification(COIN_JOIN);
+  }
+
+  /// @dev initialize the safe with a starting collateral (minimum amount of RAI to be borrowed at initialization is 1469 RAI)
+  /// @param _wethAmount : amount of weth to lock as collateral (must be enough to borrow 1469 RAI)
+  /// @param _collateralRatio: the initial collateral ratio for this safe
+  function initialize(uint _wethAmount, uint _collateralRatio) external {
+    require(!isInitialized, "Already initialized");
+    isInitialized = true;
+    (, int raiToEth, , ,) = priceFeed.latestRoundData();
+    _addCollateral(_wethAmount, _collateralRatio, uint(raiToEth));
+  }
+
+
+  /// @return collateralRatio = Ongoing collateral ratio of the current safe in BPS
+  /// @return raiToEth = Ratio of rai to ETH
+  /// @return safe = totalCollateral & totalDebt of this safe
+  function getSafeData() public view returns (uint256 collateralRatio, uint raiToEth, ISafeEngine.SAFE memory safe) {
+    safe = ISafeEngine(SAFE_ENGINE).safes(0x4554482d41000000000000000000000000000000000000000000000000000000, SAFE_HANDLER);
+     // rai to Eth Ratio
+    (, int x, , ,) = priceFeed.latestRoundData();
+    raiToEth = uint(x);
+    collateralRatio =  safe.lockedCollateral.mul(1e22).div(raiToEth).div(safe.generatedDebt);
   }
 
   function convert(
@@ -70,40 +97,25 @@ contract RaiBridge is IDefiBridge {
       bool isAsync
     )
   {
-    // // ### INITIALIZATION AND SANITY CHECKS
+    // ### INITIALIZATION AND SANITY CHECKS
+    require(isInitialized, "Not initialized");
     require(msg.sender == rollupProcessor, "RaiBridge: INVALID_CALLER");
 
-    // rai only takes weth as collateral
-    require( 
-      inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && 
-      inputAssetA.erc20Address == WETH,
-      "RaiBridge: INPUT_ASSET_NOT_ERC20"
-    );
+    (uint collateralRatio, uint raiToEth, ISafeEngine.SAFE memory safe) = getSafeData();
 
-  // this may need to be change to integrate both repay and collateral in the same convert function
-    require(
-      outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 &&
-      outputAssetA.erc20Address == RAI,
-      "RaiBridge: OUTPUT_ASSET_NOT_ERC20"
-    );
-
-    IEthJoin(ETH_JOIN).join(SAFE_HANDLER, totalInputValue);
-
-    // rai to Eth Ratio
-     (, int x, , ,) = priceFeed.latestRoundData();
-
-     uint raiToEth = uint(x);
-
-    // expected RAI amount = eth_amount * (1e18/raiToEthPrice) * (1/collateralRatio)
-     outputValueA = totalInputValue.mul(1e22).div(raiToEth).div(collateralRatio);
-
-     ISafeManager(SAFE_MANAGER).modifySAFECollateralization(safeId, int(totalInputValue), int(outputValueA));
-
-     ISafeManager(SAFE_MANAGER).transferInternalCoins(safeId, address(this), outputValueA * 10**27);
-
-     ICoinJoin(COIN_JOIN).exit(address(this), outputValueA);
+    if (outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && outputAssetA.erc20Address == RAI) {
+      if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+        // transfer to weth
+        IWeth(WETH).deposit{value: msg.value}();
+      }
+        outputValueA = _addCollateral(totalInputValue, collateralRatio, raiToEth);
+    } else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && inputAssetA.erc20Address == RAI) {
+        outputValueA = _removeCollateral(totalInputValue, safe);
+        if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+          IWeth(WETH).withdraw(outputValueA);
+        }
+    }
   } 
-
 
   function finalise(
     AztecTypes.AztecAsset calldata inputAssetA,
@@ -114,5 +126,31 @@ contract RaiBridge is IDefiBridge {
     uint64 auxData
   ) external payable override returns (uint256, uint256, bool) {
     require(false);
+  }
+
+
+  // ------------------------------- INTERNAL FUNCTIONS ------------------------------------------------- 
+  
+   function _addCollateral(uint _wethAmount, uint _collateralRatio, uint _raiToEth) internal returns (uint outputRai) {
+      IEthJoin(ETH_JOIN).join(SAFE_HANDLER, _wethAmount);
+
+      // expected RAI amount = eth_amount * (1e18/raiToEthPrice) * (1/collateralRatio)
+      outputRai = _wethAmount.mul(1e22).div(_raiToEth).div(_collateralRatio);
+
+      ISafeManager(SAFE_MANAGER).modifySAFECollateralization(safeId, int(_wethAmount), int(outputRai));
+
+      ISafeManager(SAFE_MANAGER).transferInternalCoins(safeId, address(this), outputRai * 10**27);
+
+      ICoinJoin(COIN_JOIN).exit(address(this), outputRai);
+  }
+
+  function _removeCollateral(uint _raiAmount, ISafeEngine.SAFE memory safe) internal returns (uint outputWeth) {
+        ICoinJoin(COIN_JOIN).join(SAFE_HANDLER, _raiAmount);
+
+        outputWeth = safe.lockedCollateral.mul(_raiAmount).div(safe.generatedDebt);
+
+        ISafeManager(SAFE_MANAGER).modifySAFECollateralization(safeId, -int(outputWeth), -int(_raiAmount));
+        ISafeManager(SAFE_MANAGER).transferCollateral(safeId, address(this), outputWeth);
+        IEthJoin(ETH_JOIN).exit(address(this), outputWeth);
   }
 }

@@ -5,4 +5,6 @@ pragma experimental ABIEncoderV2;
 
 interface IWeth {
     function approve(address guy, uint wad) external returns (bool);
+    function deposit() external payable;
+    function withdraw(uint wad) external;
 }

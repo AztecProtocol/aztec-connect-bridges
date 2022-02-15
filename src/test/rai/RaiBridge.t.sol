@@ -47,7 +47,6 @@ contract RaiBridgeTest is DSTest {
     }
 
     event Sexxxxxxxxxxyyyyyyyyyy(uint num);
-     
 
     function testCollateralDeposit() public {
         uint depositAmount = 10e18;
@@ -62,7 +61,7 @@ contract RaiBridgeTest is DSTest {
 
         require(
             actualCollateralRatio == raiBridge.collateralRatio(), 
-            "Collateral ratio does not equal expected"
+            "Collateral ratio not equal expected"
         );
     }
 

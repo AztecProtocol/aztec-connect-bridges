@@ -22,4 +22,10 @@ interface ISafeManager {
     ) external;
 
     function safes(uint _safeId) external view returns (address);
+
+    function transferCollateral(
+        uint safe,
+        address dst,
+        uint wad
+    ) external;
 }
