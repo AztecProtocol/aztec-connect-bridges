@@ -16,6 +16,7 @@ import {ISafeEngine} from "./interfaces/ISafeEngine.sol";
 import {ISafeManager} from "./interfaces/ISafeManager.sol";
 import {IWeth} from "./interfaces/IWeth.sol";
 import {AggregatorV3Interface} from "./interfaces/AggregatorV3Interface.sol";
+import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
 
 
 // NOTE:
@@ -103,16 +104,18 @@ contract RaiBridge is IDefiBridge {
     if (isInitialized) {
       (uint collateralRatio, uint raiToEth, ISafeEngine.SAFE memory safe) = getSafeData();
       if (outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && outputAssetA.erc20Address == RAI) {
-        // deposit weth output RAI
+            // deposit weth output RAI
             outputValueA = _addCollateral(totalInputValue, collateralRatio, raiToEth);
         } else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && inputAssetA.erc20Address == RAI) {
-          // deposit RAI output weth
+            // deposit RAI output weth
             outputValueA = _removeCollateral(totalInputValue, safe);
             if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+              // change weth to eth
               IWeth(WETH).withdraw(outputValueA);
+              IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
+          }
         }
-      }
-    } else {
+    } else {     
         // this means the contract is still not initialized and this is the initialization 
         require(auxData > 0, "no collateral ratio provided");
         isInitialized = true;
@@ -120,7 +123,7 @@ contract RaiBridge is IDefiBridge {
         (, int raiToEth, , ,) = priceFeed.latestRoundData();
 
         // minimum amount of RAI to be borrowed at initialization is 1469 RAI
-        // please provide enough ETH for that or this method will revert
+        // please provide enough ETH/WETH for that or this method will revert
         outputValueA = _addCollateral(totalInputValue, auxData, uint(raiToEth));
     }
   } 
@@ -161,4 +164,6 @@ contract RaiBridge is IDefiBridge {
         ISafeManager(SAFE_MANAGER).transferCollateral(safeId, address(this), outputWeth);
         IEthJoin(ETH_JOIN).exit(address(this), outputWeth);
   }
+
+  fallback() external payable {}
 }

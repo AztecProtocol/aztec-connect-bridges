@@ -784,8 +784,8 @@
       }
     },
     "/Users/diganta/Desktop/blockchain/gitcoin/aztec-connect-bridges/src/bridges/rai/RaiBridge.sol": {
-      "lastModificationDate": 1644938341210,
-      "contentHash": "3514fbab354c22f93ea1d60e01b5cc9d",
+      "lastModificationDate": 1645085552971,
+      "contentHash": "d8aeec500e5e36ab450948e6f1ebac54",
       "sourceName": "src/bridges/rai/RaiBridge.sol",
       "solcConfig": {
         "settings": {
@@ -819,7 +819,8 @@
         "src/bridges/rai/interfaces/ISafeEngine.sol",
         "src/bridges/rai/interfaces/ISafeManager.sol",
         "src/bridges/rai/interfaces/IWeth.sol",
-        "src/interfaces/IDefiBridge.sol"
+        "src/interfaces/IDefiBridge.sol",
+        "src/interfaces/IRollupProcessor.sol"
       ],
       "versionRequirement": ">=0.6.10, <=0.8.10",
       "artifacts": {
@@ -1416,8 +1417,8 @@
       }
     },
     "/Users/diganta/Desktop/blockchain/gitcoin/aztec-connect-bridges/src/test/rai/RaiBridge.t.sol": {
-      "lastModificationDate": 1644942393651,
-      "contentHash": "35fe12ab9538dbb8e8bcebc89d72b650",
+      "lastModificationDate": 1645085824155,
+      "contentHash": "fb5177f212134af159f50fce7a9f6eb8",
       "sourceName": "src/test/rai/RaiBridge.t.sol",
       "solcConfig": {
         "settings": {
@@ -1457,6 +1458,7 @@
         "src/bridges/rai/interfaces/IWeth.sol",
         "src/interfaces/IDefiBridge.sol",
         "src/interfaces/IERC20Permit.sol",
+        "src/interfaces/IRollupProcessor.sol",
         "src/libraries/TokenTransfers.sol",
         "src/test/Vm.sol"
       ],

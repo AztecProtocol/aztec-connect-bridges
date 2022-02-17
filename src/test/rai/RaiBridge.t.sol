@@ -57,25 +57,17 @@ contract RaiBridgeTest is DSTest {
         _initialize(10e18, initialCollateralRatio);
     }
 
-    event Sexxxxxxxxxxyyyyyyyyyy(uint num);
+    event Sexxxxxxxxxxxxxxxyyyyyyyyyyyyyyyy(uint num);
 
     function testWethCollateralDeposit() public {
         uint depositAmount = 1e18;
         uint rollUpRai = _addCollateralWeth(depositAmount);
 
-        // test the collateral ratio
-        (, int x, , ,) = priceFeed.latestRoundData();
-        uint raiToEth = uint(x);
-        uint actualCollateralRatio = totalDepositAmount.mul(1e22).div(raiToEth).div(rollUpRai);
-        (uint expectedCollateralRatio,,) = raiBridge.getSafeData();
-        require(
-            actualCollateralRatio == expectedCollateralRatio, 
-            "Collateral ratio not equal expected"
-        );
+       _assertCollateralRatio(rollUpRai);
     }
 
     function testWethCollateralWithdraw() public {
-        uint raiAmount = 100e18;
+        uint raiAmount = 689e18;
         // test that the wethAmount matches what is supposed to be get by the actual collateral ratio
         ISafeEngine.SAFE memory safe = ISafeEngine(raiBridge.SAFE_ENGINE()).safes(0x4554482d41000000000000000000000000000000000000000000000000000000, raiBridge.SAFE_HANDLER());
 
@@ -98,6 +90,25 @@ contract RaiBridgeTest is DSTest {
         uint wethBal = weth.balanceOf(address(rollupProcessor));
         require(totalDepositAmount == 0);
         require(wethBal == totalWeth, "Total withdrawAll failed");
+    }
+
+    function testEthCollateralDeposit() public {
+        uint depositAmount = 5e18;
+        uint rollupRai = _addCollateralEth(depositAmount);
+
+        _assertCollateralRatio(rollupRai);
+    }
+
+    function testEthCollateralWithdraw() public {
+       uint raiAmount = 1000e18;
+        // test that the ethAmount matches what is supposed to be get by the actual collateral ratio
+        ISafeEngine.SAFE memory safe = ISafeEngine(raiBridge.SAFE_ENGINE()).safes(0x4554482d41000000000000000000000000000000000000000000000000000000, raiBridge.SAFE_HANDLER());
+
+        uint expectedEthAmount = safe.lockedCollateral.mul(raiAmount).div(safe.generatedDebt);
+
+        uint ethAmount = _removeCollateralEth(raiAmount);
+
+        require(expectedEthAmount == ethAmount, "Expected eth withdraw dont match actual");
     }
 
     // percentageThreshold is in BPS (divide by 10000)
@@ -221,14 +232,18 @@ contract RaiBridgeTest is DSTest {
 
         uint newBalance = weth.balanceOf(address(rollupProcessor));
 
-        require(outputValue > 0);
+        emit Sexxxxxxxxxxxxxxxyyyyyyyyyyyyyyyy(outputValue);
+
+        require(outputValue > 0, "output wEth is zero");
         require(newBalance - initialBalance == outputValue, "Weth balance dont match");
 
         totalDepositAmount -= outputValue;
     }
 
-    function _addCollateralEth() payable internal returns (uint rollUpRai) {
-        totalDepositAmount += msg.value;
+    function _addCollateralEth(uint depositAmount) internal returns (uint rollUpRai) {
+        rollupProcessor.receiveEthFromBridge{value: depositAmount}(interactionNonce);
+
+        totalDepositAmount += depositAmount;
 
         uint initialRollUpRai = rai.balanceOf(address(rollupProcessor));
 
@@ -265,11 +280,53 @@ contract RaiBridgeTest is DSTest {
 
         interactionNonce += 1;
 
+        require(outputValueA > 0);
+
         require(
             outputValueA + initialRollUpRai == rollUpRai,
             "Rai balance dont match"
         );
     } 
+
+    function _removeCollateralEth(uint raiAmount) internal returns (uint outputValue) {
+        AztecTypes.AztecAsset memory empty;
+
+        uint initialEthBalance = address(rollupProcessor).balance;
+
+        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
+            id: 1, 
+            erc20Address: address(rai),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+
+        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
+            id: 1, 
+            erc20Address: address(0),
+            assetType: AztecTypes.AztecAssetType.ETH
+        });
+
+        (
+            outputValue,
+            ,
+            
+        ) = rollupProcessor.convert(
+                address(raiBridge),
+                inputAsset,
+                empty,
+                outputAsset,
+                empty,
+                raiAmount,
+                interactionNonce,
+                0
+        );
+
+        uint newEthBalance = address(rollupProcessor).balance;
+
+        require(outputValue > 0, "output eth is zero");
+        require(newEthBalance - initialEthBalance == outputValue, "eth balance dont match");
+
+        totalDepositAmount -= outputValue;
+    }
 
     function _initialize(uint depositAmount, uint collateralRatio) internal returns (uint rollUpRai) {
         _setTokenBalance(address(weth), address(rollupProcessor), depositAmount);
@@ -318,6 +375,18 @@ contract RaiBridgeTest is DSTest {
         require(
             outputValueA == rollUpRai,
             "Rai balance dont match"
+        );
+    }
+
+    function _assertCollateralRatio(uint rollUpRai) internal {
+        // test the collateral ratio
+        (, int x, , ,) = priceFeed.latestRoundData();
+        uint raiToEth = uint(x);
+        uint actualCollateralRatio = totalDepositAmount.mul(1e22).div(raiToEth).div(rollUpRai);
+        (uint expectedCollateralRatio,,) = raiBridge.getSafeData();
+        require(
+            actualCollateralRatio == expectedCollateralRatio, 
+            "Collateral ratio not equal expected"
         );
     }
 }
