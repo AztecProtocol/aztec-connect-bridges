@@ -4,6 +4,7 @@ pragma solidity >=0.6.10 <=0.8.10;
 pragma experimental ABIEncoderV2;
 
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import { IDefiBridge } from "../../interfaces/IDefiBridge.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -22,11 +23,8 @@ import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
 // NOTE:
 // 1. Theres a minimum amount of RAI to be borrowed in the first call, which is currently 1469 RAI
 
-// TODO:
-// 1. Support both weth & eth
-// 2. Maybe move the initialization step inside the convert function
 
-contract RaiBridge is IDefiBridge {
+contract RaiBridge is IDefiBridge, ERC20 {
   using SafeMath for uint256;
 
   address public immutable rollupProcessor;
@@ -42,7 +40,7 @@ contract RaiBridge is IDefiBridge {
   uint public immutable safeId;
   bool private isInitialized;
 
-  constructor(address _rollupProcessor) {
+  constructor(address _rollupProcessor, string memory _name, string memory _symbol) ERC20(_name, _symbol) {
     rollupProcessor = _rollupProcessor;
 
     // OPEN THE SAFE
@@ -104,9 +102,13 @@ contract RaiBridge is IDefiBridge {
     if (isInitialized) {
       (uint collateralRatio, uint raiToEth, ISafeEngine.SAFE memory safe) = getSafeData();
       if (outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && outputAssetA.erc20Address == RAI) {
+        require(outputAssetB.assetType == AztecTypes.AztecAssetType.ERC20 && outputAssetB.erc20Address == address(this));
             // deposit weth output RAI
             outputValueA = _addCollateral(totalInputValue, collateralRatio, raiToEth);
+            outputValueB = outputValueA;
+            _mint(address(this), outputValueB);
         } else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && inputAssetA.erc20Address == RAI) {
+          _burn(address(this), totalInputValue);
             // deposit RAI output weth
             outputValueA = _removeCollateral(totalInputValue, safe);
             if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
@@ -116,15 +118,20 @@ contract RaiBridge is IDefiBridge {
           }
         }
     } else {     
-        // this means the contract is still not initialized and this is the initialization 
+        // CONTRACT INITIALIZATION 
         require(auxData > 0, "no collateral ratio provided");
+        require(outputAssetB.assetType == AztecTypes.AztecAssetType.ERC20 && outputAssetB.erc20Address == address(this));
         isInitialized = true;
+
+        require(IERC20(address(this)).approve(rollupProcessor, type(uint).max), "BridgeTokens approve failed");
 
         (, int raiToEth, , ,) = priceFeed.latestRoundData();
 
         // minimum amount of RAI to be borrowed at initialization is 1469 RAI
         // please provide enough ETH/WETH for that or this method will revert
         outputValueA = _addCollateral(totalInputValue, auxData, uint(raiToEth));
+        outputValueB = outputValueA;
+        _mint(address(this), outputValueB);
     }
   } 
 
@@ -166,4 +173,6 @@ contract RaiBridge is IDefiBridge {
   }
 
   fallback() external payable {}
+
+  receive() external payable {}
 }

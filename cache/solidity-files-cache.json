@@ -784,8 +784,8 @@
       }
     },
     "/Users/diganta/Desktop/blockchain/gitcoin/aztec-connect-bridges/src/bridges/rai/RaiBridge.sol": {
-      "lastModificationDate": 1645085552971,
-      "contentHash": "d8aeec500e5e36ab450948e6f1ebac54",
+      "lastModificationDate": 1645114042428,
+      "contentHash": "fd8d90a2f3e24a7f1e4be3094c96c6f8",
       "sourceName": "src/bridges/rai/RaiBridge.sol",
       "solcConfig": {
         "settings": {
@@ -810,7 +810,10 @@
         }
       },
       "imports": [
+        "node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol",
         "node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol",
+        "node_modules/@openzeppelin/contracts/utils/Context.sol",
         "node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol",
         "src/aztec/AztecTypes.sol",
         "src/bridges/rai/interfaces/AggregatorV3Interface.sol",
@@ -1417,8 +1420,8 @@
       }
     },
     "/Users/diganta/Desktop/blockchain/gitcoin/aztec-connect-bridges/src/test/rai/RaiBridge.t.sol": {
-      "lastModificationDate": 1645085824155,
-      "contentHash": "fb5177f212134af159f50fce7a9f6eb8",
+      "lastModificationDate": 1645126533051,
+      "contentHash": "c84ff1033ceaf8e014c8068cb8ad9834",
       "sourceName": "src/test/rai/RaiBridge.t.sol",
       "solcConfig": {
         "settings": {
@@ -1444,7 +1447,10 @@
       },
       "imports": [
         "lib/ds-test/src/test.sol",
+        "node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol",
         "node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol",
+        "node_modules/@openzeppelin/contracts/utils/Context.sol",
         "node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol",
         "src/aztec/AztecTypes.sol",
         "src/aztec/DefiBridgeProxy.sol",
