@@ -6,9 +6,11 @@ import ISwapRouter from "./artifacts/contracts/interfaces/ISwapRouter.sol/ISwapR
 import WETH from "./artifacts/contracts/interfaces/IWETH.sol/WETH.json";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { Curve } from "./curve";
-import {AztecAsset, AztecAssetType, SendTxOptions, assetToArray } from './utils';
-
-
+import {
+  AztecAsset,
+  SendTxOptions,
+  assetToArray,
+} from "./utils";
 
 export interface TestToken {
   amount: bigint;
@@ -18,19 +20,12 @@ export interface TestToken {
 
 export class RollupProcessor {
   private contract: Contract;
-  private uniswapContract: Contract;
   private WETH9: string;
   private wethContract: Contract;
 
   constructor(public address: string, signer: Signer) {
     this.contract = new Contract(this.address, abi.abi, signer);
     this.WETH9 = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
-
-    this.uniswapContract = new Contract(
-      "0xe592427a0aece92de3edee1f18e0157c05861564",
-      ISwapRouter.abi,
-      signer
-    );
 
     this.wethContract = new Contract(this.WETH9, WETH.abi, signer);
   }

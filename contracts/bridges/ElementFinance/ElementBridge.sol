@@ -94,7 +94,6 @@ contract ElementBridge is IDefiBridge {
   function deriveTranche(address _position, uint256 _expiration)
     internal
     view
-    virtual
     returns (address)
   {
     bytes32 salt = keccak256(abi.encodePacked(_position, _expiration));
@@ -293,7 +292,7 @@ contract ElementBridge is IDefiBridge {
       interaction = failedInteractions[interactionNonce];
     }
     require(interaction.expiry != 0, "ElementBridge: UNKNOWN_NONCE");
-    return interaction.expiry <= block.timestamp && !interaction.finalised && interacionCanBeFinalised(interaction);
+    return interaction.expiry <= block.timestamp && !interaction.finalised;
   }
 
   // serves as the 'off ramp' for the transaction
@@ -334,6 +333,9 @@ contract ElementBridge is IDefiBridge {
   }
 
   function addInteractionAsFailure(Interaction storage interaction, uint256 interactionNonce) internal {
+    if (failedInteractions[interactionNonce].expiry != 0) {
+      return;
+    }
     // copy the interaction over to the failed interactions store
     failedInteractions[interactionNonce] = Interaction(
       interaction.trancheAddress,

@@ -130,7 +130,7 @@ const assetSpecs: AssetSpecs = {
       {
         decimals: 18n,
         quantityExponent: 9n,
-        disabled: true,
+        disabled: false,
       },
     ],
     [
@@ -1437,6 +1437,7 @@ describe("defi bridge", function () {
           name: assetName,
         };
         try {
+          console.log(`Purchasing ${requiredToken.amount} of ${requiredToken.name}`);
           await rollupContract.preFundContractWithToken(signer, requiredToken);
           const poolSpecs = buildPoolSpecs(assetName, vaultConfig);
           if (!poolSpecs.length) {
@@ -1706,6 +1707,8 @@ describe("defi bridge", function () {
     logInteractions(interactions, 'One in - one out');
   });
 
+  // This requires the removal of the requirement within the ElementBridge for convert and finalise to be called by the rollup contract
+  // This is useful for determining the gas consumption of the element bridge contract
   (Object.keys(vaultConfig.tokens).flatMap(x => {
     const assetSpec = assetSpecs.specs.get(x);
     if (!assetSpec || assetSpec.disabled) {
@@ -1713,7 +1716,7 @@ describe("defi bridge", function () {
     }
     return buildPoolSpecs(x, vaultConfig);
   })).forEach((poolSpec: ElementPoolSpec) => {
-    it(`directly finalising for ${poolSpec.name} - ${new Date(poolSpec.expiry * 1000)} should succeed`, async () => {
+    it.skip(`directly finalising for ${poolSpec.name} - ${new Date(poolSpec.expiry * 1000)} should succeed`, async () => {
       const contractSpec = poolSpec;
       const currentTimestamp = await getCurrentBlockTime();
       if (currentTimestamp >= poolSpec.expiry) {
@@ -1754,15 +1757,6 @@ describe("defi bridge", function () {
         erc20Address: contractSpec.underlyingAddress,
       } as AztecAsset;
       const outputAsset = inputAsset;
-  
-      const beforeConvert = await getBalances(
-        contractSpec.trancheAddress,
-        contractSpec.underlyingAddress,
-        signer,
-        balancerAddress,
-        elementBridge.address,
-        rollupContract.address
-      );
 
   
       const results =
@@ -1777,30 +1771,8 @@ describe("defi bridge", function () {
           interactionNonce,
           BigInt(contractSpec.expiry)
         );
-  
-      const afterConvert = await getBalances(
-        contractSpec.trancheAddress,
-        contractSpec.underlyingAddress,
-        signer,
-        balancerAddress,
-        elementBridge.address,
-        rollupContract.address
-      );
-  
-      //expect(results.results.length).toBe(1);
-      //expect(results.results[0].outputValueA).toBe(0n);
-      //expect(results.results[0].outputValueB).toBe(0n);
-      //expect(results.results[0].isAsync).toBe(true);
+
       const gasToConvert = results.gasUsed;
-  
-      const beforeFinalise = await getBalances(
-        contractSpec.trancheAddress,
-        contractSpec.underlyingAddress,
-        signer,
-        balancerAddress,
-        elementBridge.address,
-        rollupContract.address
-      );
   
       await setBlockchainTime(contractSpec.expiry);
   
@@ -1820,19 +1792,6 @@ describe("defi bridge", function () {
       );
   
       const gasToFinalise = result.gasUsed;
-  
-      const afterFinalise = await getBalances(
-        contractSpec.trancheAddress,
-        contractSpec.underlyingAddress,
-        signer,
-        balancerAddress,
-        elementBridge.address,
-        rollupContract.address
-      );
-  
-      // await expect(elementBridge.canFinalise(interactionNonce)).resolves.toBe(
-      //   false
-      // );
 
       const gasUsage = `Asset ${
         poolSpec.name
@@ -1841,6 +1800,187 @@ describe("defi bridge", function () {
       }, gas to finalise: ${gasToFinalise}`
       console.log(gasUsage);
     });
+  });
+
+  // This requires the removal of the requirement within the ElementBridge for convert and finalise to be called by the rollup contract
+  // This is useful for determining the gas consumption of the element bridge contract
+  it.skip("all assets and all expiries - directly to the bridge", async () => {
+    const numInteractionsPerExpiry = 10n;
+    const tokens = vaultConfig.tokens;
+
+    const blockNumBefore = await ethers.provider.getBlockNumber();
+    const blockBefore = await ethers.provider.getBlock(blockNumBefore);
+    const currentTime = blockBefore.timestamp;
+    let goodSpecs: ElementPoolSpec[] = [];
+    const failedSpecs: ElementPoolSpec[] = [];
+    const assetNames = Object.keys(tokens);
+    const depositPerInteraction = new Map<string, bigint>();
+
+    for (let i = 0; i < assetNames.length; i++) {
+      const assetName = assetNames[i];
+      if (assetSpecs.specs.has(assetName)) {
+        const assetSpec = assetSpecs.specs.get(assetName)!;
+        if (assetSpec.disabled) {
+          continue;
+        }
+        const requiredToken = {
+          amount: numInteractionsPerExpiry * 10n ** assetSpec.quantityExponent,
+          erc20Address: tokens[assetName],
+          name: assetName,
+        };
+        try {
+          await rollupContract.preFundContractWithToken(signer, requiredToken, elementBridge.address);
+          const poolSpecs = buildPoolSpecs(assetName, vaultConfig);
+          if (!poolSpecs.length) {
+            continue;
+          }
+          goodSpecs.push(...poolSpecs);
+          const underlyingContract = new Contract(
+            requiredToken.erc20Address,
+            ERC20.abi,
+            signer
+          );
+          const balance = await underlyingContract.balanceOf(
+            elementBridge.address
+          );
+          const numInteractions =
+            numInteractionsPerExpiry * BigInt(poolSpecs.length);
+          const amountPerInteraction = balance.toBigInt() / numInteractions;
+          depositPerInteraction.set(
+            requiredToken.erc20Address,
+            amountPerInteraction
+          );
+        } catch (e) {
+          console.log(
+            `Failed to fund rollup with ${requiredToken.amount} tokens of ${requiredToken.name}`,
+            e
+          );
+          failedSpecs.push(...buildPoolSpecs(assetName, vaultConfig));
+        }
+      }
+    }
+
+    const register = async (spec: ElementPoolSpec) => {
+      await elementBridge
+        .registerConvergentPoolAddress(
+          signer,
+          spec.poolAddress,
+          spec.wrappedPositionAddress,
+          spec.expiry
+        )
+        .catch(fixEthersStackTrace);
+    };
+
+    const tempSpecs: ElementPoolSpec[] = [];
+    for (let i = 0; i < goodSpecs.length; i++) {
+      const currentSpec = goodSpecs[i];
+      if (currentSpec.expiry <= currentTime) {
+        failedSpecs.push(currentSpec);
+        continue;
+      }
+      try {
+        await register(currentSpec);
+        tempSpecs.push(currentSpec);
+      } catch (e) {
+        console.log(
+          `Failed to register ${currentSpec.name}: ${new Date(
+            currentSpec.expiry * 1000
+          )}`
+        );
+        failedSpecs.push(currentSpec);
+      }
+    }
+
+    goodSpecs = tempSpecs;
+
+    const interactions: Interaction[] = [];
+
+    let interactionNonce = 1n;
+    for (let i = 0; i < numInteractionsPerExpiry; i++) {
+      for (let j = 0; j < goodSpecs.length; j++) {
+        const currentSpec = goodSpecs[j];
+        const inputAsset = {
+          assetType: AztecAssetType.ERC20,
+          id: 1,
+          erc20Address: currentSpec.underlyingAddress,
+        } as AztecAsset;
+        const outputAsset = inputAsset;
+
+        const quantity = depositPerInteraction.get(
+          currentSpec.underlyingAddress
+        )!;
+
+
+        const results =
+          await elementBridge.convert(
+            signer,
+            elementBridge.address,
+            inputAsset,
+            {},
+            outputAsset,
+            {},
+            quantity,
+            interactionNonce,
+            BigInt(currentSpec.expiry)
+          );
+
+        interactions.push({
+          amount: quantity,
+          spec: currentSpec,
+          nonce: interactionNonce,
+          gasUsedConvert: results.gasUsed,
+          gasUsedFinalise: 0n,
+          finalised: false,
+          beforeConvert: {} as SwapQuantities,
+          afterConvert: {} as SwapQuantities
+        });
+
+        interactionNonce++;
+      }
+    }
+
+    expect(goodSpecs.length).toBeTruthy();
+    const maxExpiry = goodSpecs.map((x) => x.expiry).sort()[
+      goodSpecs.length - 1
+    ];
+
+    await setBlockchainTime(maxExpiry);
+
+    for (let i = 0; i < interactions.length; i++) {
+      const interaction = interactions[i];
+      const currentSpec = interaction.spec;
+
+      const inputAsset = {
+        assetType: AztecAssetType.ERC20,
+        id: 1,
+        erc20Address: currentSpec.underlyingAddress,
+      } as AztecAsset;
+      const outputAsset = inputAsset;
+
+      await expect(elementBridge.canFinalise(interaction.nonce)).resolves.toBe(
+        true
+      );
+
+      console.log(`About to finalise `, currentSpec.name);
+
+      const result = await elementBridge.finalise(
+        signer,
+        elementBridge.address,
+        inputAsset,
+        {},
+        outputAsset,
+        {},
+        interaction.nonce,
+        BigInt(currentSpec.expiry)
+      );
+      interaction.gasUsedFinalise = result.gasUsed;
+
+      await expect(elementBridge.canFinalise(interaction.nonce)).resolves.toBe(
+        false
+      );
+    }
+
+    logInteractions(interactions, 'All in - all out directly to the bridge');
   });
 });
 
