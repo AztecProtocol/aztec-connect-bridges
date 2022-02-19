@@ -25,7 +25,23 @@
       "^.+\\.ts$": "ts-jest"
     },
     "testRegex": ".*\\.test\\.ts$",
+<<<<<<< HEAD
     "rootDir": "./src"
+=======
+    "rootDir": "./src",
+    "testTimeout": 20000,
+    "slowTestThreshold": 60
+  },
+  "dependencies": {
+    "@ethersproject/experimental": "5.0.9",
+    "@ethersproject/providers": "^5.5.1",
+    "@uniswap/v2-core": "^1.0.1",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
+    "compound-protocol": "https://github.com/compound-finance/compound-protocol",
+    "dotenv": "^8.2.0",
+    "ethers": "^5.5.2",
+    "typescript": "^3.5.3"
+>>>>>>> 6fdb4f30f04898bdfc6de4773bfb917a3f2d27c2
   },
   "name": "aztec-connect-bridges",
   "version": "1.0.0",
@@ -33,11 +49,35 @@
   "repository": "git@github.com:AztecProtocol/aztec-connect-bridges.git",
   "license": "MIT",
   "devDependencies": {
+<<<<<<< HEAD
     "@typechain/ethers-v5": "^9.0.0",
     "@typechain/hardhat": "^4.0.0",
     "@types/jest": "^27.4.0",
     "ts-jest": "^27.1.3",
     "ts-node": "^10.4.0",
     "typechain": "^7.0.0"
+=======
+    "@nomiclabs/hardhat-ethers": "2.0.1",
+    "@nomiclabs/hardhat-waffle": "^2.0.0",
+    "@openzeppelin/contracts": "^3.3.0",
+    "@types/jest": "^26.0.15",
+    "@types/mocha": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^4.1.1",
+    "@typescript-eslint/parser": "^4.1.1",
+    "eslint": "^7.9.0",
+    "eslint-config-prettier": "^6.11.0",
+    "ethereum-waffle": "3.0.0",
+    "ethereumjs-util": "^7.0.7",
+    "hardhat": "^2.7.1",
+    "jest": "^27.0.6",
+    "prettier": "^2.2.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.3",
+    "ts-jest": "^27.0.3",
+    "ts-node": "^8.9.1"
+  },
+  "resolutions": {
+    "ethers": "5.0.29",
+    "@ethersproject/abstract-signer": "5.0.13"
+>>>>>>> 6fdb4f30f04898bdfc6de4773bfb917a3f2d27c2
   }
 }

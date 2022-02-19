@@ -9,8 +9,6 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IDefiBridge } from "../../interfaces/IDefiBridge.sol";
 import { AztecTypes } from "../../aztec/AztecTypes.sol";
 
-//import { ComptrollerInterface } from "./interfaces/ComptrollerInterface.sol";
-
 interface ICETH {
   function approve(address, uint) external returns (uint);
   function balanceOf(address) external view returns (uint256);
@@ -31,23 +29,22 @@ interface ICERC20 {
   function mint(uint256) external returns (uint256);
   function redeem(uint) external returns (uint);
   function redeemUnderlying(uint) external returns (uint);
+  function underlying() external returns (address);
 }
 
 contract CompoundBridgeContract is IDefiBridge {
   using SafeMath for uint256;
 
   address public immutable rollupProcessor;
-  address public cTokenAddress;
-  //address public cToken;
-  //address public underlying;
 
-  constructor(address _rollupProcessor, address _cTokenAddress) public {
+  constructor(address _rollupProcessor) public {
     rollupProcessor = _rollupProcessor;
-    cTokenAddress = _cTokenAddress;
+
   }
 
   receive() external payable {}
 
+  // ATC: To do: use auxData to extend bridge to other actions
   function convert(
     AztecTypes.AztecAsset memory inputAssetA,
     AztecTypes.AztecAsset memory,
@@ -69,34 +66,41 @@ contract CompoundBridgeContract is IDefiBridge {
     require(msg.sender == rollupProcessor, "CompoundBridge: INVALID_CALLER");
     require(outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20, "CompoundBridge: INVALID_OUTPUT_ASSET_TYPE");
 
-    isAsync = false;
-    ICERC20 cToken;
+    isAsync = true;
     IERC20 underlying;
 
     if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH){
       ICETH cToken = ICETH(outputAssetA.erc20Address);
       cToken.mint{ value: msg.value }();
+      outputValueB = cToken.balanceOf(address(this));
+      cToken.approve(rollupProcessor,outputValueB);
+      cToken.transfer(rollupProcessor,outputValueB);
     }
     else{
-      cToken = ICERC20(outputAssetA.erc20Address);
-      require(inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20, "CompoundBridge: INVALID_INPUT_ASSET_TYPE");
+    //  if (auxData == 0)
+        require(inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20, "CompoundBridge: INVALID_INPUT_ASSET_TYPE");
+        ICERC20 cToken = ICERC20(outputAssetA.erc20Address);
+    //  else
+    //    require(outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20, "CompoundBridge: INVALID_INPUT_ASSET_TYPE");
+    //    ICERC20 cToken = ICERC20(inputAssetA.erc20Address);
+      
       underlying = IERC20(inputAssetA.erc20Address);
       require(underlying.balanceOf(address(this)) >= totalInputValue, "CompoundBridge: INSUFFICIENT_TOKEN_BALANCE");
       underlying.approve(address(cToken),totalInputValue);
       cToken.mint(totalInputValue);
+      outputValueB = cToken.balanceOf(address(this));
+      cToken.approve(rollupProcessor,outputValueB);
+      cToken.transfer(rollupProcessor,outputValueB);
     }
-    outputValueB = cToken.balanceOf(address(this));
-    cToken.approve(rollupProcessor,outputValueB);
-    cToken.transfer(rollupProcessor,outputValueB);
-  return (outputValueA, 0, true);
+    return (0, 0, true);
   }
 
-//  ATC: This appears no longer necessary?
-//  function canFinalise(
-//    uint256 /*interactionNonce*/
-//  ) external view override returns (bool) {
-//    return false;
-//  }
+  ////ATC: This appears no longer necessary?
+  //function canFinalise(
+  //  uint256 /*interactionNonce*/
+  //) external view override returns (bool) {
+  //  return false;
+  //}
 
   function finalise(
     AztecTypes.AztecAsset calldata,

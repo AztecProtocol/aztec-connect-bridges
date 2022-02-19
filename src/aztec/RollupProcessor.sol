@@ -239,7 +239,7 @@ contract RollupProcessor is DSTest {
             true
         );
         }
-        require(success, 'Interation Failed');
+        require(success, 'Interaction Failed');
         // else {
 
 

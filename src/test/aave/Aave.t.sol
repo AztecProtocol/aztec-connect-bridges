@@ -17,7 +17,7 @@ import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 import {WadRayMath} from "./../../bridges/aave/libraries/WadRayMath.sol";
 
 import "../../../lib/ds-test/src/test.sol";
-
+import "../../test/console.sol";
 
 contract AaveTest is DSTest {
     using WadRayMath for uint256;
@@ -54,6 +54,7 @@ contract AaveTest is DSTest {
     }
 
     function testAddDaiToMapping() public {
+        console.log("Entering testAddDaiToMapping");
         assertEq(
             aaveLendingBridge.underlyingToZkAToken(address(dai)),
             address(0)
