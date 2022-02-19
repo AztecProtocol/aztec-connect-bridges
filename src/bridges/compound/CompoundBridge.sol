@@ -77,13 +77,8 @@ contract CompoundBridgeContract is IDefiBridge {
       cToken.transfer(rollupProcessor,outputValueB);
     }
     else{
-    //  if (auxData == 0)
-        require(inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20, "CompoundBridge: INVALID_INPUT_ASSET_TYPE");
-        ICERC20 cToken = ICERC20(outputAssetA.erc20Address);
-    //  else
-    //    require(outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20, "CompoundBridge: INVALID_INPUT_ASSET_TYPE");
-    //    ICERC20 cToken = ICERC20(inputAssetA.erc20Address);
-      
+      require(inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20, "CompoundBridge: INVALID_INPUT_ASSET_TYPE");
+      ICERC20 cToken = ICERC20(outputAssetA.erc20Address);
       underlying = IERC20(inputAssetA.erc20Address);
       require(underlying.balanceOf(address(this)) >= totalInputValue, "CompoundBridge: INSUFFICIENT_TOKEN_BALANCE");
       underlying.approve(address(cToken),totalInputValue);
