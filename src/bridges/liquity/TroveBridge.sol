@@ -204,8 +204,9 @@ contract TroveBridge is IDefiBridge, ERC20, Ownable {
         } else if (troveStatus == Status.closedByRedemption) {
             if (!_collateralClaimed) {
                 operations.claimCollateral();
+            } else {
+                _collateralClaimed = false;
             }
-            _collateralClaimed = true;
         }
 
         owner.transfer(address(this).balance);

@@ -5,5 +5,5 @@ libs = ['lib']
 remappings = ['ds-test/=lib/ds-test/src/', '@openzeppelin/=node_modules/@openzeppelin/']
 fuzz_runs = 256
 gas_reports = ["*"]
-ETH_RPC_URL = 'https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c'
+ETH_RPC_URL = 'https://mainnet.infura.io/v3/737bcb5393b146d7870be2f68a7cea9c'
 # See more config options https://github.com/gakonst/foundry/tree/master/config
