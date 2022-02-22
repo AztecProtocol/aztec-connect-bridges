@@ -29,7 +29,7 @@ contract JuiceboxBridge is IDefiBridge {
         address _rollupProcessor,
         IJBDirectory _jbDirectory,
         IJBTokenStore _jbTokenStore
-    ) public {
+    ) {
         rollupProcessor = _rollupProcessor;
         jbDirectory = _jbDirectory;
         jbTokenStore = _jbTokenStore;
@@ -74,6 +74,9 @@ contract JuiceboxBridge is IDefiBridge {
             'JuiceboxBridge: OUTPUT_ASSET_MISMATCH'
         );
 
+        IERC20 _jbToken = IERC20(outputAssetA.erc20Address);
+        uint256 _prevTokenBalance = _jbToken.balanceOf(address(this));
+
         // Pay using appropriate JBTerminal
         IJBTerminal _terminal = jbDirectory.primaryTerminalOf(auxData, JB_ETH);
         require(_terminal != IJBTerminal(address(0)), 'JuiceboxBridge: TERMINAL_NOT_FOUND');
@@ -92,14 +95,11 @@ contract JuiceboxBridge is IDefiBridge {
             new bytes(0)
         );
 
-        // TODO: best way to get or predict outputValueA aka "number of resulting JBTokens from pay"?
-        outputValueA = 0;
+        // Calculate amount of output tokens
+        outputValueA = _jbToken.balanceOf(address(this)) - _prevTokenBalance;
 
         // Approve rollupProcessor to transfer output JBToken
-        require(
-            IERC20(outputAssetA.erc20Address).approve(address(rollupProcessor), outputValueA),
-            'JuiceboxBridge: APPROVE_FAILED'
-        );
+        require(_jbToken.approve(address(rollupProcessor), outputValueA), 'JuiceboxBridge: APPROVE_FAILED');
 
         outputValueB = 0;
         isAsync = false;
