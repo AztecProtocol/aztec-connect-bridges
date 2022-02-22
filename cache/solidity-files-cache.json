@@ -790,8 +790,8 @@
       }
     },
     "/home/tkowalcz/Source/web3/aztec-connect-bridges/src/bridges/compound/CompoundBridge.sol": {
-      "lastModificationDate": 1645251476769,
-      "contentHash": "e762e13e75c35f9749a2f1a929fbf88c",
+      "lastModificationDate": 1645504580944,
+      "contentHash": "e2ee3d668313a1db7341e1f15d80daf1",
       "sourceName": "src/bridges/compound/CompoundBridge.sol",
       "solcConfig": {
         "settings": {
@@ -819,7 +819,8 @@
         "node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol",
         "node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol",
         "src/aztec/AztecTypes.sol",
-        "src/interfaces/IDefiBridge.sol"
+        "src/interfaces/IDefiBridge.sol",
+        "src/test/console.sol"
       ],
       "versionRequirement": ">=0.6.6, <0.8.10",
       "artifacts": {
@@ -1483,8 +1484,8 @@
       }
     },
     "/home/tkowalcz/Source/web3/aztec-connect-bridges/src/test/compound/Compound.t.sol": {
-      "lastModificationDate": 1645251012551,
-      "contentHash": "70610adfd761b59eaf3c5c10be00076c",
+      "lastModificationDate": 1645505386271,
+      "contentHash": "998cf13bcfbd3734e8246290e2167923",
       "sourceName": "src/test/compound/Compound.t.sol",
       "solcConfig": {
         "settings": {
@@ -1519,7 +1520,8 @@
         "src/interfaces/IDefiBridge.sol",
         "src/interfaces/IERC20Permit.sol",
         "src/libraries/TokenTransfers.sol",
-        "src/test/Vm.sol"
+        "src/test/Vm.sol",
+        "src/test/console.sol"
       ],
       "versionRequirement": ">=0.6.6, <0.8.10",
       "artifacts": {

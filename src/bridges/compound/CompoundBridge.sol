@@ -9,6 +9,8 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IDefiBridge } from "../../interfaces/IDefiBridge.sol";
 import { AztecTypes } from "../../aztec/AztecTypes.sol";
 
+import "../../test/console.sol";
+
 interface ICETH {
   function approve(address, uint) external returns (uint);
   function balanceOf(address) external view returns (uint256);
@@ -44,7 +46,7 @@ contract CompoundBridgeContract is IDefiBridge {
 
   receive() external payable {}
 
-  // ATC: To do: use auxData to extend bridge to other actions
+  // ATC: To do: use auxData to extend bridge to borrows and repays
   function convert(
     AztecTypes.AztecAsset memory inputAssetA,
     AztecTypes.AztecAsset memory,
@@ -82,15 +84,17 @@ contract CompoundBridgeContract is IDefiBridge {
       underlying = IERC20(inputAssetA.erc20Address);
       require(underlying.balanceOf(address(this)) >= totalInputValue, "CompoundBridge: INSUFFICIENT_TOKEN_BALANCE");
       underlying.approve(address(cToken),totalInputValue);
+      console.log("depositing %s of underlying", totalInputValue);
       cToken.mint(totalInputValue);
       outputValueB = cToken.balanceOf(address(this));
+      console.log("received %s cTokens", outputValueB);
       cToken.approve(rollupProcessor,outputValueB);
       cToken.transfer(rollupProcessor,outputValueB);
     }
     return (0, 0, true);
   }
 
-  ////ATC: This appears no longer necessary?
+  ////ATC: This appears unnecessary for Compound...
   //function canFinalise(
   //  uint256 /*interactionNonce*/
   //) external view override returns (bool) {

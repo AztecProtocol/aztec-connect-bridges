@@ -109,19 +109,6 @@ contract CompoundTest is DSTest {
         );
     }
 
-    //function testMKRinComptrollerAddresses() public {
-    //    ICERC20[] memory markets = comptroller.getAllMarkets();
-    //    address[] memory underlyings;
-    //    for (uint i=0; i<markets.length; i++)
-    //      underlyings[i] = markets[i].underlying();
-    //    uint matchCount = 0;
-    //    for (uint i=0; i<markets.length; i++){
-    //      if (address(markets[i]) == cMKRaddress)
-    //        matchCount += 1;
-    //    }
-    //    require(matchCount == 1, "MKR not found in list of active markets");
-    //}
-
     /* TEST DEPOSIT OF ETH */
     function testCompoundBridgeETH(uint256 depositAmount) public {
         if (depositAmount == 0 || depositAmount >= 2**96)
