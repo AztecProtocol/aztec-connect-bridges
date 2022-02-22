@@ -44,7 +44,7 @@ contract TroveBridge is IDefiBridge, ERC20, Ownable {
     uint256 public immutable maxFee;
 
     // Used to check whether collateral has already been claimed during redemptions.
-    bool private _collateralClaimed = false;
+    bool private _collateralClaimed;
 
     // Trove status taken from TroveManager.sol
     enum Status {
@@ -130,7 +130,6 @@ contract TroveBridge is IDefiBridge, ERC20, Ownable {
         )
     {
         require(msg.sender == processor, "TroveBridge: INVALID_CALLER");
-        isAsync = false;
         Status troveStatus = Status(troveManager.getTroveStatus(address(this)));
 
         address upperHint = sortedTroves.getPrev(address(this));

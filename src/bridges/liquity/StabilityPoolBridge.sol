@@ -116,7 +116,6 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
         )
     {
         require(msg.sender == processor, "StabilityPoolBridge: INVALID_CALLER");
-        isAsync = false;
 
         if (inputAssetA.erc20Address == LUSD) {
             // Deposit
