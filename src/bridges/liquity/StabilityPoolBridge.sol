@@ -175,12 +175,16 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
 
         uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
         if (wethBalance != 0) {
-            uint256 usdcBalance = UNI_ROUTER.exactInputSingle(
-                ISwapRouter.ExactInputSingleParams(WETH, USDC, 500, address(this), block.timestamp, wethBalance, 0, 0)
+            uint256 lusdBalance = UNI_ROUTER.exactInput(
+                ISwapRouter.ExactInputParams({
+                path: abi.encodePacked(WETH, uint24(500), USDC, uint24(500), LUSD),
+                recipient: address(this),
+                deadline: block.timestamp,
+                amountIn: wethBalance,
+                amountOutMinimum: 0
+                })
             );
-            uint256 lusdBalance = UNI_ROUTER.exactInputSingle(
-                ISwapRouter.ExactInputSingleParams(USDC, LUSD, 500, address(this), block.timestamp, usdcBalance, 0, 0)
-            );
+
             if (lusdBalance != 0) {
                 STABILITY_POOL.provideToSP(lusdBalance, frontEndTag);
             }
