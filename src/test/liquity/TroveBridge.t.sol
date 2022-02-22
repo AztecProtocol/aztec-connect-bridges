@@ -133,13 +133,12 @@ contract TroveBridgeTest is TestUtil {
         _openTrove();
         _borrow();
 
-        // Mint 40 million LUSD and redeem
-        uint256 amountToRedeem = 4e25;
-        mint("LUSD", address(this), amountToRedeem);
-
-        bridge.troveManager().redeemCollateral(amountToRedeem, address(0), address(0), address(0), 0, 0, 5e16);
-        Status troveStatus = Status(bridge.troveManager().getTroveStatus(address(bridge)));
-        assertTrue(troveStatus == Status.closedByRedemption);
+        // Keep on redeeming 20 million LUSD until the trove is in the closedByRedemption status
+        uint256 amountToRedeem = 2e25;
+        do {
+            mint("LUSD", address(this), amountToRedeem);
+            bridge.troveManager().redeemCollateral(amountToRedeem, address(0), address(0), address(0), 0, 0, 1e18);
+        } while (Status(bridge.troveManager().getTroveStatus(address(bridge))) != Status.closedByRedemption);
 
         _redeem();
     }
