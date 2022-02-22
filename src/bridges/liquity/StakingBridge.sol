@@ -141,11 +141,14 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
     function _swapRewardsToLQTYAndStake() internal {
         uint256 lusdBalance = IERC20(LUSD).balanceOf(address(this));
         if (lusdBalance != 0) {
-            uint256 usdcBalance = UNI_ROUTER.exactInputSingle(
-                ISwapRouter.ExactInputSingleParams(LUSD, USDC, 500, address(this), block.timestamp, lusdBalance, 0, 0)
-            );
-            UNI_ROUTER.exactInputSingle(
-                ISwapRouter.ExactInputSingleParams(USDC, WETH, 500, address(this), block.timestamp, usdcBalance, 0, 0)
+            UNI_ROUTER.exactInput(
+                ISwapRouter.ExactInputParams({
+                    path: abi.encodePacked(LUSD, uint24(500), USDC, uint24(500), WETH),
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: lusdBalance,
+                    amountOutMinimum: 0
+                })
             );
         }
 
