@@ -95,7 +95,6 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
         )
     {
         require(msg.sender == processor, "StakingBridge: INVALID_CALLER");
-        isAsync = false;
 
         if (inputAssetA.erc20Address == LQTY) {
             // Deposit
