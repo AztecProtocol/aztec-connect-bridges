@@ -16,6 +16,7 @@ jobs:
       - image: 'aztecprotocol/build-image'
     steps:
       - checkout
+      - run: source /home/circleci/.bashrc
       - run: yarn setup:foundry
   test:
     docker:
