@@ -167,7 +167,8 @@ contract DefiBridgeProxy is DSTest {
             outputAssetB,
             totalInputValue,
             interactionNonce,
-            uint64(auxInputData)
+            uint64(auxInputData),
+            address(0)
         );
 
         if (isAsync) {

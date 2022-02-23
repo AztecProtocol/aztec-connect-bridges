@@ -71,6 +71,8 @@ interface IRollupProcessor {
 
     function getUserPendingDeposit(uint256 assetId, address userAddress) external view returns (uint256);
 
+    function processAsyncDefiInteraction(uint256 interactionNonce) external returns (bool);
+
     event DefiBridgeProcessed(
         uint256 indexed bridgeId,
         uint256 indexed nonce,
