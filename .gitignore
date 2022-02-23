@@ -1,18 +1,6 @@
-<<<<<<< HEAD
 cache
 out/
 node_modules/
-=======
-.vscode
-.viscode
-.cache
-.yarn
-dest*
-dist
-hardhat.config.ts
-node_modules
-.terraform
->>>>>>> 6fdb4f30f04898bdfc6de4773bfb917a3f2d27c2
 yarn.lock
 package-lock.json
 typechain-types/
