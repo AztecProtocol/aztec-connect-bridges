@@ -13,8 +13,8 @@ jobs:
       - run:
           name: Setup Foundry
           command: |
-            source /home/circleci/.bashrc
             yarn setup:foundry
+            source /home/circleci/.bashrc
             yarn install:foundry
   test:
     docker:
