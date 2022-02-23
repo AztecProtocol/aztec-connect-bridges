@@ -10,14 +10,12 @@ jobs:
       - node/install:
           node-version: '16.13'
       - run: node --version
-      - run: yarn install:foundry
-  setup-foundry:
-    docker:
-      - image: 'aztecprotocol/build-image'
-    steps:
-      - checkout
-      - run: source /home/circleci/.bashrc
-      - run: yarn setup:foundry
+      - run:
+          name: Setup Foundry
+          command: |
+            source /home/circleci/.bashrc
+            yarn setup:foundry
+            yarn install:foundry
   test:
     docker:
       - image: 'aztecprotocol/build-image'
@@ -36,12 +34,9 @@ workflows:
   build:
     jobs:
       - install
-      - setup-foundry:
-          requires:
-            - install
       - test:
           requires:
-            - setup-foundry
+            - install
       - build:
           requires:
             - test
