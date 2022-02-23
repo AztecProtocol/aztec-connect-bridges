@@ -3,6 +3,7 @@
     "setup": "curl -L https://foundry.paradigm.xyz | bash && foundryup && git submodule update --init",
     "compile:contracts": "forge build",
     "compile:typechain": "forge build && hardhat compile ",
+    "compile:client-dest": "tsc --project tsconfig.client-dest.json && node package-client-dest.js",
     "clean": "rm -rf ./cache ./dest ./out ./artifacts ./typechain-types",
     "test": "yarn test:contracts && yarn test:clients",
     "test:client": "jest test",
