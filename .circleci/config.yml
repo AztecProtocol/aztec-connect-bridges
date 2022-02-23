@@ -26,8 +26,12 @@ jobs:
       - run: yarn build
 
 workflows:
-  test:
+  build:
     jobs:
       - install
-      - test
-      - build
+      - test:
+          requires:
+            - install
+      - build:
+          requires:
+            - test
