@@ -744,51 +744,6 @@
         }
       }
     },
-    "/home/tkowalcz/Source/web3/aztec-connect-bridges/src/bridges/compound/CompoundBridge-hardcodeAddresses.sol": {
-      "lastModificationDate": 1644905713047,
-      "contentHash": "d8cf717e5fb15cbe55bace60aaaa7f64",
-      "sourceName": "src/bridges/compound/CompoundBridge-hardcodeAddresses.sol",
-      "solcConfig": {
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "": [
-                "ast"
-              ],
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers"
-              ]
-            }
-          },
-          "evmVersion": "london"
-        }
-      },
-      "imports": [
-        "node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol",
-        "node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol",
-        "src/aztec/AztecTypes.sol",
-        "src/interfaces/IDefiBridge.sol"
-      ],
-      "versionRequirement": ">=0.6.6, <0.8.10",
-      "artifacts": {
-        "CompoundBridgeContract": {
-          "0.8.9+commit.e5eed63a.Linux.gcc": "CompoundBridge-hardcodeAddresses.sol/CompoundBridgeContract.json"
-        },
-        "ICERC20": {
-          "0.8.9+commit.e5eed63a.Linux.gcc": "CompoundBridge-hardcodeAddresses.sol/ICERC20.json"
-        },
-        "ICETH": {
-          "0.8.9+commit.e5eed63a.Linux.gcc": "CompoundBridge-hardcodeAddresses.sol/ICETH.json"
-        }
-      }
-    },
     "/home/tkowalcz/Source/web3/aztec-connect-bridges/src/bridges/compound/CompoundBridge.sol": {
       "lastModificationDate": 1645590678364,
       "contentHash": "0026aa67b93a43d3851cd03428d7b3ea",
