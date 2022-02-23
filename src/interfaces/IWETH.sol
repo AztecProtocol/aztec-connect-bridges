@@ -1,15 +1,11 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.4;
+// SPDX-License-Identifier: GPL-2.0-or-later
+pragma solidity >=0.7.5;
+pragma abicoder v2;
 
-interface IWETH {
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
+interface WETH is IERC20 {
     function deposit() external payable;
 
-    function approve(address spender, uint256 amount) external returns (bool);
-
-    function transfer(address to, uint256 amount) external returns (bool);
-
-    function balanceOf(address user) external view returns (uint256);
-
-    function withdraw(uint256 amount) external;
+    function withdraw(uint256 wad) external;
 }
