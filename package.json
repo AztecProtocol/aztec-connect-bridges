@@ -1,6 +1,8 @@
 {
   "scripts": {
-    "setup": "curl -L https://foundry.paradigm.xyz | bash && source ~/.bash_profile && foundryup && git submodule update --init",
+    "setup": "yarn install:foundry && yarn setup:foundry",
+    "setup:foundry": "foundryup && git submodule update --init",
+    "install:foundry": "curl -L https://foundry.paradigm.xyz | bash",
     "compile:contracts": "forge build",
     "compile:typechain": "forge build && hardhat compile ",
     "clean": "rm -rf ./cache ./dest ./out ./artifacts ./typechain-types",
