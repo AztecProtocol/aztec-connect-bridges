@@ -790,8 +790,8 @@
       }
     },
     "/home/tkowalcz/Source/web3/aztec-connect-bridges/src/bridges/compound/CompoundBridge.sol": {
-      "lastModificationDate": 1645504580944,
-      "contentHash": "e2ee3d668313a1db7341e1f15d80daf1",
+      "lastModificationDate": 1645590678364,
+      "contentHash": "0026aa67b93a43d3851cd03428d7b3ea",
       "sourceName": "src/bridges/compound/CompoundBridge.sol",
       "solcConfig": {
         "settings": {
@@ -820,6 +820,7 @@
         "node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol",
         "src/aztec/AztecTypes.sol",
         "src/interfaces/IDefiBridge.sol",
+        "src/interfaces/IRollupProcessor.sol",
         "src/test/console.sol"
       ],
       "versionRequirement": ">=0.6.6, <0.8.10",
@@ -1388,7 +1389,7 @@
       }
     },
     "/home/tkowalcz/Source/web3/aztec-connect-bridges/src/test/aave/Aave.t.sol": {
-      "lastModificationDate": 1644860041490,
+      "lastModificationDate": 1645508848622,
       "contentHash": "f7b32dd6b4153c54a04c661298f38678",
       "sourceName": "src/test/aave/Aave.t.sol",
       "solcConfig": {
@@ -1484,8 +1485,8 @@
       }
     },
     "/home/tkowalcz/Source/web3/aztec-connect-bridges/src/test/compound/Compound.t.sol": {
-      "lastModificationDate": 1645505386271,
-      "contentHash": "998cf13bcfbd3734e8246290e2167923",
+      "lastModificationDate": 1645592049860,
+      "contentHash": "439d2b1d93403b1b236073f25e072687",
       "sourceName": "src/test/compound/Compound.t.sol",
       "solcConfig": {
         "settings": {
@@ -1519,6 +1520,7 @@
         "src/bridges/compound/CompoundBridge.sol",
         "src/interfaces/IDefiBridge.sol",
         "src/interfaces/IERC20Permit.sol",
+        "src/interfaces/IRollupProcessor.sol",
         "src/libraries/TokenTransfers.sol",
         "src/test/Vm.sol",
         "src/test/console.sol"
