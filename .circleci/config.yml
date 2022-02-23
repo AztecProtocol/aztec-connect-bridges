@@ -18,7 +18,7 @@ jobs:
       - checkout
       - run: yarn test:contracts
       - run: yarn test:client
-   build:
+  build:
     docker:
       - image: 'aztecprotocol/build-image'
     steps:
