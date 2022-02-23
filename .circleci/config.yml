@@ -2,7 +2,7 @@ version: '2.1'
 orbs:
   node: circleci/node@5.0
 jobs:
-  test:
+  install:
     docker:
       - image: 'aztecprotocol/build-image'
     steps:
@@ -11,11 +11,23 @@ jobs:
           node-version: '16.13'
       - run: node --version
       - run: yarn setup
+  test:
+    docker:
+      - image: 'aztecprotocol/build-image'
+    steps:
+      - checkout
       - run: yarn test:contracts
       - run: yarn test:client
+   build:
+    docker:
+      - image: 'aztecprotocol/build-image'
+    steps:
+      - checkout
       - run: yarn build
 
 workflows:
   test:
     jobs:
+      - install
       - test
+      - build
