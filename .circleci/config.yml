@@ -19,47 +19,11 @@ jobs:
             export PATH=/home/circleci/.foundry/bin:$PATH
             export PATH=/home/circleci/.forge/bin:$PATH
             yarn setup:foundry
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .
-  test:
-    docker:
-      - image: 'cimg/base:stable-20.04'
-    steps:
-      - checkout
-      - node/install:
-          install-yarn: true
-          node-version: '16.13'
-      - run:
-          name: Test
-          shell: /bin/bash
-          command: |
-            export PATH=/home/circleci/.foundry/bin:$PATH
-            export PATH=/home/circleci/.forge/bin:$PATH
-            yarn config set script-shell /bin/bash
             yarn compile:typechain
             yarn test:contracts
             yarn test:client
-  build:
-    docker:
-      - image: 'aztecprotocol/build-image'
-    steps:
-      - checkout
-      - run:
-          shell: /bin/bash
-          command: |
-            export PATH=/home/circleci/.foundry/bin:$PATH
-            export PATH=/home/circleci/.forge/bin:$PATH
-            yarn build
 
 workflows:
   build:
     jobs:
       - install
-      - test:
-          requires:
-            - install
-      - build:
-          requires:
-            - test
