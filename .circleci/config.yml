@@ -14,11 +14,14 @@ jobs:
       - run: node --version
       - run: yarn install:foundry
       - run:
-          name: Setup Foundry VArs
+          name: Setup Foundry varrs
+          shell: /bin/bash
           command: |
             echo 'export PATH=/home/circleci/.foundry/bin:$PATH' >> $BASH_ENV
             echo 'export PATH=/home/circleci/.forge/bin:$PATH' >> $BASH_ENV
-      - run: yarn setup:foundry
+      - run:
+          shell: /bin/bash
+          command: yarn setup:foundry
       - persist_to_workspace:
           root: .
           paths:
