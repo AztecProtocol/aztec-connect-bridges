@@ -11,4 +11,11 @@ interface IAaveLendingBridgeConfigurator {
     function addPoolFromV2(address lendingBridge, address underlyingAsset) external;
 
     function addPoolFromV3(address lendingBridge, address underlyingAsset) external;
+
+    function claimLiquidityRewards(
+        address lendingBridge,
+        address incentivesController,
+        address[] calldata assets,
+        address beneficiary
+    ) external returns (uint256);
 }
