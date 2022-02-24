@@ -10,6 +10,7 @@ jobs:
       - node/install:
           node-version: '16.13'
           install-yarn: true
+      - run: sudo apt install bash
       - run: node --version
       - run: yarn install:foundry
       - run:
@@ -22,7 +23,6 @@ jobs:
           root: .
           paths:
             - .
-
   test:
     docker:
       - image: 'aztecprotocol/build-image'
