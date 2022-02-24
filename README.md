@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/AztecProtocol/aztec-connect-bridges/tree/master.svg?style=svg)](https://circleci.com/gh/AztecProtocol/aztec-connect-bridges/tree/master)
+[![CircleCI](https://circleci.com/gh/AztecProtocol/aztec-connect-bridges/tree/master.svg?style=shield)](https://circleci.com/gh/AztecProtocol/aztec-connect-bridges/tree/master)
 
 # How to contribute
 
