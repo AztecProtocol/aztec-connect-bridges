@@ -22,19 +22,29 @@ jobs:
             yarn setup:foundry
             yarn compile:typechain
             yarn test:contracts
-            yarn test:client
       - run:
-          name: Tests
+          name: Test Contracts
           shell: /bin/bash
           command: |
             yarn config set script-shell /bin/bash
+            export PATH=/home/circleci/.foundry/bin:$PATH
+            export PATH=/home/circleci/.forge/bin:$PATH
             yarn test:contracts
+      - run:
+          name: Test Client
+          shell: /bin/bash
+          command: |
+            yarn config set script-shell /bin/bash
+            export PATH=/home/circleci/.foundry/bin:$PATH
+            export PATH=/home/circleci/.forge/bin:$PATH
             yarn test:client
       - run:
           name: Build
           shell: /bin/bash
           command: |
             yarn config set script-shell /bin/bash
+            export PATH=/home/circleci/.foundry/bin:$PATH
+            export PATH=/home/circleci/.forge/bin:$PATH
             yarn build
   publish:
     docker:
