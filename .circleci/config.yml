@@ -1,58 +1,17 @@
 version: '2.1'
 jobs:
-  install:
-    docker:
-      - image: 'aztecprotocol/build-image'
-    steps:
-      - checkout
-      - run:
-          name: Setup Foundry
-          shell: /bin/bash
-          command: |
-            yarn config set script-shell /bin/bash
-            yarn install:foundry
-            export PATH=/home/circleci/.foundry/bin:$PATH
-            export PATH=/home/circleci/.forge/bin:$PATH
-            yarn setup:foundry
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .
-  test:
-    docker:
-      - image: 'aztecprotocol/build-image'
-    steps:
-      - checkout
-      - run:
-          name: Test
-          shell: /bin/bash
-          command: |
-            export PATH=/home/circleci/.foundry/bin:$PATH
-            export PATH=/home/circleci/.forge/bin:$PATH
-            yarn config set script-shell /bin/bash
-            yarn
-            yarn compile:typechain
-            yarn test:contracts
-            yarn test:client
   build:
     docker:
       - image: 'aztecprotocol/build-image'
     steps:
-      - checkout
+      - setup_remote_docker:
+          version: 19.03.13
       - run:
-          shell: /bin/bash
-          command: |
-            export PATH=/home/circleci/.foundry/bin:$PATH
-            export PATH=/home/circleci/.forge/bin:$PATH
-            yarn build
+          name: 'Build and test'
+          working_directory: .
+          command: build client-bridge-data
 
 workflows:
   build:
     jobs:
-      - install
-      - test:
-          requires:
-            - install
-      - build:
-          requires:
-            - test
+      - build
