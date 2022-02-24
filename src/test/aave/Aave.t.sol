@@ -53,26 +53,26 @@ contract AaveTest is DSTest {
         _setTokenBalance(address(dai), address(0xdead), 42069);
     }
 
-    function testAddDaiToMapping() public {
-        assertEq(
-            aaveLendingBridge.underlyingToZkAToken(address(dai)),
-            address(0)
-        );
-        /// Add invalid (revert)
-        vm.expectRevert("AaveLendingBridge: NO_LENDING_POOL");
-        aaveLendingBridge.setUnderlyingToZkAToken(address(0xdead));
+    // function testAddDaiToMapping() public {
+    //     assertEq(
+    //         aaveLendingBridge.underlyingToZkAToken(address(dai)),
+    //         address(0)
+    //     );
+    //     /// Add invalid (revert)
+    //     vm.expectRevert("AaveLendingBridge: NO_LENDING_POOL");
+    //     aaveLendingBridge.setUnderlyingToZkAToken(address(0xdead));
 
-        /// Add dai
-        aaveLendingBridge.setUnderlyingToZkAToken(address(dai));
-        assertNotEq(
-            aaveLendingBridge.underlyingToZkAToken(address(dai)),
-            address(0)
-        );
+    //     /// Add dai
+    //     aaveLendingBridge.setUnderlyingToZkAToken(address(dai));
+    //     assertNotEq(
+    //         aaveLendingBridge.underlyingToZkAToken(address(dai)),
+    //         address(0)
+    //     );
 
-        /// Add dai again (revert)
-        vm.expectRevert("AaveLendingBridge: ZK_TOKEN_SET");
-        aaveLendingBridge.setUnderlyingToZkAToken(address(dai));
-    }
+    //     /// Add dai again (revert)
+    //     vm.expectRevert("AaveLendingBridge: ZK_TOKEN_SET");
+    //     aaveLendingBridge.setUnderlyingToZkAToken(address(dai));
+    // }
 
     function testEnterWithDai(uint128 depositAmount, uint16 timeDiff) public {
         _setupDai();
