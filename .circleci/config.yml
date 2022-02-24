@@ -4,9 +4,12 @@ orbs:
 jobs:
   install:
     docker:
-      - image: 'aztecprotocol/build-image'
+      - image: 'cimg/base:stable-20.04'
     steps:
       - checkout
+      - node/install:
+          install-yarn: true
+          node-version: '16.13'
       - run:
           name: Setup Foundry
           shell: /bin/bash
