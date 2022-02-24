@@ -23,8 +23,56 @@ jobs:
             yarn compile:typechain
             yarn test:contracts
             yarn test:client
+      - run:
+          name: Tests
+          shell: /bin/bash
+          command: |
+            yarn config set script-shell /bin/bash
+            yarn test:contracts
+            yarn test:client
+      - run:
+          name: Build
+          shell: /bin/bash
+          command: |
+            yarn config set script-shell /bin/bash
+            yarn build
+  publish:
+    docker:
+      - image: 'cimg/base:stable-20.04'
+    steps:
+      - checkout
+      - node/install:
+          install-yarn: true
+          node-version: '16.13'
+      - run:
+          name: Authenticate with registry
+          command: echo "//registry.npmjs.org/:_authToken=$npm_TOKEN" > .npmrc
+      - run:
+          name: Setup Foundry
+          shell: /bin/bash
+          command: |
+            yarn config set script-shell /bin/bash
+            yarn
+            yarn install:foundry
+            export PATH=/home/circleci/.foundry/bin:$PATH
+            export PATH=/home/circleci/.forge/bin:$PATH
+            yarn setup:foundry
+            yarn compile:typechain
+            yarn test:contracts
+            yarn test:client
+            yarn build
+            yarn publish
 
 workflows:
-  build:
+  install:
     jobs:
       - install
+  deploy:
+    jobs:
+      - publish:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              only:
+                - master
