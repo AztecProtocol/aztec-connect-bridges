@@ -4,20 +4,19 @@ orbs:
 jobs:
   install:
     docker:
-      - image: 'cimg/base:2021.04'
+      - image: 'aztecprotocol/build-image'
     steps:
       - checkout
       - node/install:
           node-version: '16.13'
-          install-yarn: true
       - run: sudo apt install bash
       - run: node --version
       - run:
-          shell: /bin/bash
+          shell: bin/bash
           command: yarn install:foundry
       - run:
           name: Setup Foundry varrs
-          shell: /bin/bash
+          shell: bin/bash
           command: |
             echo 'export PATH=/home/circleci/.foundry/bin:$PATH' >> $BASH_ENV
             echo 'export PATH=/home/circleci/.forge/bin:$PATH' >> $BASH_ENV
