@@ -1,4 +1,6 @@
 version: '2.1'
+orbs:
+  node: circleci/node@5.0.0
 jobs:
   install:
     docker:
@@ -23,6 +25,9 @@ jobs:
       - image: 'cimg/base:stable-20.04'
     steps:
       - checkout
+      - node/install:
+          install-yarn: true
+          node-version: '16.13'
       - run:
           name: Test
           shell: /bin/bash
