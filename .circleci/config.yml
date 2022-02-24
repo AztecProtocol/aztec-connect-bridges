@@ -9,14 +9,12 @@ jobs:
       - checkout
       - node/install:
           node-version: '16.13'
-      - run: node --version
-      - run:
-          shell: /bin/bash
-          command: yarn install:foundry
       - run:
           name: Setup Foundry
           shell: /bin/bash
           command: |
+            yarn config set script-shell /bin/bash
+            yarn install:foundry
             export PATH=/home/circleci/.foundry/bin:$PATH
             export PATH=/home/circleci/.forge/bin:$PATH
             yarn setup:foundry
