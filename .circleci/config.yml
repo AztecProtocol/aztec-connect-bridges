@@ -9,20 +9,17 @@ jobs:
       - checkout
       - node/install:
           node-version: '16.13'
-      - run: sudo apt install bash
       - run: node --version
       - run:
           shell: /bin/bash
           command: yarn install:foundry
       - run:
-          name: Setup Foundry varrs
+          name: Setup Foundry
           shell: /bin/bash
           command: |
-            echo 'export PATH=/home/circleci/.foundry/bin:$PATH' >> $BASH_ENV
-            echo 'export PATH=/home/circleci/.forge/bin:$PATH' >> $BASH_ENV
-      - run:
-          shell: /bin/bash
-          command: yarn setup:foundry
+            export PATH=/home/circleci/.foundry/bin:$PATH
+            export PATH=/home/circleci/.forge/bin:$PATH
+            yarn setup:foundry
       - persist_to_workspace:
           root: .
           paths:
@@ -33,20 +30,14 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Setup Foundry varrs
+          name: Test
           shell: /bin/bash
           command: |
-            echo 'export PATH=/home/circleci/.foundry/bin:$PATH' >> $BASH_ENV
-            echo 'export PATH=/home/circleci/.forge/bin:$PATH' >> $BASH_ENV
-      - run:
-          shell: /bin/bash
-          command: yarn compile:typechain
-      - run:
-          shell: /bin/bash
-          command: yarn test:contracts
-      - run:
-          shell: /bin/bash
-          command: yarn test:client
+            export PATH=/home/circleci/.foundry/bin:$PATH
+            export PATH=/home/circleci/.forge/bin:$PATH
+            yarn compile:typechain
+            yarn test:contracts
+            yarn test:client
   build:
     docker:
       - image: 'aztecprotocol/build-image'
@@ -54,7 +45,10 @@ jobs:
       - checkout
       - run:
           shell: /bin/bash
-          command: yarn build
+          command: |
+            export PATH=/home/circleci/.foundry/bin:$PATH
+            export PATH=/home/circleci/.forge/bin:$PATH
+            yarn build
 
 workflows:
   build:
