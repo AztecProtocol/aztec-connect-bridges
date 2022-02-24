@@ -1,14 +1,10 @@
 version: '2.1'
-orbs:
-  node: circleci/node@5.0
 jobs:
   install:
     docker:
       - image: 'aztecprotocol/build-image'
     steps:
       - checkout
-      - node/install:
-          node-version: '16.13'
       - run:
           name: Setup Foundry
           shell: /bin/bash
@@ -34,6 +30,7 @@ jobs:
             export PATH=/home/circleci/.foundry/bin:$PATH
             export PATH=/home/circleci/.forge/bin:$PATH
             yarn config set script-shell /bin/bash
+            yarn
             yarn compile:typechain
             yarn test:contracts
             yarn test:client
