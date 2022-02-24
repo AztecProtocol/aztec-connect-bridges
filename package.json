@@ -31,8 +31,8 @@
     "testRegex": ".*\\.test\\.ts$",
     "rootDir": "./src"
   },
-  "name": "aztec-connect-bridges",
-  "version": "1.0.0",
+  "name": "@aztec/bridge-clients",
+  "version": "0.0.1",
   "description": "This repo contains the solidity files and typescript helper class for all of the Aztec Connect Bridge Contracts",
   "repository": "git@github.com:AztecProtocol/aztec-connect-bridges.git",
   "license": "MIT",
