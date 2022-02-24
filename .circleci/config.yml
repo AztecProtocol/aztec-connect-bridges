@@ -32,14 +32,20 @@ jobs:
       - image: 'aztecprotocol/build-image'
     steps:
       - checkout
-      - run: yarn test:contracts
-      - run: yarn test:client
+      - run:
+          shell: /bin/bash
+          command: yarn test:contracts
+      - run:
+          shell: /bin/bash
+          command: yarn test:client
   build:
     docker:
       - image: 'aztecprotocol/build-image'
     steps:
       - checkout
-      - run: yarn build
+       - run:
+          shell: /bin/bash
+          command: yarn build
 
 workflows:
   build:
