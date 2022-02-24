@@ -15,6 +15,7 @@ jobs:
           shell: /bin/bash
           command: |
             yarn config set script-shell /bin/bash
+            yarn
             yarn install:foundry
             export PATH=/home/circleci/.foundry/bin:$PATH
             export PATH=/home/circleci/.forge/bin:$PATH
