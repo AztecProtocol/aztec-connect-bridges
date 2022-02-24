@@ -33,6 +33,15 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Setup Foundry varrs
+          shell: /bin/bash
+          command: |
+            echo 'export PATH=/home/circleci/.foundry/bin:$PATH' >> $BASH_ENV
+            echo 'export PATH=/home/circleci/.forge/bin:$PATH' >> $BASH_ENV
+      - run:
+          shell: /bin/bash
+          command: yarn compile:typechain
+      - run:
           shell: /bin/bash
           command: yarn test:contracts
       - run:
