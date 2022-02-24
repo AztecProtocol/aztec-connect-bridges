@@ -41,38 +41,38 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
 
     address public immutable ROLLUP_PROCESSOR;
     ILendingPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
-    address public immutable REWARDS_BENEFICIARY;
     address public immutable CONFIGURATOR;
 
     /// Mapping underlying assets to the zk aToken used for accounting
     mapping(address => address) public underlyingToZkAToken;
-    /// Mapping underlying assets to the aToken in Aave
-    mapping(address => address) public underlyingToAToken;
 
     modifier onlyConfigurator() {
         require(msg.sender == CONFIGURATOR, Errors.INVALID_CALLER);
         _;
     }
 
+    /// Need to be able to receive ETH for WETH unwrapping
     receive() external payable {}
 
     constructor(
         address _rollupProcessor,
         address _addressesProvider,
-        address _rewardsBeneficiary,
         address _configurator
     ) {
         ROLLUP_PROCESSOR = _rollupProcessor;
         /// @dev addressesProvider is used to fetch pool, used in case Aave governance update pool proxy
         ADDRESSES_PROVIDER = ILendingPoolAddressesProvider(_addressesProvider);
-        REWARDS_BENEFICIARY = _rewardsBeneficiary;
         CONFIGURATOR = _configurator;
     }
 
     /**
      * @notice Add the underlying asset to the set of supported assets
-     * @dev For the underlying to be accepted, the asset must be supported in Aave
+     * @dev For the underlying to be accepted, the asset must be supported in Aave.
+     * Also, the underlying asset MUST NOT be a rebasing token, as scaled balance computation differs from standard.
+     * These properties must be enforced by the configurator.
      * @dev Underlying assets that already is supported cannot be added again.
+     * @param underlyingAsset The address of the underlying asset
+     * @param aTokenAddress The address of the aToken, only used to define name, symbol and decimals for the zkatoken.
      */
     function setUnderlyingToZkAToken(address underlyingAsset, address aTokenAddress) external onlyConfigurator {
         require(underlyingToZkAToken[underlyingAsset] == address(0), Errors.ZK_TOKEN_ALREADY_SET);
@@ -85,7 +85,6 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         string memory symbol = string(abi.encodePacked('ZK-', aToken.symbol()));
 
         underlyingToZkAToken[underlyingAsset] = address(new AccountingToken(name, symbol, aToken.decimals()));
-        underlyingToAToken[underlyingAsset] = address(aToken);
     }
 
     /**
@@ -150,33 +149,31 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         uint256 amount,
         bool isEth
     ) internal returns (uint256) {
+        /**
+         * Interaction flow:
+         * 0. If receiving ETH, wrap it such that WETH can be deposited
+         * 1. Fetch current liquidity index from Aave and compute scaled amount
+         * 2. Approve underlying asset to be deposited into Aave
+         * 3. Deposit assets into Aave (receives aUnderlyingAsset in return)
+         * 4. Mint zkATokens equal to scaled amount
+         * 5. Approve ROLLUP_PROCESSOR to pull funds
+         */
+
         if (isEth) {
-            // 0. Wrap ETH if necessary
             WETH.deposit{value: amount}();
         }
 
         ILendingPool pool = ILendingPool(ADDRESSES_PROVIDER.getLendingPool());
+        uint256 scaledAmount = amount.rayDiv(pool.getReserveNormalizedIncome(underlyingAsset));
 
-        IScaledBalanceToken aToken = IScaledBalanceToken(underlyingToAToken[underlyingAsset]);
-
-        IAccountingToken zkAToken = IAccountingToken(zkATokenAddress);
-
-        // 1. Read the scaled balance
-        uint256 scaledBalance = aToken.scaledBalanceOf(address(this));
-
-        // 2. Approve totalInputValue to be deposited
         IERC20(underlyingAsset).safeApprove(address(pool), amount);
-
-        // 3. Deposit totalInputValue of inputAssetA on AAVE lending pool
         pool.deposit(underlyingAsset, amount, address(this), 0);
 
-        // 4. Mint the difference between the scaled balance at the start of the interaction and after the deposit as our zkAToken
-        uint256 diff = aToken.scaledBalanceOf(address(this)).sub(scaledBalance);
-        zkAToken.mint(address(this), diff);
+        IAccountingToken zkAToken = IAccountingToken(zkATokenAddress);
+        zkAToken.mint(address(this), scaledAmount);
+        zkAToken.approve(ROLLUP_PROCESSOR, scaledAmount);
 
-        // 5. Approve processor to pull zk aTokens.
-        zkAToken.approve(ROLLUP_PROCESSOR, diff);
-        return diff;
+        return scaledAmount;
     }
 
     /**
@@ -192,23 +189,28 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         uint256 interactionNonce,
         bool isEth
     ) internal returns (uint256) {
-        ILendingPool pool = ILendingPool(ADDRESSES_PROVIDER.getLendingPool());
+        /**
+         * Interaction flow:
+         * 0. Burn zkATokens equal to scaledAmount
+         * 1. Compute the amount of underlying assets to withdraw
+         * 2. Withdraw from the Aave pool
+         * 3. If underlyingAsset is supposed to be ETH, unwrap WETH
+         * 4. Approve underlying asset to be pulled by ROLLUP_PROCESSOR or transfer ETH
+         * Exit may fail if insufficient liquidity is available in the Aave pool.
+         */
 
-        // 1. Compute the amount from the scaledAmount supplied
-        uint256 underlyingAmount = scaledAmount.rayMul(pool.getReserveNormalizedIncome(underlyingAsset));
-
-        // 2. Burn the supplied amount of zkAToken as this has now been withdrawn
         IAccountingToken(zkATokenAddress).burn(scaledAmount);
 
-        // 3. Lend totalInputValue of inputAssetA on AAVE lending pool and return the amount of tokens
+        ILendingPool pool = ILendingPool(ADDRESSES_PROVIDER.getLendingPool());
+        uint256 underlyingAmount = scaledAmount.rayMul(pool.getReserveNormalizedIncome(underlyingAsset));
+
+        /// Return value by pool::withdraw() equal to underlyingAmount, unless underlying amount == type(uint256).max;
         uint256 outputValue = pool.withdraw(underlyingAsset, underlyingAmount, address(this));
 
         if (isEth) {
-            // 4. Withdraw ETH from WETH and send eth to ROLLUP_PROCESSOR
             WETH.withdraw(outputValue);
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValue}(interactionNonce);
         } else {
-            // 4. Approve rollup to spend underlying
             IERC20(underlyingAsset).safeApprove(ROLLUP_PROCESSOR, outputValue);
         }
 
@@ -217,19 +219,18 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
 
     /**
      * @notice Claim liquidity mining rewards and transfer to the beneficiary
+     * @dev Only callable by the configurator
+     * @param incentivesController The address of the incentives controller
+     * @param assets The list of assets to claim rewards for
+     * @param beneficiary The address to receive the rewards
+     * @return The amount of rewards claimed
      */
-    function claimLiquidityRewards(address incentivesController, address[] calldata assets) external returns (uint256) {
-        // Just to have an initial claim rewards function
-        // Don't like that we are accepting any contract from the users. Not obvious how they would abuse though.
-        // Assets are approved to the lendingPool, but it does not have a claimRewards function that can be abused.
-        // The malicious controller can be used to reenter. But limited what can be entered again as convert can only be entered by the processor.
-        // To limit attack surface. Can pull incentives controller from assets and ensure that the assets are actually supported assets.
-        return
-            IAaveIncentivesController(incentivesController).claimRewards(
-                assets,
-                type(uint256).max,
-                REWARDS_BENEFICIARY
-            );
+    function claimLiquidityRewards(
+        address incentivesController,
+        address[] calldata assets,
+        address beneficiary
+    ) external onlyConfigurator returns (uint256) {
+        return IAaveIncentivesController(incentivesController).claimRewards(assets, type(uint256).max, beneficiary);
     }
 
     function finalise(

@@ -46,4 +46,13 @@ contract AaveLendingBridgeConfigurator is IAaveLendingBridgeConfigurator, Ownabl
 
         addNewPool(lendingBridge, underlyingAsset, aTokenAddress);
     }
+
+    function claimLiquidityRewards(
+        address lendingBridge,
+        address incentivesController,
+        address[] calldata assets,
+        address beneficiary
+    ) external override(IAaveLendingBridgeConfigurator) onlyOwner returns (uint256) {
+        return IAaveLendingBridge(lendingBridge).claimLiquidityRewards(incentivesController, assets, beneficiary);
+    }
 }

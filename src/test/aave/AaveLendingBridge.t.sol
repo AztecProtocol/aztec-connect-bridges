@@ -76,7 +76,6 @@ contract AaveLendingTest is TestHelper {
 
     function _tokenSetup(IERC20 _token) internal {
         token = _token;
-        DataTypes.ReserveData memory data = pool.getReserveData(address(token));
         aToken = IAToken(pool.getReserveData(address(token)).aTokenAddress);
         minValue = 10**aToken.decimals();
         maxValue = 1e12 * 10**aToken.decimals();
@@ -89,12 +88,7 @@ contract AaveLendingTest is TestHelper {
         configurator = IAaveLendingBridgeConfigurator(new AaveLendingBridgeConfigurator());
 
         aaveLendingBridge = IAaveLendingBridge(
-            new AaveLendingBridge(
-                address(rollupProcessor),
-                address(ADDRESSES_PROVIDER),
-                BENEFICIARY,
-                address(configurator)
-            )
+            new AaveLendingBridge(address(rollupProcessor), address(ADDRESSES_PROVIDER), address(configurator))
         );
     }
 
@@ -143,12 +137,6 @@ contract AaveLendingTest is TestHelper {
             erc20Address: address(0xda),
             assetType: AztecTypes.AztecAssetType.VIRTUAL
         });
-
-        // validate caller
-        // Wrong input token types.
-        // double eth
-        // zkATokenAddress == 0
-        // same asset for both input and output
 
         // Invalid caller //
         VM.expectRevert(bytes(Errors.INVALID_CALLER));
@@ -314,14 +302,14 @@ contract AaveLendingTest is TestHelper {
     }
 
     function testExitPartially(
-        uint128 depositAmount,
+        uint128 _depositAmount,
         uint128 withdrawAmount,
         uint16 timeDiff
     ) public {
         for (uint256 i = 0; i < tokens.length; i++) {
             _tokenSetup(tokens[i]);
 
-            uint256 depositAmount = cut(depositAmount / divisor, maxValue, minValue);
+            uint256 depositAmount = cut(_depositAmount / divisor, maxValue, minValue);
             uint256 index = pool.getReserveNormalizedIncome(address(token));
             uint256 scaledDepositAmount = uint256(depositAmount).rayDiv(index);
 
@@ -336,13 +324,13 @@ contract AaveLendingTest is TestHelper {
     }
 
     function testExitPartiallyEther(
-        uint128 depositAmount,
+        uint128 _depositAmount,
         uint128 withdrawAmount,
         uint16 timeDiff
     ) public {
         _tokenSetup(WETH);
 
-        uint256 depositAmount = cut(depositAmount / divisor, maxValue, minValue);
+        uint256 depositAmount = cut(_depositAmount / divisor, maxValue, minValue);
         uint256 index = pool.getReserveNormalizedIncome(address(token));
         uint256 scaledDepositAmount = uint256(depositAmount).rayDiv(index);
 
@@ -356,14 +344,14 @@ contract AaveLendingTest is TestHelper {
     }
 
     function testExitPartiallyThenCompletely(
-        uint128 depositAmount,
+        uint128 _depositAmount,
         uint16 timeDiff1,
         uint16 timeDiff2
     ) public {
         for (uint256 i = 0; i < tokens.length; i++) {
             _tokenSetup(tokens[i]);
 
-            uint256 depositAmount = cut(depositAmount / divisor, maxValue, minValue);
+            uint256 depositAmount = cut(_depositAmount / divisor, maxValue, minValue);
 
             _addTokenPool();
             _enterWithToken(depositAmount);
@@ -386,13 +374,13 @@ contract AaveLendingTest is TestHelper {
     }
 
     function testExitPartiallyThenCompletelyEther(
-        uint128 depositAmount,
+        uint128 _depositAmount,
         uint16 timeDiff1,
         uint16 timeDiff2
     ) public {
         _tokenSetup(WETH);
 
-        uint256 depositAmount = cut(depositAmount / divisor, maxValue, minValue);
+        uint256 depositAmount = cut(_depositAmount / divisor, maxValue, minValue);
 
         _addTokenPool();
         _enterWithEther(depositAmount);
@@ -413,12 +401,12 @@ contract AaveLendingTest is TestHelper {
         assertEq(balancesAfter.rollupZk, 0, 'Not exited with everything');
     }
 
-    function testExitCompletely(uint128 depositAmount, uint16 timeDiff) public {
+    function testExitCompletely(uint128 _depositAmount, uint16 timeDiff) public {
         for (uint256 i = 0; i < tokens.length; i++) {
             _tokenSetup(tokens[i]);
 
             _addTokenPool();
-            uint256 depositAmount = cut(depositAmount / divisor, maxValue, minValue);
+            uint256 depositAmount = cut(_depositAmount / divisor, maxValue, minValue);
 
             _enterWithToken(depositAmount);
 
@@ -435,11 +423,11 @@ contract AaveLendingTest is TestHelper {
         }
     }
 
-    function testExitCompletelyEther(uint128 depositAmount, uint16 timeDiff) public {
+    function testExitCompletelyEther(uint128 _depositAmount, uint16 timeDiff) public {
         _tokenSetup(WETH);
 
         _addTokenPool();
-        uint256 depositAmount = cut(depositAmount / divisor, maxValue, minValue);
+        uint256 depositAmount = cut(_depositAmount / divisor, maxValue, minValue);
 
         _enterWithEther(depositAmount);
 
@@ -455,11 +443,8 @@ contract AaveLendingTest is TestHelper {
         assertEq(balancesAfter.rollupZk, 0, 'Not exited with everything');
     }
 
-    function testClaimRewardsWBTC() public {
-        uint256 depositAmount = 21267647932558653966460912964485513215;
-        uint256 timeDiff = 15413;
-        emit log_named_address('Testing with', address(WBTC));
-        _tokenSetup(WBTC);
+    function testClaimRewardstokenNotConfigurator(uint128 depositAmount, uint16 timeDiff) public {
+        _tokenSetup(tokens[0]);
 
         _addTokenPool();
         _enterWithToken(cut(depositAmount / divisor, maxValue, minValue));
@@ -468,19 +453,14 @@ contract AaveLendingTest is TestHelper {
         address[] memory assets = new address[](1);
         assets[0] = address(aToken);
 
-        uint256 beneficiaryCurrentStakedAaveBalance = STK_AAVE.balanceOf(BENEFICIARY);
-
-        uint256 expectedRewards = aaveLendingBridge.claimLiquidityRewards(address(INCENTIVES), assets);
+        VM.expectRevert(bytes(Errors.INVALID_CALLER));
+        aaveLendingBridge.claimLiquidityRewards(address(INCENTIVES), assets, BENEFICIARY);
         assertEq(STK_AAVE.balanceOf(address(aaveLendingBridge)), 0, 'The bridge received the rewards');
-
-        // The claiming of liquidity rewards is not always returning the actual value increase
-
-        assertCloseTo(STK_AAVE.balanceOf(BENEFICIARY), expectedRewards + beneficiaryCurrentStakedAaveBalance, 2);
+        assertEq(STK_AAVE.balanceOf(address(BENEFICIARY)), 0, 'The BENEFICIARY received the rewards');
     }
 
     function testClaimRewardsTokens(uint128 depositAmount, uint16 timeDiff) public {
         for (uint256 i = 0; i < tokens.length; i++) {
-            emit log_named_address('Testing with', address(tokens[i]));
             _tokenSetup(tokens[i]);
 
             _addTokenPool();
@@ -492,11 +472,15 @@ contract AaveLendingTest is TestHelper {
 
             uint256 beneficiaryCurrentStakedAaveBalance = STK_AAVE.balanceOf(BENEFICIARY);
 
-            uint256 expectedRewards = aaveLendingBridge.claimLiquidityRewards(address(INCENTIVES), assets);
+            uint256 expectedRewards = configurator.claimLiquidityRewards(
+                address(aaveLendingBridge),
+                address(INCENTIVES),
+                assets,
+                BENEFICIARY
+            );
             assertEq(STK_AAVE.balanceOf(address(aaveLendingBridge)), 0, 'The bridge received the rewards');
 
             // The claiming of liquidity rewards is not always returning the actual value increase
-
             assertCloseTo(STK_AAVE.balanceOf(BENEFICIARY), expectedRewards + beneficiaryCurrentStakedAaveBalance, 2);
         }
     }
@@ -511,7 +495,12 @@ contract AaveLendingTest is TestHelper {
         assets[0] = address(aToken);
 
         uint256 beneficiaryCurrentStakedAaveBalance = STK_AAVE.balanceOf(address(BENEFICIARY));
-        uint256 expectedRewards = aaveLendingBridge.claimLiquidityRewards(address(INCENTIVES), assets);
+        uint256 expectedRewards = configurator.claimLiquidityRewards(
+            address(aaveLendingBridge),
+            address(INCENTIVES),
+            assets,
+            BENEFICIARY
+        );
         assertEq(STK_AAVE.balanceOf(address(aaveLendingBridge)), 0, 'The bridge received the rewards');
 
         // The claiming of liquidity rewards is not always returning the actual value increase
@@ -601,6 +590,9 @@ contract AaveLendingTest is TestHelper {
             0
         );
 
+        assertFalse(isAsync, 'Convert is async');
+        assertEq(outputValueB, 0, 'OutputValue B not zero');
+
         Balances memory balanceAfter = _getBalances();
 
         uint256 index = pool.getReserveNormalizedIncome(address(token));
@@ -652,6 +644,8 @@ contract AaveLendingTest is TestHelper {
             1,
             0
         );
+        assertFalse(isAsync, 'Convert is async');
+        assertEq(outputValueB, 0, 'OutputValue B not zero');
 
         Balances memory balanceAfter = _getBalances();
 
@@ -713,6 +707,8 @@ contract AaveLendingTest is TestHelper {
             2,
             0
         );
+        assertFalse(isAsync, 'Convert is async');
+        assertEq(outputValueB, 0, 'OutputValue B not zero');
 
         Balances memory balanceAfter = _getBalances();
 
@@ -778,6 +774,8 @@ contract AaveLendingTest is TestHelper {
             2,
             0
         );
+        assertFalse(isAsync, 'Convert is async');
+        assertEq(outputValueB, 0, 'OutputValue B not zero');
 
         Balances memory balanceAfter = _getBalances();
 

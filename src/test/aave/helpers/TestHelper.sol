@@ -52,6 +52,13 @@ contract TestHelper is DSTest {
         }
     }
 
+    function assertFalse(bool condition, string memory err) internal {
+        if (condition) {
+            emit log_named_string('Error', err);
+            fail();
+        }
+    }
+
     function assertCloseTo(
         uint256 a,
         uint256 b,
