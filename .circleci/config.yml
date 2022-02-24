@@ -20,7 +20,7 @@ jobs:
             - .
   test:
     docker:
-      - image: 'aztecprotocol/build-image'
+      - image: 'cimg/base:stable-20.04'
     steps:
       - checkout
       - run:
