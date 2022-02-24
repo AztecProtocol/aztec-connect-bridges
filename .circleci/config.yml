@@ -4,11 +4,12 @@ orbs:
 jobs:
   install:
     docker:
-      - image: 'aztecprotocol/build-image'
+      - image: 'cimg/base:2021.04'
     steps:
       - checkout
       - node/install:
           node-version: '16.13'
+          install-yarn: true
       - run: node --version
       - run: yarn install:foundry
       - run:
