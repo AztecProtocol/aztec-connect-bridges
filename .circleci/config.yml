@@ -16,6 +16,7 @@ jobs:
           command: |
             echo 'export PATH=/home/circleci/.foundry/bin:$PATH' >> $BASH_ENV
       - run: yarn setup:foundry
+      - persist_to_workspace
   test:
     docker:
       - image: 'aztecprotocol/build-image'
