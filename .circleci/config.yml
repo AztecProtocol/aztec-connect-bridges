@@ -43,7 +43,7 @@ jobs:
       - image: 'aztecprotocol/build-image'
     steps:
       - checkout
-       - run:
+      - run:
           shell: /bin/bash
           command: yarn build
 
