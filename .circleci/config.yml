@@ -38,7 +38,6 @@ jobs:
             export PATH=/home/circleci/.foundry/bin:$PATH
             export PATH=/home/circleci/.forge/bin:$PATH
             yarn config set script-shell /bin/bash
-            yarn setup
             yarn compile:typechain
             yarn test:contracts
             yarn test:client
