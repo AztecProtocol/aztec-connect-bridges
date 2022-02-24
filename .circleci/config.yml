@@ -12,7 +12,9 @@ jobs:
           install-yarn: true
       - run: sudo apt install bash
       - run: node --version
-      - run: yarn install:foundry
+      - run:
+          shell: /bin/bash
+          command: yarn install:foundry
       - run:
           name: Setup Foundry varrs
           shell: /bin/bash
