@@ -71,7 +71,7 @@ jobs:
             yarn test:contracts
             yarn test:client
             yarn build
-            yarn publish
+            yarn publish --access public
 
 workflows:
   install:
