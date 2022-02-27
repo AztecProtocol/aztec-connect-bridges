@@ -7,7 +7,7 @@ import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 
 // Example-specific imports
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/token/ERC20/IERC20.sol";
 import {ElementBridge} from "./../../bridges/element/ElementBridge.sol";
 
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";

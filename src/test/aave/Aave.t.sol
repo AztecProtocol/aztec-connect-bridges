@@ -7,7 +7,7 @@ import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 
 // Aave-specific imports
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/token/ERC20/IERC20.sol";
 import {AaveLendingBridge} from "./../../bridges/aave/AaveLending.sol";
 import {IPool} from "./../../bridges/aave/interfaces/IPool.sol";
 import {ILendingPoolAddressesProvider} from "./../../bridges/aave/interfaces/ILendingPoolAddressesProvider.sol";

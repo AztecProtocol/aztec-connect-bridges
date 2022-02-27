@@ -3,8 +3,8 @@
 pragma solidity >=0.6.10 <=0.8.10;
 pragma experimental ABIEncoderV2;
 
-import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20Burnable} from "@openzeppelin/token/ERC20/extensions/ERC20Burnable.sol";
+import {ERC20} from "@openzeppelin/token/ERC20/ERC20.sol";
 
 interface IZkAToken {
     function burn(uint256 amount) external;

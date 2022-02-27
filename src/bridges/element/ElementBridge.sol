@@ -3,8 +3,8 @@
 pragma solidity >=0.6.10 <=0.8.10;
 pragma experimental ABIEncoderV2;
 
-import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { SafeMath } from "@openzeppelin/utils/math/SafeMath.sol";
+import { ERC20 } from "@openzeppelin/token/ERC20/ERC20.sol";
 import { IVault, IAsset, PoolSpecialization } from "./interfaces/IVault.sol";
 import { IPool } from "./interfaces/IPool.sol";
 import { ITranche } from "./interfaces/ITranche.sol";

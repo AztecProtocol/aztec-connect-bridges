@@ -2,7 +2,7 @@
 // Copyright 2020 Spilsbury Holdings Ltd
 pragma solidity >=0.6.10 <=0.8.10;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
 
 interface IERC20Permit is IERC20 {
   function nonces(address user) external view returns (uint256);
