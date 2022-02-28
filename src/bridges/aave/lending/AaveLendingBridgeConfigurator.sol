@@ -24,7 +24,6 @@ contract AaveLendingBridgeConfigurator is IAaveLendingBridgeConfigurator, Ownabl
     function addPoolFromV2(address lendingBridge, address underlyingAsset)
         external
         override(IAaveLendingBridgeConfigurator)
-        onlyOwner
     {
         IAaveLendingBridge bridge = IAaveLendingBridge(lendingBridge);
         ILendingPool pool = ILendingPool(bridge.ADDRESSES_PROVIDER().getLendingPool());
@@ -37,7 +36,6 @@ contract AaveLendingBridgeConfigurator is IAaveLendingBridgeConfigurator, Ownabl
     function addPoolFromV3(address lendingBridge, address underlyingAsset)
         external
         override(IAaveLendingBridgeConfigurator)
-        onlyOwner
     {
         IAaveLendingBridge bridge = IAaveLendingBridge(lendingBridge);
         IPool pool = IPool(bridge.ADDRESSES_PROVIDER().getLendingPool());
