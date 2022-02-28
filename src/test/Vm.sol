@@ -2,38 +2,38 @@
 pragma solidity ^0.8.0;
 
 interface Vm {
-    // Set block.timestamp (newTimestamp)
+    // Set block.timestamp
     function warp(uint256) external;
 
-    // Set block.height (newHeight)
+    // Set block.number
     function roll(uint256) external;
 
-    // Set block.basefee (newBasefee)
+    // Set block.basefee
     function fee(uint256) external;
 
-    // Loads a storage slot from an address (who, slot)
-    function load(address, bytes32) external returns (bytes32);
+    // Loads a storage slot from an address
+    function load(address account, bytes32 slot) external returns (bytes32);
 
-    // Stores a value to an address' storage slot, (who, slot, value)
+    // Stores a value to an address' storage slot
     function store(
-        address,
-        bytes32,
-        bytes32
+        address account,
+        bytes32 slot,
+        bytes32 value
     ) external;
 
-    // Signs data, (privateKey, digest) => (v, r, s)
-    function sign(uint256, bytes32)
+    // Signs data
+    function sign(uint256 privateKey, bytes32 digest)
         external
         returns (
-            uint8,
-            bytes32,
-            bytes32
+            uint8 v,
+            bytes32 r,
+            bytes32 s
         );
 
-    // Gets address for a given private key, (privateKey) => (address)
-    function addr(uint256) external returns (address);
+    // Computes address for a given private key
+    function addr(uint256 privateKey) external returns (address);
 
-    // Performs a foreign function call via terminal, (stringInputs) => (result)
+    // Performs a foreign function call via terminal
     function ffi(string[] calldata) external returns (bytes memory);
 
     // Sets the *next* call's msg.sender to be the input address
@@ -51,11 +51,11 @@ interface Vm {
     // Resets subsequent calls' msg.sender to be `address(this)`
     function stopPrank() external;
 
-    // Sets an address' balance, (who, newBalance)
-    function deal(address, uint256) external;
+    // Sets an address' balance
+    function deal(address who, uint256 newBalance) external;
 
-    // Sets an address' code, (who, newCode)
-    function etch(address, bytes calldata) external;
+    // Sets an address' code
+    function etch(address who, bytes calldata code) external;
 
     // Expects an error on next call
     function expectRevert(bytes calldata) external;
@@ -66,9 +66,7 @@ interface Vm {
     function record() external;
 
     // Gets all accessed reads and write slot from a recording session, for a given address
-    function accesses(address)
-        external
-        returns (bytes32[] memory reads, bytes32[] memory writes);
+    function accesses(address) external returns (bytes32[] memory reads, bytes32[] memory writes);
 
     // Prepare an expected log with (bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData).
     // Call this function, then emit an event, then call a function. Internally after the call, we check if
@@ -98,4 +96,10 @@ interface Vm {
     function expectCall(address, bytes calldata) external;
 
     function getCode(string calldata) external returns (bytes memory);
+
+    // Label an address in test traces
+    function label(address addr, string calldata label) external;
+
+    // When fuzzing, generate new inputs if conditional not met
+    function assume(bool) external;
 }
