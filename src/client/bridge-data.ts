@@ -87,7 +87,7 @@ export interface YieldBridgeData extends BridgeData {
   @dev given inputValue of inputAssetA and inputAssetB
   */
 
-  getExpectedYearlyOuput(
+  getExpectedYearlyOutput(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
