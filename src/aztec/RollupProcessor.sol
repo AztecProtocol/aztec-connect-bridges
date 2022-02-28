@@ -3,13 +3,13 @@
 pragma solidity >=0.8.0 <=0.8.10;
 pragma abicoder v2;
 
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import {IDefiBridge} from "../interfaces/IDefiBridge.sol";
-import {IERC20} from "../interfaces/IERC20Permit.sol";
-import {DefiBridgeProxy} from "./DefiBridgeProxy.sol";
-import {AztecTypes} from "./AztecTypes.sol";
+import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
+import {IDefiBridge} from '../interfaces/IDefiBridge.sol';
+import {IERC20} from '../interfaces/IERC20Permit.sol';
+import {DefiBridgeProxy} from './DefiBridgeProxy.sol';
+import {AztecTypes} from './AztecTypes.sol';
 
-import "../../lib/ds-test/src/test.sol";
+import '../../lib/ds-test/src/test.sol';
 
 contract RollupProcessor is DSTest {
     DefiBridgeProxy private bridgeProxy;
@@ -43,22 +43,22 @@ contract RollupProcessor is DSTest {
     //      This has a different interface to the IDefiBridge.convert function
     bytes4 private constant DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = 0xffd8e7b7;
     event DefiBridgeProcessed(
-            uint256 indexed bridgeId,
-            uint256 indexed nonce,
-            uint256 totalInputValue,
-            uint256 totalOutputValueA,
-            uint256 totalOutputValueB,
-            bool result
-        );
+        uint256 indexed bridgeId,
+        uint256 indexed nonce,
+        uint256 totalInputValue,
+        uint256 totalOutputValueA,
+        uint256 totalOutputValueB,
+        bool result
+    );
 
-        event AsyncDefiBridgeProcessed(
-            uint256 indexed bridgeId,
-            uint256 indexed nonce,
-            uint256 totalInputValue,
-            uint256 totalOutputValueA,
-            uint256 totalOutputValueB,
-            bool result
-        );
+    event AsyncDefiBridgeProcessed(
+        uint256 indexed bridgeId,
+        uint256 indexed nonce,
+        uint256 totalInputValue,
+        uint256 totalOutputValueA,
+        uint256 totalOutputValueB,
+        bool result
+    );
 
     function receiveEthFromBridge(uint256 interactionNonce) external payable {
         ethPayments[interactionNonce] += msg.value;
@@ -77,15 +77,9 @@ contract RollupProcessor is DSTest {
         uint256 interactionNonce
     ) internal {
         if (asset.assetType == AztecTypes.AztecAssetType.ETH) {
-            require(
-                outputValue == ethPayments[interactionNonce],
-                "Rollup Processor: INSUFFICEINT_ETH_PAYMENT"
-            );
+            require(outputValue == ethPayments[interactionNonce], 'Rollup Processor: INSUFFICEINT_ETH_PAYMENT');
             ethPayments[interactionNonce] = 0;
-        } else if (
-            asset.assetType == AztecTypes.AztecAssetType.ERC20 &&
-            outputValue > 0
-        ) {
+        } else if (asset.assetType == AztecTypes.AztecAssetType.ERC20 && outputValue > 0) {
             address tokenAddress = asset.erc20Address;
             bool success;
 
@@ -110,17 +104,11 @@ contract RollupProcessor is DSTest {
     function processAsyncDeFiInteraction(uint256 interactionNonce) external {
         // call canFinalise on the bridge
         // call finalise on the bridge
-        DefiInteraction storage interaction = defiInteractions[
-            interactionNonce
-        ];
-        require(
-            interaction.bridgeAddress != address(0),
-            "Rollup Contract: UNKNOWN_NONCE"
-        );
+        DefiInteraction storage interaction = defiInteractions[interactionNonce];
+        require(interaction.bridgeAddress != address(0), 'Rollup Contract: UNKNOWN_NONCE');
 
-        (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = IDefiBridge(
-            interaction.bridgeAddress
-        ).finalise(
+        (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = IDefiBridge(interaction.bridgeAddress)
+            .finalise(
                 interaction.inputAssetA,
                 interaction.inputAssetB,
                 interaction.outputAssetA,
@@ -129,12 +117,8 @@ contract RollupProcessor is DSTest {
                 uint64(interaction.auxInputData)
             );
 
-        if (
-            outputValueB > 0 &&
-            interaction.outputAssetB.assetType ==
-            AztecTypes.AztecAssetType.NOT_USED
-        ) {
-            require(false, "Non-zero output value on non-existant asset!");
+        if (outputValueB > 0 && interaction.outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED) {
+            require(false, 'Non-zero output value on non-existant asset!');
         }
         if (outputValueA == 0 && outputValueB == 0) {
             // issue refund.
@@ -168,7 +152,6 @@ contract RollupProcessor is DSTest {
             outputValueB,
             true
         );
-
     }
 
     function convert(
@@ -188,10 +171,7 @@ contract RollupProcessor is DSTest {
             bool isAsync
         )
     {
-        require(
-            defiInteractions[interactionNonce].auxInputData == 0,
-            "Rollup Contract: INTERACTION_ALREADY_EXISTS"
-        );
+        require(defiInteractions[interactionNonce].auxInputData == 0, 'Rollup Contract: INTERACTION_ALREADY_EXISTS');
         defiInteractions[interactionNonce] = DefiInteraction(
             bridgeAddress,
             inputAssetA,
@@ -225,23 +205,12 @@ contract RollupProcessor is DSTest {
         );
 
         if (success) {
-            (outputValueA, outputValueB, isAsync) = abi.decode(
-                result,
-                (uint256, uint256, bool)
-            );
+            (outputValueA, outputValueB, isAsync) = abi.decode(result, (uint256, uint256, bool));
 
-            emit DefiBridgeProcessed(
-            0,
-            interactionNonce,
-            totalInputValue,
-            outputValueA,
-            outputValueB,
-            true
-        );
+            emit DefiBridgeProcessed(0, interactionNonce, totalInputValue, outputValueA, outputValueB, true);
         }
         require(success, 'Interaction Failed');
         // else {
-
 
         //     emit DefiBridgeProcessed(
         //     0,

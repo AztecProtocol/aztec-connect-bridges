@@ -32,6 +32,13 @@ import {Errors} from '../../bridges/aave/lending/libraries/Errors.sol';
 import {AaveV3StorageEmulator} from './helpers/AaveV3StorageEmulator.sol';
 import {TestHelper} from './helpers/TestHelper.sol';
 
+/**
+ * @notice Tests for the Aave Lending Bridge
+ * @dev Perform a mainnet fork to execute tests on.
+ * @note Be aware, that test may fail if the node used is not of good quality,
+ * if tests fail, try a less "pressured" RPC
+ * @author Lasse Herskind
+ */
 contract AaveLendingTest is TestHelper {
     using WadRayMath for uint256;
 
@@ -74,6 +81,15 @@ contract AaveLendingTest is TestHelper {
         rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
     }
 
+    function _setupLabels() internal {
+        VM.label(address(DAI), 'DAI');
+        VM.label(address(USDT), 'USDT');
+        VM.label(address(USDC), 'USDC');
+        VM.label(address(WBTC), 'WBTC');
+        VM.label(address(WETH), 'WETH');
+        VM.label(address(pool), 'Pool');
+    }
+
     function _tokenSetup(IERC20 _token) internal {
         token = _token;
         aToken = IAToken(pool.getReserveData(address(token)).aTokenAddress);
@@ -84,6 +100,7 @@ contract AaveLendingTest is TestHelper {
 
     function setUp() public {
         _aztecPreSetup();
+        _setupLabels();
 
         configurator = IAaveLendingBridgeConfigurator(new AaveLendingBridgeConfigurator());
 
