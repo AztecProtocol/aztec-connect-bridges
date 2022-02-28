@@ -9,7 +9,7 @@
     "clean": "rm -rf ./cache ./dest ./out ./artifacts ./typechain-types",
     "test": "yarn test:contracts && yarn test:clients",
     "test:client": "jest test",
-    "test:contracts": "forge test",
+    "test:contracts": "forge test --lib-paths node_modules",
     "build": "yarn clean && yarn compile:typechain && yarn compile:client-dest"
   },
   "dependencies": {
