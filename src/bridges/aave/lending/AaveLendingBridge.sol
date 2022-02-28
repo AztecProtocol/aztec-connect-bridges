@@ -29,7 +29,7 @@ import {AccountingToken} from './../AccountingToken.sol';
 /**
  * @notice AaveLendingBridge implementation that allow a configurator to "list" a reserve and then anyone can
  * permissionlessly deposit and withdraw funds into the listed reserves. Configurator cannot remove nor update listings
- * @dev Only assets with large volume should be listed to ensure
+ * @dev Only assets with large volume should be listed to ensure sufficiently large privacy sets
  * @author Lasse Herskind
  */
 contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
