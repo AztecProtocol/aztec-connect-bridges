@@ -1,0 +1,87 @@
+version: '2.1'
+orbs:
+  node: circleci/node@5.0.0
+jobs:
+  build-and-test:
+    docker:
+      - image: 'cimg/base:stable-20.04'
+    steps:
+      - checkout
+      - node/install:
+          install-yarn: true
+          node-version: '16.13'
+      - run:
+          name: Setup Foundry
+          shell: /bin/bash
+          command: |
+            yarn config set script-shell /bin/bash
+            yarn
+            yarn install:foundry
+            export PATH=/home/circleci/.foundry/bin:$PATH
+            export PATH=/home/circleci/.forge/bin:$PATH
+            yarn setup:foundry
+            yarn compile:typechain
+            yarn test:contracts
+      - run:
+          name: Test Contracts
+          shell: /bin/bash
+          command: |
+            yarn config set script-shell /bin/bash
+            export PATH=/home/circleci/.foundry/bin:$PATH
+            export PATH=/home/circleci/.forge/bin:$PATH
+            yarn test:contracts
+      - run:
+          name: Test Client
+          shell: /bin/bash
+          command: |
+            yarn config set script-shell /bin/bash
+            export PATH=/home/circleci/.foundry/bin:$PATH
+            export PATH=/home/circleci/.forge/bin:$PATH
+            yarn test:client
+      - run:
+          name: Build
+          shell: /bin/bash
+          command: |
+            yarn config set script-shell /bin/bash
+            export PATH=/home/circleci/.foundry/bin:$PATH
+            export PATH=/home/circleci/.forge/bin:$PATH
+            yarn build
+  publish:
+    docker:
+      - image: 'cimg/base:stable-20.04'
+    steps:
+      - checkout
+      - node/install:
+          install-yarn: true
+          node-version: '16.13'
+      - run:
+          name: Authenticate with registry
+          command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc
+      - run:
+          name: Setup Foundry
+          shell: /bin/bash
+          command: |
+            yarn config set script-shell /bin/bash
+            yarn
+            yarn install:foundry
+            export PATH=/home/circleci/.foundry/bin:$PATH
+            export PATH=/home/circleci/.forge/bin:$PATH
+            yarn setup:foundry
+            yarn compile:typechain
+            yarn test:contracts
+            yarn test:client
+            yarn build
+            yarn publish --access public
+
+workflows:
+  install:
+    jobs:
+      - build-and-test
+  deploy:
+    jobs:
+      - publish:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
