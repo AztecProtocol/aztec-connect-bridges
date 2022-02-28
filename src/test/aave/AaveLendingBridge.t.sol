@@ -35,8 +35,7 @@ import {TestHelper} from './helpers/TestHelper.sol';
 /**
  * @notice Tests for the Aave Lending Bridge
  * @dev Perform a mainnet fork to execute tests on.
- * @note Be aware, that test may fail if the node used is not of good quality,
- * if tests fail, try a less "pressured" RPC
+ * Be aware, that test may fail if the node used is not of good quality, if tests fail, try a less "pressured" RPC
  * @author Lasse Herskind
  */
 contract AaveLendingTest is TestHelper {

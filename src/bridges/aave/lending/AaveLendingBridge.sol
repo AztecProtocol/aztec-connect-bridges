@@ -37,6 +37,8 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
     using WadRayMath for uint256;
     using SafeERC20 for IERC20;
 
+    event UnderlyingAssetListed(address underlyingAsset, address zkAToken);
+
     IWETH9 public constant WETH = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     address public immutable ROLLUP_PROCESSOR;
@@ -84,7 +86,11 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         string memory name = string(abi.encodePacked('ZK-', aToken.name()));
         string memory symbol = string(abi.encodePacked('ZK-', aToken.symbol()));
 
-        underlyingToZkAToken[underlyingAsset] = address(new AccountingToken(name, symbol, aToken.decimals()));
+        address zkAToken = address(new AccountingToken(name, symbol, aToken.decimals()));
+
+        underlyingToZkAToken[underlyingAsset] = zkAToken;
+
+        emit UnderlyingAssetListed(underlyingAsset, zkAToken);
     }
 
     /**
