@@ -41,7 +41,7 @@ contract LidoTest is DSTest {
 
     function setUp() public {
         _aztecPreSetup();
-        bridge = new LidoBridge(address(rollupProcessor));
+        bridge = new LidoBridge(address(rollupProcessor), address(rollupProcessor));
     }
 
     function testLidoBridge() public {
