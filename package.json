@@ -1,14 +1,18 @@
 {
   "scripts": {
-    "setup": "curl -L https://foundry.paradigm.xyz | bash && foundryup && git submodule update --init",
+    "setup": "yarn install:foundry && yarn setup:foundry",
+    "setup:foundry": "foundryup && git submodule update --init",
+    "install:foundry": "curl -L https://foundry.paradigm.xyz | bash",
     "compile:contracts": "forge build",
     "compile:typechain": "forge build && hardhat compile ",
+    "compile:client-dest": "tsc --project tsconfig.client-dest.json && node package-client-dest.js",
     "clean": "rm -rf ./cache ./dest ./out ./artifacts ./typechain-types",
     "test": "yarn test:contracts && yarn test:clients",
     "test:client": "jest test",
-    "test:contracts": "forge test",
     "test:contracts:block": "forge test --fork-block-number",
-    "cast": "cast"
+    "cast": "cast",
+    "test:contracts": "forge test -vvv",
+    "build": "yarn clean && yarn compile:typechain && yarn compile:client-dest"
   },
   "dependencies": {
     "@ethersproject/constants": "^5.5.0",
@@ -29,8 +33,8 @@
     "testRegex": ".*\\.test\\.ts$",
     "rootDir": "./src"
   },
-  "name": "aztec-connect-bridges",
-  "version": "1.0.0",
+  "name": "@aztec/bridge-clients",
+  "version": "0.0.1",
   "description": "This repo contains the solidity files and typescript helper class for all of the Aztec Connect Bridge Contracts",
   "repository": "git@github.com:AztecProtocol/aztec-connect-bridges.git",
   "license": "MIT",

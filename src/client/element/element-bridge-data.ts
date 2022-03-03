@@ -28,7 +28,7 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
   private elementBridgeContract: ElementBridge;
   private rollupContract: RollupProcessor;
   private balancerContract: IVault;
-  public scalingFactor = 1000000000n;
+  public scalingFactor = BigInt(1000000000);
 
   constructor(elementBridge: ElementBridge, balancer: IVault, rollupContract: RollupProcessor) {
     this.elementBridgeContract = elementBridge;
@@ -97,7 +97,7 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
     precision: bigint,
   ): Promise<bigint[]> {
     // bridge is async the third parameter represents this
-    return [0n, 0n, 1n];
+    return [BigInt(0), BigInt(0), BigInt(1)];
   }
 
   async getExpectedYearlyOuput(
@@ -144,7 +144,7 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
     const scaledOutput = (interest * this.scalingFactor) / BigInt(timeToExpiration);
     const yearlyOutput = (scaledOutput * BigInt(YEAR)) / this.scalingFactor;
 
-    return [yearlyOutput + precision, 0n];
+    return [yearlyOutput + precision, BigInt(0)];
   }
 
   async getMarketSize(
