@@ -399,7 +399,7 @@ contract ElementBridge is IDefiBridge {
                 addInteractionAsFailure(interaction, interactionNonce, errorMessage);
                 trancheAccount.redemptionFailed = true;
                 return (0, 0, false);
-            } catch (bytes memory data) {
+            } catch {
                 addInteractionAsFailure(interaction, interactionNonce, 'UNKNOWN_ERROR');
                 trancheAccount.redemptionFailed = true;
                 return (0, 0, false);
