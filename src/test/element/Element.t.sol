@@ -718,16 +718,13 @@ contract ElementTest is DSTest {
                 interactions[nonce - 1] = interaction;
                 _increaseTokenBalance(asset, address(elementBridge), depositAmount);
                 Balances memory balancesBefore = _getBalances(interaction, address(elementBridge));
-                uint256 allowanceBefore = tokens[asset].allowance(address(elementBridge), address(rollupProcessor));
                 (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert(asset, interaction);
                 assertEq(isAsync, true);
                 assertEq(outputValueA, 0);
                 assertEq(outputValueB, 0);
                 Balances memory balancesAfter = _getBalances(interaction, address(elementBridge));
-                uint256 allowanceAfter = tokens[asset].allowance(address(elementBridge), address(rollupProcessor));
                 assertEq(balancesBefore.startingAsset - balancesAfter.startingAsset, balancesAfter.balancerAsset - balancesBefore.balancerAsset);
                 assertEq(balancesBefore.balancerTranche - balancesAfter.balancerTranche, balancesAfter.bridgeTranche - balancesBefore.bridgeTranche);
-                assertEq(allowanceAfter - allowanceBefore, outputValueA);
                 nonce++;
             }
         }
@@ -755,7 +752,6 @@ contract ElementTest is DSTest {
             TrancheConfig[] storage configs = trancheConfigs[asset];
             uint256 totalDeposited = depositAmount * configs.length;
             uint256 assetInBridge = tokens[asset].balanceOf(address(elementBridge));
-            assertEq(tokens[asset].allowance(address(elementBridge), address(rollupProcessor)), assetInBridge);
             assertGt(assetInBridge, totalDeposited);
         }
     }
