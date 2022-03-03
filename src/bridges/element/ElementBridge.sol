@@ -43,6 +43,7 @@ contract ElementBridge is IDefiBridge {
         address trancheAddress;
         uint64 expiry;
         bool finalised;
+        bool failed;
     }
 
     // minimum info required to execute a deposit
@@ -73,9 +74,6 @@ contract ElementBridge is IDefiBridge {
     mapping(uint256 => Interaction) public interactions;
 
     mapping(address => uint64[]) public assetToExpirys;
-
-    // cache of failed Defi interactions
-    mapping(uint256 => Interaction) public failedInteractions;
 
     // cache of all pools we are able to interact with
     mapping(uint256 => Pool) public pools;
@@ -246,9 +244,19 @@ contract ElementBridge is IDefiBridge {
         uint256 assetExpiryHash = hashAssetAndExpiry(poolSpec.underlyingAsset, expiry);
         pools[assetExpiryHash] = Pool(poolSpec.poolId, poolSpec.trancheAddress, poolAddress, wrappedPositionAddress);
         uint64[] storage expiriesForAsset = assetToExpirys[poolSpec.underlyingAsset];
-        expiriesForAsset.push(uint64(poolSpec.poolExpiry));
+        uint256 expiryIndex = 0;
+        while (expiryIndex < expiriesForAsset.length && expiriesForAsset[expiryIndex] != expiry) {
+            ++expiryIndex;
+        }
+        if (expiryIndex == expiriesForAsset.length) {
+            expiriesForAsset.push(expiry);
+        }
+        
         // initialising the expiry -> nonce mapping here like this reduces a chunk of gas later when we start to add interactions for this expiry
-        expiryToNonce[expiry].push(MAX_INT);
+        uint256[] storage nonces = expiryToNonce[expiry];
+        if (nonces.length == 0) {
+            expiryToNonce[expiry].push(MAX_INT);
+        }
         emit PoolAdded(poolAddress, wrappedPositionAddress, expiry);
     }
 
@@ -322,7 +330,7 @@ contract ElementBridge is IDefiBridge {
             block.timestamp
         );
         // store the tranche that underpins our interaction, the expiry and the number of received tokens against the nonce
-        interactions[interactionNonce] = Interaction(principalTokensAmount, pool.trancheAddress, auxData, false);
+        interactions[interactionNonce] = Interaction(principalTokensAmount, pool.trancheAddress, auxData, false, false);
         // add the nonce and expiry to our expiry heap
         addNonceAndExpiry(interactionNonce, auxData);
         // increase our tranche account
@@ -368,9 +376,6 @@ contract ElementBridge is IDefiBridge {
         // retrieve the interaction and verify it's ready for finalising
         Interaction storage interaction = interactions[interactionNonce];
         if (interaction.expiry == 0) {
-            interaction = failedInteractions[interactionNonce];
-        }
-        if (interaction.expiry == 0) {
             revert UNKNOWN_NONCE();
         }
         if (interaction.expiry > block.timestamp) {
@@ -383,7 +388,7 @@ contract ElementBridge is IDefiBridge {
         TrancheAccount storage trancheAccount = trancheAccounts[interaction.trancheAddress];
         if (trancheAccount.quantityTokensHeld == 0) {
             // shouldn't be possible!!
-            addInteractionAsFailure(interaction, interactionNonce, 'INTERNAL_ERROR');
+            setInteractionAsFailure(interaction, interactionNonce, 'INTERNAL_ERROR');
             return (0, 0, false);
         }
 
@@ -396,12 +401,14 @@ contract ElementBridge is IDefiBridge {
                 trancheAccount.quantityAssetRemaining = valueRedeemed;
                 trancheAccount.redemptionFailed = false;
             } catch Error(string memory errorMessage) {
-                addInteractionAsFailure(interaction, interactionNonce, errorMessage);
+                setInteractionAsFailure(interaction, interactionNonce, errorMessage);
                 trancheAccount.redemptionFailed = true;
+                popInteraction(interaction, interactionNonce);
                 return (0, 0, false);
             } catch {
-                addInteractionAsFailure(interaction, interactionNonce, 'UNKNOWN_ERROR');
+                setInteractionAsFailure(interaction, interactionNonce, 'UNKNOWN_ERROR');
                 trancheAccount.redemptionFailed = true;
+                popInteraction(interaction, interactionNonce);
                 return (0, 0, false);
             }
         }
@@ -426,20 +433,12 @@ contract ElementBridge is IDefiBridge {
         emit Finalise(interactionNonce, interactionCompleted, '');
     }
 
-    function addInteractionAsFailure(
+    function setInteractionAsFailure(
         Interaction storage interaction,
         uint256 interactionNonce,
         string memory message
     ) internal {
-        // copy the interaction over to the failed interactions store
-        failedInteractions[interactionNonce] = Interaction(
-            interaction.quantityPT,
-            interaction.trancheAddress,
-            interaction.expiry,
-            false
-        );
-        // delete from the original mapping
-        delete interactions[interactionNonce];
+        interaction.failed = true;
         emit Finalise(interactionNonce, false, message);
     }
 
@@ -610,7 +609,7 @@ contract ElementBridge is IDefiBridge {
             (bool canBeFinalised, bool interactionRequiresRedemption, string memory message) = interactionCanBeFinalised(interaction);
             if (!canBeFinalised) {
                 // can't be finalised, add to failures and pop from nonces
-                addInteractionAsFailure(interaction, nextNonce, message);
+                setInteractionAsFailure(interaction, nextNonce, message);
                 nonces.pop();
                 continue;
             }

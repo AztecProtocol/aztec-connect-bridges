@@ -718,13 +718,16 @@ contract ElementTest is DSTest {
                 interactions[nonce - 1] = interaction;
                 _increaseTokenBalance(asset, address(elementBridge), depositAmount);
                 Balances memory balancesBefore = _getBalances(interaction, address(elementBridge));
+                uint256 allowanceBefore = tokens[asset].allowance(address(elementBridge), address(rollupProcessor));
                 (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert(asset, interaction);
                 assertEq(isAsync, true);
                 assertEq(outputValueA, 0);
                 assertEq(outputValueB, 0);
                 Balances memory balancesAfter = _getBalances(interaction, address(elementBridge));
+                uint256 allowanceAfter = tokens[asset].allowance(address(elementBridge), address(rollupProcessor));
                 assertEq(balancesBefore.startingAsset - balancesAfter.startingAsset, balancesAfter.balancerAsset - balancesBefore.balancerAsset);
                 assertEq(balancesBefore.balancerTranche - balancesAfter.balancerTranche, balancesAfter.bridgeTranche - balancesBefore.bridgeTranche);
+                assertEq(allowanceAfter - allowanceBefore, outputValueA);
                 nonce++;
             }
         }
@@ -744,9 +747,22 @@ contract ElementTest is DSTest {
                 assertEq(balancesAfter.startingAsset - balancesBefore.startingAsset, outputValueA);
             }
         }
+
+        // verify rollup and bridge contract token quantities
+        for (uint256 assetIndex = 0; assetIndex < assets.length; assetIndex++) {
+            string storage asset = assets[assetIndex];
+            uint256 depositAmount = quantities[asset];
+            TrancheConfig[] storage configs = trancheConfigs[asset];
+            uint256 totalDeposited = depositAmount * configs.length;
+            uint256 assetInBridge = tokens[asset].balanceOf(address(elementBridge));
+            assertEq(tokens[asset].allowance(address(elementBridge), address(rollupProcessor)), assetInBridge);
+            assertGt(assetInBridge, totalDeposited);
+        }
     }
 
     function testMultipleInteractionsAreFinalisedOnConvert() public {
+        // need to increase the gaslimit for the bridge to finalise
+        rollupProcessor.setBridgeGasLimit(address(elementBridge), 800000);
         setupAssetPools('DAI');
         setupAssetPools('USDC');
         string memory asset = 'USDC';
@@ -789,12 +805,14 @@ contract ElementTest is DSTest {
             assertEq(outputValueB, 0);
         }
         // this will get the balances for USDC
-        Balances memory balancesAfter = _getBalances(interactions[0], address(rollupProcessor));
+        Balances memory balancesRollupAfter = _getBalances(interactions[0], address(rollupProcessor));
+        Balances memory balancesBridgeAfter = _getBalances(interactions[0], address(elementBridge));
         // the bridge's balance of the tranche token should now be 0
-        assertEq(balancesAfter.bridgeTranche, 0);
+        assertEq(balancesRollupAfter.bridgeTranche, 0);
+        // the bridge's balance of USDC should be 0
+        assertEq(balancesBridgeAfter.startingAsset, 0);
         // the rollup contract's balance of USDC should now be greater than the original amount deposited
-        uint256 combinedUsdcBalance = tokens['USDC'].balanceOf(address(rollupProcessor)) + tokens['USDC'].balanceOf(address(elementBridge));
-        assertGt(combinedUsdcBalance, usdcDepositAmount * numUsdcInteractions);
+        assertGt(balancesRollupAfter.startingAsset, usdcDepositAmount * numUsdcInteractions);
     }
 
     function testCanFinaliseAllInteractionsOnConvert() public {
@@ -849,13 +867,14 @@ contract ElementTest is DSTest {
             nonce++;
         }
 
-        // verify rollup contract token quantities
+        // verify rollup and bridge contract token quantities
         for (uint256 assetIndex = 0; assetIndex < assets.length; assetIndex++) {
             string storage asset = assets[assetIndex];
             uint256 depositAmount = quantities[asset];
             TrancheConfig[] storage configs = trancheConfigs[asset];
             uint256 totalDeposited = depositAmount * (configs.length * numInteractionsPerTranche);
             assertGt(tokens[asset].balanceOf(address(rollupProcessor)), totalDeposited);
+            assertEq(tokens[asset].balanceOf(address(elementBridge)), 0);
         }
     }
 

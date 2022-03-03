@@ -50,6 +50,8 @@ contract AaveTest is DSTest {
             address(addressesProvider)
         );
 
+        rollupProcessor.setBridgeGasLimit(address(aaveLendingBridge), 100000);
+
         _setTokenBalance(address(dai), address(0xdead), 42069);
     }
 
