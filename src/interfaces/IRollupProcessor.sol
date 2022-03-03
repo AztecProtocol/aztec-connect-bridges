@@ -31,8 +31,6 @@ interface IRollupProcessor {
         bytes32 s
     ) external;
 
-    function processAsyncDeFiInteraction(uint256 interactionNonce) external;
-
     function receiveEthFromBridge(uint256 interactionNonce) external payable;
 
     function setRollupProvider(address provderAddress, bool valid) external;

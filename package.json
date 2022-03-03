@@ -6,7 +6,9 @@
     "clean": "rm -rf ./cache ./dest ./out ./artifacts ./typechain-types",
     "test": "yarn test:contracts && yarn test:clients",
     "test:client": "jest test",
-    "test:contracts": "forge test"
+    "test:contracts": "forge test",
+    "test:contracts:block": "forge test --fork-block-number",
+    "cast": "cast"
   },
   "dependencies": {
     "@ethersproject/constants": "^5.5.0",
