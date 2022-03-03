@@ -11,7 +11,7 @@
     "test:client": "jest test",
     "test:contracts:block": "forge test --fork-block-number",
     "cast": "cast",
-    "test:contracts": "forge test -vvv",
+    "test:contracts": "forge test --fork-block-number 14000000 -vvv",
     "build": "yarn clean && yarn compile:typechain && yarn compile:client-dest"
   },
   "dependencies": {
