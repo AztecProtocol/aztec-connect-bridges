@@ -72,9 +72,9 @@ contract StakingBridgeTest is TestUtil {
         assertEq(tokens["LQTY"].erc.balanceOf(address(rollupProcessor)), depositAmount);
     }
 
-    function test5DepositsWithdrawals() public {
+    function testMultipleDepositsWithdrawals() public {
         uint256 i = 0;
-        uint256 numIters = 5;
+        uint256 numIters = 2;
         uint256 depositAmount = 203;
         uint256[] memory sbBalances = new uint256[](numIters);
 
