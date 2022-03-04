@@ -122,6 +122,7 @@ contract ElementBridge is IDefiBridge {
         GAS_REQUIRED_FOR_NON_REDEMPTION_FINALISE = _gasForNonRedemptionFinalise;
     }
 
+    // TODO: Needs some kind of calling guard 'OwnerOnly' or something
     function updateGasRequirements(uint256 gasForRedemptionFinalise, uint256 gasForNonRedemptionFinalise) external {
         GAS_REQUIRED_FOR_REDEMPTION_FINALISE = gasForRedemptionFinalise;
         GAS_REQUIRED_FOR_NON_REDEMPTION_FINALISE = gasForNonRedemptionFinalise;
