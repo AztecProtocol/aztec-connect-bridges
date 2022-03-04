@@ -97,8 +97,8 @@ contract ElementBridge is IDefiBridge {
 
     // the amount of gas that we need to have available for a redemption finalise
     // the amount of gas that we need to have available for a non-redemption finalise
-    uint256 private immutable GAS_REQUIRED_FOR_REDEMPTION_FINALISE;
-    uint256 private immutable GAS_REQUIRED_FOR_NON_REDEMPTION_FINALISE;
+    uint256 private GAS_REQUIRED_FOR_REDEMPTION_FINALISE = 0;
+    uint256 private GAS_REQUIRED_FOR_NON_REDEMPTION_FINALISE = 0;
 
     event Convert(uint256 indexed nonce, uint256 totalInputValue);
 
@@ -120,6 +120,11 @@ contract ElementBridge is IDefiBridge {
         balancerAddress = _balancerVaultAddress;
         GAS_REQUIRED_FOR_REDEMPTION_FINALISE = _gasForRedemptionFinalise;
         GAS_REQUIRED_FOR_NON_REDEMPTION_FINALISE = _gasForNonRedemptionFinalise;
+    }
+
+    function updateGasRequirements(uint256 gasForRedemptionFinalise, uint256 gasForNonRedemptionFinalise) external {
+        GAS_REQUIRED_FOR_REDEMPTION_FINALISE = gasForRedemptionFinalise;
+        GAS_REQUIRED_FOR_NON_REDEMPTION_FINALISE = gasForNonRedemptionFinalise;
     }
 
     function getAssetExpiries(address asset) public view returns (uint64[] memory assetExpiries) {
@@ -330,13 +335,18 @@ contract ElementBridge is IDefiBridge {
             block.timestamp
         );
         // store the tranche that underpins our interaction, the expiry and the number of received tokens against the nonce
-        interactions[interactionNonce] = Interaction(principalTokensAmount, pool.trancheAddress, auxData, false, false);
+        Interaction storage newInteraction = interactions[interactionNonce];
+        newInteraction.expiry = auxData;
+        newInteraction.failed = false;
+        newInteraction.finalised = false;
+        newInteraction.quantityPT = principalTokensAmount;
+        newInteraction.trancheAddress = pool.trancheAddress;
         // add the nonce and expiry to our expiry heap
         addNonceAndExpiry(interactionNonce, auxData);
         // increase our tranche account
-        TrancheAccount storage trancheAccount = trancheAccounts[pool.trancheAddress];
+        TrancheAccount storage trancheAccount = trancheAccounts[newInteraction.trancheAddress];
         trancheAccount.numDeposits++;
-        trancheAccount.quantityTokensHeld += principalTokensAmount;
+        trancheAccount.quantityTokensHeld += newInteraction.quantityPT;
         emit Convert(interactionNonce, totalInputValue);
 
         bool continueFinalising = true;
@@ -389,6 +399,7 @@ contract ElementBridge is IDefiBridge {
         if (trancheAccount.quantityTokensHeld == 0) {
             // shouldn't be possible!!
             setInteractionAsFailure(interaction, interactionNonce, 'INTERNAL_ERROR');
+            popInteraction(interaction, interactionNonce);
             return (0, 0, false);
         }
 
