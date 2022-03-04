@@ -2,7 +2,7 @@
 pragma solidity >=0.7.5;
 pragma abicoder v2;
 
-interface WETH {
+interface IWETH {
   function deposit() external payable;
 
   function approve(address spender, uint256 amount) external returns (bool);
