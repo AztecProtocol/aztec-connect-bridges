@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "esnext",
     "moduleResolution": "node",
-    "lib": ["dom", "esnext", "es2017.object"],
+    "lib": ["dom", "esnext", "es2017.object", "DOM.Iterable"],
     "outDir": "dest",
     "module": "commonjs",
     "strict": true,

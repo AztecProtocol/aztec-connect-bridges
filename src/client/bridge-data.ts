@@ -67,7 +67,7 @@ export interface BridgeData {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
-    inputVale: bigint,
+    inputValue: bigint,
   ): Promise<bigint[]>;
 }
 
@@ -76,7 +76,9 @@ export interface AsyncBridgeData extends BridgeData {
   @dev This function should be implemented for async bridges. It should return the date at which the bridge is expected to be finalised.
   @dev For limit orders this should be the expiration.
   */
-  getExpiration(interactionNonce: bigint): Promise<Date>;
+  getExpiration(interactionNonce: bigint): Promise<bigint>;
+
+  hasFinalised(interactionNonce: bigint): Promise<Boolean>;
 }
 
 export interface YieldBridgeData extends BridgeData {

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.10;
 
-import "ds-test/test.sol";
 import {Vm} from "../Vm.sol";
 
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
-import {MockRollupProcessor} from "./../../aztec/MockRollupProcessor.sol";
+import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 
 // Example-specific imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -14,12 +13,15 @@ import {ExampleBridgeContract} from "./../../bridges/example/ExampleBridge.sol";
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 
 
+import "../../../lib/ds-test/src/test.sol";
+
+
 contract ExampleTest is DSTest {
 
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     DefiBridgeProxy defiBridgeProxy;
-    MockRollupProcessor rollupProcessor;
+    RollupProcessor rollupProcessor;
 
     ExampleBridgeContract exampleBridge;
 
@@ -28,7 +30,7 @@ contract ExampleTest is DSTest {
 
     function _aztecPreSetup() internal {
         defiBridgeProxy = new DefiBridgeProxy();
-        rollupProcessor = new MockRollupProcessor(address(defiBridgeProxy));
+        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
     }
 
     function setUp() public {

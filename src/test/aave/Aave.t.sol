@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.10;
 
-import "ds-test/test.sol";
 import {Vm} from "../Vm.sol";
 
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
-import {MockRollupProcessor} from "./../../aztec/MockRollupProcessor.sol";
+import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 
 // Aave-specific imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -17,13 +16,16 @@ import {ZkAToken} from "./../../bridges/aave/ZkAToken.sol";
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 import {WadRayMath} from "./../../bridges/aave/libraries/WadRayMath.sol";
 
+import "../../../lib/ds-test/src/test.sol";
+
+
 contract AaveTest is DSTest {
     using WadRayMath for uint256;
 
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     DefiBridgeProxy defiBridgeProxy;
-    MockRollupProcessor rollupProcessor;
+    RollupProcessor rollupProcessor;
 
     AaveLendingBridge aaveLendingBridge;
     ILendingPoolAddressesProvider constant addressesProvider =
@@ -37,7 +39,7 @@ contract AaveTest is DSTest {
 
     function _aztecPreSetup() internal {
         defiBridgeProxy = new DefiBridgeProxy();
-        rollupProcessor = new MockRollupProcessor(address(defiBridgeProxy));
+        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
     }
 
     function setUp() public {
@@ -51,108 +53,108 @@ contract AaveTest is DSTest {
         _setTokenBalance(address(dai), address(0xdead), 42069);
     }
 
-    function testAddDaiToMapping() public {
-        assertEq(
-            aaveLendingBridge.underlyingToZkAToken(address(dai)),
-            address(0)
-        );
-        /// Add invalid (revert)
-        vm.expectRevert("AaveLendingBridge: NO_LENDING_POOL");
-        aaveLendingBridge.setUnderlyingToZkAToken(address(0xdead));
+    // function testAddDaiToMapping() public {
+    //     assertEq(
+    //         aaveLendingBridge.underlyingToZkAToken(address(dai)),
+    //         address(0)
+    //     );
+    //     /// Add invalid (revert)
+    //     vm.expectRevert("AaveLendingBridge: NO_LENDING_POOL");
+    //     aaveLendingBridge.setUnderlyingToZkAToken(address(0xdead));
 
-        /// Add dai
-        aaveLendingBridge.setUnderlyingToZkAToken(address(dai));
-        assertNotEq(
-            aaveLendingBridge.underlyingToZkAToken(address(dai)),
-            address(0)
-        );
+    //     /// Add dai
+    //     aaveLendingBridge.setUnderlyingToZkAToken(address(dai));
+    //     assertNotEq(
+    //         aaveLendingBridge.underlyingToZkAToken(address(dai)),
+    //         address(0)
+    //     );
 
-        /// Add dai again (revert)
-        vm.expectRevert("AaveLendingBridge: ZK_TOKEN_SET");
-        aaveLendingBridge.setUnderlyingToZkAToken(address(dai));
-    }
+    //     /// Add dai again (revert)
+    //     vm.expectRevert("AaveLendingBridge: ZK_TOKEN_SET");
+    //     aaveLendingBridge.setUnderlyingToZkAToken(address(dai));
+    // }
 
-    function testEnterWithDai(uint128 depositAmount, uint16 timeDiff) public {
-        _setupDai();
-        _enterWithDai(1000000);
-        _accrueInterest(timeDiff);
-    }
+    // function testEnterWithDai(uint128 depositAmount, uint16 timeDiff) public {
+    //     _setupDai();
+    //     _enterWithDai(1000000);
+    //     _accrueInterest(timeDiff);
+    // }
 
-    function testAdditionalEnter(
-        uint128 depositAmount1,
-        uint128 depositAmount2,
-        uint16 timeDiff
-    ) public {
-        _setupDai();
-        _enterWithDai(depositAmount1);
+    // function testAdditionalEnter(
+    //     uint128 depositAmount1,
+    //     uint128 depositAmount2,
+    //     uint16 timeDiff
+    // ) public {
+    //     _setupDai();
+    //     _enterWithDai(depositAmount1);
 
-        _accrueInterest(timeDiff);
+    //     _accrueInterest(timeDiff);
 
-        _enterWithDai(depositAmount2);
-    }
+    //     _enterWithDai(depositAmount2);
+    // }
 
-    function testExitPartially(
-        uint128 depositAmount,
-        uint128 withdrawAmount,
-        uint16 timeDiff
-    ) public {
-        while (withdrawAmount > depositAmount / 2) {
-            withdrawAmount /= 2;
-        }
+    // function testExitPartially(
+    //     uint128 depositAmount,
+    //     uint128 withdrawAmount,
+    //     uint16 timeDiff
+    // ) public {
+    //     while (withdrawAmount > depositAmount / 2) {
+    //         withdrawAmount /= 2;
+    //     }
 
-        _setupDai();
-        _enterWithDai(depositAmount);
+    //     _setupDai();
+    //     _enterWithDai(depositAmount);
 
-        _accrueInterest(timeDiff);
+    //     _accrueInterest(timeDiff);
 
-        _exitWithDai(withdrawAmount);
-    }
+    //     _exitWithDai(withdrawAmount);
+    // }
 
-    function testExitPartiallyTenCompletely(
-        uint128 depositAmount,
-        uint16 timeDiff1,
-        uint16 timeDiff2
-    ) public {
-        _setupDai();
-        _enterWithDai(depositAmount);
+    // function testExitPartiallyTenCompletely(
+    //     uint128 depositAmount,
+    //     uint16 timeDiff1,
+    //     uint16 timeDiff2
+    // ) public {
+    //     _setupDai();
+    //     _enterWithDai(depositAmount);
 
-        _accrueInterest(timeDiff1);
+    //     _accrueInterest(timeDiff1);
 
-        _exitWithDai(depositAmount / 2);
+    //     _exitWithDai(depositAmount / 2);
 
-        Balances memory balances = _getBalances();
+    //     Balances memory balances = _getBalances();
 
-        _accrueInterest(timeDiff2);
+    //     _accrueInterest(timeDiff2);
 
-        _exitWithDai(balances.rollupZk);
+    //     _exitWithDai(balances.rollupZk);
 
-        Balances memory balancesAfter = _getBalances();
-        assertLt(
-            balances.rollupZk,
-            depositAmount,
-            "never entered, or entered at index = 1"
-        );
-        assertEq(balancesAfter.rollupZk, 0, "Not exited with everything");
-    }
+    //     Balances memory balancesAfter = _getBalances();
+    //     assertLt(
+    //         balances.rollupZk,
+    //         depositAmount,
+    //         "never entered, or entered at index = 1"
+    //     );
+    //     assertEq(balancesAfter.rollupZk, 0, "Not exited with everything");
+    // }
 
-    function testExitCompletely(uint128 depositAmount, uint16 timeDiff) public {
-        _setupDai();
-        _enterWithDai(depositAmount);
+    // function testExitCompletely(uint128 depositAmount, uint16 timeDiff) public {
+    //     _setupDai();
+    //     _enterWithDai(depositAmount);
 
-        Balances memory balances = _getBalances();
+    //     Balances memory balances = _getBalances();
 
-        _accrueInterest(timeDiff);
+    //     _accrueInterest(timeDiff);
 
-        _exitWithDai(balances.rollupZk);
+    //     _exitWithDai(balances.rollupZk);
 
-        Balances memory balancesAfter = _getBalances();
-        assertLt(
-            balances.rollupZk,
-            depositAmount,
-            "never entered, or entered at index = 1"
-        );
-        assertEq(balancesAfter.rollupZk, 0, "Not exited with everything");
-    }
+    //     Balances memory balancesAfter = _getBalances();
+    //     assertLt(
+    //         balances.rollupZk,
+    //         depositAmount,
+    //         "never entered, or entered at index = 1"
+    //     );
+    //     assertEq(balancesAfter.rollupZk, 0, "Not exited with everything");
+    // }
 
     /// Helpers
 

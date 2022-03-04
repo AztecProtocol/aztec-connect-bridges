@@ -7,7 +7,7 @@ import {Vm} from "../Vm.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
-import {MockRollupProcessor} from "./../../aztec/MockRollupProcessor.sol";
+import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 import {AggregatorV3Interface} from "./../../bridges/rai/interfaces/AggregatorV3Interface.sol";
 
 // Example-specific imports
@@ -27,7 +27,7 @@ contract RaiBridgeTest is DSTest {
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     DefiBridgeProxy defiBridgeProxy;
-    MockRollupProcessor rollupProcessor;
+    RollupProcessor rollupProcessor;
 
     RaiBridge raiBridge;
 
@@ -38,7 +38,7 @@ contract RaiBridgeTest is DSTest {
 
     function _aztecPreSetup() internal {
         defiBridgeProxy = new DefiBridgeProxy();
-        rollupProcessor = new MockRollupProcessor(address(defiBridgeProxy));
+        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
     }
 
     uint totalDepositAmount;
