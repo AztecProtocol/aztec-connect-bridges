@@ -22,7 +22,7 @@ import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
 
 // NOTE:
 // 1. Theres a minimum amount of RAI to be borrowed in the first call, which is currently 1469 RAI
-
+// 2. You can find the readme for the contract here: https://gist.github.com/realdiganta/2c73f86820bf7310bd934184fa960e3d
 
 contract RaiBridge is IDefiBridge, ERC20 {
   using SafeMath for uint256;
