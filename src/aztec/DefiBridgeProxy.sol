@@ -3,7 +3,6 @@
 pragma solidity >=0.8.4 <0.8.11;
 pragma experimental ABIEncoderV2;
 
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {IDefiBridge} from "../interfaces/IDefiBridge.sol";
 import {AztecTypes} from "./AztecTypes.sol";
 

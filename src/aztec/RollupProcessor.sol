@@ -3,7 +3,6 @@
 pragma solidity >=0.8.0 <=0.8.10;
 pragma abicoder v2;
 
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {IDefiBridge} from "../interfaces/IDefiBridge.sol";
 import {IERC20} from "../interfaces/IERC20Permit.sol";
 import {DefiBridgeProxy} from "./DefiBridgeProxy.sol";
