@@ -122,6 +122,7 @@ contract ElementBridge is IDefiBridge {
         balancerAddress = _balancerVaultAddress;
         GAS_REQUIRED_FOR_REDEMPTION_FINALISE = _gasForRedemptionFinalise;
         GAS_REQUIRED_FOR_NON_REDEMPTION_FINALISE = _gasForNonRedemptionFinalise;
+        heap.initialise(100);
     }
 
     // TODO: Needs some kind of calling guard 'OwnerOnly' or something
@@ -351,7 +352,10 @@ contract ElementBridge is IDefiBridge {
         trancheAccount.numDeposits++;
         trancheAccount.quantityTokensHeld += newInteraction.quantityPT;
         emit Convert(interactionNonce, totalInputValue);
-        console.log('Finalising');
+        finaliseExpiredInteractions();
+    }
+
+    function finaliseExpiredInteractions() internal {
         bool continueFinalising = true;
         while (continueFinalising) {
             // check the heap to see if we can finalise an expired transaction
@@ -439,7 +443,7 @@ contract ElementBridge is IDefiBridge {
         trancheAccount.numFinalised++;
 
         // approve the transfer of funds back to the rollup contract
-        console.log('allocation', outputAssetA.erc20Address, amountToAllocate);
+        console.log('allocation', interactionNonce, amountToAllocate);
         ERC20(outputAssetA.erc20Address).approve(rollupProcessor, amountToAllocate);
         interaction.finalised = true;
         popInteraction(interaction, interactionNonce);
@@ -470,74 +474,8 @@ contract ElementBridge is IDefiBridge {
         // is this the first time this expiry has been requested?
         // if so then add it to our expiry heap
         if (nonces.length == 1) {
-            addToHeap(expiry);
+            heap.addToHeap(expiry);
             expiryAdded = true;
-        }
-    }
-
-    // move an expiry up through the heap to the correct position
-    function siftUp(uint256 index) internal {
-        uint64 value = heap[index];
-        while (index > 0) {
-            uint256 parentIndex = index / 2;
-            if (heap[parentIndex] <= value) {
-                break;
-            }
-            heap[index] = heap[parentIndex]; // update
-            index = index / 2;
-        }
-        heap[index] = value;
-    }
-
-    // add a new expiry to the heap
-    function addToHeap(uint64 expiry) internal {
-        // standard min-heap insertion
-        // push to the end of the heap and sift up.
-        // there is a high probability that the expiry being added will remain where it is
-        // so this operation will end up being O(1)
-        heap.push(expiry); // write
-        uint256 index = heap.length - 1;
-        siftUp(index);
-    }
-
-    // remove the root expiry from the heap
-    function popFromHeap() internal {
-        // if the heap is empty then nothing to do
-        if (heap.length == 0) {
-            return;
-        }
-        // read the value in the last position and shrink the array by 1
-        uint64 last = heap[heap.length - 1];
-        heap.pop();
-        // now sift down but no need to swap parent and child nodes
-        // we just write the child value into the parent each time
-        // then once we no longer have any smaller children, we write the 'last' value into place
-        // requires a total of O(logN) updates
-        uint256 index = 0;
-        while (index < heap.length) {
-            // get the indices of the child values
-            uint256 leftChildIndex = (index * 2) + 1;
-            uint256 rightChildIndex = leftChildIndex + 1;
-            uint256 swapIndex = index;
-            uint64 smallestValue = last;
-
-            // identify the smallest child, first check the left
-            if (leftChildIndex < heap.length && heap[leftChildIndex] < smallestValue) {
-                swapIndex = leftChildIndex;
-                smallestValue = heap[leftChildIndex];
-            }
-            // then check the right
-            if (rightChildIndex < heap.length && heap[rightChildIndex] < smallestValue) {
-                swapIndex = rightChildIndex;
-            }
-            // if neither child was smaller then nothing more to do
-            if (swapIndex == index) {
-                heap[index] = smallestValue;
-                break;
-            }
-            // take the value from the smallest child and write in into our slot
-            heap[index] = heap[swapIndex];
-            index = swapIndex;
         }
     }
 
@@ -562,26 +500,10 @@ contract ElementBridge is IDefiBridge {
 
         // if there are no more nonces left for this expiry then remove it from the heap
         if (nonces.length == 0) {
-            removeExpiryFromHeap(interaction.expiry);
+            heap.remove(interaction.expiry);
             delete expiryToNonce[interaction.expiry];
             return (true);
         }
-    }
-
-    // will remove an expiry from the min-heap
-    function removeExpiryFromHeap(uint64 expiry) internal {
-        uint256 index = 0;
-        while (index < heap.length && heap[index] != expiry) {
-            ++index;
-        }
-        if (index == heap.length) {
-            return;
-        }
-        if (index != 0) {
-            heap[index] = 0;
-            siftUp(index);
-        }
-        popFromHeap();
     }
 
     // fast lookup to determine if we have an interaction that can be finalised
@@ -595,10 +517,10 @@ contract ElementBridge is IDefiBridge {
         )
     {
         // do we have any expiries and if so is the earliest expiry now expired
-        if (heap.length == 0) {
+        if (heap.size() == 0) {
             return (false, false, 0, 0);
         }
-        uint64 nextExpiry = heap[0];
+        uint64 nextExpiry = heap.min();
         if (nextExpiry > block.timestamp) {
             // oldest expiry is still not expired
             return (false, false, 0, 0);
@@ -632,7 +554,7 @@ contract ElementBridge is IDefiBridge {
         }
 
         // if we are here then we have run out of nonces for this expiry so pop from the heap
-        popFromHeap();
+        heap.remove(nextExpiry);
     }
 
     function interactionCanBeFinalised(Interaction storage interaction) internal returns (bool canBeFinalised, bool requiresRedemption, string memory message) {
