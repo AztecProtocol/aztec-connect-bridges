@@ -10,6 +10,7 @@ import {ITranche} from './interfaces/ITranche.sol';
 import {IERC20Permit, IERC20} from '../../interfaces/IERC20Permit.sol';
 import {IWrappedPosition} from './interfaces/IWrappedPosition.sol';
 import {IRollupProcessor} from '../../interfaces/IRollupProcessor.sol';
+import {MinHeap} from './MinHeap.sol';
 
 import {IDefiBridge} from '../../interfaces/IDefiBridge.sol';
 
@@ -18,6 +19,7 @@ import {AztecTypes} from '../../aztec/AztecTypes.sol';
 import { console } from '../../test/console.sol';
 
 contract ElementBridge is IDefiBridge {
+    using MinHeap for MinHeap.MinHeapData;
 
     error INVALID_TRANCHE();
     error INVALID_WRAPPED_POSITION();
@@ -87,7 +89,7 @@ contract ElementBridge is IDefiBridge {
     // the balancer contract
     address private immutable balancerAddress;
 
-    uint64[] private heap;
+    MinHeap.MinHeapData private heap;
     mapping(uint64 => uint256[]) private expiryToNonce;
 
     // 48 hours in seconds, usd for calculating speeedbump expiries
@@ -349,7 +351,7 @@ contract ElementBridge is IDefiBridge {
         trancheAccount.numDeposits++;
         trancheAccount.quantityTokensHeld += newInteraction.quantityPT;
         emit Convert(interactionNonce, totalInputValue);
-
+        console.log('Finalising');
         bool continueFinalising = true;
         while (continueFinalising) {
             // check the heap to see if we can finalise an expired transaction
@@ -437,6 +439,7 @@ contract ElementBridge is IDefiBridge {
         trancheAccount.numFinalised++;
 
         // approve the transfer of funds back to the rollup contract
+        console.log('allocation', outputAssetA.erc20Address, amountToAllocate);
         ERC20(outputAssetA.erc20Address).approve(rollupProcessor, amountToAllocate);
         interaction.finalised = true;
         popInteraction(interaction, interactionNonce);
@@ -669,6 +672,8 @@ contract ElementBridge is IDefiBridge {
         uint256 vaultQuantity = ERC20(underlyingAddress).balanceOf(yearnVaultAddress);
         if (trancheAccount.quantityTokensHeld > vaultQuantity) {
             trancheAccount.redemptionFailed = true;
+            console.log('Vault', underlyingAddress, trancheAccount.quantityTokensHeld);
+            console.log('Bal', vaultQuantity);
             return (false, false, 'VAULT_BALANCE');
         }
         // at this point, we will need to redeem the tranche which should be possible
