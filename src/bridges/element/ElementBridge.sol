@@ -16,8 +16,6 @@ import {IDefiBridge} from '../../interfaces/IDefiBridge.sol';
 
 import {AztecTypes} from '../../aztec/AztecTypes.sol';
 
-import { console } from '../../test/console.sol';
-
 contract ElementBridge is IDefiBridge {
     using MinHeap for MinHeap.MinHeapData;
 
