@@ -176,7 +176,7 @@ contract HeapTest is DSTest {
         assertEq(newHeap.size(), 0);
     }
 
-    function getMinOfRandomInts(uint256 upperBound) internal returns (uint64 min) {
+    function getMinOfRandomInts(uint256 upperBound) internal view returns (uint64 min) {
         min = 10000;
         for (uint256 i = 0; i < upperBound; i++) {
             if (randomInts[i] < min) {

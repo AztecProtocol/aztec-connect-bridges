@@ -27,7 +27,7 @@ library MinHeap {
         addToHeap(self, value);
     }
 
-    function min(MinHeapData storage self) public returns (uint64) {
+    function min(MinHeapData storage self) public view returns (uint64) {
         if (size(self) == 0) {
             revert HEAP_EMPTY();
         }
@@ -42,7 +42,7 @@ library MinHeap {
         popFromHeap(self);
     }
 
-    function size(MinHeapData storage self) public returns (uint256) {
+    function size(MinHeapData storage self) public view returns (uint256) {
         return self.heapSize;
     }
 

@@ -103,7 +103,7 @@ contract ElementTest is DSTest {
 
     event PoolAdded(address poolAddress, address wrappedPositionAddress, uint64 expiry);
 
-    function hashAssetAndExpiry(address asset, uint64 expiry) public returns (uint256) {
+    function hashAssetAndExpiry(address asset, uint64 expiry) public pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(asset, uint256(expiry))));
     }
 
@@ -190,9 +190,6 @@ contract ElementTest is DSTest {
         TrancheConfig[] storage configs = trancheConfigs[asset];
         for (uint256 configIndex = 0; configIndex < configs.length; configIndex++) {
             TrancheConfig storage config = configs[configIndex];
-            IWrappedPosition wp = IWrappedPosition(wrappedPosition);
-            uint256 yearnBalance = tokens[asset].balanceOf(wp.vault());
-            console.log('year asset', asset, yearnBalance);
             elementBridge.registerConvergentPoolAddress(config.poolAddress, wrappedPosition, config.expiry);
         }
     }
@@ -1090,11 +1087,11 @@ contract ElementTest is DSTest {
         }
     }
 
-    function boolToUint(bool a) internal returns (uint256) {
+    function boolToUint(bool a) internal pure returns (uint256) {
         return a ? 1 : 0;
     }
 
-    function getBalance(address owner, address erc20) internal returns (uint256) {
+    function getBalance(address owner, address erc20) internal view returns (uint256) {
         return IERC20(erc20).balanceOf(owner);
     } 
 
@@ -1114,7 +1111,7 @@ contract ElementTest is DSTest {
         return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))));
     }
 
-    function _randomAddress() internal returns (address) {
+    function _randomAddress() internal view returns (address) {
         return address(uint160(uint256(keccak256(abi.encodePacked(block.timestamp)))));
     }
 

@@ -18,7 +18,7 @@ contract HeapTestContract {
         heap.add(value);
     }
 
-    function min() public returns (uint64) {
+    function min() public view returns (uint64) {
         return heap.min();
     }
 
@@ -30,7 +30,7 @@ contract HeapTestContract {
         heap.pop();
     }
 
-    function size() public returns (uint256) {
+    function size() public view returns (uint256) {
         return heap.size();
     }
 }
