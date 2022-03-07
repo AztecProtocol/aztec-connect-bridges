@@ -25,7 +25,7 @@ describe('element bridge data', () => {
 
     elementBridge = {
       ...elementBridge,
-      interactions: jest.fn().mockResolvedValue(['', BigNumber.from(expiration), BigNumber.from(outputValue), false]),
+      interactions: jest.fn().mockResolvedValue([BigNumber.from(outputValue), '', BigNumber.from(expiration), false, false]),
     };
     const bridgeId = new BridgeId(67, 123, 456, 7890, 78, new BitConfig(false, true, false, true, false, false), 78);
 
