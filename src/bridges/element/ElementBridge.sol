@@ -443,7 +443,6 @@ contract ElementBridge is IDefiBridge {
         trancheAccount.numFinalised++;
 
         // approve the transfer of funds back to the rollup contract
-        console.log('allocation', interactionNonce, amountToAllocate);
         ERC20(outputAssetA.erc20Address).approve(rollupProcessor, amountToAllocate);
         interaction.finalised = true;
         popInteraction(interaction, interactionNonce);
@@ -594,8 +593,6 @@ contract ElementBridge is IDefiBridge {
         uint256 vaultQuantity = ERC20(underlyingAddress).balanceOf(yearnVaultAddress);
         if (trancheAccount.quantityTokensHeld > vaultQuantity) {
             trancheAccount.redemptionFailed = true;
-            console.log('Vault', underlyingAddress, trancheAccount.quantityTokensHeld);
-            console.log('Bal', vaultQuantity);
             return (false, false, 'VAULT_BALANCE');
         }
         // at this point, we will need to redeem the tranche which should be possible
