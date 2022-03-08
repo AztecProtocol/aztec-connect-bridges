@@ -12,14 +12,12 @@ library MinHeap {
     struct MinHeapData {
         uint64[] heap;
         uint32 heapSize;
-        uint32 heapStorageSize;
     }
 
     function initialise(MinHeapData storage self, uint32 initialSize) public {
         for (uint32 i = 0; i < initialSize; i++) {
             self.heap.push(MAX_INT);
         }
-        self.heapStorageSize = initialSize;
         self.heapSize = 0;
     }
 
@@ -66,9 +64,8 @@ library MinHeap {
         // push to the end of the heap and sift up.
         // there is a high probability that the expiry being added will remain where it is
         // so this operation will end up being O(1)
-        if (self.heapSize == self.heapStorageSize) {
-            self.heap.push(expiry);        
-            ++self.heapStorageSize;
+        if (self.heapSize == self.heap.length) {
+            self.heap.push(expiry);       
         } else {
             self.heap[self.heapSize] = expiry;
         }
