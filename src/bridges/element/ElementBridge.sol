@@ -95,10 +95,10 @@ contract ElementBridge is IDefiBridge {
 
     uint256 internal constant MAX_INT = 2**256 - 1;
 
-    // the amount of gas that we need to have available for a redemption finalise
-    // the amount of gas that we need to have available for a non-redemption finalise
-    uint256 private GAS_REQUIRED_FOR_REDEMPTION_FINALISE = 0;
-    uint256 private GAS_REQUIRED_FOR_NON_REDEMPTION_FINALISE = 0;
+    uint256 internal constant MIN_GAS_FOR_CHECK_AND_FINALISE = 50000;
+    uint256 internal constant MIN_GAS_FOR_FUNCTION_COMPLETION = 5000;
+    uint256 internal constant MIN_GAS_FOR_FAILED_INTERACTION = 20000;
+    uint256 internal constant MIN_GAS_FOR_EXPIRY_REMOVAL = 25000;
 
     event Convert(uint256 indexed nonce, uint256 totalInputValue);
 
@@ -110,23 +110,13 @@ contract ElementBridge is IDefiBridge {
         address _rollupProcessor,
         address _trancheFactory,
         bytes32 _trancheBytecodeHash,
-        address _balancerVaultAddress,
-        uint256 _gasForRedemptionFinalise,
-        uint256 _gasForNonRedemptionFinalise
+        address _balancerVaultAddress
     ) {
         rollupProcessor = _rollupProcessor;
         trancheFactory = _trancheFactory;
         trancheBytecodeHash = _trancheBytecodeHash;
         balancerAddress = _balancerVaultAddress;
-        GAS_REQUIRED_FOR_REDEMPTION_FINALISE = _gasForRedemptionFinalise;
-        GAS_REQUIRED_FOR_NON_REDEMPTION_FINALISE = _gasForNonRedemptionFinalise;
         heap.initialise(100);
-    }
-
-    // TODO: Needs some kind of calling guard 'OwnerOnly' or something
-    function updateGasRequirements(uint256 gasForRedemptionFinalise, uint256 gasForNonRedemptionFinalise) external {
-        GAS_REQUIRED_FOR_REDEMPTION_FINALISE = gasForRedemptionFinalise;
-        GAS_REQUIRED_FOR_NON_REDEMPTION_FINALISE = gasForNonRedemptionFinalise;
     }
 
     function getAssetExpiries(address asset) public view returns (uint64[] memory assetExpiries) {
@@ -350,18 +340,33 @@ contract ElementBridge is IDefiBridge {
         trancheAccount.numDeposits++;
         trancheAccount.quantityTokensHeld += newInteraction.quantityPT;
         emit Convert(interactionNonce, totalInputValue);
-        finaliseExpiredInteractions();
+        finaliseExpiredInteractions(MIN_GAS_FOR_FUNCTION_COMPLETION);       
+        // we need to get here with MIN_GAS_FOR_FUNCTION_COMPLETION gas to exit.
     }
 
-    function finaliseExpiredInteractions() internal {
-        bool continueFinalising = true;
-        while (continueFinalising) {
+    function finaliseExpiredInteractions(uint256 gasFloor) internal {
+        // check and finalise interactions until we don't have enough gas left to reliably update our state without risk of reverting the entire transaction
+        // gas left must be enough for check for next expiry, finalise and leave this function without breaching gasFloor
+        uint256 gasLoopCondition = MIN_GAS_FOR_CHECK_AND_FINALISE + MIN_GAS_FOR_FUNCTION_COMPLETION + gasFloor;
+        uint256 ourGasFloor = MIN_GAS_FOR_FUNCTION_COMPLETION + gasFloor;
+        while (gasleft() > gasLoopCondition) {
             // check the heap to see if we can finalise an expired transaction
-            (bool expiryAvailable, bool requiresRedemption, uint64 expiry, uint256 nonce) = checkNextExpiry();
-            continueFinalising = expiryAvailable && gasleft() >= (requiresRedemption ? GAS_REQUIRED_FOR_REDEMPTION_FINALISE : GAS_REQUIRED_FOR_NON_REDEMPTION_FINALISE);
-            if (continueFinalising) {
-                // another position is available for finalising, inform the rollup contract
-                IRollupProcessor(rollupProcessor).processAsyncDefiInteraction(nonce);
+            // we provide a gas floor to the function which will enable us to leave this function without breaching our gasFloor
+            (bool expiryAvailable, uint256 nonce) = checkNextExpiry(ourGasFloor);
+            if (!expiryAvailable) {
+                break;
+            }
+            // make sure we will have at least ourGasFloor gas after the finalise in order to exit this function
+            uint256 gasRemaining = gasleft();
+            if (gasRemaining <= ourGasFloor) {
+                break;
+            }
+            uint256 gasForFinalise = gasRemaining - ourGasFloor;
+            // make the call to finalise the interaction with the gas limit        
+            try IRollupProcessor(rollupProcessor).processAsyncDefiInteraction{gas: gasForFinalise}(nonce) returns (bool interactionCompleted) {
+                // no need to do anything here, we just need to know that the call didn't throw
+            } catch {
+                break;
             }
         }
     }
@@ -504,27 +509,26 @@ contract ElementBridge is IDefiBridge {
     }
 
     // fast lookup to determine if we have an interaction that can be finalised
-    function checkNextExpiry()
+    function checkNextExpiry(uint256 gasFloor)
         internal
         returns (
             bool expiryAvailable,
-            bool requiresRedemption,
-            uint64 expiry,
             uint256 nonce
         )
     {
         // do we have any expiries and if so is the earliest expiry now expired
         if (heap.size() == 0) {
-            return (false, false, 0, 0);
+            return (false, 0);
         }
         uint64 nextExpiry = heap.min();
         if (nextExpiry > block.timestamp) {
             // oldest expiry is still not expired
-            return (false, false, 0, 0);
+            return (false, 0);
         }
         // we have some expired interactions
         uint256[] storage nonces = expiryToNonce[nextExpiry];
-        while (nonces.length > 0) {
+        uint256 minGasForLoop = (gasFloor + MIN_GAS_FOR_FAILED_INTERACTION);
+        while (nonces.length > 0 && gasleft() >= minGasForLoop) {
             uint256 nextNonce = nonces[nonces.length - 1];
             if (nextNonce == MAX_INT) {
                 // this shouldn't happen, this value is the placeholder for reducing gas costs on convert
@@ -533,45 +537,49 @@ contract ElementBridge is IDefiBridge {
                 continue;
             }
             Interaction storage interaction = interactions[nextNonce];
-            if (interaction.expiry == 0 || interaction.finalised) {
-                // this shouldn't happen, suggests the interaction has been finalised already but not removed from the expiry heap
+            if (interaction.expiry == 0 || interaction.finalised || interaction.failed) {
+                // this shouldn't happen, suggests the interaction has been finalised already but not removed from the sets of nonces for this expiry
                 // remove the nonce and continue searching
                 nonces.pop();
                 continue;
             }
             // we have valid interaction for the next expiry, check if it can be finalised
-            (bool canBeFinalised, bool interactionRequiresRedemption, string memory message) = interactionCanBeFinalised(interaction);
+            (bool canBeFinalised, string memory message) = interactionCanBeFinalised(interaction);
             if (!canBeFinalised) {
                 // can't be finalised, add to failures and pop from nonces
                 setInteractionAsFailure(interaction, nextNonce, message);
                 nonces.pop();
                 continue;
             }
-            return (true, interactionRequiresRedemption, nextExpiry, nextNonce);
+            return (true, nextNonce);
         }
 
-        // if we are here then we have run out of nonces for this expiry so pop from the heap
-        heap.remove(nextExpiry);
+        // if we don't have enough gas to remove the expiry, it will be removed next time
+        if (nonces.length == 0 && gasleft() >= (gasFloor + MIN_GAS_FOR_EXPIRY_REMOVAL)) {
+            // if we are here then we have run out of nonces for this expiry so pop from the heap
+            heap.remove(nextExpiry);
+        }
+        return (false, 0);
     }
 
-    function interactionCanBeFinalised(Interaction storage interaction) internal returns (bool canBeFinalised, bool requiresRedemption, string memory message) {
+    function interactionCanBeFinalised(Interaction storage interaction) internal returns (bool canBeFinalised, string memory message) {
         TrancheAccount storage trancheAccount = trancheAccounts[interaction.trancheAddress];
         if (trancheAccount.quantityTokensHeld == 0) {
             // shouldn't happen, suggests we don't have an account for this tranche!
-            return (false, false, 'INTERNAL_ERROR');
+            return (false, 'INTERNAL_ERROR');
         }
         if (trancheAccount.redemptionFailed == true) {
-            return (false, false, 'TRANCHE_REDEMPTION_FAILED');
+            return (false, 'TRANCHE_REDEMPTION_FAILED');
         }
         // determine if the tranche has already been redeemed
         if (trancheAccount.quantityAssetRedeemed > 0) {
             // tranche was previously redeemed
             if (trancheAccount.quantityAssetRemaining == 0) {
                 // this is a problem. we have already allocated out all of the redeemed assets!
-                return (false, false, 'INTERNAL_ERROR');
+                return (false, 'INTERNAL_ERROR');
             }
             // this interaction can be finalised. we don't need to redeem the tranche, we just need to allocate the redeemed asset
-            return (true, false, '');
+            return (true, '');
         }
         // tranche hasn't been redeemed, now check to see if we can redeem it
         ITranche tranche = ITranche(interaction.trancheAddress);
@@ -581,7 +589,7 @@ contract ElementBridge is IDefiBridge {
             if (newExpiry > block.timestamp) {
                 // a speedbump is in force for this tranche and it is beyond the current time
                 trancheAccount.redemptionFailed = true;
-                return (false, false, 'SPEEDBUMP');
+                return (false, 'SPEEDBUMP');
             }
         }
         address wpAddress = address(tranche.position());
@@ -591,9 +599,9 @@ contract ElementBridge is IDefiBridge {
         uint256 vaultQuantity = ERC20(underlyingAddress).balanceOf(yearnVaultAddress);
         if (trancheAccount.quantityTokensHeld > vaultQuantity) {
             trancheAccount.redemptionFailed = true;
-            return (false, false, 'VAULT_BALANCE');
+            return (false, 'VAULT_BALANCE');
         }
         // at this point, we will need to redeem the tranche which should be possible
-        return (true, true, '');
+        return (true, '');
     }
 }

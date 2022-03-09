@@ -67,6 +67,47 @@ contract HeapTest is DSTest {
         assertEq(heap.size(), 0);
     }
 
+    function testPopDown1() public {
+        uint8[10] memory values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        for (uint256 i = 0; i < values.length; i++) {
+            heap.add(values[i]);
+        }
+        // heap will look exactly the same as the array of values above
+        // now when we pop it, 10 will be moved to index zero and get sifted back down
+        // swapping with each left child i.e. 2, 4, 8
+        // continue for all values, some swaps will be right child and some will be left
+        for (uint256 min = 2; min < 11; min++) {
+            heap.pop();
+            assertEq(heap.min(), min);
+        }
+    }
+
+    function testPopDown2() public {
+        uint8[10] memory values = [1, 3, 2, 5, 4, 7, 6, 9, 8, 10];
+        for (uint256 i = 0; i < values.length; i++) {
+            heap.add(values[i]);
+        }
+        // heap will look exactly the same as the array of values above
+        // now when we pop it, 10 will be moved to index zero and get sifted back down
+        // swapping with each left child i.e. 2, 4, 8
+        // continue for all values, some swaps will be right child and some will be left
+        for (uint256 min = 2; min < 11; min++) {
+            heap.pop();
+            assertEq(heap.min(), min);
+        }
+    }
+
+    function testWorksWithDuplicateValues() public {
+        uint8[30] memory values = [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 10];
+        for (uint256 i = 0; i < values.length; i++) {
+            heap.add(values[i]);
+        }
+        for (uint256 i = 1; i < values.length; i++) {
+            heap.pop();
+            assertEq(heap.min(), values[i]);
+        }
+    }
+
     function testAddAndRemoveMinMultiples() public {
         uint64[] memory values = new uint64[](randomInts.length);
         uint64[] memory sortedValues = new uint64[](randomInts.length);
@@ -139,13 +180,19 @@ contract HeapTest is DSTest {
         }    
         assertEq(heap.size(), values.length);
 
-
+        uint256[] memory gasValues = new uint256[](100);
         for (uint256 i = 0; i < sortedValues.length; i++) {
             assertEq(heap.min(), sortedValues[i], 'pop');
             assertEq(heap.size(), sortedValues.length - i);
-            heap.remove(heap.min());
+            uint64 min = heap.min();
+            uint256 gasBefore = gasleft();
+            heap.remove(min);
+            gasValues[i] = gasBefore - gasleft();
         }
         assertEq(heap.size(), 0);
+        for (uint256 i = 0; i < gasValues.length; i++) {
+            console.log(gasValues[i]);
+        }
     }
 
     function testCanBuildHeapGreaterThanInitialised() public {

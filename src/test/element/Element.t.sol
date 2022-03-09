@@ -175,9 +175,7 @@ contract ElementTest is DSTest {
             address(rollupProcessor),
             trancheFactoryAddress,
             byteCodeHash,
-            balancer,
-            300000,
-            75000
+            balancer
         );
 
         rollupProcessor.setBridgeGasLimit(address(elementBridge), 700000);
@@ -907,7 +905,6 @@ contract ElementTest is DSTest {
         // this will get the balances for EUR
         Balances memory balancesBridgeAfterFinalise = _getBalances(interactions[0], address(elementBridge));
         // the bridge's balance of the tranche token should now be the same as after the initial calls to convert
-        console.log('Tranche balances', balancesBridgeAfterFinalise.bridgeTranche, balancesBridgeAfterConvert.bridgeTranche);
         assertEq(balancesBridgeAfterFinalise.bridgeTranche, balancesBridgeAfterConvert.bridgeTranche);
         // the bridge's balance of EUR should be 0
         assertEq(balancesBridgeAfterFinalise.startingAsset, 0);

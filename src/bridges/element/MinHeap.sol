@@ -1,6 +1,5 @@
 pragma solidity 0.8.10;
 
-import { console } from '../../test/console.sol';
 
 library MinHeap {
     using MinHeap for MinHeapData;
@@ -14,33 +13,33 @@ library MinHeap {
         uint32 heapSize;
     }
 
-    function initialise(MinHeapData storage self, uint32 initialSize) public {
+    function initialise(MinHeapData storage self, uint32 initialSize) internal {
         for (uint32 i = 0; i < initialSize; i++) {
             self.heap.push(MAX_INT);
         }
         self.heapSize = 0;
     }
 
-    function add(MinHeapData storage self, uint64 value) public {
+    function add(MinHeapData storage self, uint64 value) internal {
         addToHeap(self, value);
     }
 
-    function min(MinHeapData storage self) public view returns (uint64) {
+    function min(MinHeapData storage self) internal view returns (uint64) {
         if (size(self) == 0) {
             revert HEAP_EMPTY();
         }
         return self.heap[0];
     }
 
-    function remove(MinHeapData storage self, uint64 value) public {
+    function remove(MinHeapData storage self, uint64 value) internal {
         removeExpiryFromHeap(self, value);
     }
 
-    function pop(MinHeapData storage self) public {
+    function pop(MinHeapData storage self) internal {
         popFromHeap(self);
     }
 
-    function size(MinHeapData storage self) public view returns (uint256) {
+    function size(MinHeapData storage self) internal view returns (uint256) {
         return self.heapSize;
     }
 
