@@ -10,6 +10,8 @@ import {TokenTransfers} from "../libraries/TokenTransfers.sol";
 
 import "../../lib/ds-test/src/test.sol";
 
+import { console } from '../test/console.sol';
+
 contract DefiBridgeProxy is DSTest {
     bytes4 private constant BALANCE_OF_SELECTOR = 0x70a08231; // bytes4(keccak256('balanceOf(address)'));
     bytes4 private constant TRANSFER_SELECTOR = 0xa9059cbb; // bytes4(keccak256('transfer(address,uint256)'));
@@ -166,7 +168,8 @@ contract DefiBridgeProxy is DSTest {
             outputAssetB,
             totalInputValue,
             interactionNonce,
-            uint64(auxInputData)
+            uint64(auxInputData),
+            address(0)
         );
 
         if (isAsync) {

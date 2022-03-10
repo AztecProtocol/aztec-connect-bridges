@@ -31,8 +31,6 @@ interface IRollupProcessor {
         bytes32 s
     ) external;
 
-    function processAsyncDeFiInteraction(uint256 interactionNonce) external;
-
     function receiveEthFromBridge(uint256 interactionNonce) external payable;
 
     function setRollupProvider(address provderAddress, bool valid) external;
@@ -70,6 +68,8 @@ interface IRollupProcessor {
     function getEscapeHatchStatus() external view returns (bool, uint256);
 
     function getUserPendingDeposit(uint256 assetId, address userAddress) external view returns (uint256);
+
+    function processAsyncDefiInteraction(uint256 interactionNonce) external returns (bool);
 
     event DefiBridgeProcessed(
         uint256 indexed bridgeId,

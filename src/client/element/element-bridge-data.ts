@@ -42,9 +42,8 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
 
   async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
-
-    const exitTimestamp = interaction[1];
-    const endValue = interaction[2];
+    const exitTimestamp = interaction.expiry;
+    const endValue = interaction.quantityPT;
 
     // we get the present value of the interaction
     const [rollupInteraction] = await this.rollupContract.queryFilter(
@@ -110,8 +109,8 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
   ): Promise<bigint[]> {
     const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(inputAssetA.erc20Address, auxData);
     const pool = await this.elementBridgeContract.pools(assetExpiryHash);
-    const poolId = pool[2];
-    const trancheAddress = pool[0];
+    const poolId = pool.poolId;
+    const trancheAddress = pool.trancheAddress;
 
     const funds: FundManagement = {
       sender: AddressZero,
@@ -156,7 +155,7 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
   ): Promise<AssetValue[]> {
     const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(inputAssetA.erc20Address, auxData);
     const pool = await this.elementBridgeContract.pools(assetExpiryHash);
-    const poolId = pool[2];
+    const poolId = pool.poolId;
     const tokenBalances = await this.balancerContract.getPoolTokens(poolId);
 
     // todo return the correct aztec assetIds
@@ -171,11 +170,11 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
   async getExpiration(interactionNonce: bigint): Promise<bigint> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
 
-    return BigInt(interaction[1].toString());
+    return BigInt(interaction.expiry.toString());
   }
 
   async hasFinalised(interactionNonce: bigint): Promise<Boolean> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
-    return interaction[3];
+    return interaction.finalised;
   }
 }
