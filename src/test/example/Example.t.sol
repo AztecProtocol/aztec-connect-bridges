@@ -40,6 +40,8 @@ contract ExampleTest is DSTest {
             address(rollupProcessor)
         );
 
+        rollupProcessor.setBridgeGasLimit(address(exampleBridge), 100000);
+
         _setTokenBalance(address(dai), address(0xdead), 42069);
     }
 

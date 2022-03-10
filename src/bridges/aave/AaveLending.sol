@@ -29,7 +29,7 @@ contract AaveLendingBridge is IDefiBridge {
 
     mapping(address => address) public underlyingToZkAToken;
 
-    constructor(address _rollupProcessor, address _addressesProvider) public {
+    constructor(address _rollupProcessor, address _addressesProvider) {
         rollupProcessor = _rollupProcessor;
         // needed in case AAVE governance changes the lending pool address
         addressesProvider = ILendingPoolAddressesProvider(_addressesProvider);
@@ -64,7 +64,8 @@ contract AaveLendingBridge is IDefiBridge {
         AztecTypes.AztecAsset memory outputAssetB,
         uint256 totalInputValue,
         uint256 interactionNonce,
-        uint64 auxData
+        uint64 auxData,
+        address rollupBeneficiary
     )
         external
         payable

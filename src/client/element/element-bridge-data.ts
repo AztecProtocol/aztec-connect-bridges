@@ -28,7 +28,7 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
   private elementBridgeContract: ElementBridge;
   private rollupContract: RollupProcessor;
   private balancerContract: IVault;
-  public scalingFactor = 1000000000n;
+  public scalingFactor = BigInt(1000000000);
 
   constructor(elementBridge: ElementBridge, balancer: IVault, rollupContract: RollupProcessor) {
     this.elementBridgeContract = elementBridge;
@@ -42,9 +42,8 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
 
   async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
-
-    const exitTimestamp = interaction[1];
-    const endValue = interaction[2];
+    const exitTimestamp = interaction.expiry;
+    const endValue = interaction.quantityPT;
 
     // we get the present value of the interaction
     const [rollupInteraction] = await this.rollupContract.queryFilter(
@@ -97,7 +96,7 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
     precision: bigint,
   ): Promise<bigint[]> {
     // bridge is async the third parameter represents this
-    return [0n, 0n, 1n];
+    return [BigInt(0), BigInt(0), BigInt(1)];
   }
 
   async getExpectedYearlyOuput(
@@ -110,8 +109,8 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
   ): Promise<bigint[]> {
     const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(inputAssetA.erc20Address, auxData);
     const pool = await this.elementBridgeContract.pools(assetExpiryHash);
-    const poolId = pool[2];
-    const trancheAddress = pool[0];
+    const poolId = pool.poolId;
+    const trancheAddress = pool.trancheAddress;
 
     const funds: FundManagement = {
       sender: AddressZero,
@@ -144,7 +143,7 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
     const scaledOutput = (interest * this.scalingFactor) / BigInt(timeToExpiration);
     const yearlyOutput = (scaledOutput * BigInt(YEAR)) / this.scalingFactor;
 
-    return [yearlyOutput + precision, 0n];
+    return [yearlyOutput + precision, BigInt(0)];
   }
 
   async getMarketSize(
@@ -156,7 +155,7 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
   ): Promise<AssetValue[]> {
     const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(inputAssetA.erc20Address, auxData);
     const pool = await this.elementBridgeContract.pools(assetExpiryHash);
-    const poolId = pool[2];
+    const poolId = pool.poolId;
     const tokenBalances = await this.balancerContract.getPoolTokens(poolId);
 
     // todo return the correct aztec assetIds
@@ -171,11 +170,11 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
   async getExpiration(interactionNonce: bigint): Promise<bigint> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
 
-    return BigInt(interaction[1].toString());
+    return BigInt(interaction.expiry.toString());
   }
 
   async hasFinalised(interactionNonce: bigint): Promise<Boolean> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
-    return interaction[3];
+    return interaction.finalised;
   }
 }

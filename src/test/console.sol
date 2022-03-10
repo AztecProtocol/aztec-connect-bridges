@@ -209,6 +209,10 @@ library console {
         _sendLogPayload(abi.encodeWithSignature("log(string,string)", p0, p1));
     }
 
+    function logSBytes(string memory p0, bytes memory p1) internal view {
+        _sendLogPayload(abi.encodeWithSignature("log(string,bytes)", p0, p1));
+    }
+
     function log(string memory p0, bool p1) internal view {
         _sendLogPayload(abi.encodeWithSignature("log(string,bool)", p0, p1));
     }
