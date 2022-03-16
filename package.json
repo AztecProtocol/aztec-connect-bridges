@@ -5,13 +5,14 @@
     "install:foundry": "curl -L https://foundry.paradigm.xyz | bash",
     "compile:contracts": "forge build",
     "compile:typechain": "forge build && hardhat compile ",
-    "compile:client-dest": "tsc --project tsconfig.client-dest.json && node package-client-dest.js",
+    "compile:client-dest": "yarn compile:typechain && tsc --project tsconfig.client-dest.json && node package-client-dest.js",
     "clean": "rm -rf ./cache ./dest ./out ./artifacts ./typechain-types",
     "test": "yarn test:contracts && yarn test:clients",
     "test:client": "jest test",
+    "test:element": "forge test --fork-block-number 14000000 --match-contract Element -vvv",
     "test:contracts:block": "forge test --fork-block-number",
     "cast": "cast",
-    "test:contracts": "forge test --fork-block-number 14000000 -vvv",
+    "test:contracts": "forge test --no-match-contract Element -vvv && yarn test:element",
     "build": "yarn clean && yarn compile:typechain && yarn compile:client-dest"
   },
   "dependencies": {
@@ -24,7 +25,8 @@
     "ethers": "^5.5.4",
     "hardhat": "^2.8.3",
     "jest": "^27.5.0",
-    "typescript": "^4.5.5"
+    "typescript": "^4.5.5",
+    "typechain": "^7.0.1"
   },
   "jest": {
     "transform": {
@@ -43,7 +45,6 @@
     "@typechain/hardhat": "^4.0.0",
     "@types/jest": "^27.4.0",
     "ts-jest": "^27.1.3",
-    "ts-node": "^10.4.0",
-    "typechain": "^7.0.0"
+    "ts-node": "^10.4.0"
   }
 }

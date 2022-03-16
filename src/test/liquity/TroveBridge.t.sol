@@ -61,7 +61,8 @@ contract TroveBridgeTest is TestUtil {
                 AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
                 ROLLUP_PROCESSOR_WEI_BALANCE,
                 0,
-                0
+                0,
+                address(0)
             )
         {
             assertTrue(false, "convert(...) has to revert when trove is in an incorrect state.");
@@ -81,7 +82,8 @@ contract TroveBridgeTest is TestUtil {
                 AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
                 0,
                 0,
-                0
+                0,
+                address(0)
             )
         {
             assertTrue(false, "convert(...) has to revert on incorrect input.");

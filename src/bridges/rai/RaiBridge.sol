@@ -15,7 +15,7 @@ import {ICoinJoin} from "./interfaces/ICoinJoin.sol";
 import {IEthJoin} from "./interfaces/IEthJoin.sol";
 import {ISafeEngine} from "./interfaces/ISafeEngine.sol";
 import {ISafeManager} from "./interfaces/ISafeManager.sol";
-import {IWeth} from "./interfaces/IWeth.sol";
+import {IWETH} from "../../interfaces/IWETH.sol";
 import {AggregatorV3Interface} from "./interfaces/AggregatorV3Interface.sol";
 import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
 
@@ -24,7 +24,7 @@ import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
 // 1. Theres a minimum amount of RAI to be borrowed in the first call, which is currently 1469 RAI
 // 2. You can find the readme for the contract here: https://gist.github.com/realdiganta/2c73f86820bf7310bd934184fa960e3d
 
-contract RaiBridge is IDefiBridge, ERC20 {
+ contract RaiBridge is ERC20, IDefiBridge {
   using SafeMath for uint256;
 
   address public immutable rollupProcessor;
@@ -49,8 +49,8 @@ contract RaiBridge is IDefiBridge, ERC20 {
     SAFE_HANDLER = ISafeManager(SAFE_MANAGER).safes(safeId);
 
     // do all one off approvals
-    require(IWeth(WETH).approve(ETH_JOIN, type(uint).max), "Weth approve failed");
-    require(IWeth(WETH).approve(rollupProcessor, type(uint).max), "Weth approve failed");
+    require(IWETH(WETH).approve(ETH_JOIN, type(uint).max), "Weth approve failed");
+    require(IWETH(WETH).approve(rollupProcessor, type(uint).max), "Weth approve failed");
     require(IERC20(RAI).approve(COIN_JOIN, type(uint).max), "Rai approve failed");
     require(IERC20(RAI).approve(rollupProcessor, type(uint).max), "Rai approve failed");
     ISafeEngine(SAFE_ENGINE).approveSAFEModification(COIN_JOIN);
@@ -79,11 +79,11 @@ contract RaiBridge is IDefiBridge, ERC20 {
     AztecTypes.AztecAsset memory outputAssetB,
     uint256 totalInputValue,
     uint256 interactionNonce,
-    uint64 auxData
+    uint64 auxData,
+    address
   )
     external
     payable
-    override
     returns (
       uint256 outputValueA,
       uint256 outputValueB,
@@ -95,7 +95,7 @@ contract RaiBridge is IDefiBridge, ERC20 {
 
     if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
         // transfer to weth
-        IWeth(WETH).deposit{value: msg.value}();
+        IWETH(WETH).deposit{value: msg.value}();
     }
 
 
@@ -113,12 +113,12 @@ contract RaiBridge is IDefiBridge, ERC20 {
             outputValueA = _removeCollateral(totalInputValue, safe);
             if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
               // change weth to eth
-              IWeth(WETH).withdraw(outputValueA);
+              IWETH(WETH).withdraw(outputValueA);
               IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
           }
         }
-    } else {     
-        // CONTRACT INITIALIZATION 
+    } else {
+        // CONTRACT INITIALIZATION
         require(auxData > 0, "no collateral ratio provided");
         require(outputAssetB.assetType == AztecTypes.AztecAssetType.ERC20 && outputAssetB.erc20Address == address(this));
         isInitialized = true;
@@ -133,7 +133,7 @@ contract RaiBridge is IDefiBridge, ERC20 {
         outputValueB = outputValueA;
         _mint(address(this), outputValueB);
     }
-  } 
+  }
 
   function finalise(
     AztecTypes.AztecAsset calldata inputAssetA,
@@ -142,12 +142,12 @@ contract RaiBridge is IDefiBridge, ERC20 {
     AztecTypes.AztecAsset calldata outputAssetB,
     uint256 interactionNonce,
     uint64 auxData
-  ) external payable override returns (uint256, uint256, bool) {
+  ) external payable returns (uint256, uint256, bool) {
     require(false);
   }
 
 
-  // ------------------------------- INTERNAL FUNCTIONS ------------------------------------------------- 
+  // ------------------------------- INTERNAL FUNCTIONS -------------------------------------------------
 
    function _addCollateral(uint _wethAmount, uint _collateralRatio, uint _raiToEth) internal returns (uint outputRai) {
       IEthJoin(ETH_JOIN).join(SAFE_HANDLER, _wethAmount);

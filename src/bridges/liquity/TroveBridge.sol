@@ -30,7 +30,7 @@ import "./interfaces/ISortedTroves.sol";
  *
  * If the trove is closed by redemption, users can withdraw their remaining collateral by supplying their TB.
  */
-contract TroveBridge is IDefiBridge, ERC20, Ownable {
+contract TroveBridge is ERC20, Ownable, IDefiBridge {
     using Strings for uint256;
 
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
@@ -118,11 +118,12 @@ contract TroveBridge is IDefiBridge, ERC20, Ownable {
         AztecTypes.AztecAsset calldata outputAssetB,
         uint256 inputValue,
         uint256 interactionNonce,
-        uint64
+        uint64,
+        address
+
     )
         external
         payable
-        override
         returns (
             uint256 outputValueA,
             uint256 outputValueB,
@@ -266,7 +267,6 @@ contract TroveBridge is IDefiBridge, ERC20, Ownable {
     )
         external
         payable
-        override
         returns (
             uint256,
             uint256,

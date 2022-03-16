@@ -64,11 +64,11 @@ contract LidoBridge is IDefiBridge {
         AztecTypes.AztecAsset calldata,
         uint256 inputValue,
         uint256 interactionNonce,
-        uint64
+        uint64,
+        address
     )
         external
         payable
-        override
         returns (
             uint256 outputValueA,
             uint256,
@@ -146,7 +146,7 @@ contract LidoBridge is IDefiBridge {
     AztecTypes.AztecAsset calldata,
     uint256,
     uint64
-  ) external payable override returns (uint256, uint256, bool) {
+  ) external payable returns (uint256, uint256, bool) {
     require(false);
   }
 }
