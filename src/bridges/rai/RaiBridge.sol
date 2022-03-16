@@ -24,7 +24,7 @@ import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
 // 1. Theres a minimum amount of RAI to be borrowed in the first call, which is currently 1469 RAI
 // 2. You can find the readme for the contract here: https://gist.github.com/realdiganta/2c73f86820bf7310bd934184fa960e3d
 
-contract RaiBridge is IDefiBridge, ERC20 {
+ contract RaiBridge is ERC20, IDefiBridge {
   using SafeMath for uint256;
 
   address public immutable rollupProcessor;
@@ -79,11 +79,11 @@ contract RaiBridge is IDefiBridge, ERC20 {
     AztecTypes.AztecAsset memory outputAssetB,
     uint256 totalInputValue,
     uint256 interactionNonce,
-    uint64 auxData
+    uint64 auxData,
+    address
   )
     external
     payable
-    override
     returns (
       uint256 outputValueA,
       uint256 outputValueB,
@@ -117,8 +117,8 @@ contract RaiBridge is IDefiBridge, ERC20 {
               IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
           }
         }
-    } else {     
-        // CONTRACT INITIALIZATION 
+    } else {
+        // CONTRACT INITIALIZATION
         require(auxData > 0, "no collateral ratio provided");
         require(outputAssetB.assetType == AztecTypes.AztecAssetType.ERC20 && outputAssetB.erc20Address == address(this));
         isInitialized = true;
@@ -133,7 +133,7 @@ contract RaiBridge is IDefiBridge, ERC20 {
         outputValueB = outputValueA;
         _mint(address(this), outputValueB);
     }
-  } 
+  }
 
   function finalise(
     AztecTypes.AztecAsset calldata inputAssetA,
@@ -142,12 +142,12 @@ contract RaiBridge is IDefiBridge, ERC20 {
     AztecTypes.AztecAsset calldata outputAssetB,
     uint256 interactionNonce,
     uint64 auxData
-  ) external payable override returns (uint256, uint256, bool) {
+  ) external payable returns (uint256, uint256, bool) {
     require(false);
   }
 
 
-  // ------------------------------- INTERNAL FUNCTIONS ------------------------------------------------- 
+  // ------------------------------- INTERNAL FUNCTIONS -------------------------------------------------
 
    function _addCollateral(uint _wethAmount, uint _collateralRatio, uint _raiToEth) internal returns (uint outputRai) {
       IEthJoin(ETH_JOIN).join(SAFE_HANDLER, _wethAmount);

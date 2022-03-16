@@ -24,7 +24,9 @@
     "ethers": "^5.5.4",
     "hardhat": "^2.8.3",
     "jest": "^27.5.0",
-    "typescript": "^4.5.5"
+    "typescript": "^4.5.5",
+    "typechain": "^7.0.1"
+
   },
   "jest": {
     "transform": {
@@ -43,7 +45,6 @@
     "@typechain/hardhat": "^4.0.0",
     "@types/jest": "^27.4.0",
     "ts-jest": "^27.1.3",
-    "ts-node": "^10.4.0",
-    "typechain": "^7.0.0"
+    "ts-node": "^10.4.0"
   }
 }

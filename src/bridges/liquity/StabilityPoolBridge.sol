@@ -105,7 +105,8 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
         AztecTypes.AztecAsset calldata,
         uint256 inputValue,
         uint256,
-        uint64
+        uint64,
+        address
     )
         external
         payable

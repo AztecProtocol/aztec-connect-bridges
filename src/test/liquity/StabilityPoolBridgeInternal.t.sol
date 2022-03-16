@@ -6,7 +6,7 @@ pragma abicoder v2;
 import "./utils/TestUtil.sol";
 import "../../bridges/liquity/StabilityPoolBridge.sol";
 
-contract StabilityPoolBridgeTestInternal is TestUtil, StabilityPoolBridge(address(0), address(0)) {
+abstract contract StabilityPoolBridgeTestInternal is TestUtil, StabilityPoolBridge(address(0), address(0)) {
     function setUp() public {
         _aztecPreSetup();
         setUpTokens();
