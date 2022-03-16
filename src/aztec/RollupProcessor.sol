@@ -213,9 +213,9 @@ contract RollupProcessor is DSTest {
             convertArgs.interactionNonce,
             convertArgs.auxInputData
         );
+        uint256 gas = bridgeGasLimits[convertArgs.bridgeAddress]  > 0 ? bridgeGasLimits[convertArgs.bridgeAddress]: uint256(150000000);
 
-
-        (bool success, bytes memory result) = address(bridgeProxy).delegatecall{gas: bridgeGasLimits[convertArgs.bridgeAddress]}(
+        (bool success, bytes memory result) = address(bridgeProxy).delegatecall{gas: gas}(
             abi.encodeWithSelector(
                 DEFI_BRIDGE_PROXY_CONVERT_SELECTOR,
                 convertArgs.bridgeAddress,
@@ -229,8 +229,7 @@ contract RollupProcessor is DSTest {
                 convertArgs.ethPaymentsSlot
             )
         );
-
-        results = ConvertReturnValues(0, 0, false);  
+        results = ConvertReturnValues(0, 0, false);
 
         if (success) {
             (uint256 outputValueA, uint256 outputValueB, bool isAsync) = abi.decode(
