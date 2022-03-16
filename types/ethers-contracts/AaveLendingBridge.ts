@@ -36,7 +36,7 @@ export interface AaveLendingBridgeInterface extends utils.Interface {
   contractName: "AaveLendingBridge";
   functions: {
     "claimLiquidityRewards(address)": FunctionFragment;
-    "convert((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint256,uint64)": FunctionFragment;
+    "convert((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint256,uint64,address)": FunctionFragment;
     "finalise((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint64)": FunctionFragment;
     "rollupProcessor()": FunctionFragment;
     "setUnderlyingToZkAToken(address)": FunctionFragment;
@@ -57,7 +57,8 @@ export interface AaveLendingBridgeInterface extends utils.Interface {
       AztecTypes.AztecAssetStruct,
       BigNumberish,
       BigNumberish,
-      BigNumberish
+      BigNumberish,
+      string
     ]
   ): string;
   encodeFunctionData(
@@ -149,6 +150,7 @@ export interface AaveLendingBridge extends BaseContract {
       totalInputValue: BigNumberish,
       interactionNonce: BigNumberish,
       auxData: BigNumberish,
+      rollupBeneficiary: string,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
@@ -190,6 +192,7 @@ export interface AaveLendingBridge extends BaseContract {
     totalInputValue: BigNumberish,
     interactionNonce: BigNumberish,
     auxData: BigNumberish,
+    rollupBeneficiary: string,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
@@ -228,6 +231,7 @@ export interface AaveLendingBridge extends BaseContract {
       totalInputValue: BigNumberish,
       interactionNonce: BigNumberish,
       auxData: BigNumberish,
+      rollupBeneficiary: string,
       overrides?: CallOverrides
     ): Promise<
       [BigNumber, BigNumber, boolean] & {
@@ -278,6 +282,7 @@ export interface AaveLendingBridge extends BaseContract {
       totalInputValue: BigNumberish,
       interactionNonce: BigNumberish,
       auxData: BigNumberish,
+      rollupBeneficiary: string,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
@@ -320,6 +325,7 @@ export interface AaveLendingBridge extends BaseContract {
       totalInputValue: BigNumberish,
       interactionNonce: BigNumberish,
       auxData: BigNumberish,
+      rollupBeneficiary: string,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 

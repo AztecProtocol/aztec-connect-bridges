@@ -15,7 +15,7 @@ import {ICoinJoin} from "./interfaces/ICoinJoin.sol";
 import {IEthJoin} from "./interfaces/IEthJoin.sol";
 import {ISafeEngine} from "./interfaces/ISafeEngine.sol";
 import {ISafeManager} from "./interfaces/ISafeManager.sol";
-import {IWeth} from "./interfaces/IWeth.sol";
+import {IWETH} from "../../interfaces/IWETH.sol";
 import {AggregatorV3Interface} from "./interfaces/AggregatorV3Interface.sol";
 import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
 
@@ -49,8 +49,8 @@ import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
     SAFE_HANDLER = ISafeManager(SAFE_MANAGER).safes(safeId);
 
     // do all one off approvals
-    require(IWeth(WETH).approve(ETH_JOIN, type(uint).max), "Weth approve failed");
-    require(IWeth(WETH).approve(rollupProcessor, type(uint).max), "Weth approve failed");
+    require(IWETH(WETH).approve(ETH_JOIN, type(uint).max), "Weth approve failed");
+    require(IWETH(WETH).approve(rollupProcessor, type(uint).max), "Weth approve failed");
     require(IERC20(RAI).approve(COIN_JOIN, type(uint).max), "Rai approve failed");
     require(IERC20(RAI).approve(rollupProcessor, type(uint).max), "Rai approve failed");
     ISafeEngine(SAFE_ENGINE).approveSAFEModification(COIN_JOIN);
@@ -95,7 +95,7 @@ import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
 
     if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
         // transfer to weth
-        IWeth(WETH).deposit{value: msg.value}();
+        IWETH(WETH).deposit{value: msg.value}();
     }
 
 
@@ -113,7 +113,7 @@ import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
             outputValueA = _removeCollateral(totalInputValue, safe);
             if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
               // change weth to eth
-              IWeth(WETH).withdraw(outputValueA);
+              IWETH(WETH).withdraw(outputValueA);
               IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
           }
         }
