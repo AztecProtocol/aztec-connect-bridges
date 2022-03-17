@@ -2,7 +2,7 @@
 pragma solidity 0.8.10;
 
 import "../../../lib/ds-test/src/test.sol";
-import {Vm} from "../Vm.sol";
+import {Vm} from "../../../lib/forge-std/src/Vm.sol";
 
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 

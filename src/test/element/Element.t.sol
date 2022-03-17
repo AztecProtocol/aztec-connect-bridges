@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.10;
 
-import {Vm} from "../Vm.sol";
+import {Vm} from "../../../lib/forge-std/src/Vm.sol";
 
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
@@ -13,7 +13,7 @@ import {ITranche} from "../../bridges/element/interfaces/ITranche.sol";
 import {IWrappedPosition} from "../../bridges/element/interfaces/IWrappedPosition.sol";
 
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
-import "../stdlib.sol";
+import "../../../lib/forge-std/src/stdlib.sol";
 
 import "../../../lib/ds-test/src/test.sol";
 

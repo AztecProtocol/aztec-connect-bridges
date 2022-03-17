@@ -190,9 +190,6 @@ contract HeapTest is DSTest {
             gasValues[i] = gasBefore - gasleft();
         }
         assertEq(heap.size(), 0);
-        for (uint256 i = 0; i < gasValues.length; i++) {
-            console.log(gasValues[i]);
-        }
     }
 
     function testCanBuildHeapGreaterThanInitialised() public {
