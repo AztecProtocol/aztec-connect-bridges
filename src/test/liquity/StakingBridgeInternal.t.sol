@@ -6,11 +6,11 @@ pragma abicoder v2;
 import "./utils/TestUtil.sol";
 import "../../bridges/liquity/StakingBridge.sol";
 
-contract StakingBridgeTestInternal is TestUtil, StakingBridge(address(0)) {
+abstract contract StakingBridgeTestInternal is TestUtil, StakingBridge(address(0)) {
+
     function setUp() public {
         _aztecPreSetup();
         setUpTokens();
-
         require(IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max), "StakingBridge: WETH_APPROVE_FAILED");
         require(IERC20(LUSD).approve(address(UNI_ROUTER), type(uint256).max), "StakingBridge: LUSD_APPROVE_FAILED");
         require(IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max), "StakingBridge: USDC_APPROVE_FAILED");

@@ -83,11 +83,11 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
         AztecTypes.AztecAsset calldata,
         uint256 inputValue,
         uint256,
-        uint64
+        uint64,
+        address
     )
         external
         payable
-        override
         returns (
             uint256 outputValueA,
             uint256,
@@ -180,7 +180,6 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
     )
         external
         payable
-        override
         returns (
             uint256,
             uint256,

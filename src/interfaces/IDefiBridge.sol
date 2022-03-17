@@ -56,6 +56,7 @@ interface IDefiBridge {
   )
     external
     payable
+    virtual
     returns (
       uint256 outputValueA,
       uint256 outputValueB,
@@ -79,7 +80,7 @@ interface IDefiBridge {
     AztecTypes.AztecAsset calldata outputAssetB,
     uint256 interactionNonce,
     uint64 auxData
-  ) external payable returns (uint256 outputValueA, uint256 outputValueB, bool interactionComplete);
+  ) external payable virtual returns (uint256 outputValueA, uint256 outputValueB, bool interactionComplete);
 
 
 }

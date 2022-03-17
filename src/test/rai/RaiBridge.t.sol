@@ -59,8 +59,6 @@ contract RaiBridgeTest is DSTest {
         _initialize(10e18, initialCollateralRatio);
     }
 
-    event Sexxxxxxxxxxxxxxxyyyyyyyyyyyyyyyy(uint num);
-
     function testWethCollateralDeposit() public {
         uint depositAmount = 1e18;
         uint rollUpRai = _addCollateralWeth(depositAmount);
@@ -173,7 +171,7 @@ contract RaiBridgeTest is DSTest {
             "Rai balance dont match"
         );
 
-        // also assert that the rollupProcessor gets equal number of RaiBridge ERC20 tokens 
+        // also assert that the rollupProcessor gets equal number of RaiBridge ERC20 tokens
         uint bridgeTokens = raiBridge.balanceOf(address(rollupProcessor));
         require(rollUpRai - initialRollUpRai == bridgeTokens - initialBridgeTokens, "bridgeTokens balance dont equal rai balance");
     }
@@ -185,19 +183,19 @@ contract RaiBridgeTest is DSTest {
         uint initialSupply = raiBridge.totalSupply();
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
-            id: 1, 
+            id: 1,
             erc20Address: address(rai),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
         AztecTypes.AztecAsset memory inputAssetB = AztecTypes.AztecAsset({
-            id: 2, 
+            id: 2,
             erc20Address: address(raiBridge),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
         AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
-            id: 1, 
+            id: 1,
             erc20Address: address(weth),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
@@ -205,7 +203,7 @@ contract RaiBridgeTest is DSTest {
         (
             outputValue,
             ,
-            
+
         ) = rollupProcessor.convert(
                 address(raiBridge),
                 inputAssetA,
@@ -242,19 +240,19 @@ contract RaiBridgeTest is DSTest {
         AztecTypes.AztecAsset memory empty;
 
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
-            id: 1, 
+            id: 1,
             erc20Address: address(0),
             assetType: AztecTypes.AztecAssetType.ETH
         });
 
         AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset({
-            id: 1, 
+            id: 1,
             erc20Address: address(rai),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
         AztecTypes.AztecAsset memory outputAssetB = AztecTypes.AztecAsset({
-            id: 2, 
+            id: 2,
             erc20Address: address(raiBridge),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
@@ -262,7 +260,7 @@ contract RaiBridgeTest is DSTest {
         (
             uint256 outputValueA,
             ,
-            
+
         ) = rollupProcessor.convert(
                 address(raiBridge),
                 inputAsset,
@@ -284,7 +282,7 @@ contract RaiBridgeTest is DSTest {
             outputValueA + initialRollUpRai == rollUpRai,
             "Rai balance dont match"
         );
-    } 
+    }
 
     function _removeCollateralEth(uint raiAmount) internal returns (uint outputValue) {
         AztecTypes.AztecAsset memory empty;
@@ -293,19 +291,19 @@ contract RaiBridgeTest is DSTest {
         uint initialSupply = raiBridge.totalSupply();
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
-            id: 1, 
+            id: 1,
             erc20Address: address(rai),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
         AztecTypes.AztecAsset memory inputAssetB = AztecTypes.AztecAsset({
-            id: 2, 
+            id: 2,
             erc20Address: address(raiBridge),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
         AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
-            id: 1, 
+            id: 1,
             erc20Address: address(0),
             assetType: AztecTypes.AztecAssetType.ETH
         });
@@ -313,7 +311,7 @@ contract RaiBridgeTest is DSTest {
         (
             outputValue,
             ,
-            
+
         ) = rollupProcessor.convert(
                 address(raiBridge),
                 inputAssetA,
@@ -370,19 +368,19 @@ contract RaiBridgeTest is DSTest {
         AztecTypes.AztecAsset memory empty;
 
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
-            id: 1, 
+            id: 1,
             erc20Address: address(weth),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
         AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset({
-            id: 1, 
+            id: 1,
             erc20Address: address(rai),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
         AztecTypes.AztecAsset memory outputAssetB = AztecTypes.AztecAsset({
-            id: 2, 
+            id: 2,
             erc20Address: address(raiBridge),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
@@ -390,7 +388,7 @@ contract RaiBridgeTest is DSTest {
         (
              outputValueA,
              outputValueB,
-            
+
         ) = rollupProcessor.convert(
                 address(raiBridge),
                 inputAsset,
@@ -403,7 +401,7 @@ contract RaiBridgeTest is DSTest {
         );
 
         interactionNonce += 1;
-    } 
+    }
 
     function _assertCollateralRatio(uint rollUpRai) internal {
         // test the collateral ratio
@@ -412,7 +410,7 @@ contract RaiBridgeTest is DSTest {
         uint actualCollateralRatio = totalDepositAmount.mul(1e22).div(raiToEth).div(rollUpRai);
         (uint expectedCollateralRatio,,) = raiBridge.getSafeData();
         require(
-            actualCollateralRatio == expectedCollateralRatio, 
+            actualCollateralRatio == expectedCollateralRatio,
             "Collateral ratio not equal expected"
         );
     }
