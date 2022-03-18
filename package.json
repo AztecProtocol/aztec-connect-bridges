@@ -18,16 +18,16 @@
   },
   "dependencies": {
     "@ethersproject/constants": "^5.5.0",
-    "@nomiclabs/hardhat-ethers": "^2.0.4",
-    "@nomiclabs/hardhat-waffle": "^2.0.2",
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "^4.4.2",
     "@typechain/ethers-v4": "^7.0.0",
     "crypto": "^1.0.1",
     "ethers": "^5.5.4",
-    "hardhat": "^2.8.3",
+    "hardhat": "^2.6.8",
     "jest": "^27.5.0",
     "typechain": "^7.0.1",
-    "typescript": "^4.5.5"
+    "typescript": "^4.4.4"
   },
   "jest": {
     "transform": {
@@ -37,7 +37,7 @@
     "rootDir": "./src"
   },
   "name": "@aztec/bridge-clients",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "This repo contains the solidity files and typescript helper class for all of the Aztec Connect Bridge Contracts",
   "repository": "git@github.com:AztecProtocol/aztec-connect-bridges.git",
   "license": "MIT",
