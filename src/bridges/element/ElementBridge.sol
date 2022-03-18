@@ -36,6 +36,7 @@ contract ElementBridge is IDefiBridge {
     error POOL_EXPIRY_MISMATCH();
     error VAULT_ADDRESS_VERIFICATION_FAILED();
     error VAULT_ADDRESS_MISMATCH();
+    error TRANCHE_ALREADY_EXPIRED();
 
     // capture the minimum info required to recall a deposit
     struct Interaction {
@@ -291,6 +292,9 @@ contract ElementBridge is IDefiBridge {
         }
         if (inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) {
             revert ASSET_NOT_ERC20();
+        }
+        if (block.timestamp >= auxData) {
+            revert TRANCHE_ALREADY_EXPIRED();
         }
         if (interactions[interactionNonce].expiry != 0) {
             revert INTERACTION_ALREADY_EXISTS();
