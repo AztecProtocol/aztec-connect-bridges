@@ -390,6 +390,41 @@ contract ElementTest is DSTest {
         );
     }
 
+    function testShouldRejectAlreadyExpired() public {
+        elementBridge
+        .registerConvergentPoolAddress(
+          trancheConfigs['DAI'][0].poolAddress,
+          wrappedPositions['DAI'],
+          trancheConfigs['DAI'][0].expiry
+        );
+        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(tokens['DAI']),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(tokens['DAI']),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        uint256 depositAmount = 15000;
+        _setTokenBalance('DAI', address(elementBridge), depositAmount);
+
+        vm.warp(trancheConfigs['DAI'][0].expiry);
+        vm.expectRevert(abi.encodeWithSelector(ElementBridge.TRANCHE_ALREADY_EXPIRED.selector));
+        vm.prank(address(rollupProcessor));
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = elementBridge.convert(
+                inputAsset,
+                emptyAsset,
+                outputAsset,
+                emptyAsset,
+                depositAmount,
+                1,
+                trancheConfigs['DAI'][0].expiry,
+                address(0)
+        );
+    }
+
     function testShouldRejectUnusedAsset() public {
         elementBridge
         .registerConvergentPoolAddress(
