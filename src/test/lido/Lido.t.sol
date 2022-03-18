@@ -3,7 +3,7 @@ pragma solidity 0.8.10;
 
 import "../../../lib/ds-test/src/test.sol";
 
-import {Vm} from "../Vm.sol";
+import {Vm} from "../../../lib/forge-std/src/Vm.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 

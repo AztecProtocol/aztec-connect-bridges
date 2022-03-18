@@ -3,8 +3,8 @@ out/
 node_modules/
 yarn.lock
 package-lock.json
-typechain-types/
 artifacts/
 yarn-error.log
 contracts
 client-dest/
+types/
