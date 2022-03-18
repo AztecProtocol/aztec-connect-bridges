@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.10;
 
-import {Vm} from "../Vm.sol";
+import {Vm} from "../../../lib/forge-std/src/Vm.sol";
 
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
@@ -13,7 +13,7 @@ import {ITranche} from "../../bridges/element/interfaces/ITranche.sol";
 import {IWrappedPosition} from "../../bridges/element/interfaces/IWrappedPosition.sol";
 
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
-import "../stdlib.sol";
+import "../../../lib/forge-std/src/stdlib.sol";
 
 import "../../../lib/ds-test/src/test.sol";
 
@@ -377,6 +377,41 @@ contract ElementTest is DSTest {
         _setTokenBalance('DAI', address(elementBridge), depositAmount);
 
         vm.expectRevert(abi.encodeWithSelector(ElementBridge.ASSET_NOT_ERC20.selector));
+        vm.prank(address(rollupProcessor));
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = elementBridge.convert(
+                inputAsset,
+                emptyAsset,
+                outputAsset,
+                emptyAsset,
+                depositAmount,
+                1,
+                trancheConfigs['DAI'][0].expiry,
+                address(0)
+        );
+    }
+
+    function testShouldRejectAlreadyExpired() public {
+        elementBridge
+        .registerConvergentPoolAddress(
+          trancheConfigs['DAI'][0].poolAddress,
+          wrappedPositions['DAI'],
+          trancheConfigs['DAI'][0].expiry
+        );
+        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(tokens['DAI']),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(tokens['DAI']),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        uint256 depositAmount = 15000;
+        _setTokenBalance('DAI', address(elementBridge), depositAmount);
+
+        vm.warp(trancheConfigs['DAI'][0].expiry);
+        vm.expectRevert(abi.encodeWithSelector(ElementBridge.TRANCHE_ALREADY_EXPIRED.selector));
         vm.prank(address(rollupProcessor));
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = elementBridge.convert(
                 inputAsset,

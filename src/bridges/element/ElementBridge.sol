@@ -34,8 +34,10 @@ contract ElementBridge is IDefiBridge {
     error TRANCHE_UNDERLYING_MISMATCH();
     error POOL_UNDERLYING_MISMATCH();
     error POOL_EXPIRY_MISMATCH();
+    error TRANCHE_EXPIRY_MISMATCH();
     error VAULT_ADDRESS_VERIFICATION_FAILED();
     error VAULT_ADDRESS_MISMATCH();
+    error TRANCHE_ALREADY_EXPIRED();
 
     // capture the minimum info required to recall a deposit
     struct Interaction {
@@ -186,6 +188,16 @@ contract ElementBridge is IDefiBridge {
         } catch {
             revert INVALID_TRANCHE();
         }
+        // get the tranche expiry to cross check against that provided
+        uint64 trancheExpiry = 0;
+        try tranche.unlockTimestamp() returns (uint256 trancheUnlock) {
+            trancheExpiry = uint64(trancheUnlock);
+        } catch {
+            revert INVALID_TRANCHE();
+        }
+        if (trancheExpiry != expiry) {
+            revert TRANCHE_EXPIRY_MISMATCH();
+        }
 
         if (poolSpec.tranchePosition != wrappedPositionAddress) {
             revert TRANCHE_POSITION_MISMATCH();
@@ -238,23 +250,23 @@ contract ElementBridge is IDefiBridge {
         }
 
         // we store the pool information against a hash of the asset and expiry
-        uint256 assetExpiryHash = hashAssetAndExpiry(poolSpec.underlyingAsset, expiry);
+        uint256 assetExpiryHash = hashAssetAndExpiry(poolSpec.underlyingAsset, trancheExpiry);
         pools[assetExpiryHash] = Pool(poolSpec.poolId, poolSpec.trancheAddress, poolAddress, wrappedPositionAddress);
         uint64[] storage expiriesForAsset = assetToExpirys[poolSpec.underlyingAsset];
         uint256 expiryIndex = 0;
-        while (expiryIndex < expiriesForAsset.length && expiriesForAsset[expiryIndex] != expiry) {
+        while (expiryIndex < expiriesForAsset.length && expiriesForAsset[expiryIndex] != trancheExpiry) {
             ++expiryIndex;
         }
         if (expiryIndex == expiriesForAsset.length) {
-            expiriesForAsset.push(expiry);
+            expiriesForAsset.push(trancheExpiry);
         }
         
         // initialising the expiry -> nonce mapping here like this reduces a chunk of gas later when we start to add interactions for this expiry
-        uint256[] storage nonces = expiryToNonce[expiry];
+        uint256[] storage nonces = expiryToNonce[trancheExpiry];
         if (nonces.length == 0) {
-            expiryToNonce[expiry].push(MAX_INT);
+            expiryToNonce[trancheExpiry].push(MAX_INT);
         }
-        emit PoolAdded(poolAddress, wrappedPositionAddress, expiry);
+        emit PoolAdded(poolAddress, wrappedPositionAddress, trancheExpiry);
     }
 
     function hashAssetAndExpiry(address asset, uint64 expiry) public pure returns (uint256) {
@@ -303,6 +315,11 @@ contract ElementBridge is IDefiBridge {
         if (pool.trancheAddress == address(0)) {
             revert POOL_NOT_FOUND();
         }
+        ITranche tranche = ITranche(pool.trancheAddress);
+        if (block.timestamp >= tranche.unlockTimestamp()) {
+            revert TRANCHE_ALREADY_EXPIRED();
+        }
+        uint64 trancheExpiry = uint64(tranche.unlockTimestamp());
         // approve the transfer of tokens to the balancer address
         ERC20(inputAssetA.erc20Address).approve(balancerAddress, totalInputValue);
         // execute the swap on balancer
@@ -328,13 +345,13 @@ contract ElementBridge is IDefiBridge {
         );
         // store the tranche that underpins our interaction, the expiry and the number of received tokens against the nonce
         Interaction storage newInteraction = interactions[interactionNonce];
-        newInteraction.expiry = auxData;
+        newInteraction.expiry = trancheExpiry;
         newInteraction.failed = false;
         newInteraction.finalised = false;
         newInteraction.quantityPT = principalTokensAmount;
         newInteraction.trancheAddress = pool.trancheAddress;
         // add the nonce and expiry to our expiry heap
-        addNonceAndExpiry(interactionNonce, auxData);
+        addNonceAndExpiry(interactionNonce, trancheExpiry);
         // increase our tranche account
         TrancheAccount storage trancheAccount = trancheAccounts[newInteraction.trancheAddress];
         trancheAccount.numDeposits++;
