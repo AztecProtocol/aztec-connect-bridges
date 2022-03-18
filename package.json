@@ -5,6 +5,7 @@
     "install:foundry": "curl -L https://foundry.paradigm.xyz | bash",
     "compile:contracts": "forge build",
     "compile:typechain": "forge build && hardhat compile ",
+    "compile:client-dest:watch": "yarn compile:typechain && tsc --project tsconfig.client-dest.json --watch",
     "compile:client-dest": "yarn compile:typechain && tsc --project tsconfig.client-dest.json && node package-client-dest.js",
     "clean": "rm -rf ./cache ./dest ./out ./artifacts ./typechain-types",
     "test": "yarn test:contracts && yarn test:clients",
