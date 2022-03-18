@@ -4,7 +4,7 @@ pragma solidity >=0.8.0 <=0.8.10;
 pragma abicoder v2;
 
 import "./MockPriceFeed.sol";
-import "../../Vm.sol";
+import {Vm} from "../../../../lib/forge-std/src/Vm.sol";
 import "../../../../lib/ds-test/src/test.sol";
 import "../../../aztec/DefiBridgeProxy.sol";
 import "../../../aztec/RollupProcessor.sol";
