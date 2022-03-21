@@ -7,6 +7,7 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IVault, IAsset, PoolSpecialization} from './interfaces/IVault.sol';
 import {IPool} from './interfaces/IPool.sol';
 import {ITranche} from './interfaces/ITranche.sol';
+import {IDeploymentValidator} from './interfaces/IDeploymentValidator.sol';
 import {IERC20Permit, IERC20} from '../../interfaces/IERC20Permit.sol';
 import {IWrappedPosition} from './interfaces/IWrappedPosition.sol';
 import {IRollupProcessor} from '../../interfaces/IRollupProcessor.sol';
@@ -16,9 +17,17 @@ import {IDefiBridge} from '../../interfaces/IDefiBridge.sol';
 
 import {AztecTypes} from '../../aztec/AztecTypes.sol';
 
+/**
+ * @title Element Bridge
+ * @dev Smart contract responsible for depositing, managing and redeeming Defi interactions with the Element protocol
+ */
+
 contract ElementBridge is IDefiBridge {
     using MinHeap for MinHeap.MinHeapData;
 
+    /*----------------------------------------
+      ERROR TAGS
+      ----------------------------------------*/
     error INVALID_TRANCHE();
     error INVALID_WRAPPED_POSITION();
     error INVALID_POOL();
@@ -38,8 +47,22 @@ contract ElementBridge is IDefiBridge {
     error VAULT_ADDRESS_VERIFICATION_FAILED();
     error VAULT_ADDRESS_MISMATCH();
     error TRANCHE_ALREADY_EXPIRED();
+    error UNREGISTERED_POOL();
+    error UNREGISTERED_POSITION();
+    error UNREGISTERED_PAIR();
 
-    // capture the minimum info required to recall a deposit
+    /*----------------------------------------
+      STRUCTS
+      ----------------------------------------*/
+    /**
+     * @dev Contains information that describes a specific interaction
+     *
+     * @param quantityPT the quantity of element principal tokens that were purchased by this interaction
+     * @param trancheAddress the address of the element tranche for which principal tokens were purchased
+     * @param expiry the time of expiry of this interaction's tranche
+     * @param finalised flag specifying whether this interaction has been finalised
+     * @param failed flag specifying whether this interaction failed to be finalised at any point
+     */
     struct Interaction {
         uint256 quantityPT;
         address trancheAddress;
@@ -48,7 +71,14 @@ contract ElementBridge is IDefiBridge {
         bool failed;
     }
 
-    // minimum info required to execute a deposit
+    /**
+     * @dev Contains information that describes a specific element pool
+     *
+     * @param poolId the unique Id associated with the element pool
+     * @param trancheAddress the address of the element tranche for which principal tokens are traded in the pool
+     * @param poolAddress the address of the pool contract
+     * @param wrappedPositionAddress the address of the underlying wrapped position token associated with the pool/tranche
+     */
     struct Pool {
         bytes32 poolId;
         address trancheAddress;
@@ -56,7 +86,16 @@ contract ElementBridge is IDefiBridge {
         address wrappedPositionAddress;
     }
 
-    // info pertaining to the funds we have in a given tranche
+    /**
+     * @dev Contains information for managing all funds deposited/redeemed with a specific element tranche
+     *
+     * @param quantityTokensHeld total quantity of principal tokens purchased for the tranche
+     * @param quantityAssetRedeemed total quantity of underlying tokens received from the element tranche on expiry
+     * @param quantityAssetRemaining the current remainning quantity of underlying tokens held by the contract
+     * @param numDeposits the total number of deposits (interactions) against the give tranche
+     * @param numFinalised the current number of interactions against this tranche that have been finalised
+     * @param failed flag specifying whether redemption against this tranche failed
+     */
     struct TrancheAccount {
         uint256 quantityTokensHeld;
         uint256 quantityAssetRedeemed;
@@ -72,12 +111,13 @@ contract ElementBridge is IDefiBridge {
     // This is constant as long as Tranche does not implement non-constant constructor arguments.
     bytes32 private immutable trancheBytecodeHash; // = 0xf481a073666136ab1f5e93b296e84df58092065256d0db23b2d22b62c68e978d;
 
-    // cache of all of our pending Defi interactions. keyed on nonce
+    // cache of all of our Defi interactions. keyed on nonce
     mapping(uint256 => Interaction) public interactions;
 
+    // cahce of all expiry values against the underlying asset address
     mapping(address => uint64[]) public assetToExpirys;
 
-    // cache of all pools we are able to interact with
+    // cache of all pools we have been configured to interact with
     mapping(uint256 => Pool) public pools;
 
     // cahce of all of our tranche accounts
@@ -89,6 +129,10 @@ contract ElementBridge is IDefiBridge {
     // the balancer contract
     address private immutable balancerAddress;
 
+    // the address of the element deployment validator contract
+    address private immutable elementDeploymentValidatorAddress;
+
+    // data structures used to manage the ongoing interaction deposit/redemption cycle
     MinHeap.MinHeapData private heap;
     mapping(uint64 => uint256[]) private expiryToNonce;
 
@@ -102,49 +146,68 @@ contract ElementBridge is IDefiBridge {
     uint256 internal constant MIN_GAS_FOR_FAILED_INTERACTION = 20000;
     uint256 internal constant MIN_GAS_FOR_EXPIRY_REMOVAL = 25000;
 
+    // event emitted on every successful convert call
     event Convert(uint256 indexed nonce, uint256 totalInputValue);
 
+    // event emitted on every attempt to finalise, successful or otherwise
     event Finalise(uint256 indexed nonce, bool success, string message);
 
+    // event emitted on wvery newly configured pool
     event PoolAdded(address poolAddress, address wrappedPositionAddress, uint64 expiry);
 
+    /**
+     * @dev Constructor
+     * @param _rollupProcessor the address of the rollup contract
+     * @param _trancheFactory the address of the element tranche factor contract
+     * @param _trancheBytecodeHash the hash of the bytecode of the tranche contract, used for tranche contract address derivation
+     * @param _balancerVaultAddress the address of the balancer router contract
+     * @param _elementDeploymentValidatorAddress the address of the element deployment validator contract
+     */
     constructor(
         address _rollupProcessor,
         address _trancheFactory,
         bytes32 _trancheBytecodeHash,
-        address _balancerVaultAddress
+        address _balancerVaultAddress,
+        address _elementDeploymentValidatorAddress
     ) {
         rollupProcessor = _rollupProcessor;
         trancheFactory = _trancheFactory;
         trancheBytecodeHash = _trancheBytecodeHash;
         balancerAddress = _balancerVaultAddress;
+        elementDeploymentValidatorAddress = _elementDeploymentValidatorAddress;
         heap.initialise(100);
     }
 
+    /**
+     * @dev Function for retrieving the available expiries for the given asset
+     * @param asset the asset address being queried
+     * @return assetExpiries the list of available expiries for the provided asset address
+     */
     function getAssetExpiries(address asset) public view returns (uint64[] memory assetExpiries) {
-        return assetToExpirys[asset];
+        assetExpiries = assetToExpirys[asset];
     }
 
-    // this function allows for the dynamic addition of new asset/expiry combinations as they come online
+    /// @dev Registers a convergent pool with the contract, setting up a new asset/expiry element tranche
+    /// @param _convergentPool The pool's address
+    /// @param _wrappedPosition The element wrapped position contract's address
+    /// @param _expiry The expiry of the tranche being configured
     function registerConvergentPoolAddress(
         address _convergentPool,
         address _wrappedPosition,
         uint64 _expiry
     ) external {
-        // stores a mapping between tranche address and pool.
-        // required to look up the swap info on balancer
-        checkAndStorePoolSpecification(_wrappedPosition, _expiry, _convergentPool);
+        checkAndStorePoolSpecification(_convergentPool, _wrappedPosition, _expiry);
     }
 
     /// @dev This internal function produces the deterministic create2
-    ///      address of the Tranche contract from a wrapped position contract and expiration
-    /// @param _position The wrapped position contract address
-    /// @param _expiration The expiration time of the tranche as a uint256
-    /// @return The derived Tranche contract
-    function deriveTranche(address _position, uint256 _expiration) internal view virtual returns (address) {
-        bytes32 salt = keccak256(abi.encodePacked(_position, _expiration));
+    ///      address of the Tranche contract from a wrapped position contract and expiry
+    /// @param position The wrapped position contract address
+    /// @param expiry The expiration time of the tranche as a uint256
+    /// @return trancheContract derived Tranche contract address
+    function deriveTranche(address position, uint256 expiry) internal view virtual returns (address trancheContract) {
+        bytes32 salt = keccak256(abi.encodePacked(position, expiry));
         bytes32 addressBytes = keccak256(abi.encodePacked(bytes1(0xff), trancheFactory, salt, trancheBytecodeHash));
-        return address(uint160(uint256(addressBytes)));
+        trancheContract = address(uint160(uint256(addressBytes)));
     }
 
     struct PoolSpec {
@@ -158,12 +221,14 @@ contract ElementBridge is IDefiBridge {
         address poolVaultAddress;
     }
 
-    // function to validate a pool specification
-    // do the wrapped position address, the pool address and the expiry cross reference with one another
+    /// @dev Validates and stores a convergent pool specification
+    /// @param poolAddress The pool's address
+    /// @param wrappedPositionAddress The element wrapped position contract's address
+    /// @param expiry The expiry of the tranche being configured
     function checkAndStorePoolSpecification(
+        address poolAddress,
         address wrappedPositionAddress,
-        uint64 expiry,
-        address poolAddress
+        uint64 expiry        
     ) internal {
         PoolSpec memory poolSpec;
         IWrappedPosition wrappedPosition = IWrappedPosition(wrappedPositionAddress);
@@ -249,6 +314,9 @@ contract ElementBridge is IDefiBridge {
             revert VAULT_ADDRESS_MISMATCH();
         }
 
+        // verify with Element that the provided contracts are registered
+        validatePositionAndPoolAddresses(wrappedPositionAddress, poolAddress);
+
         // we store the pool information against a hash of the asset and expiry
         uint256 assetExpiryHash = hashAssetAndExpiry(poolSpec.underlyingAsset, trancheExpiry);
         pools[assetExpiryHash] = Pool(poolSpec.poolId, poolSpec.trancheAddress, poolAddress, wrappedPositionAddress);
@@ -269,12 +337,45 @@ contract ElementBridge is IDefiBridge {
         emit PoolAdded(poolAddress, wrappedPositionAddress, trancheExpiry);
     }
 
-    function hashAssetAndExpiry(address asset, uint64 expiry) public pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(asset, uint256(expiry))));
+    /**
+    * @dev Verifies that the given pool and wrapped position addresses are registered in the Element deployment validator
+    * Reverts if addresses don't validate successfully
+    * @param wrappedPosition address of a wrapped position contract
+    * @param pool address of a balancer pool contract
+     */
+    function validatePositionAndPoolAddresses(address wrappedPosition, address pool) internal {
+        IDeploymentValidator validator = IDeploymentValidator(elementDeploymentValidatorAddress);
+        if (!validator.checkPoolValidation(pool)) {
+            revert UNREGISTERED_POOL();
+        }
+        if (!validator.checkWPValidation(wrappedPosition)) {
+            revert UNREGISTERED_POSITION();
+        }
+        if (!validator.checkPairValidation(wrappedPosition, pool)) {
+            revert UNREGISTERED_PAIR();
+        }
     }
 
-    // convert the input asset to the output asset
-    // serves as the 'on ramp' to the interaction
+    /// @dev Produces a hash of the given asset and expiry value
+    /// @param asset The asset address
+    /// @param expiry The expiry value
+    /// @return hashValue The resulting hash value
+    function hashAssetAndExpiry(address asset, uint64 expiry) public pure returns (uint256 hashValue) {
+        hashValue = uint256(keccak256(abi.encodePacked(asset, uint256(expiry))));
+    }
+
+    /**
+     * @dev Function to add a new interaction to the bridge
+     * Converts the amount of input asset given to the market determined amount of tranche asset
+     * @param inputAssetA The type of input asset for the new interaction
+     * @param outputAssetA The type of output asset for the new interaction
+     * @param totalInputValue The amount the the input asset provided in this interaction
+     * @param interactionNonce The nonce value for this interaction
+     * @param auxData The expiry value for this interaction
+     * @return outputValueA The interaction's first ouptut value after this call - will be 0
+     * @return outputValueB The interaction's second ouptut value after this call - will be 0
+     * @return isAsync Flag specifying if this interaction is asynchronous - will be true
+     */
     function convert(
         AztecTypes.AztecAsset calldata inputAssetA,
         AztecTypes.AztecAsset calldata,
@@ -283,7 +384,7 @@ contract ElementBridge is IDefiBridge {
         uint256 totalInputValue,
         uint256 interactionNonce,
         uint64 auxData,
-        address rollupBeneficiary
+        address
     )
         external
         payable
@@ -340,7 +441,7 @@ contract ElementBridge is IDefiBridge {
                 recipient: payable(address(this)),
                 toInternalBalance: false
             }),
-            totalInputValue, // discuss with ELement on the likely slippage for a large trade e.g $1M Dai
+            totalInputValue,
             block.timestamp
         );
         // store the tranche that underpins our interaction, the expiry and the number of received tokens against the nonce
@@ -361,6 +462,11 @@ contract ElementBridge is IDefiBridge {
         // we need to get here with MIN_GAS_FOR_FUNCTION_COMPLETION gas to exit.
     }
 
+    /**
+     * @dev Function to attempt finalising of as many interactions as possible within the specified gas limit
+     * Continue checking for and finalising interactions until we expend the available gas
+     * @param gasFloor The amount of gas that needs to remain after this call has completed
+     */
     function finaliseExpiredInteractions(uint256 gasFloor) internal {
         // check and finalise interactions until we don't have enough gas left to reliably update our state without risk of reverting the entire transaction
         // gas left must be enough for check for next expiry, finalise and leave this function without breaching gasFloor
@@ -388,15 +494,18 @@ contract ElementBridge is IDefiBridge {
         }
     }
 
-    // serves as the 'off ramp' for the transaction
-    // converts the principal tokens back to the underlying asset
+    /**
+     * @dev Function to finalise an interaction
+     * Converts the held amount of tranche asset for the given interaction into the output asset
+     * @param interactionNonce The nonce value for the interaction that should be finalised
+     */
     function finalise(
-        AztecTypes.AztecAsset calldata inputAssetA,
-        AztecTypes.AztecAsset calldata inputAssetB,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata outputAssetA,
-        AztecTypes.AztecAsset calldata outputAssetB,
+        AztecTypes.AztecAsset calldata,
         uint256 interactionNonce,
-        uint64 auxData
+        uint64
     )
         external
         payable
@@ -471,6 +580,12 @@ contract ElementBridge is IDefiBridge {
         emit Finalise(interactionNonce, interactionCompleted, '');
     }
 
+    /**
+     * @dev Function to mark an interaction as having failed and publish a finalise event
+     * @param interaction The interaction that failed
+     * @param interactionNonce The nonce of the failed interaction
+     * @param message The reason for failure
+     */
     function setInteractionAsFailure(
         Interaction storage interaction,
         uint256 interactionNonce,
@@ -480,7 +595,12 @@ contract ElementBridge is IDefiBridge {
         emit Finalise(interactionNonce, false, message);
     }
 
-    // add an interaction nonce and expiry to the expiry heap
+    /**
+     * @dev Function to add an interaction nonce and expiry to the heap data structures
+     * @param nonce The nonce of the interaction to be added
+     * @param expiry The expiry of the interaction to be added
+     * @return expiryAdded Flag specifying whether the interactions expiry was added to the heap
+     */
     function addNonceAndExpiry(uint256 nonce, uint64 expiry) internal returns (bool expiryAdded) {
         // get the set of nonces already against this expiry
         // check for the MAX_INT placeholder nonce that exists to reduce gas costs at this point in the code
@@ -493,13 +613,17 @@ contract ElementBridge is IDefiBridge {
         // is this the first time this expiry has been requested?
         // if so then add it to our expiry heap
         if (nonces.length == 1) {
-            heap.addToHeap(expiry);
+            heap.add(expiry);
             expiryAdded = true;
         }
     }
 
-    // clean an interaction from the heap
-    // optimised to remove the last interaction for the earliest expiry but will work in all cases (just at the expense of gas)
+    /**
+     * @dev Function to remove an interaction from the heap data structures
+     * @param interaction The interaction should be removed
+     * @param interactionNonce The nonce of the interaction to be removed
+     * @return expiryRemoved Flag specifying whether the interactions expiry was removed from the heap
+     */
     function popInteraction(Interaction storage interaction, uint256 interactionNonce) internal returns (bool expiryRemoved) {
         uint256[] storage nonces = expiryToNonce[interaction.expiry];
         if (nonces.length == 0) {
@@ -525,7 +649,12 @@ contract ElementBridge is IDefiBridge {
         }
     }
 
-    // fast lookup to determine if we have an interaction that can be finalised
+    /**
+     * @dev Function to determine if we are able to finalise an interaction
+     * @param gasFloor The amount of gas that needs to remain after this call has completed
+     * @return expiryAvailable Flag specifying whether an expiry is available to be finalised
+     * @return nonce The next interaction nonce to be finalised
+     */
     function checkNextExpiry(uint256 gasFloor)
         internal
         returns (
@@ -537,6 +666,7 @@ contract ElementBridge is IDefiBridge {
         if (heap.size() == 0) {
             return (false, 0);
         }
+        // retrieve the minimum (oldest) expiry and determine if it is in the past
         uint64 nextExpiry = heap.min();
         if (nextExpiry > block.timestamp) {
             // oldest expiry is still not expired
@@ -579,6 +709,16 @@ contract ElementBridge is IDefiBridge {
         return (false, 0);
     }
 
+    /**
+     * @dev Determine if an interaction can be finalised
+     * Performs a variety of check on the tranche and tranche account to determine 
+     * a. if the tranche has already been redeemed
+     * b. if the tranche is currently under a speedbump
+     * c. if the yearn vault has sufficient balance to support tranche redemption
+     * @param interaction The interaction to be finalised
+     * @return canBeFinalised Flag specifying whether the interaction can be finalised
+     * @return message Message value giving the reason why an interaction can't be finalised
+     */
     function interactionCanBeFinalised(Interaction storage interaction) internal returns (bool canBeFinalised, string memory message) {
         TrancheAccount storage trancheAccount = trancheAccounts[interaction.trancheAddress];
         if (trancheAccount.quantityTokensHeld == 0) {
