@@ -16,7 +16,9 @@
     "test:contracts": "forge test --no-match-contract Element -vvv && yarn test:element",
     "build": "yarn clean && yarn compile:typechain && yarn compile:client-dest"
   },
-  "dependencies": {},
+  "dependencies": {
+    "axios": "^0.26.1"
+  },
   "jest": {
     "transform": {
       "^.+\\.ts$": "ts-jest"
