@@ -6,11 +6,11 @@ import {Vm} from "../../../lib/forge-std/src/Vm.sol";
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 
-// Example-specific imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ElementBridge} from "../../bridges/element/ElementBridge.sol";
 import {ITranche} from "../../bridges/element/interfaces/ITranche.sol";
 import {IWrappedPosition} from "../../bridges/element/interfaces/IWrappedPosition.sol";
+import {MockDeploymentValidator} from "./MockDeploymentValidator.sol";
 
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 import "../../../lib/forge-std/src/stdlib.sol";
@@ -28,6 +28,7 @@ contract ElementTest is DSTest {
 
     DefiBridgeProxy private defiBridgeProxy;
     RollupProcessor private rollupProcessor;
+    MockDeploymentValidator private elementDeploymentValidator;
 
     ElementBridge private elementBridge;
 
@@ -110,6 +111,7 @@ contract ElementTest is DSTest {
     function _aztecPreSetup() internal {
         defiBridgeProxy = new DefiBridgeProxy();
         rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
+        elementDeploymentValidator = new MockDeploymentValidator();
     }
 
     function setUp() public {
@@ -175,7 +177,8 @@ contract ElementTest is DSTest {
             address(rollupProcessor),
             trancheFactoryAddress,
             byteCodeHash,
-            balancer
+            balancer,
+            address(elementDeploymentValidator)
         );
 
         rollupProcessor.setBridgeGasLimit(address(elementBridge), 700000);
@@ -183,12 +186,19 @@ contract ElementTest is DSTest {
         vm.warp(timestamps[0]);
     }
 
+    function setupConvergentPool(TrancheConfig storage config) internal {
+        address wrappedPosition = wrappedPositions[config.asset];
+        elementDeploymentValidator.validateWPAddress(wrappedPosition);
+        elementDeploymentValidator.validatePoolAddress(config.poolAddress);
+        elementDeploymentValidator.validateAddresses(wrappedPosition, config.poolAddress);
+        elementBridge.registerConvergentPoolAddress(config.poolAddress, wrappedPosition, config.expiry);
+    }
+
     function setupAssetPools(string memory asset) internal {
-        address wrappedPosition = wrappedPositions[asset];
         TrancheConfig[] storage configs = trancheConfigs[asset];
         for (uint256 configIndex = 0; configIndex < configs.length; configIndex++) {
-            TrancheConfig storage config = configs[configIndex];
-            elementBridge.registerConvergentPoolAddress(config.poolAddress, wrappedPosition, config.expiry);
+            TrancheConfig storage config = configs[configIndex];            
+            setupConvergentPool(config);
         }
     }
 
@@ -217,6 +227,10 @@ contract ElementTest is DSTest {
     function testCanConfigurePool() public {
         TrancheConfig storage config = trancheConfigs['USDC'][0];
 
+        elementDeploymentValidator.validateWPAddress(wrappedPositions['USDC']);
+        elementDeploymentValidator.validatePoolAddress(config.poolAddress);
+        elementDeploymentValidator.validateAddresses(wrappedPositions['USDC'], config.poolAddress);
+
         vm.expectEmit(false, false, false, true);
         emit PoolAdded(config.poolAddress, wrappedPositions['USDC'], config.expiry);
 
@@ -230,6 +244,10 @@ contract ElementTest is DSTest {
 
     function testCanConfigureSamePoolMultipleTimes() public {
         TrancheConfig storage config = trancheConfigs['USDC'][0];
+
+        elementDeploymentValidator.validateWPAddress(wrappedPositions['USDC']);
+        elementDeploymentValidator.validatePoolAddress(config.poolAddress);
+        elementDeploymentValidator.validateAddresses(wrappedPositions['USDC'], config.poolAddress);
 
         vm.expectEmit(false, false, false, true);
         emit PoolAdded(config.poolAddress, wrappedPositions['USDC'], config.expiry);        
@@ -257,6 +275,15 @@ contract ElementTest is DSTest {
     }
 
     function testCanConfigureMultiplePools() public {
+        elementDeploymentValidator.validateWPAddress(wrappedPositions['USDC']);
+        elementDeploymentValidator.validateWPAddress(wrappedPositions['DAI']);
+        elementDeploymentValidator.validatePoolAddress(trancheConfigs['USDC'][0].poolAddress);
+        elementDeploymentValidator.validatePoolAddress(trancheConfigs['DAI'][0].poolAddress);
+        elementDeploymentValidator.validatePoolAddress(trancheConfigs['DAI'][1].poolAddress);
+        elementDeploymentValidator.validateAddresses(wrappedPositions['USDC'], trancheConfigs['USDC'][0].poolAddress);
+        elementDeploymentValidator.validateAddresses(wrappedPositions['DAI'], trancheConfigs['DAI'][0].poolAddress);
+        elementDeploymentValidator.validateAddresses(wrappedPositions['DAI'], trancheConfigs['DAI'][1].poolAddress);
+
         vm.expectEmit(false, false, false, true); 
         emit PoolAdded(trancheConfigs['USDC'][0].poolAddress, wrappedPositions['USDC'], trancheConfigs['USDC'][0].expiry);
 
@@ -322,13 +349,96 @@ contract ElementTest is DSTest {
         );
     }
 
-    function testShouldRejectVirtualAsset() public {
+    function testRejectsUnregisteredPoolAddress() public {
+        // register position but not pool
+        elementDeploymentValidator.validateWPAddress(wrappedPositions['DAI']);
+        vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNREGISTERED_POOL.selector));
         elementBridge
         .registerConvergentPoolAddress(
           trancheConfigs['DAI'][0].poolAddress,
           wrappedPositions['DAI'],
           trancheConfigs['DAI'][0].expiry
         );
+    }
+
+    function testRejectsUnregisteredPositionAddress() public {
+        // register pool but not position
+        elementDeploymentValidator.validatePoolAddress(trancheConfigs['DAI'][0].poolAddress);
+        vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNREGISTERED_POSITION.selector));
+        elementBridge
+        .registerConvergentPoolAddress(
+          trancheConfigs['DAI'][0].poolAddress,
+          wrappedPositions['DAI'],
+          trancheConfigs['DAI'][0].expiry
+        );
+    }
+
+    function testRejectsUnregisteredPositionAndPoolAddresses() public {
+        // register neither address, pool is validated first
+        vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNREGISTERED_POOL.selector));
+        elementBridge
+        .registerConvergentPoolAddress(
+          trancheConfigs['DAI'][0].poolAddress,
+          wrappedPositions['DAI'],
+          trancheConfigs['DAI'][0].expiry
+        );
+    }
+
+    function testRejectsUnregisteredPairAddresses() public {
+        // register both the pool and position but not as a pair
+        elementDeploymentValidator.validatePoolAddress(trancheConfigs['DAI'][0].poolAddress);
+        elementDeploymentValidator.validateWPAddress(wrappedPositions['DAI']);
+        vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNREGISTERED_PAIR.selector));
+        elementBridge
+        .registerConvergentPoolAddress(
+          trancheConfigs['DAI'][0].poolAddress,
+          wrappedPositions['DAI'],
+          trancheConfigs['DAI'][0].expiry
+        );
+    }
+
+    function testRejectsUnregisteredPairAddresses2() public {
+        // register DAI position
+        elementDeploymentValidator.validateWPAddress(wrappedPositions['DAI']);
+        // register both DAI pools
+        elementDeploymentValidator.validatePoolAddress(trancheConfigs['DAI'][0].poolAddress);
+        elementDeploymentValidator.validatePoolAddress(trancheConfigs['DAI'][1].poolAddress);
+
+        // register second DAI pair
+        elementDeploymentValidator.validateAddresses(wrappedPositions['DAI'], trancheConfigs['DAI'][1].poolAddress);
+        
+        // the first DAI pair isn't registered and should revert
+        vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNREGISTERED_PAIR.selector));
+        elementBridge
+        .registerConvergentPoolAddress(
+          trancheConfigs['DAI'][0].poolAddress,
+          wrappedPositions['DAI'],
+          trancheConfigs['DAI'][0].expiry
+        );
+    }
+
+    function testRejectsUnregisteredPairAddresses3() public {
+        // register DAI position
+        elementDeploymentValidator.validateWPAddress(wrappedPositions['DAI']);
+        // register both DAI pools
+        elementDeploymentValidator.validatePoolAddress(trancheConfigs['DAI'][0].poolAddress);
+        elementDeploymentValidator.validatePoolAddress(trancheConfigs['DAI'][1].poolAddress);
+
+        // register first DAI pair
+        elementDeploymentValidator.validateAddresses(wrappedPositions['DAI'], trancheConfigs['DAI'][0].poolAddress);
+        
+        // the second DAI pair isn't registered and should revert
+        vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNREGISTERED_PAIR.selector));
+        elementBridge
+        .registerConvergentPoolAddress(
+          trancheConfigs['DAI'][1].poolAddress,
+          wrappedPositions['DAI'],
+          trancheConfigs['DAI'][1].expiry
+        );
+    }
+
+    function testShouldRejectVirtualAsset() public {
+        setupConvergentPool(trancheConfigs['DAI'][0]);
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: address(tokens['DAI']),
@@ -357,12 +467,7 @@ contract ElementTest is DSTest {
     }
 
     function testShouldRejectEthAsset() public {
-        elementBridge
-        .registerConvergentPoolAddress(
-          trancheConfigs['DAI'][0].poolAddress,
-          wrappedPositions['DAI'],
-          trancheConfigs['DAI'][0].expiry
-        );
+        setupConvergentPool(trancheConfigs['DAI'][0]);
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: address(tokens['DAI']),
@@ -391,12 +496,7 @@ contract ElementTest is DSTest {
     }
 
     function testShouldRejectAlreadyExpired() public {
-        elementBridge
-        .registerConvergentPoolAddress(
-          trancheConfigs['DAI'][0].poolAddress,
-          wrappedPositions['DAI'],
-          trancheConfigs['DAI'][0].expiry
-        );
+        setupConvergentPool(trancheConfigs['DAI'][0]);
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: address(tokens['DAI']),
@@ -426,12 +526,7 @@ contract ElementTest is DSTest {
     }
 
     function testShouldRejectUnusedAsset() public {
-        elementBridge
-        .registerConvergentPoolAddress(
-          trancheConfigs['DAI'][0].poolAddress,
-          wrappedPositions['DAI'],
-          trancheConfigs['DAI'][0].expiry
-        );
+        setupConvergentPool(trancheConfigs['DAI'][0]);
 
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,
@@ -461,12 +556,7 @@ contract ElementTest is DSTest {
     }
 
     function testShouldRejectInconsistentAssetIds() public {
-        elementBridge
-        .registerConvergentPoolAddress(
-          trancheConfigs['DAI'][0].poolAddress,
-          wrappedPositions['DAI'],
-          trancheConfigs['DAI'][0].expiry
-        );
+        setupConvergentPool(trancheConfigs['DAI'][0]);
 
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,
@@ -496,12 +586,7 @@ contract ElementTest is DSTest {
     }
 
     function testShouldRejectNonRollupCaller() public {
-        elementBridge
-        .registerConvergentPoolAddress(
-          trancheConfigs['DAI'][0].poolAddress,
-          wrappedPositions['DAI'],
-          trancheConfigs['DAI'][0].expiry
-        );
+        setupConvergentPool(trancheConfigs['DAI'][0]);
 
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,
@@ -530,12 +615,7 @@ contract ElementTest is DSTest {
     }
 
     function testShouldRejectInconsistentPool() public {
-        elementBridge
-        .registerConvergentPoolAddress(
-          trancheConfigs['DAI'][0].poolAddress,
-          wrappedPositions['DAI'],
-          trancheConfigs['DAI'][0].expiry
-        );
+        setupConvergentPool(trancheConfigs['DAI'][0]);
 
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,
@@ -564,15 +644,46 @@ contract ElementTest is DSTest {
         );
     }
 
+    function testShouldRejectInconsistentPool2() public {
+        setupConvergentPool(trancheConfigs['DAI'][0]);
+
+        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(tokens['DAI']),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(tokens['DAI']),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        uint256 depositAmount = 15000;
+        _setTokenBalance('DAI', address(elementBridge), depositAmount);
+
+        vm.expectRevert(abi.encodeWithSelector(ElementBridge.POOL_NOT_FOUND.selector));
+        vm.prank(address(rollupProcessor));
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = elementBridge.convert(
+                inputAsset,
+                emptyAsset,
+                outputAsset,
+                emptyAsset,
+                depositAmount,
+                1,
+                trancheConfigs['DAI'][1].expiry, // The second DAI expiry hasn't been registered
+                address(0)
+        );
+    }
+
     function testCanConvert() public {
+        TrancheConfig storage config = trancheConfigs['DAI'][0];
         vm.warp(timestamps[0]);
         Interaction memory interactionConfig = Interaction(
-            trancheConfigs['DAI'][0],
+            config,
             15000,
             6,
             0
         );
-        elementBridge.registerConvergentPoolAddress(interactionConfig.tranche.poolAddress, wrappedPositions['DAI'], interactionConfig.tranche.expiry);
+        setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
         uint256 balancerBefore = tokens['DAI'].balanceOf(address(balancer));
         vm.expectEmit(false, false, false, true); 
@@ -592,14 +703,15 @@ contract ElementTest is DSTest {
     }
 
     function testRejectConvertDuplicateNonce() public {
+        TrancheConfig storage config = trancheConfigs['DAI'][0];
         vm.warp(timestamps[0]);
         Interaction memory interactionConfig = Interaction(
-            trancheConfigs['DAI'][0],
+            config,
             15000,
             6,
             0
         );        
-        elementBridge.registerConvergentPoolAddress(interactionConfig.tranche.poolAddress, wrappedPositions['DAI'], interactionConfig.tranche.expiry);
+        setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount * 2);
         uint256 balancerBefore = tokens['DAI'].balanceOf(address(balancer));
         vm.expectEmit(false, false, false, true); 
@@ -638,14 +750,15 @@ contract ElementTest is DSTest {
     }
 
     function testRejectFinaliseNotReady() public {
+        TrancheConfig storage config = trancheConfigs['DAI'][0];
         vm.warp(timestamps[0]);
         Interaction memory interactionConfig = Interaction(
-            trancheConfigs['DAI'][0],
+            config,
             15000,
             6,
             0
         );
-        elementBridge.registerConvergentPoolAddress(interactionConfig.tranche.poolAddress, wrappedPositions['DAI'], interactionConfig.tranche.expiry);
+        setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
         vm.startPrank(address(rollupProcessor));
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
@@ -658,18 +771,19 @@ contract ElementTest is DSTest {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
         vm.expectRevert(abi.encodeWithSelector(ElementBridge.BRIDGE_NOT_READY.selector));
-        elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, 6, trancheConfigs['DAI'][0].expiry);
+        elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, 6, config.expiry);
     }
 
     function testCanFinaliseDaiJan22() public {
+        TrancheConfig storage config = trancheConfigs['DAI'][0];
         vm.warp(timestamps[0]); // Jan 01 2022
         Interaction memory interactionConfig = Interaction(
-            trancheConfigs['DAI'][0],
+            config,
             15000000000000000,
             6,
             0
         );
-        elementBridge.registerConvergentPoolAddress(interactionConfig.tranche.poolAddress, wrappedPositions['DAI'], interactionConfig.tranche.expiry);
+        setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
         vm.startPrank(address(rollupProcessor));
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
@@ -689,14 +803,15 @@ contract ElementTest is DSTest {
     }
 
     function testCanFinaliseDaiApr22() public {
+        TrancheConfig storage config = trancheConfigs['DAI'][1];
         vm.warp(timestamps[0]); // Jan 01 2022
         Interaction memory interactionConfig = Interaction(
-            trancheConfigs['DAI'][1],
+            config,
             15000000000000000,
             6,
             0
         );
-        elementBridge.registerConvergentPoolAddress(interactionConfig.tranche.poolAddress, wrappedPositions['DAI'], interactionConfig.tranche.expiry);
+        setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
         vm.startPrank(address(rollupProcessor));
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
@@ -716,14 +831,15 @@ contract ElementTest is DSTest {
     }
 
     function testRejectAlreadyFinalised() public {
+        TrancheConfig storage config = trancheConfigs['DAI'][0];
         vm.warp(timestamps[0]); // Jan 01 2022
         Interaction memory interactionConfig = Interaction(
-            trancheConfigs['DAI'][0],
+            config,
             15000000000000000,
             6,
             0
         );
-        elementBridge.registerConvergentPoolAddress(interactionConfig.tranche.poolAddress, wrappedPositions['DAI'], interactionConfig.tranche.expiry);
+        setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
         vm.startPrank(address(rollupProcessor));
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
@@ -737,11 +853,11 @@ contract ElementTest is DSTest {
         });
         // warp to just after the tranche expiry
         vm.warp(interactionConfig.tranche.expiry + 1);
-        elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, interactionConfig.nonce, trancheConfigs['DAI'][0].expiry);
+        elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, interactionConfig.nonce, config.expiry);
         assertZeroBalance(address(elementBridge), interactionConfig.tranche.trancheAddress);
         assertBalanceGt(address(elementBridge), address(tokens['DAI']), interactionConfig.depositAmount);
         vm.expectRevert(abi.encodeWithSelector(ElementBridge.ALREADY_FINALISED.selector));
-        elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, interactionConfig.nonce, trancheConfigs['DAI'][0].expiry);
+        elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, interactionConfig.nonce, config.expiry);
     }
 
     function testCanProcessAllExpiries() public {
