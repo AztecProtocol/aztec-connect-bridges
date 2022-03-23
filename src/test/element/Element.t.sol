@@ -936,6 +936,126 @@ contract ElementTest is DSTest {
         }
     }
 
+    function testCanFinaliseInteractionsOutOfOrder() public {
+        setupAllPools();
+        uint256 numInteractionsPerExpiry = 5;
+        uint8[5] memory depositMultipliers = [1, 2, 3, 4, 5];
+        // deposit 5 interactions against every expiry
+        Interaction[] memory interactions = new Interaction[](numTranches * numInteractionsPerExpiry);
+        uint256 nonce = 1;
+        for (uint256 assetIndex = 0; assetIndex < assets.length; assetIndex++) {
+            string storage asset = assets[assetIndex];
+            uint256 depositAmount = quantities[asset];
+            TrancheConfig[] storage configs = trancheConfigs[asset];
+            _increaseTokenBalance(asset, address(elementBridge), depositAmount * configs.length * 15);
+            for (uint256 configIndex = 0; configIndex < configs.length; configIndex++) {
+                for (uint256 interactionCount = 0; interactionCount < numInteractionsPerExpiry; interactionCount++) {
+                    TrancheConfig storage config = configs[configIndex];
+                    Interaction memory interaction = Interaction(
+                        config,
+                        depositAmount * depositMultipliers[interactionCount],
+                        nonce,
+                        0
+                    );
+                    interactions[nonce - 1] = interaction;
+                    Balances memory balancesBefore = _getBalances(interaction, address(elementBridge));
+                    (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert(asset, interaction);
+                    assertEq(isAsync, true);
+                    assertEq(outputValueA, 0);
+                    assertEq(outputValueB, 0);
+                    Balances memory balancesAfter = _getBalances(interaction, address(elementBridge));
+                    assertEq(balancesBefore.startingAsset - balancesAfter.startingAsset, balancesAfter.balancerAsset - balancesBefore.balancerAsset, 'asset balance');
+                    assertEq(balancesBefore.balancerTranche - balancesAfter.balancerTranche, balancesAfter.bridgeTranche - balancesBefore.bridgeTranche, 'tranche balance');
+                    nonce++;
+                }
+            }
+        }
+        vm.warp(expiries[expiries.length - 1]);
+
+        // we are now going to call finalise on every interaction
+        // but we are going to do it out of order
+        // we will find the middle expiry value
+        // then get the interactions for that expiry and finalise them one at a time using the middle interaction of the set
+        // keep doing this until all interactions are finalised
+        uint256[] memory expiriesCopy = new uint256[](expiries.length);
+        for (uint256 i = 0; i < expiries.length; i++) {
+            expiriesCopy[i] = expiries[i];
+        }
+
+        uint256 numExpiries = expiriesCopy.length;
+        while (numExpiries != 0) {
+            // us the middle expiry and shuffle the rest down
+            uint256 midExpiry = numExpiries / 2;
+            uint64 currentExpiry = uint64(expiriesCopy[midExpiry]);
+            for (uint256 i = midExpiry + 1; i < numExpiries; i++) {
+                expiriesCopy[i - 1] = expiriesCopy[i]; 
+            }
+            numExpiries--;
+            // we now have the expiry we wish to work with
+            // get the set of interactions for this expiry
+            Interaction[] memory interactionsForThisExpiry = new Interaction[](numInteractionsPerExpiry);
+            uint256 nextInteractionIndex = 0;
+            for (uint256 interactionIndex = 0; interactionIndex < interactions.length; interactionIndex++) {
+                Interaction memory interaction = interactions[interactionIndex];
+                if (interaction.tranche.expiry == currentExpiry) {
+                    interactionsForThisExpiry[nextInteractionIndex] = interaction;
+                    nextInteractionIndex++;
+                }
+            }
+            if (nextInteractionIndex == 0) {
+                continue;
+            }
+            // we now have the set of interactions we would like to finalise
+            uint256 numInteractions = interactionsForThisExpiry.length;
+            while (numInteractions != 0) {
+                // use the middle interaction and shuffle the rest down
+                uint256 midInteraction = numInteractions / 2;
+                Interaction memory currentInteraction = interactionsForThisExpiry[midInteraction];
+                for (uint256 i = midInteraction + 1; i < numInteractions; i++) {
+                    interactionsForThisExpiry[i - 1] = interactionsForThisExpiry[i]; 
+                }
+                numInteractions--;
+                // now finalise this interaction
+                Balances memory balancesBefore = _getBalances(currentInteraction, address(elementBridge));
+                (uint256 outputValueA, uint256 outputValueB, bool interactionCompleted) = _callElementFinalise(currentInteraction);
+                assertEq(interactionCompleted, true);
+                assertEq(outputValueB, 0);
+                assertGt(outputValueA, currentInteraction.depositAmount);
+                Balances memory balancesAfter = _getBalances(currentInteraction, address(elementBridge));
+                if (bridgeBalanceByTranche[currentInteraction.tranche.trancheAddress] == 0) {
+                    uint256 balanceMovedToBridge = balancesAfter.startingAsset - balancesBefore.startingAsset;
+                    uint256 totalDeposit = 15 * quantities[currentInteraction.tranche.asset];
+                    assertGt(balanceMovedToBridge, totalDeposit);
+                    bridgeBalanceByTranche[currentInteraction.tranche.trancheAddress] = balanceMovedToBridge;
+                }            
+                // accumulate the amount received by asset
+                totalReceiptByTranche[currentInteraction.tranche.trancheAddress] += outputValueA;
+                currentInteraction.outputValue = outputValueA;
+            }
+        }
+
+        // now verify that each interaction received the same proportion of the output as it gave in deposit
+        for (uint256 interactionIndex = 0; interactionIndex < interactions.length; interactionIndex++) {
+            Interaction memory interaction = interactions[interactionIndex];
+            uint256 percentOfDeposit = (interaction.depositAmount * 100) / (15 * quantities[interaction.tranche.asset]);
+            uint256 totalReceipt = totalReceiptByTranche[interaction.tranche.trancheAddress];
+            uint256 percentOfReceipt = (interaction.outputValue * 100) / totalReceipt;
+            int256 diff = int256(percentOfDeposit) - int256(percentOfReceipt);
+            uint256 absDiff = diff >= 0 ? uint256(diff) : uint256(-diff);
+            assertLt(absDiff, 2);
+        }
+
+        // verify rollup and bridge contract token quantities
+        for (uint256 assetIndex = 0; assetIndex < assets.length; assetIndex++) {
+            string storage asset = assets[assetIndex];
+            uint256 depositAmount = quantities[asset];
+            TrancheConfig[] storage configs = trancheConfigs[asset];
+            uint256 totalDeposited = depositAmount * configs.length;
+            uint256 assetInBridge = tokens[asset].balanceOf(address(elementBridge));
+            assertGt(assetInBridge, totalDeposited);
+        }
+    }
+
     function testMultipleInteractionsAreFinalisedOnConvert() public {
         // need to increase the gaslimit for the bridge to finalise
         rollupProcessor.setBridgeGasLimit(address(elementBridge), 800000);
