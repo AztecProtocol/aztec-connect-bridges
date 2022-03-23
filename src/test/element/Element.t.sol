@@ -1437,19 +1437,4 @@ contract ElementTest is DSTest {
         balances.balancerTranche = IERC20(interaction.tranche.trancheAddress).balanceOf(balancer);
         return balances;
     }
-
-    function _getBalancesLog(Interaction memory interaction, address startingContract) internal returns (Balances memory balances) {
-        console.log('1');
-        console.log(interaction.tranche.asset);
-        console.log('1A');
-        balances.startingAsset = IERC20(tokens[interaction.tranche.asset]).balanceOf(startingContract);
-        console.log('2');
-        balances.bridgeTranche = IERC20(interaction.tranche.trancheAddress).balanceOf(address(elementBridge));
-        console.log('3');
-        balances.balancerAsset = IERC20(tokens[interaction.tranche.asset]).balanceOf(balancer);
-        console.log('4');
-        balances.balancerTranche = IERC20(interaction.tranche.trancheAddress).balanceOf(balancer);
-        console.log('5');
-        return balances;
-    }
 }
