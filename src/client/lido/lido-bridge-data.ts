@@ -2,9 +2,24 @@ import { AssetValue, AuxDataConfig, AztecAsset, SolidityType, BridgeData, AztecA
 
 import { IWstETH, RollupProcessor, ICurvePool } from '../../../typechain-types';
 
+function rootNth(val: bigint, k?: bigint): bigint {
+  if (!k) k = 2n;
+  let o = 0n; // old approx value
+  let x = val;
+  let limit = 1000;
+
+  while (x ** k !== k && x !== o && --limit) {
+    o = x;
+    x = ((k - 1n) * x + val / x ** (k - 1n)) / k;
+  }
+
+  return x;
+}
+
 export class LidoBridgeData implements BridgeData {
   private wstETHContract: IWstETH;
   private curvePoolContract: ICurvePool;
+  public scalingFactor: bigint = 1n * 10n ** 18n;
 
   constructor(wstETHContract: IWstETH, curvePoolContract: ICurvePool) {
     this.wstETHContract = wstETHContract;
@@ -61,5 +76,29 @@ export class LidoBridgeData implements BridgeData {
       return [ETHBalance.toBigInt()];
     }
     return [0n];
+  }
+  async getExpectedYearlyOuput(
+    inputAssetA: AztecAsset,
+    inputAssetB: AztecAsset,
+    outputAssetA: AztecAsset,
+    outputAssetB: AztecAsset,
+    auxData: bigint,
+    precision: bigint,
+  ): Promise<bigint[]> {
+    const gwei = BigInt(10n ** 9n);
+    const depositContractBalance = (
+      await this.curvePoolContract.provider.getBalance('0x00000000219ab540356cBB839Cbe05303d7705Fa')
+    ).toBigInt();
+    const depositContractBalanceGwei = depositContractBalance / gwei;
+    const EPOCHS_PER_YEAR = 82180n;
+    // precision is in wei, the beacon chain deals in gwei....
+
+    const precisionGwei = precision / gwei;
+
+    const baseReward = (EPOCHS_PER_YEAR * 512n * this.scalingFactor) / rootNth(depositContractBalanceGwei);
+
+    const multiplier = ((precisionGwei * 4n * baseReward) / 32n) * 10n ** 9n;
+
+    return [multiplier / this.scalingFactor];
   }
 }

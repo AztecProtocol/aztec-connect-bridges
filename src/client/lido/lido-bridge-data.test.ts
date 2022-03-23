@@ -4,7 +4,7 @@ import { AztecAsset, AztecAssetType } from '../bridge-data';
 import { BigNumber } from 'ethers';
 
 type Mockify<T> = {
-  [P in keyof T]: jest.Mock;
+  [P in keyof T]: jest.Mock | any;
 };
 
 describe('lido bridge data', () => {
@@ -102,5 +102,37 @@ describe('lido bridge data', () => {
     );
 
     expect(expectedOutput == output[0]).toBeTruthy();
+  });
+
+  it('should correctly return the expectedOutput', async () => {
+    const depositContractBalance = BigInt(10000000n * 10n ** 18n);
+    const depositAmount = BigInt(1 * 10e18);
+
+    const expectedOutput = 525952000000000000n;
+
+    wstethContract = {
+      ...wstethContract,
+    };
+
+    curvePoolContract = {
+      ...curvePoolContract,
+      provider: {
+        ...curvePoolContract.provider,
+        getBalance: jest.fn().mockResolvedValue(BigNumber.from(depositContractBalance)),
+      },
+    };
+
+    lidoBridgeData = new LidoBridgeData(wstethContract as any, curvePoolContract as any);
+
+    const output = await lidoBridgeData.getExpectedYearlyOuput(
+      wstETHAsset,
+      emptyAsset,
+      ethAsset,
+      emptyAsset,
+      0n,
+      depositAmount,
+    );
+
+    expect(expectedOutput).toBe(output[0]);
   });
 });
