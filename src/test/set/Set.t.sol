@@ -3,22 +3,21 @@ pragma solidity 0.8.10;
 
 import "../console.sol";
 import "ds-test/test.sol";
-import {Vm} from "../Vm.sol";
+import { Vm } from "../Vm.sol";
 
-import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
-import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
+import { DefiBridgeProxy } from "./../../aztec/DefiBridgeProxy.sol";
+import { RollupProcessor } from "./../../aztec/RollupProcessor.sol";
 
 // Aave-specific imports
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {IssuanceBridge} from "./../../bridges/set/IssuanceBridge.sol";
-import {IController} from "./../../bridges/set/interfaces/IController.sol";
-import {ISetToken} from "./../../bridges/set/interfaces/ISetToken.sol";
-import {AztecTypes} from "./../../aztec/AztecTypes.sol";
+import { IssuanceBridge } from "./../../bridges/set/IssuanceBridge.sol";
+import { IController } from "./../../bridges/set/interfaces/IController.sol";
+import { ISetToken } from "./../../bridges/set/interfaces/ISetToken.sol";
+import { AztecTypes } from "./../../aztec/AztecTypes.sol";
 
 // Runs only yhis tests (and print traces for failed tests):
 // $ forge test --match-contract SetTest -vvv 
-// $ yarn test:contracts --match-contract Set -vvv
 
 contract SetTest is DSTest {
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);

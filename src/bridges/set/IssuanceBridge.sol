@@ -3,17 +3,16 @@
 pragma solidity >=0.6.10 <=0.8.10;
 pragma experimental ABIEncoderV2;
 
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
-import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
+import { AztecTypes } from "../../aztec/AztecTypes.sol";
 
-import {ISetToken} from "./interfaces/ISetToken.sol";
-import {IController} from "./interfaces/IController.sol";
-import {IExchangeIssuance} from "./interfaces/IExchangeIssuance.sol";
-
-import "../../test/console.sol";
+import { IDefiBridge } from "../../interfaces/IDefiBridge.sol";
+import { ISetToken } from "./interfaces/ISetToken.sol";
+import { IController } from "./interfaces/IController.sol";
+import { IExchangeIssuance } from "./interfaces/IExchangeIssuance.sol";
+import { IRollupProcessor } from "../../interfaces/IRollupProcessor.sol";
 
 contract IssuanceBridge is IDefiBridge {
     using SafeMath for uint256;
@@ -83,7 +82,6 @@ contract IssuanceBridge is IDefiBridge {
             (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH ||
                 outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20)
         ) {
-            console.log("BRIDGE: Redeem SET and receive ETH or ERC20");
             // Check that spending of the given SetToken is approved
             require(
                 IERC20(inputAssetA.erc20Address).approve(
@@ -94,21 +92,18 @@ contract IssuanceBridge is IDefiBridge {
             );
 
             // user wants to receive ETH
-            // TODO this does not work.
-            // The transaction reverts in AaveTokenV2Mintalbe.sol with error:
-            // "Address: unable to send value, recipient may have reverted"
             if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
-                console.log("BRIDGE: Redeem SET and receive ETH ");
                 outputValueA = exchangeIssuance.redeemExactSetForETH(
                     ISetToken(address(inputAssetA.erc20Address)),
                     inputValue, // _amountSetToken
                     0 // __minEthOut
                 );
+                // Send ETH to rollup processor
+                IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
             }
 
             // user wants to receive ERC20
             if (outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
-                console.log("BRIDGE: Redeem SET and receive ERC20 ");
                 outputValueA = exchangeIssuance.redeemExactSetForToken(
                     ISetToken(address(inputAssetA.erc20Address)), // _setToken,
                     IERC20(address(outputAssetA.erc20Address)), // _outputToken,
@@ -134,7 +129,6 @@ contract IssuanceBridge is IDefiBridge {
             !setController.isSet(address(inputAssetA.erc20Address)) &&
             setController.isSet(address(outputAssetA.erc20Address))
         ) {
-            console.log("BRIDGE: Issue SET for ERC20");
             // Check that spending of the ERC20 is approved
             require(
                 IERC20(inputAssetA.erc20Address).approve(
@@ -167,7 +161,6 @@ contract IssuanceBridge is IDefiBridge {
             inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
             setController.isSet(address(outputAssetA.erc20Address))
         ) {
-            console.log("BRIDGE: Issue SET for ETH");
             // issue SetTokens for a given amount of ETH (=inputValue)
             outputValueA = exchangeIssuance.issueSetForExactETH{
                 value: inputValue
@@ -185,12 +178,12 @@ contract IssuanceBridge is IDefiBridge {
                 "IssuanceBridge: APPROVE_FAILED"
             );
         } else {
-            console.log(
-                "INCOMPATIBLE_ASSET_PAIR - transaction will be reverted"
-            );
             revert("IssuanceBridge: INCOMPATIBLE_ASSET_PAIR");
         }
     }
+
+    // Empty fallback function in order to receive ETH 
+    receive() external payable {}
     
     function finalise(
         AztecTypes.AztecAsset calldata inputAssetA,
