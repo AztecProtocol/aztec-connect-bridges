@@ -760,7 +760,6 @@ contract ElementTest is DSTest {
         );
         setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
-        vm.startPrank(address(rollupProcessor));
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
         assertEq(isAsync, true);
         assertEq(outputValueA, 0);
@@ -771,8 +770,8 @@ contract ElementTest is DSTest {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
         vm.expectRevert(abi.encodeWithSelector(ElementBridge.BRIDGE_NOT_READY.selector));
+        vm.prank(address(rollupProcessor));
         elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, 6, config.expiry);
-        vm.stopPrank();
 
     }
 
@@ -787,7 +786,6 @@ contract ElementTest is DSTest {
         );
         setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
-        vm.startPrank(address(rollupProcessor));
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
         assertEq(isAsync, true);
         assertEq(outputValueA, 0);
@@ -799,10 +797,10 @@ contract ElementTest is DSTest {
         });
         // warp to just after the tranche expiry
         vm.warp(interactionConfig.tranche.expiry + 1);
+        vm.prank(address(rollupProcessor));
         elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, interactionConfig.nonce, interactionConfig.tranche.expiry);
         assertZeroBalance(address(elementBridge), interactionConfig.tranche.trancheAddress);
         assertBalanceGt(address(elementBridge), address(tokens['DAI']), interactionConfig.depositAmount);
-        vm.stopPrank();
     }
 
     function testCanFinaliseDaiApr22() public {
@@ -816,7 +814,6 @@ contract ElementTest is DSTest {
         );
         setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
-        vm.startPrank(address(rollupProcessor));
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
         assertEq(isAsync, true);
         assertEq(outputValueA, 0);
@@ -828,10 +825,10 @@ contract ElementTest is DSTest {
         });
         // warp to just after the tranche expiry
         vm.warp(interactionConfig.tranche.expiry + 1);
+        vm.prank(address(rollupProcessor));
         elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, interactionConfig.nonce, interactionConfig.tranche.expiry);
         assertZeroBalance(address(elementBridge), interactionConfig.tranche.trancheAddress);
         assertBalanceGt(address(elementBridge), address(tokens['DAI']), interactionConfig.depositAmount);
-        vm.stopPrank();
     }
 
     function testRejectAlreadyFinalised() public {
@@ -845,7 +842,6 @@ contract ElementTest is DSTest {
         );
         setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
-        vm.startPrank(address(rollupProcessor));
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
         assertEq(isAsync, true);
         assertEq(outputValueA, 0);
@@ -857,12 +853,13 @@ contract ElementTest is DSTest {
         });
         // warp to just after the tranche expiry
         vm.warp(interactionConfig.tranche.expiry + 1);
+        vm.prank(address(rollupProcessor));
         elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, interactionConfig.nonce, config.expiry);
         assertZeroBalance(address(elementBridge), interactionConfig.tranche.trancheAddress);
         assertBalanceGt(address(elementBridge), address(tokens['DAI']), interactionConfig.depositAmount);
         vm.expectRevert(abi.encodeWithSelector(ElementBridge.ALREADY_FINALISED.selector));
+        vm.prank(address(rollupProcessor));
         elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, interactionConfig.nonce, config.expiry);
-        vm.stopPrank();
 
     }
 
