@@ -168,7 +168,7 @@ contract ElementTest is DSTest {
 
         //addTrancheConfig('EURSCRV', 0x2A8f5649DE50462fF9699Ccc75A2Fb0b53447503, 0x6AC02eCD0c2A23B11f9AFb3b3Aaf237169475cac, 1644604852);
         //addTrancheConfig('LUSD3CRV-F', 0x0740A6CfB9468B8b53070C0B327099293DCCB82d, 0x56F30398d13F111401d6e7ffE758254a0946687d, 1651264326);
-        addTrancheConfig('CRV3CRYPTO', 0x285328906D0D33cb757c1E471F5e2176683247c2, 0x6Dd0F7c8F4793ed2531c0df4fEA8633a21fDcFf4, 1651240496);        
+        addTrancheConfig('CRV3CRYPTO', 0x285328906D0D33cb757c1E471F5e2176683247c2, 0x6Dd0F7c8F4793ed2531c0df4fEA8633a21fDcFf4, 1651240496);
 
         addTrancheConfig('MIM-3LP3CRV-F', 0x418De6227499181B045CAdf554030722E460881a, 0x09b1b33BaD0e87454ff05696b1151BFbD208a43F, 1644601070);
         addTrancheConfig('MIM-3LP3CRV-F', 0xC63958D9D01eFA6B8266b1df3862c6323CbDb52B, 0x14792d3F6FcF2661795d1E08ef818bf612708BbF, 1651247155);
@@ -197,7 +197,7 @@ contract ElementTest is DSTest {
     function setupAssetPools(string memory asset) internal {
         TrancheConfig[] storage configs = trancheConfigs[asset];
         for (uint256 configIndex = 0; configIndex < configs.length; configIndex++) {
-            TrancheConfig storage config = configs[configIndex];            
+            TrancheConfig storage config = configs[configIndex];
             setupConvergentPool(config);
         }
     }
@@ -250,7 +250,7 @@ contract ElementTest is DSTest {
         elementDeploymentValidator.validateAddresses(wrappedPositions['USDC'], config.poolAddress);
 
         vm.expectEmit(false, false, false, true);
-        emit PoolAdded(config.poolAddress, wrappedPositions['USDC'], config.expiry);        
+        emit PoolAdded(config.poolAddress, wrappedPositions['USDC'], config.expiry);
 
         elementBridge
         .registerConvergentPoolAddress(
@@ -271,7 +271,7 @@ contract ElementTest is DSTest {
           config.poolAddress,
           wrappedPositions['USDC'],
           config.expiry
-        );        
+        );
     }
 
     function testCanConfigureMultiplePools() public {
@@ -284,7 +284,7 @@ contract ElementTest is DSTest {
         elementDeploymentValidator.validateAddresses(wrappedPositions['DAI'], trancheConfigs['DAI'][0].poolAddress);
         elementDeploymentValidator.validateAddresses(wrappedPositions['DAI'], trancheConfigs['DAI'][1].poolAddress);
 
-        vm.expectEmit(false, false, false, true); 
+        vm.expectEmit(false, false, false, true);
         emit PoolAdded(trancheConfigs['USDC'][0].poolAddress, wrappedPositions['USDC'], trancheConfigs['USDC'][0].expiry);
 
         elementBridge
@@ -306,7 +306,7 @@ contract ElementTest is DSTest {
           trancheConfigs['DAI'][1].poolAddress,
           wrappedPositions['DAI'],
           trancheConfigs['DAI'][1].expiry
-        );   
+        );
     }
 
     function testRejectsWrongExpiryForPool() public {
@@ -315,7 +315,7 @@ contract ElementTest is DSTest {
         .registerConvergentPoolAddress(
           trancheConfigs['DAI'][0].poolAddress,
           wrappedPositions['DAI'],
-          trancheConfigs['DAI'][1].expiry // expiry is for a different pool to 
+          trancheConfigs['DAI'][1].expiry // expiry is for a different pool to
         );
     }
 
@@ -406,7 +406,7 @@ contract ElementTest is DSTest {
 
         // register second DAI pair
         elementDeploymentValidator.validateAddresses(wrappedPositions['DAI'], trancheConfigs['DAI'][1].poolAddress);
-        
+
         // the first DAI pair isn't registered and should revert
         vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNREGISTERED_PAIR.selector));
         elementBridge
@@ -426,7 +426,7 @@ contract ElementTest is DSTest {
 
         // register first DAI pair
         elementDeploymentValidator.validateAddresses(wrappedPositions['DAI'], trancheConfigs['DAI'][0].poolAddress);
-        
+
         // the second DAI pair isn't registered and should revert
         vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNREGISTERED_PAIR.selector));
         elementBridge
@@ -686,7 +686,7 @@ contract ElementTest is DSTest {
         setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
         uint256 balancerBefore = tokens['DAI'].balanceOf(address(balancer));
-        vm.expectEmit(false, false, false, true); 
+        vm.expectEmit(false, false, false, true);
         emit Convert(interactionConfig.nonce, interactionConfig.depositAmount);
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
         assertEq(isAsync, true);
@@ -710,11 +710,11 @@ contract ElementTest is DSTest {
             15000,
             6,
             0
-        );        
+        );
         setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount * 2);
         uint256 balancerBefore = tokens['DAI'].balanceOf(address(balancer));
-        vm.expectEmit(false, false, false, true); 
+        vm.expectEmit(false, false, false, true);
         emit Convert(interactionConfig.nonce, interactionConfig.depositAmount);
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
         assertEq(isAsync, true);
@@ -760,7 +760,6 @@ contract ElementTest is DSTest {
         );
         setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
-        vm.startPrank(address(rollupProcessor));
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
         assertEq(isAsync, true);
         assertEq(outputValueA, 0);
@@ -771,7 +770,9 @@ contract ElementTest is DSTest {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
         vm.expectRevert(abi.encodeWithSelector(ElementBridge.BRIDGE_NOT_READY.selector));
+        vm.prank(address(rollupProcessor));
         elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, 6, config.expiry);
+
     }
 
     function testCanFinaliseDaiJan22() public {
@@ -785,7 +786,6 @@ contract ElementTest is DSTest {
         );
         setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
-        vm.startPrank(address(rollupProcessor));
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
         assertEq(isAsync, true);
         assertEq(outputValueA, 0);
@@ -797,6 +797,7 @@ contract ElementTest is DSTest {
         });
         // warp to just after the tranche expiry
         vm.warp(interactionConfig.tranche.expiry + 1);
+        vm.prank(address(rollupProcessor));
         elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, interactionConfig.nonce, interactionConfig.tranche.expiry);
         assertZeroBalance(address(elementBridge), interactionConfig.tranche.trancheAddress);
         assertBalanceGt(address(elementBridge), address(tokens['DAI']), interactionConfig.depositAmount);
@@ -813,7 +814,6 @@ contract ElementTest is DSTest {
         );
         setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
-        vm.startPrank(address(rollupProcessor));
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
         assertEq(isAsync, true);
         assertEq(outputValueA, 0);
@@ -825,6 +825,7 @@ contract ElementTest is DSTest {
         });
         // warp to just after the tranche expiry
         vm.warp(interactionConfig.tranche.expiry + 1);
+        vm.prank(address(rollupProcessor));
         elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, interactionConfig.nonce, interactionConfig.tranche.expiry);
         assertZeroBalance(address(elementBridge), interactionConfig.tranche.trancheAddress);
         assertBalanceGt(address(elementBridge), address(tokens['DAI']), interactionConfig.depositAmount);
@@ -841,7 +842,6 @@ contract ElementTest is DSTest {
         );
         setupConvergentPool(config);
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
-        vm.startPrank(address(rollupProcessor));
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
         assertEq(isAsync, true);
         assertEq(outputValueA, 0);
@@ -853,11 +853,14 @@ contract ElementTest is DSTest {
         });
         // warp to just after the tranche expiry
         vm.warp(interactionConfig.tranche.expiry + 1);
+        vm.prank(address(rollupProcessor));
         elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, interactionConfig.nonce, config.expiry);
         assertZeroBalance(address(elementBridge), interactionConfig.tranche.trancheAddress);
         assertBalanceGt(address(elementBridge), address(tokens['DAI']), interactionConfig.depositAmount);
         vm.expectRevert(abi.encodeWithSelector(ElementBridge.ALREADY_FINALISED.selector));
+        vm.prank(address(rollupProcessor));
         elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, interactionConfig.nonce, config.expiry);
+
     }
 
     function testCanProcessAllExpiries() public {
@@ -908,7 +911,7 @@ contract ElementTest is DSTest {
                 uint256 totalDeposit = 15 * quantities[interaction.tranche.asset];
                 assertGt(balanceMovedToBridge, totalDeposit);
                 bridgeBalanceByTranche[interaction.tranche.trancheAddress] = balanceMovedToBridge;
-            }            
+            }
             // accumulate the amount received by asset
             totalReceiptByTranche[interaction.tranche.trancheAddress] += outputValueA;
             interaction.outputValue = outputValueA;
@@ -988,7 +991,7 @@ contract ElementTest is DSTest {
             uint256 midExpiry = numExpiries / 2;
             uint64 currentExpiry = uint64(expiriesCopy[midExpiry]);
             for (uint256 i = midExpiry + 1; i < numExpiries; i++) {
-                expiriesCopy[i - 1] = expiriesCopy[i]; 
+                expiriesCopy[i - 1] = expiriesCopy[i];
             }
             numExpiries--;
             // we now have the expiry we wish to work with
@@ -1012,7 +1015,7 @@ contract ElementTest is DSTest {
                 uint256 midInteraction = numInteractions / 2;
                 Interaction memory currentInteraction = interactionsForThisExpiry[midInteraction];
                 for (uint256 i = midInteraction + 1; i < numInteractions; i++) {
-                    interactionsForThisExpiry[i - 1] = interactionsForThisExpiry[i]; 
+                    interactionsForThisExpiry[i - 1] = interactionsForThisExpiry[i];
                 }
                 numInteractions--;
                 // now finalise this interaction
@@ -1027,7 +1030,7 @@ contract ElementTest is DSTest {
                     uint256 totalDeposit = 15 * quantities[currentInteraction.tranche.asset];
                     assertGt(balanceMovedToBridge, totalDeposit);
                     bridgeBalanceByTranche[currentInteraction.tranche.trancheAddress] = balanceMovedToBridge;
-                }            
+                }
                 // accumulate the amount received by asset
                 totalReceiptByTranche[currentInteraction.tranche.trancheAddress] += outputValueA;
                 currentInteraction.outputValue = outputValueA;
@@ -1308,7 +1311,7 @@ contract ElementTest is DSTest {
         outputValueB = outputValueBLocal;
         interactionCompleted = interactionCompletedLocal;
     }
-    
+
     function _callRollupConvert(string memory asset, Interaction memory interaction) internal returns (
         uint256 outputValueA,
         uint256 outputValueB,
@@ -1361,7 +1364,7 @@ contract ElementTest is DSTest {
 
     function getBalance(address owner, address erc20) internal view returns (uint256) {
         return IERC20(erc20).balanceOf(owner);
-    } 
+    }
 
     function assertZeroBalance(address owner, address erc20) internal {
         assertEq(getBalance(owner, erc20), 0);
@@ -1409,7 +1412,7 @@ contract ElementTest is DSTest {
         address tokenAddress = address(tokens[asset]);
         uint256 currentBalance = tokens[asset].balanceOf(account);
         uint256 newBalance = currentBalance + additionalBalance;
-        
+
 
         vm.store(
             tokenAddress,
@@ -1423,7 +1426,7 @@ contract ElementTest is DSTest {
         string memory usdc = 'USDC';
         if (!compareStrings(asset, usdc)) {
             bytes4 selector = bytes4(keccak256(abi.encodePacked('balanceOf(address)')));
-            uint256 foundSlot = stdStore.target(address(tokens[asset])).sig(selector).with_key(account).find();        
+            uint256 foundSlot = stdStore.target(address(tokens[asset])).sig(selector).with_key(account).find();
             slot = bytes32(foundSlot);
         } else {
             slot = keccak256(abi.encode(account, uint256(9)));

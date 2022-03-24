@@ -1,28 +1,25 @@
-import { AssetValue, AuxDataConfig, AztecAsset, SolidityType, BridgeData, AztecAssetType } from '../bridge-data';
+import {
+  AssetValue,
+  AuxDataConfig,
+  AztecAsset,
+  SolidityType,
+  BridgeData,
+  AztecAssetType,
+  YieldBridgeData,
+} from '../bridge-data';
 
-import { IWstETH, RollupProcessor, ICurvePool } from '../../../typechain-types';
+import { IWstETH, ILidoOracle, ICurvePool } from '../../../typechain-types';
 
-function rootNth(val: bigint, k?: bigint): bigint {
-  if (!k) k = 2n;
-  let o = 0n; // old approx value
-  let x = val;
-  let limit = 1000;
+export class LidoBridgeData implements YieldBridgeData {
 
-  while (x ** k !== k && x !== o && --limit) {
-    o = x;
-    x = ((k - 1n) * x + val / x ** (k - 1n)) / k;
-  }
-
-  return x;
-}
-
-export class LidoBridgeData implements BridgeData {
   private wstETHContract: IWstETH;
+  private lidoOracleContract: ILidoOracle;
   private curvePoolContract: ICurvePool;
   public scalingFactor: bigint = 1n * 10n ** 18n;
 
-  constructor(wstETHContract: IWstETH, curvePoolContract: ICurvePool) {
+  constructor(wstETHContract: IWstETH, lidoOracleContract: ILidoOracle, curvePoolContract: ICurvePool) {
     this.wstETHContract = wstETHContract;
+    this.lidoOracleContract = lidoOracleContract;
     this.curvePoolContract = curvePoolContract;
   }
 
@@ -85,20 +82,36 @@ export class LidoBridgeData implements BridgeData {
     auxData: bigint,
     precision: bigint,
   ): Promise<bigint[]> {
-    const gwei = BigInt(10n ** 9n);
-    const depositContractBalance = (
-      await this.curvePoolContract.provider.getBalance('0x00000000219ab540356cBB839Cbe05303d7705Fa')
-    ).toBigInt();
-    const depositContractBalanceGwei = depositContractBalance / gwei;
-    const EPOCHS_PER_YEAR = 82180n;
-    // precision is in wei, the beacon chain deals in gwei....
+    const YEAR = 60n * 60n * 24n * 365n;
+    if (outputAssetA.assetType === AztecAssetType.ETH) {
+      const { postTotalPooledEther, preTotalPooledEther, timeElapsed } =
+        await this.lidoOracleContract.getLastCompletedReportDelta();
 
-    const precisionGwei = precision / gwei;
+      const scaledAPR =
+        ((postTotalPooledEther.toBigInt() - preTotalPooledEther.toBigInt()) * YEAR * this.scalingFactor) /
+        (preTotalPooledEther.toBigInt() * timeElapsed.toBigInt());
 
-    const baseReward = (EPOCHS_PER_YEAR * 512n * this.scalingFactor) / rootNth(depositContractBalanceGwei);
+      const expectedYearlyOutput = (precision * scaledAPR) / this.scalingFactor;
 
-    const multiplier = ((precisionGwei * 4n * baseReward) / 32n) * 10n ** 9n;
+      return [expectedYearlyOutput];
+    }
+    return [0n];
+  }
 
-    return [multiplier / this.scalingFactor];
+  async getMarketSize(
+    inputAssetA: AztecAsset,
+    inputAssetB: AztecAsset,
+    outputAssetA: AztecAsset,
+    outputAssetB: AztecAsset,
+    auxData: bigint,
+  ): Promise<AssetValue[]> {
+    const { postTotalPooledEther } = await this.lidoOracleContract.getLastCompletedReportDelta();
+    return [
+      {
+        assetId: inputAssetA.id,
+        amount: postTotalPooledEther.toBigInt(),
+      },
+    ];
+
   }
 }
