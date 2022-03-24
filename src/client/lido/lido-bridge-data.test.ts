@@ -108,8 +108,8 @@ describe('lido bridge data', () => {
 
   it('should correctly return the expectedOutput', async () => {
     const depositAmount = BigInt(1 * 10e18);
-
     const expectedOutput = 432001397269423610n;
+
 
     wstethContract = {
       ...wstethContract,
