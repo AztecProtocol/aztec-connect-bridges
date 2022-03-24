@@ -11,6 +11,7 @@ import {
 import { IWstETH, ILidoOracle, ICurvePool } from '../../../typechain-types';
 
 export class LidoBridgeData implements YieldBridgeData {
+
   private wstETHContract: IWstETH;
   private lidoOracleContract: ILidoOracle;
   private curvePoolContract: ICurvePool;
@@ -111,5 +112,6 @@ export class LidoBridgeData implements YieldBridgeData {
         amount: postTotalPooledEther.toBigInt(),
       },
     ];
+
   }
 }
