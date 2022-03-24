@@ -27,6 +27,10 @@ interface ILido {
     function submit(address _referral) external payable returns (uint256);
 }
 
+interface ILidoOracle {
+    function getLastCompletedReportDelta() external view returns (uint256 postTotalPooledEther, uint256 preTotalPooledEther, uint256 timeElapsed);
+}
+
 interface IWstETH {
     function wrap(uint256 _stETHAmount) external returns (uint256);
     function unwrap(uint256 _wstETHAmount) external returns (uint256);
