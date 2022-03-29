@@ -108,14 +108,22 @@ describe('lido bridge data', () => {
 
   it('should correctly return the expectedYearlyOutput', async () => {
     const depositAmount = BigInt(1 * 10e18);
-    const expectedOutput = 4536014671328947905n;
+    const expectedOutput = 10432001397269423610n;
 
     wstethContract = {
       ...wstethContract,
+      getStETHByWstETH: jest.fn().mockImplementation(async input => {
+        // force WSTETH and STETH to have the same value
+        return BigNumber.from((BigInt(input) * 100n) / 100n);
+      }),
     };
 
     curvePoolContract = {
       ...curvePoolContract,
+      get_dy: jest.fn().mockImplementation(async (x, y, input) => {
+        // force ETH and STETH to have the same value
+        return BigNumber.from((BigInt(input) * 100n) / 100n);
+      }),
     };
 
     lidoOracleContract = {
