@@ -91,7 +91,7 @@ export class LidoBridgeData implements YieldBridgeData {
         (preTotalPooledEther.toBigInt() * timeElapsed.toBigInt());
       const stETHBalance = await this.wstETHContract.getStETHByWstETH(precision);
       const ETHBalance = (await this.curvePoolContract.get_dy(1, 0, stETHBalance)).toBigInt();
-      const expectedYearlyOutputETH = (ETHBalance * scaledAPR) / this.scalingFactor;
+      const expectedYearlyOutputETH = ETHBalance + (ETHBalance * scaledAPR) / this.scalingFactor;
 
       return [expectedYearlyOutputETH];
     }
