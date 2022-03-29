@@ -110,6 +110,7 @@ describe('lido bridge data', () => {
     const depositAmount = BigInt(1 * 10e18);
     const expectedOutput = 10432001397269423610n;
 
+
     wstethContract = {
       ...wstethContract,
       getStETHByWstETH: jest.fn().mockImplementation(async input => {
