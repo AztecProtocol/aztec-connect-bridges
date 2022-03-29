@@ -11,7 +11,6 @@ import {
 import { IWstETH, ILidoOracle, ICurvePool } from '../../../typechain-types';
 
 export class LidoBridgeData implements YieldBridgeData {
-
   private wstETHContract: IWstETH;
   private lidoOracleContract: ILidoOracle;
   private curvePoolContract: ICurvePool;
@@ -90,10 +89,11 @@ export class LidoBridgeData implements YieldBridgeData {
       const scaledAPR =
         ((postTotalPooledEther.toBigInt() - preTotalPooledEther.toBigInt()) * YEAR * this.scalingFactor) /
         (preTotalPooledEther.toBigInt() * timeElapsed.toBigInt());
+      const stETHBalance = await this.wstETHContract.getStETHByWstETH(precision);
+      const ETHBalance = (await this.curvePoolContract.get_dy(1, 0, stETHBalance)).toBigInt();
+      const expectedYearlyOutputETH = (ETHBalance * scaledAPR) / this.scalingFactor;
 
-      const expectedYearlyOutput = (precision * scaledAPR) / this.scalingFactor;
-
-      return [expectedYearlyOutput];
+      return [expectedYearlyOutputETH];
     }
     return [0n];
   }
@@ -112,6 +112,5 @@ export class LidoBridgeData implements YieldBridgeData {
         amount: postTotalPooledEther.toBigInt(),
       },
     ];
-
   }
 }

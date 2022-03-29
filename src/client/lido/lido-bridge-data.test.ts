@@ -106,10 +106,9 @@ describe('lido bridge data', () => {
     expect(expectedOutput == output[0]).toBeTruthy();
   });
 
-  it('should correctly return the expectedOutput', async () => {
+  it('should correctly return the expectedYearlyOutput', async () => {
     const depositAmount = BigInt(1 * 10e18);
-    const expectedOutput = 432001397269423610n;
-
+    const expectedOutput = 4536014671328947905n;
 
     wstethContract = {
       ...wstethContract,
@@ -138,7 +137,6 @@ describe('lido bridge data', () => {
       0n,
       depositAmount,
     );
-
     expect(expectedOutput).toBe(output[0]);
   });
 });
