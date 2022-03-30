@@ -21,7 +21,6 @@ jobs:
             export PATH=/home/circleci/.forge/bin:$PATH
             yarn setup:foundry
             yarn compile:typechain
-            yarn test:contracts
       - run:
           name: Test Contracts No Element
           shell: /bin/bash
