@@ -24,11 +24,15 @@ export type FundManagement = {
   toInternalBalance: boolean;
 };
 
+function divide(a: bigint, b: bigint, precision: bigint) {
+  return (a * precision) / b;
+}
+
 export class ElementBridgeData implements AsyncYieldBridgeData {
   private elementBridgeContract: ElementBridge;
   private rollupContract: RollupProcessor;
   private balancerContract: IVault;
-  public scalingFactor = BigInt(1000000000);
+  public scalingFactor = BigInt(1n * 10n ** 18n);
 
   constructor(elementBridge: ElementBridge, balancer: IVault, rollupContract: RollupProcessor) {
     this.elementBridgeContract = elementBridge;
@@ -54,17 +58,17 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
       args: [bridgeId, , totalInputValue],
     } = rollupInteraction;
 
-    const now = Date.now();
+    const now = Math.floor(Date.now() / 1000);
     const totalInterest = endValue.toBigInt() - totalInputValue.toBigInt();
     const elapsedTime = BigInt(now - entryTimestamp);
     const totalTime = exitTimestamp.toBigInt() - BigInt(entryTimestamp);
+    const timeRatio = divide(elapsedTime, totalTime, this.scalingFactor);
+    const accruedInterst = (totalInterest * timeRatio) / this.scalingFactor;
+
     return [
       {
         assetId: BigInt(BridgeId.fromBigInt(bridgeId.toBigInt()).inputAssetId),
-        amount:
-          totalInputValue.toBigInt() +
-          (totalInterest * (((elapsedTime * this.scalingFactor) / totalTime) * this.scalingFactor)) /
-            this.scalingFactor,
+        amount: totalInputValue.toBigInt() + accruedInterst,
       },
     ];
   }
@@ -136,12 +140,12 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
 
     const outputAssetAValue = deltas[1];
 
-    const timeToExpiration = auxData - BigInt(Date.now());
+    const timeToExpiration = auxData - BigInt(Math.floor(Date.now() / 1000));
 
-    const YEAR = 60 * 60 * 24 * 365;
-    const interest = BigInt(-outputAssetAValue.toBigInt() - precision);
-    const scaledOutput = (interest * this.scalingFactor) / BigInt(timeToExpiration);
-    const yearlyOutput = (scaledOutput * BigInt(YEAR)) / this.scalingFactor;
+    const YEAR = 60n * 60n * 24n * 365n;
+    const interest = -outputAssetAValue.toBigInt() - precision;
+    const scaledOutput = divide(interest, timeToExpiration, this.scalingFactor);
+    const yearlyOutput = (scaledOutput * YEAR) / this.scalingFactor;
 
     return [yearlyOutput + precision, BigInt(0)];
   }
