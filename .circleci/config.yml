@@ -23,13 +23,21 @@ jobs:
             yarn compile:typechain
             yarn test:contracts
       - run:
-          name: Test Contracts
+          name: Test Contracts No Element
           shell: /bin/bash
           command: |
             yarn config set script-shell /bin/bash
             export PATH=/home/circleci/.foundry/bin:$PATH
             export PATH=/home/circleci/.forge/bin:$PATH
-            yarn test:contracts
+            yarn test:contracts:noelement
+      - run:
+          name: Test Element
+          shell: /bin/bash
+          command: |
+            yarn config set script-shell /bin/bash
+            export PATH=/home/circleci/.foundry/bin:$PATH
+            export PATH=/home/circleci/.forge/bin:$PATH
+            yarn test:element
       - run:
           name: Test Client
           shell: /bin/bash
