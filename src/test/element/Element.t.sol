@@ -1000,8 +1000,6 @@ contract ElementTest is DSTest {
     }
 
     function testMultipleInteractionsFailToFinaliseIfInsufficientBalance() public {
-        // need to increase the gaslimit for the bridge to finalise
-        rollupProcessor.setBridgeGasLimit(address(elementBridge), 800000);
         addTrancheConfig('EURSCRV', 0x2A8f5649DE50462fF9699Ccc75A2Fb0b53447503, 0x6AC02eCD0c2A23B11f9AFb3b3Aaf237169475cac, 1644604852);
         setupAssetPools('DAI');
         setupAssetPools('EURSCRV');
@@ -1042,6 +1040,7 @@ contract ElementTest is DSTest {
             0
         );
         _increaseTokenBalance(asset, address(rollupProcessor), daiDepositAmount);
+        // the next call wo convert will attempt to finalise the EUR tranche above. But they will fail as there is insufficient balance in the yearn vault
         // we expect 5 Finalise events to be emitted but we can't test the data values
         for (uint256 i = 0; i <  numEurInteractions; i++) {
             vm.expectEmit(false, false, false, false);
@@ -1151,6 +1150,284 @@ contract ElementTest is DSTest {
         }
     }
 
+    function testInteractionsFailOnSpeedbump() public {
+        addTrancheConfig('EURSCRV', 0x2A8f5649DE50462fF9699Ccc75A2Fb0b53447503, 0x6AC02eCD0c2A23B11f9AFb3b3Aaf237169475cac, 1644604852);
+        setupAssetPools('DAI');
+        setupAssetPools('EURSCRV');
+        string memory asset = 'EURSCRV';
+        uint256 eurDepositAmount = 1;
+        TrancheConfig storage config = trancheConfigs[asset][0];
+        uint256 numEurInteractions = 5;
+        uint8[5] memory depositMultipliers = [1, 2, 3, 4, 5];
+        uint256 nonce = 1;
+        Interaction[] memory interactions = new Interaction[](numEurInteractions);
+        _increaseTokenBalance(asset, address(rollupProcessor), eurDepositAmount * 15);
+        for (uint256 i = 0; i < numEurInteractions; i++) {
+            Interaction memory interaction = Interaction(
+                config,
+                eurDepositAmount * depositMultipliers[i],
+                nonce,
+                0
+            );
+            interactions[nonce - 1] = interaction;
+            {
+                (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, interaction);
+                assertEq(isAsync, true);
+                assertEq(outputValueA, 0);
+                assertEq(outputValueB, 0);
+            }
+            nonce++;
+        }
+        Balances memory balancesBridgeAfterConvert = _getBalances(interactions[0], address(elementBridge));
+
+        vm.warp(config.expiry + 1);
+
+        // now set the speedbump
+        _setSpeedbumpSlot(asset, config.expiry, config.expiry + 1);
+
+        asset = 'DAI';
+        uint256 daiDepositAmount = quantities[asset];
+        config = trancheConfigs[asset][1];
+        Interaction memory daiInteraction = Interaction(
+            config,
+            daiDepositAmount,
+            nonce,
+            0
+        );
+        _increaseTokenBalance(asset, address(rollupProcessor), daiDepositAmount);
+        // the next call wo convert will attempt to finalise the EUR tranche above. But they will fail as the tranche has the speedbump set
+        // we expect 5 Finalise events to be emitted but we can't test the data values
+        for (uint256 i = 0; i <  numEurInteractions; i++) {
+            vm.expectEmit(false, false, false, false);
+            emit Finalise(1 + i, true, '');
+        }
+        {
+            (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, daiInteraction);
+            assertEq(isAsync, true);
+            assertEq(outputValueA, 0);
+            assertEq(outputValueB, 0);
+        }
+        // this will get the balances for EUR
+        Balances memory balancesBridgeAfterFinalise = _getBalances(interactions[0], address(elementBridge));
+        // the bridge's balance of the tranche token should now be the same as after the initial calls to convert
+        assertEq(balancesBridgeAfterFinalise.bridgeTranche, balancesBridgeAfterConvert.bridgeTranche);
+        // the bridge's balance of EUR should be 0
+        assertEq(balancesBridgeAfterFinalise.startingAsset, 0);
+
+        // having previously failed, interactions can be finalised directly
+        uint256 totalReceived = 0;
+        for (uint256 i = 0; i < numEurInteractions; i++) {
+            Interaction memory interaction = interactions[i];
+            Balances memory balancesRollupBeforeManualFinalise = _getBalances(interactions[i], address(rollupProcessor));
+            Balances memory balancesBridgeBeforeManualFinalise = _getBalances(interactions[i], address(elementBridge));
+            bool interactionCompleted = rollupProcessor.processAsyncDefiInteraction(interaction.nonce);
+            assertEq(interactionCompleted, true);
+            Balances memory balancesRollupAfterManualFinalise = _getBalances(interactions[i], address(rollupProcessor));
+            Balances memory balancesBridgeAfterManualFinalise = _getBalances(interactions[i], address(elementBridge));
+            uint256 outputValue = balancesRollupAfterManualFinalise.startingAsset - balancesRollupBeforeManualFinalise.startingAsset;
+            totalReceived += outputValue;
+            assertGt(outputValue, 0);
+            assertEq(balancesBridgeAfterManualFinalise.bridgeTranche, 0);
+            assertEq(balancesBridgeBeforeManualFinalise.bridgeTranche, i == 0 ? balancesBridgeAfterConvert.bridgeTranche : 0);
+        }
+        assertGt(totalReceived, eurDepositAmount * 15);
+        Balances memory rollupBalancesEnd = _getBalances(interactions[0], address(rollupProcessor));
+        Balances memory bridgeBalancesEnd = _getBalances(interactions[0], address(elementBridge));
+        assertEq(rollupBalancesEnd.startingAsset, totalReceived);
+        assertEq(bridgeBalancesEnd.bridgeTranche, 0);
+        assertEq(bridgeBalancesEnd.startingAsset, 0);
+    }
+
+    function testOnlyFinalisesUpToGasLimit() public {
+        // set the gas limit so that only the first interaction finalises
+        rollupProcessor.setBridgeGasLimit(address(elementBridge), 570000);
+        setupAssetPools('DAI');
+        setupAssetPools('USDC');
+        string memory asset = 'USDC';
+        uint256 usdcDepositAmount = quantities[asset];
+        TrancheConfig storage config = trancheConfigs[asset][0];
+        uint256 numUsdcInteractions = 5;
+        uint8[5] memory depositMultipliers = [1, 1, 1, 1, 1];
+        uint256 nonce = 1;
+        Interaction[] memory interactions = new Interaction[](numUsdcInteractions);
+        _increaseTokenBalance(asset, address(rollupProcessor), usdcDepositAmount * 5);
+        for (uint256 i = 0; i < numUsdcInteractions; i++) {
+            Interaction memory interaction = Interaction(
+                config,
+                usdcDepositAmount * depositMultipliers[i],
+                nonce,
+                0
+            );
+            interactions[nonce - 1] = interaction;
+            {
+                (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, interaction);
+                assertEq(isAsync, true);
+                assertEq(outputValueA, 0);
+                assertEq(outputValueB, 0);
+            }
+            nonce++;
+        }
+
+        vm.warp(config.expiry + 1);
+        asset = 'DAI';
+        uint256 daiDepositAmount = quantities[asset];
+        config = trancheConfigs[asset][1];
+        Interaction memory daiInteraction = Interaction(
+            config,
+            daiDepositAmount,
+            nonce,
+            0
+        );
+        _increaseTokenBalance(asset, address(rollupProcessor), daiDepositAmount);
+        // we expect 1 Finalise events to be emitted but we can't test the data values
+        vm.expectEmit(false, false, false, true);
+        emit Finalise(5, true, '');
+        {
+            (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, daiInteraction);
+            assertEq(isAsync, true);
+            assertEq(outputValueA, 0);
+            assertEq(outputValueB, 0);
+        }
+        // this will get the balances for USDC
+        Balances memory balancesRollupAfter = _getBalances(interactions[0], address(rollupProcessor));
+        Balances memory balancesBridgeAfter = _getBalances(interactions[0], address(elementBridge));
+        // the bridge's balance of the tranche token should be 0
+        assertEq(balancesRollupAfter.bridgeTranche, 0);
+        // the bridge's balance of USDC should be greater than zero
+        assertGt(balancesBridgeAfter.startingAsset, 0);
+        // the rollup contract's balance of USDC should now be greater than the amount of 1 deposit but less than the amount of 2
+        assertGt(balancesRollupAfter.startingAsset, usdcDepositAmount);
+        assertLt(balancesRollupAfter.startingAsset, usdcDepositAmount * 2);
+        // rollup balance of asset should be 20%
+        assertWithinOnePercentagePoint(balancesRollupAfter.startingAsset, balancesRollupAfter.startingAsset + balancesBridgeAfter.startingAsset, 20);
+    }
+
+    function testOnlyFinalisesUpToGasLimit2() public {
+        // set the gas limit so that only the first 2 interactions finalise
+        rollupProcessor.setBridgeGasLimit(address(elementBridge), 600000);
+        setupAssetPools('DAI');
+        setupAssetPools('USDC');
+        string memory asset = 'USDC';
+        uint256 usdcDepositAmount = quantities[asset];
+        TrancheConfig storage config = trancheConfigs[asset][0];
+        uint256 numUsdcInteractions = 5;
+        uint8[5] memory depositMultipliers = [1, 1, 1, 1, 1];
+        uint256 nonce = 1;
+        Interaction[] memory interactions = new Interaction[](numUsdcInteractions);
+        _increaseTokenBalance(asset, address(rollupProcessor), usdcDepositAmount * 5);
+        for (uint256 i = 0; i < numUsdcInteractions; i++) {
+            Interaction memory interaction = Interaction(
+                config,
+                usdcDepositAmount * depositMultipliers[i],
+                nonce,
+                0
+            );
+            interactions[nonce - 1] = interaction;
+            {
+                (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, interaction);
+                assertEq(isAsync, true);
+                assertEq(outputValueA, 0);
+                assertEq(outputValueB, 0);
+            }
+            nonce++;
+        }
+
+        vm.warp(config.expiry + 1);
+        asset = 'DAI';
+        uint256 daiDepositAmount = quantities[asset];
+        config = trancheConfigs[asset][1];
+        Interaction memory daiInteraction = Interaction(
+            config,
+            daiDepositAmount,
+            nonce,
+            0
+        );
+        _increaseTokenBalance(asset, address(rollupProcessor), daiDepositAmount);
+        // we expect 2 Finalise events to be emitted but we can't test the data values
+        uint numExpectedFinalisedInteractions = 2;
+        vm.expectEmit(false, false, false, false);
+        emit Finalise(5, true, '');
+        emit Finalise(4, true, '');
+        {
+            (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, daiInteraction);
+            assertEq(isAsync, true);
+            assertEq(outputValueA, 0);
+            assertEq(outputValueB, 0);
+        }
+        // this will get the balances for USDC
+        Balances memory balancesRollupAfter = _getBalances(interactions[0], address(rollupProcessor));
+        Balances memory balancesBridgeAfter = _getBalances(interactions[0], address(elementBridge));
+        // the bridge's balance of the tranche token should be 0
+        assertEq(balancesRollupAfter.bridgeTranche, 0);
+        // the bridge's balance of USDC should be greater than zero
+        assertGt(balancesBridgeAfter.startingAsset, 0);
+        // the rollup contract's balance of USDC should now be greater than the amount of 2 deposit but less than the amount of 3
+        assertGt(balancesRollupAfter.startingAsset, usdcDepositAmount * numExpectedFinalisedInteractions);
+        assertLt(balancesRollupAfter.startingAsset, usdcDepositAmount * (numExpectedFinalisedInteractions + 1));
+        // rollup balance of asset should be 20% for each finalised interaction
+        assertWithinOnePercentagePoint(balancesRollupAfter.startingAsset, balancesRollupAfter.startingAsset + balancesBridgeAfter.startingAsset, numExpectedFinalisedInteractions * 20);
+    }
+
+    function testRedemptionFailsIfNotEnoughGas() public {
+        // set the gas limit so that the redemption is attempted but fails
+        rollupProcessor.setBridgeGasLimit(address(elementBridge), 350000);
+        setupAssetPools('DAI');
+        setupAssetPools('USDC');
+        string memory asset = 'USDC';
+        uint256 usdcDepositAmount = quantities[asset];
+        TrancheConfig storage config = trancheConfigs[asset][0];
+        uint256 numUsdcInteractions = 5;
+        uint8[5] memory depositMultipliers = [1, 1, 1, 1, 1];
+        uint256 nonce = 1;
+        Interaction[] memory interactions = new Interaction[](numUsdcInteractions);
+        _increaseTokenBalance(asset, address(rollupProcessor), usdcDepositAmount * 5);
+        for (uint256 i = 0; i < numUsdcInteractions; i++) {
+            Interaction memory interaction = Interaction(
+                config,
+                usdcDepositAmount * depositMultipliers[i],
+                nonce,
+                0
+            );
+            interactions[nonce - 1] = interaction;
+            {
+                (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, interaction);
+                assertEq(isAsync, true);
+                assertEq(outputValueA, 0);
+                assertEq(outputValueB, 0);
+            }
+            nonce++;
+        }
+
+        vm.warp(config.expiry + 1);
+        asset = 'DAI';
+        uint256 daiDepositAmount = quantities[asset];
+        config = trancheConfigs[asset][1];
+        Interaction memory daiInteraction = Interaction(
+            config,
+            daiDepositAmount,
+            nonce,
+            0
+        );
+        _increaseTokenBalance(asset, address(rollupProcessor), daiDepositAmount);
+        // we expect 0 Finalise events to be emitted
+        uint numExpectedFinalisedInteractions = 0;
+        {
+            (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, daiInteraction);
+            assertEq(isAsync, true);
+            assertEq(outputValueA, 0);
+            assertEq(outputValueB, 0);
+        }
+        // this will get the balances for USDC
+        Balances memory balancesRollupAfter = _getBalances(interactions[0], address(rollupProcessor));
+        Balances memory balancesBridgeAfter = _getBalances(interactions[0], address(elementBridge));
+        // the bridge's balance of the tranche token should be greater than 0
+        assertGt(balancesRollupAfter.bridgeTranche, 0);
+        // the bridge's balance of USDC should be 0
+        assertEq(balancesBridgeAfter.startingAsset, 0);
+        // the rollup contract's balance of USDC should be 0
+        assertEq(balancesRollupAfter.startingAsset, 0);
+    }
+
     function _callElementConvert(string memory asset, Interaction memory interaction) internal returns (
         uint256 outputValueA,
         uint256 outputValueB,
@@ -1255,6 +1532,13 @@ contract ElementTest is DSTest {
         assertGt(getBalance(owner, erc20), value);
     }
 
+    function assertWithinOnePercentagePoint(uint256 quantity, uint256 total, uint256 targetPercent) internal {
+        uint256 percent = (quantity * 100) / total;
+        int256 diff = int256(percent) - int256(targetPercent);
+        uint256 absDiff = diff >= 0 ? uint256(diff) : uint256(-diff);
+        assertLt(absDiff, 2);
+    }
+
     function compareStrings(string memory a, string memory b) public view returns (bool) {
         return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))));
     }
@@ -1310,11 +1594,31 @@ contract ElementTest is DSTest {
         }
     }
 
+    function _findSpeedbumpSlot(string memory asset, uint256 expiry) internal returns (bytes32 slot) {
+        address trancheAddress = _deriveTranche(asset, expiry);
+        uint256 foundSlot = stdStore.target(trancheAddress).sig('speedbump()').find();
+        slot = bytes32(foundSlot);
+    }
+
+    function _setSpeedbumpSlot(string memory asset, uint256 expiry, uint256 speedbump) internal returns (uint256 newSpeedbump) {
+        address trancheAddress = _deriveTranche(asset, expiry);
+        bytes32 slot = _findSpeedbumpSlot(asset, expiry);
+        vm.store(trancheAddress, slot, bytes32(speedbump));
+        return ITranche(trancheAddress).speedbump();
+    }
+
     function _getBalances(Interaction memory interaction, address startingContract) internal returns (Balances memory balances) {
         balances.startingAsset = IERC20(tokens[interaction.tranche.asset]).balanceOf(startingContract);
         balances.bridgeTranche = IERC20(interaction.tranche.trancheAddress).balanceOf(address(elementBridge));
         balances.balancerAsset = IERC20(tokens[interaction.tranche.asset]).balanceOf(balancer);
         balances.balancerTranche = IERC20(interaction.tranche.trancheAddress).balanceOf(balancer);
         return balances;
+    }
+
+    function _deriveTranche(string memory asset, uint256 expiry) internal view virtual returns (address trancheContract) {
+        address position = wrappedPositions[asset];
+        bytes32 salt = keccak256(abi.encodePacked(position, expiry));
+        bytes32 addressBytes = keccak256(abi.encodePacked(bytes1(0xff), trancheFactoryAddress, salt, byteCodeHash));
+        trancheContract = address(uint160(uint256(addressBytes)));
     }
 }

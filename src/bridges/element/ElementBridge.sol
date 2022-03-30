@@ -86,6 +86,8 @@ contract ElementBridge is IDefiBridge {
         address wrappedPositionAddress;
     }
 
+    enum TrancheRedemptionStatus { NOT_REDEEMED, REDEMPTION_FAILED, REDEMPTION_SUCCEEDED }
+
     /**
      * @dev Contains information for managing all funds deposited/redeemed with a specific element tranche
      *
@@ -94,15 +96,15 @@ contract ElementBridge is IDefiBridge {
      * @param quantityAssetRemaining the current remainning quantity of underlying tokens held by the contract
      * @param numDeposits the total number of deposits (interactions) against the give tranche
      * @param numFinalised the current number of interactions against this tranche that have been finalised
-     * @param failed flag specifying whether redemption against this tranche failed
+     * @param redemptionStatus value describing the redemption status of the tranche
      */
     struct TrancheAccount {
         uint256 quantityTokensHeld;
         uint256 quantityAssetRedeemed;
         uint256 quantityAssetRemaining;
-        uint32 numDeposits;
-        uint32 numFinalised;
-        bool redemptionFailed;
+        int32 numDeposits;
+        int32 numFinalised;
+        TrancheRedemptionStatus redemptionStatus;
     }
 
     // Tranche factory address for Tranche contract address derivation
@@ -453,7 +455,8 @@ contract ElementBridge is IDefiBridge {
         newInteraction.trancheAddress = pool.trancheAddress;
         // add the nonce and expiry to our expiry heap
         addNonceAndExpiry(interactionNonce, trancheExpiry);
-        // increase our tranche account
+        // increase our tranche account deposits and holdings
+        // other members are left as their initial values (all zeros)
         TrancheAccount storage trancheAccount = trancheAccounts[newInteraction.trancheAddress];
         trancheAccount.numDeposits++;
         trancheAccount.quantityTokensHeld += newInteraction.quantityPT;
@@ -532,29 +535,30 @@ contract ElementBridge is IDefiBridge {
         }
 
         TrancheAccount storage trancheAccount = trancheAccounts[interaction.trancheAddress];
-        if (trancheAccount.quantityTokensHeld == 0) {
-            // shouldn't be possible!!
-            setInteractionAsFailure(interaction, interactionNonce, 'INTERNAL_ERROR');
+        if (trancheAccount.numDeposits <= 0) {
+            // shouldn't be possible, this means we have had no deposits against this tranche
+            setInteractionAsFailure(interaction, interactionNonce, 'NO_DEPOSITS_FOR_TRANCHE');
             popInteraction(interaction, interactionNonce);
             return (0, 0, false);
         }
 
-        if (trancheAccount.quantityAssetRedeemed == 0) {
+        // we only want to redeem the tranche if it hasn't previously successfully been redeemed
+        if (trancheAccount.redemptionStatus != TrancheRedemptionStatus.REDEMPTION_SUCCEEDED) {
             // tranche not redeemed, we need to withdraw the principal
             // convert the tokens back to underlying using the tranche
             ITranche tranche = ITranche(interaction.trancheAddress);
             try tranche.withdrawPrincipal(trancheAccount.quantityTokensHeld, address(this)) returns (uint256 valueRedeemed) {
                 trancheAccount.quantityAssetRedeemed = valueRedeemed;
                 trancheAccount.quantityAssetRemaining = valueRedeemed;
-                trancheAccount.redemptionFailed = false;
+                trancheAccount.redemptionStatus = TrancheRedemptionStatus.REDEMPTION_SUCCEEDED;
             } catch Error(string memory errorMessage) {
                 setInteractionAsFailure(interaction, interactionNonce, errorMessage);
-                trancheAccount.redemptionFailed = true;
+                trancheAccount.redemptionStatus = TrancheRedemptionStatus.REDEMPTION_FAILED;
                 popInteraction(interaction, interactionNonce);
                 return (0, 0, false);
             } catch {
-                setInteractionAsFailure(interaction, interactionNonce, 'UNKNOWN_ERROR');
-                trancheAccount.redemptionFailed = true;
+                setInteractionAsFailure(interaction, interactionNonce, 'UNKNOWN_ERROR_FROM_TRANCHE_WITHDRAW');
+                trancheAccount.redemptionStatus = TrancheRedemptionStatus.REDEMPTION_FAILED;
                 popInteraction(interaction, interactionNonce);
                 return (0, 0, false);
             }
@@ -562,8 +566,8 @@ contract ElementBridge is IDefiBridge {
 
         // at this point, the tranche must have been redeemed and we can allocate proportionately to this interaction
         uint256 amountToAllocate = (trancheAccount.quantityAssetRedeemed * interaction.quantityPT) / trancheAccount.quantityTokensHeld;
-        uint256 remainingFinalises = trancheAccount.numDeposits - trancheAccount.numFinalised;
-        if (remainingFinalises == 1 || amountToAllocate > trancheAccount.quantityAssetRemaining) {
+        int256 numRemainingInteractionsForTranche = trancheAccount.numDeposits - trancheAccount.numFinalised;
+        if (numRemainingInteractionsForTranche <= 1 || amountToAllocate > trancheAccount.quantityAssetRemaining) {
             // if there are no more interactions to finalise after this then allocate all the remaining
             // or, if we managed to allocate more than the amount remaining
             amountToAllocate = trancheAccount.quantityAssetRemaining;
@@ -721,19 +725,19 @@ contract ElementBridge is IDefiBridge {
      */
     function interactionCanBeFinalised(Interaction storage interaction) internal returns (bool canBeFinalised, string memory message) {
         TrancheAccount storage trancheAccount = trancheAccounts[interaction.trancheAddress];
-        if (trancheAccount.quantityTokensHeld == 0) {
+        if (trancheAccount.numDeposits == 0) {
             // shouldn't happen, suggests we don't have an account for this tranche!
-            return (false, 'INTERNAL_ERROR');
+            return (false, 'NO_DEPOSITS_FOR_TRANCHE');
         }
-        if (trancheAccount.redemptionFailed == true) {
+        if (trancheAccount.redemptionStatus == TrancheRedemptionStatus.REDEMPTION_FAILED) {
             return (false, 'TRANCHE_REDEMPTION_FAILED');
         }
         // determine if the tranche has already been redeemed
-        if (trancheAccount.quantityAssetRedeemed > 0) {
+        if (trancheAccount.redemptionStatus == TrancheRedemptionStatus.REDEMPTION_SUCCEEDED) {
             // tranche was previously redeemed
             if (trancheAccount.quantityAssetRemaining == 0) {
                 // this is a problem. we have already allocated out all of the redeemed assets!
-                return (false, 'INTERNAL_ERROR');
+                return (false, 'ASSET_ALREADY_FULLY_ALLOCATED');
             }
             // this interaction can be finalised. we don't need to redeem the tranche, we just need to allocate the redeemed asset
             return (true, '');
@@ -745,7 +749,7 @@ contract ElementBridge is IDefiBridge {
             uint256 newExpiry = speedbump + _FORTY_EIGHT_HOURS;
             if (newExpiry > block.timestamp) {
                 // a speedbump is in force for this tranche and it is beyond the current time
-                trancheAccount.redemptionFailed = true;
+                trancheAccount.redemptionStatus = TrancheRedemptionStatus.REDEMPTION_FAILED;
                 return (false, 'SPEEDBUMP');
             }
         }
@@ -755,7 +759,7 @@ contract ElementBridge is IDefiBridge {
         address yearnVaultAddress = address(wrappedPosition.vault());
         uint256 vaultQuantity = ERC20(underlyingAddress).balanceOf(yearnVaultAddress);
         if (trancheAccount.quantityTokensHeld > vaultQuantity) {
-            trancheAccount.redemptionFailed = true;
+            trancheAccount.redemptionStatus = TrancheRedemptionStatus.REDEMPTION_FAILED;
             return (false, 'VAULT_BALANCE');
         }
         // at this point, we will need to redeem the tranche which should be possible
