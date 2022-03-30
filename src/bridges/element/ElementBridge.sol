@@ -725,7 +725,7 @@ contract ElementBridge is IDefiBridge {
      */
     function interactionCanBeFinalised(Interaction storage interaction) internal returns (bool canBeFinalised, string memory message) {
         TrancheAccount storage trancheAccount = trancheAccounts[interaction.trancheAddress];
-        if (trancheAccount.numDeposits == 0) {
+        if (trancheAccount.numDeposits <= 0) {
             // shouldn't happen, suggests we don't have an account for this tranche!
             return (false, 'NO_DEPOSITS_FOR_TRANCHE');
         }
