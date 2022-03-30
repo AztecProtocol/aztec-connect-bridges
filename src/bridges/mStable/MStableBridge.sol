@@ -40,12 +40,12 @@ contract MStableBridge is IDefiBridge {
   {
     // ### INITIALIZATION AND SANITY CHECKS
     require(msg.sender == rollupProcessor, "MStableBridge: INVALID_CALLER");
-    
+
     require(
       inputAssetA.id != outputAssetA.id,
       "MStableBridge: ASSET_IDS_EQUAL"
     );
-    
+
     require(
       inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20,
       "MStableBridge: NOT_ERC20"
