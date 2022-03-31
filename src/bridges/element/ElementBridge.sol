@@ -102,8 +102,8 @@ contract ElementBridge is IDefiBridge {
         uint256 quantityTokensHeld;
         uint256 quantityAssetRedeemed;
         uint256 quantityAssetRemaining;
-        int32 numDeposits;
-        int32 numFinalised;
+        uint32 numDeposits;
+        uint32 numFinalised;
         TrancheRedemptionStatus redemptionStatus;
     }
 
@@ -535,7 +535,7 @@ contract ElementBridge is IDefiBridge {
         }
 
         TrancheAccount storage trancheAccount = trancheAccounts[interaction.trancheAddress];
-        if (trancheAccount.numDeposits <= 0) {
+        if (trancheAccount.numDeposits == 0) {
             // shouldn't be possible, this means we have had no deposits against this tranche
             setInteractionAsFailure(interaction, interactionNonce, 'NO_DEPOSITS_FOR_TRANCHE');
             popInteraction(interaction, interactionNonce);
@@ -566,7 +566,9 @@ contract ElementBridge is IDefiBridge {
 
         // at this point, the tranche must have been redeemed and we can allocate proportionately to this interaction
         uint256 amountToAllocate = (trancheAccount.quantityAssetRedeemed * interaction.quantityPT) / trancheAccount.quantityTokensHeld;
-        int256 numRemainingInteractionsForTranche = trancheAccount.numDeposits - trancheAccount.numFinalised;
+        // numDeposits and numFinalised are uint32 types, so easily within range for an int256
+        int256 numRemainingInteractionsForTranche = int256(uint256(trancheAccount.numDeposits)) - int256(uint256(trancheAccount.numFinalised));
+        // the number of remaining interactions should never be less than 1 here, but test for <= 1 to ensure we catch all possibilities
         if (numRemainingInteractionsForTranche <= 1 || amountToAllocate > trancheAccount.quantityAssetRemaining) {
             // if there are no more interactions to finalise after this then allocate all the remaining
             // or, if we managed to allocate more than the amount remaining
@@ -725,7 +727,7 @@ contract ElementBridge is IDefiBridge {
      */
     function interactionCanBeFinalised(Interaction storage interaction) internal returns (bool canBeFinalised, string memory message) {
         TrancheAccount storage trancheAccount = trancheAccounts[interaction.trancheAddress];
-        if (trancheAccount.numDeposits <= 0) {
+        if (trancheAccount.numDeposits == 0) {
             // shouldn't happen, suggests we don't have an account for this tranche!
             return (false, 'NO_DEPOSITS_FOR_TRANCHE');
         }
