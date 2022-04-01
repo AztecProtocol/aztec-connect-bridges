@@ -413,6 +413,8 @@ contract ElementBridge is IDefiBridge {
         
         // operation is asynchronous
         isAsync = true;
+        outputValueA = 0;
+        outputValueB = 0;
         // retrieve the appropriate pool for this interaction and verify that it exists
         Pool storage pool = pools[hashAssetAndExpiry(inputAssetA.erc20Address, auxData)];
         if (pool.trancheAddress == address(0)) {
@@ -565,13 +567,23 @@ contract ElementBridge is IDefiBridge {
         }
 
         // at this point, the tranche must have been redeemed and we can allocate proportionately to this interaction
-        uint256 amountToAllocate = (trancheAccount.quantityAssetRedeemed * interaction.quantityPT) / trancheAccount.quantityTokensHeld;
+        uint256 amountToAllocate = 0;
+        if (trancheAccount.quantityTokensHeld == 0) {
+            // what can we do here? 
+            // we seem to have 0 total principle tokens so we can't apportion the output asset as it must be the case that each interaction purchased 0
+            // we know that the number of deposits against this tranche is > 0 as we check further up this function
+            // so we will have to divide the output asset, if there is any, equally
+            amountToAllocate = trancheAccount.quantityAssetRedeemed / trancheAccount.numDeposits;
+        } else {
+            // apportion the output asset based on the interaction's holding of the principle token
+            amountToAllocate = (trancheAccount.quantityAssetRedeemed * interaction.quantityPT) / trancheAccount.quantityTokensHeld;
+        }
         // numDeposits and numFinalised are uint32 types, so easily within range for an int256
         int256 numRemainingInteractionsForTranche = int256(uint256(trancheAccount.numDeposits)) - int256(uint256(trancheAccount.numFinalised));
         // the number of remaining interactions should never be less than 1 here, but test for <= 1 to ensure we catch all possibilities
         if (numRemainingInteractionsForTranche <= 1 || amountToAllocate > trancheAccount.quantityAssetRemaining) {
             // if there are no more interactions to finalise after this then allocate all the remaining
-            // or, if we managed to allocate more than the amount remaining
+            // likewise if we have managed to allocate more than the remaining
             amountToAllocate = trancheAccount.quantityAssetRemaining;
         }
         trancheAccount.quantityAssetRemaining -= amountToAllocate;
@@ -582,6 +594,7 @@ contract ElementBridge is IDefiBridge {
         interaction.finalised = true;
         popInteraction(interaction, interactionNonce);
         outputValueA = amountToAllocate;
+        outputValueB = 0;
         interactionCompleted = true;
         emit Finalise(interactionNonce, interactionCompleted, '');
     }
@@ -610,6 +623,7 @@ contract ElementBridge is IDefiBridge {
     function addNonceAndExpiry(uint256 nonce, uint64 expiry) internal returns (bool expiryAdded) {
         // get the set of nonces already against this expiry
         // check for the MAX_INT placeholder nonce that exists to reduce gas costs at this point in the code
+        expiryAdded = false;
         uint256[] storage nonces = expiryToNonce[expiry];
         if (nonces.length == 1 && nonces[0] == MAX_INT) {
             nonces[0] = nonce;
@@ -653,6 +667,7 @@ contract ElementBridge is IDefiBridge {
             delete expiryToNonce[interaction.expiry];
             return (true);
         }
+        return (false);
     }
 
     /**
