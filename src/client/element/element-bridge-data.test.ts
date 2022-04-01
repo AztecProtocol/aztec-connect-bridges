@@ -48,7 +48,7 @@ describe('element bridge data', () => {
       filters: {
         AsyncDefiBridgeProcessed: jest.fn(),
       } as any,
-      getDefiInteractionBlockNumber: jest.fn(),
+      getDefiInteractionBlockNumber: jest.fn().mockImplementation((nonce: bigint) => BigNumber.from(nonce / 32n)),
     };
     const elementBridgeData = new ElementBridgeData(
       elementBridge as any,
