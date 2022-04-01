@@ -50,8 +50,11 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
     const endValue = interaction.quantityPT;
 
     // we get the present value of the interaction
+    const blockNumber = await this.rollupContract.getDefiInteractionBlockNumber(interactionNonce);
     const [rollupInteraction] = await this.rollupContract.queryFilter(
-      this.rollupContract.filters.DefiBridgeProcessed(interactionNonce),
+      this.rollupContract.filters.AsyncDefiBridgeProcessed(undefined, interactionNonce),
+      blockNumber.toNumber(),
+      blockNumber.toNumber(),
     );
     const { timestamp: entryTimestamp } = await rollupInteraction.getBlock();
     const {

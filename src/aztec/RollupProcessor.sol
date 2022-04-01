@@ -26,6 +26,7 @@ contract RollupProcessor is DSTest {
         uint256 auxInputData; // (auxData)
     }
 
+    uint256 private constant NUMBER_OF_BRIDGE_CALLS = 32;
     bytes4 private constant TRANSFER_FROM_SELECTOR = 0x23b872dd; // bytes4(keccak256('transferFrom(address,address,uint256)'));
     mapping(uint256 => uint256) ethPayments;
     mapping(address => uint256) bridgeGasLimits;
@@ -56,10 +57,7 @@ contract RollupProcessor is DSTest {
         event AsyncDefiBridgeProcessed(
             uint256 indexed bridgeId,
             uint256 indexed nonce,
-            uint256 totalInputValue,
-            uint256 totalOutputValueA,
-            uint256 totalOutputValueB,
-            bool result
+            uint256 totalInputValue
         );
 
     function receiveEthFromBridge(uint256 interactionNonce) external payable {
@@ -245,6 +243,12 @@ contract RollupProcessor is DSTest {
                     outputValueB,
                     true
                 );
+            } else {
+                emit AsyncDefiBridgeProcessed (
+                    0,
+                    convertArgs.interactionNonce,
+                    convertArgs.totalInputValue
+                );
             }
             results.outputValueA = outputValueA;
             results.outputValueB = outputValueB;
@@ -300,5 +304,9 @@ contract RollupProcessor is DSTest {
         outputValueA = results.outputValueA;
         outputValueB = results.outputValueB;
         isAsync = results.isAsync;
+    }
+
+    function getDefiInteractionBlockNumber(uint256 interactionNonce) external view returns (uint256 blockNumber) {
+        blockNumber = interactionNonce / NUMBER_OF_BRIDGE_CALLS;
     }
 }
