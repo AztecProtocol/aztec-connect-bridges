@@ -46,15 +46,17 @@ describe('element bridge data', () => {
         },
       ]),
       filters: {
-        DefiBridgeProcessed: jest.fn(),
+        AsyncDefiBridgeProcessed: jest.fn(),
       } as any,
+      getDefiInteractionBlockNumber: jest.fn().mockImplementation((nonce: bigint) => BigNumber.from(nonce / 32n)),
     };
     const elementBridgeData = new ElementBridgeData(
       elementBridge as any,
       balancerContract as any,
       rollupContract as any,
     );
-    const [daiValue] = await elementBridgeData.getInteractionPresentValue(inputValue);
+    const nonce = 12345n;
+    const [daiValue] = await elementBridgeData.getInteractionPresentValue(nonce);
     const delta = outputValue - inputValue;
     const scalingFactor = elementBridgeData.scalingFactor;
     const ratio = ((BigInt(now) - startDate) * scalingFactor) / (expiration - startDate);
