@@ -48,6 +48,7 @@ describe('element bridge data', () => {
       filters: {
         DefiBridgeProcessed: jest.fn(),
       } as any,
+      getDefiInteractionBlockNumber: jest.fn(),
     };
     const elementBridgeData = new ElementBridgeData(
       elementBridge as any,
