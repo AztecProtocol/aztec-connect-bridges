@@ -71,6 +71,8 @@ interface IRollupProcessor {
 
     function processAsyncDefiInteraction(uint256 interactionNonce) external returns (bool);
 
+    function getDefiInteractionBlockNumber(uint256 interactionNonce) external view returns (uint256);
+
     event DefiBridgeProcessed(
         uint256 indexed bridgeId,
         uint256 indexed nonce,
