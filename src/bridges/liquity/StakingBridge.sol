@@ -38,6 +38,11 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
 
     address public immutable processor;
 
+    error ApproveFailed(address token);
+    error InvalidCaller();
+    error IncorrectInput();
+    error AsyncModeDisabled();
+
     /**
      * @notice Set the addresses of RollupProcessor.sol and token approvals.
      * @param _processor Address of the RollupProcessor.sol
@@ -52,15 +57,12 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
      * For this reason the following is not a security risk and makes the convert() function more gas efficient.
      */
     function setApprovals() public {
-        require(this.approve(processor, type(uint256).max), "StakingBridge: SBB_APPROVE_FAILED");
-        require(IERC20(LQTY).approve(processor, type(uint256).max), "StakingBridge: LUSD_APPROVE_FAILED");
-        require(
-            IERC20(LQTY).approve(address(STAKING_CONTRACT), type(uint256).max),
-            "StakingBridge: LQTY_APPROVE_FAILED"
-        );
-        require(IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max), "StakingBridge: WETH_APPROVE_FAILED");
-        require(IERC20(LUSD).approve(address(UNI_ROUTER), type(uint256).max), "StakingBridge: LUSD_APPROVE_FAILED");
-        require(IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max), "StakingBridge: USDC_APPROVE_FAILED");
+        if (!this.approve(processor, type(uint256).max)) revert ApproveFailed(address(this));
+        if (!IERC20(LQTY).approve(processor, type(uint256).max)) revert ApproveFailed(LQTY);
+        if (!IERC20(LQTY).approve(address(STAKING_CONTRACT), type(uint256).max)) revert ApproveFailed(LQTY);
+        if (!IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(WETH);
+        if (!IERC20(LUSD).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(LUSD);
+        if (!IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(USDC);
     }
 
     /**
@@ -94,11 +96,11 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
             bool isAsync
         )
     {
-        require(msg.sender == processor, "StakingBridge: INVALID_CALLER");
+        if (msg.sender != processor) revert InvalidCaller();
 
         if (inputAssetA.erc20Address == LQTY) {
             // Deposit
-            require(outputAssetA.erc20Address == address(this), "StakingBridge: INCORRECT_DEPOSIT_INPUT");
+            if (outputAssetA.erc20Address != address(this)) revert IncorrectInput();
             // Stake and claim rewards
             STAKING_CONTRACT.stake(inputValue);
             _swapRewardsToLQTYAndStake();
@@ -115,10 +117,7 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
             _mint(address(this), outputValueA);
         } else {
             // Withdrawal
-            require(
-                inputAssetA.erc20Address == address(this) && outputAssetA.erc20Address == LQTY,
-                "StakingBridge: INCORRECT_WITHDRAWAL_INPUT"
-            );
+            if (inputAssetA.erc20Address != address(this) || outputAssetA.erc20Address != LQTY) revert IncorrectInput();
             // Claim rewards
             STAKING_CONTRACT.unstake(0);
             _swapRewardsToLQTYAndStake();
@@ -186,7 +185,7 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
             bool
         )
     {
-        require(false, "StakingBridge: ASYNC_MODE_DISABLED");
+        revert AsyncModeDisabled();
     }
 
     receive() external payable {}
