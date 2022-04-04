@@ -2,16 +2,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
 pragma solidity >=0.6.10 <=0.8.10;
-pragma experimental ABIEncoderV2;
+pragma abicoder v2;
 
 
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {IERC20Detailed, IERC20} from "./interfaces/IERC20.sol";
-import {ISwapRouter} from './interfaces/ISwapRouter.sol';
-import {IRollupProcessor} from '../../interfaces/IRollupProcessor.sol';
 import {AztecTypes} from '../../aztec/AztecTypes.sol';
 import './UniswapV3Bridge.sol';
-import './interfaces/IUniswapV3Factory.sol';
 import "./interfaces/IUniswapV3Pool.sol";
 import '../../interfaces/IDefiBridge.sol';
 import "./interfaces/IQuoter.sol";
@@ -51,17 +47,36 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
     }
 
     modifier onlyRollup {
-    require(msg.sender == address(rollupProcessor), "'UniswapV3Bridge: INVALID_CALLER'");
+    require(msg.sender == address(rollupProcessor), "INVALID_CALLER");
     _;
     }
 
+    /**
+     * @notice  packs auxData for front end user
+     * @dev The first 24 bits are tickLower. The second 24 are tickUpper. The last 16 the pool's fee.
+     * As a pool's fee ranges from 10 bps, 100 bps, 300 bps, and 1000 bps, there is no data loss and type conversion
+     * is acceptable.
+     * @param tickLower the lower range of the position
+     * @param tickUpper the upper range of the position
+     * @param fee the fee tier of the pool
+     * @return auxData the packed auxdata
+     */
 
+    function packData(int24 tickLower, int24 tickUpper, uint24 fee) external view returns (uint64 auxData) {
+            uint24 a = uint24(tickLower);
+            uint24 b = uint24(tickUpper);
+            uint48 ticks = (uint48(a) << 24) | uint48(b);
+            uint16 fee =  uint16(fee);
+            auxData = (uint64(ticks) << 16) | uint64(fee);
+    }
+    
     /**
      * @notice  Functions are used to unpack auxData in chunks of 24 or 16 bits.
      * @dev The first 24 bits are tickLower. The second 24 are tickUpper. The last 16 the pool's fee.
      * As a pool's fee ranges from 10 bps, 100 bps, 300 bps, and 1000 bps, there is no data loss and type conversion
      * is acceptable.
      * @param a The uint64 to be unpacked
+     * @return b the uint24 or uint16
      */
 
     function unpack_1_to_24(uint64 a) public pure returns(uint24 b) {
@@ -81,6 +96,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
      * then the underlying ETH is wrapped and the function returns the WETH address (since inputAsset.erc20Address returns 0 if
      * the underlying is ETH). Otherwise it returns 0.
      * @param inputAsset The uint64 to be unpacked
+     * @return address the address of the asset, WETH if it is ETH, else erc20 address, or 0 if it is neither
      */
 
     function _checkForType(AztecTypes.AztecAsset calldata inputAsset) internal returns (address){
@@ -106,6 +122,8 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
      * @param inputAssetB AztecAsset
      * @param outputAssetA AztecAsset
      * @param outputAssetB AztecAsset
+     * @return outputValueA output of outputasseta
+     * @return outputValueB output of outputassetb
      */
          
     function convert(
@@ -126,12 +144,14 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             bool isAsync
         )
     {
-        require(msg.sender == address(rollupProcessor), 'UniswapV3Bridge: INVALID_CALLER');
-        
-        //bytes memory params = abi.encode(auxData);
-        //abi encoding unncessary because of integer packing 
+
+        //require(inputValue == 0, "ZERO");
+        require(msg.sender == address(rollupProcessor) || msg.sender == address(this), 'UniswapV3Bridge: INVALID_CALLER');
 
         //INTERACTION TYPE 1 
+        //1 real 1 not used
+        //1 virtual 1 not used
+
         if (
             outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED &&
             _checkForType(inputAssetA) != address(0) && inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED &&
@@ -153,6 +173,8 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             console.log("finished");
         }
         //INTERACTION TYPE 2 
+        //1 real 1 virtual
+        //1 virtual 1 real (refund)
         else if(  inputAssetB.assetType == AztecTypes.AztecAssetType.VIRTUAL && _checkForType(inputAssetA) != address(0) && 
                 outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL && _checkForType(outputAssetB) != address(0)                     
         ) {
@@ -161,7 +183,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             //sanity checks + variable instantiation
             address input_address = _checkForType(inputAssetA);
             address refund_address = _checkForType(outputAssetB); // this asset is used for refunds
-            require( input_address ==  refund_address ||  refund_address == SyncMintFundingMap[inputAssetB.id].token, "UniswapV3Bridge: INVALID_REFUND");
+            require( input_address ==  refund_address ||  refund_address == SyncMintFundingMap[inputAssetB.id].token, "INVALID_REFUND");
             
 
             (outputValueA, outputValueB) = _convertMintPart2(input_address, refund_address, interactionNonce, inputAssetB.id, inputValue, auxData);
@@ -169,7 +191,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         }
         //INTERACTION TYPE 3
         //1 real 1 not used
-        //1 virtual 1 real
+        //1 virtual 1 real (the second pair)
         else if(  inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED && _checkForType(inputAssetA) != address(0) && 
                  outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL && _checkForType(outputAssetB) != address(0) ){
 
@@ -183,7 +205,8 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
 
         }
         //INTERACTION TYPE 4 
-
+        //1 virtual 1 not used
+        //1 real 1 real
         else if( _checkForType(outputAssetA) != address(0) && inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED 
           && inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL && _checkForType(outputAssetB) != address(0) )
         {
@@ -203,41 +226,33 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
 
                 bool valid_args = ( (A == token0  && token1 == B) ||
                                     (B == token0 && token1 == A) );
-                require(valid_args,"UniswapV3Bridge: INVALID_OUTPUTS");
+                require(valid_args,"INVALID_OUTPUTS");
             }
             
-            if(false)
-            {
-                IUniswapV3Pool pool = IUniswapV3Pool(uniswapFactory.getPool(A, B, 3000));
-                originalCode = address(pool).code;
 
-                ICallback(owner).MockCallback(pool.token0(), pool.token1(), pool.fee(), pool.tickSpacing(), pool.maxLiquidityPerTick() );
-            }
-            
             //state changes
             (outputValueA, outputValueB) = _withdraw(id, uint128(inputValue) );
-
             //done because _decreaseLiquidity spits out amount0 amount1 and A && B not necessariy == token0 && token1
             if(!(A == deposits[id].token0 ) )
             { (outputValueA, outputValueB) = (outputValueB, outputValueA); }
 
-            if(A == address(WETH) ) {
-
-                require(IERC20(B).approve(address(rollupProcessor), outputValueB), "UniswapV3Bridge: APPROVE_FAILED" );
-                require(IERC20(A).approve(address(rollupProcessor), outputValueA), "UniswapV3Bridge: APPROVE_FAILED" );
-                //WETH.withdraw(outputValueA);
+            if( inputAssetA.assetType == AztecTypes.AztecAssetType.ETH ) {
+                ERC20NoReturnApprove(B,address(rollupProcessor), outputValueB);
+                TransferHelper.safeApprove(A,address(rollupProcessor), outputValueA);
+                WETH.withdraw(outputValueA);
                 rollupProcessor.receiveEthFromBridge{value: outputValueA}(interactionNonce);
             
             }
-            else if(B == address(WETH) ){  
-                require(IERC20(A).approve(address(rollupProcessor), outputValueA), "UniswapV3Bridge: APPROVE_FAILED" );
-                require(IERC20(B).approve(address(rollupProcessor), outputValueB), "UniswapV3Bridge: APPROVE_FAILED" );
-                //WETH.withdraw(outputValueB);
+            else if(inputAssetB.assetType == AztecTypes.AztecAssetType.ETH ){  
+                TransferHelper.safeApprove(B,address(rollupProcessor), outputValueB);
+                ERC20NoReturnApprove(A,address(rollupProcessor), outputValueA);
+                WETH.withdraw(outputValueB);
                 rollupProcessor.receiveEthFromBridge{value: outputValueB}(interactionNonce);
 
             }
             else {
-                _approveTo(interactionNonce, outputValueA, outputValueB, address(rollupProcessor) );
+                ERC20NoReturnApprove(B,address(rollupProcessor), outputValueB);
+                ERC20NoReturnApprove(A,address(rollupProcessor), outputValueA);
             }
         }
     }
@@ -252,6 +267,8 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
      * of an interaction that provided funding in step 1 for this step.
      * @param inputValue the input size of inputAssetA.
      * @param params the params, including the tickLower, the tickUpper, and the pool's fee.
+     * @return outputValueA outputvalueA , liquidity minted
+     * @return outputValueB outputvalueb, the refund
      */
     
     function _convertMintPart2(address input, address refund, uint256 interactionNonce, uint256 id, uint256 inputValue, uint64 params) internal returns (uint256 outputValueA, uint256 outputValueB) 
@@ -291,35 +308,41 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             fee = uint24(unpack_48_to_64(params)); 
             int24 tickLower = int24(unpack_1_to_24(params));
             int24 tickUpper = int24(unpack_24_to_48(params));
-            console.log("minting");
+            //console.log("minting");
             (outputValueA, refund0, refund1) = _mintNewPosition( token[0],  token[1], 
             amount0, amount1, tickLower, tickUpper, fee, stackholder_nonce);
         }
 
         //refunding
         if(refund1 > 0 &&  refund == token[0] || refund0 > 0 &&  refund ==  token[1] ){
-            console.log("refunding");
+            //console.log("refunding");
             outputValueB = token[0] ==  refund ? refund0 : refund1;
             uint256 amountOut = _refundConversion(refund0,refund1, refund ,token[0], token[1],fee);
             outputValueB = outputValueB.add(amountOut);
         }
 
-        console.log("passed");
+        //console.log("passed");
         //note: we need to destroy record of MINT_PT1 funding to avoid virtual asset re-use
         SyncMintFundingMap[id].amount = 0;
-        
+       
         //approve rollupProcessor to receive refund
-        require(IERC20(refund).approve(address(rollupProcessor), outputValueB ), "APPROVE_FAILED");
+
+        TransferHelper.safeApprove(refund, address(rollupProcessor), outputValueB);
+
+ 
+
     }
 
     /**
      * @notice internal function to perform the mint-by-swap interaction
-     * @dev gets a quote to prevent frontrunning, swaps half of the input. Then mints a new position, and handles refunding.
+     * @dev swaps half of the input. Mints a new position, and handles refunding.
      * @param input the input asset's address
      * @param output the output asset's address
      * @param interactionNonce the interaction nonce
      * @param inputValue the size of the input asset
      * @param params the params for the liquidity position, i.e. tickLower, tickUpper, and the pool fee.
+     * @return outputValueA the liquidity minted
+     * @return outputValueB the refund if any
      */
 
     function _convertMintBySwap(address input, address output, uint256 interactionNonce, uint256 inputValue, uint64 params) internal returns (uint256 outputValueA, uint256 outputValueB)
@@ -331,7 +354,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
 
         {
 
-            require(IERC20(input).approve(address(swapRouter),inputValue/2), "UniswapV3Bridge: APPROVE_FAILED" );
+            ERC20NoReturnApprove(input, address(swapRouter),inputValue/2);
             ISwapRouter.ExactInputSingleParams memory swap_params =
             ISwapRouter.ExactInputSingleParams({
                 tokenIn:  input,
@@ -357,20 +380,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         uint256 refund0;
         uint256 refund1;
         address token0 =  input < output ? input :  output;
-        address token1 =  input < output ? output :  input;
-        
-        //mock the pool by etching its code with the mock's code
-        //we use storage so we avoid stack too deep as this won't be used in prod anyways
-        //toggle on/off 
-        if(false)
-        {
-            //console.log(token0, token1, "tokens");
-            IUniswapV3Pool pool = IUniswapV3Pool(uniswapFactory.getPool(token0, token1, fee));
-            originalCode = address(pool).code;
-
-            ICallback(owner).MockCallback(token0, token1, fee, pool.tickSpacing(), pool.maxLiquidityPerTick() );
-        }
-        
+        address token1 =  input < output ? output :  input;       
 
         {
             uint256 stackholder_nonce = interactionNonce; //avoid stack too deep
@@ -379,13 +389,6 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             (outputValueA , refund0, refund1) = _mintNewPosition(token0, token1, amounts[0],amounts[1],tickLower,tickUpper,fee,stackholder_nonce);
         }
 
-        //console.log(IERC20(input).balanceOf(address(this)), "dai balance");
-
-        //toggle on/off
-        if(false)
-        {
-            ICallback(owner).restoreOriginalCodeCallback(originalCode);
-        }
 
         //refunding
         if(refund1 > 0 && output == token0 || refund0 > 0 && output == token1 ){
@@ -394,7 +397,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             outputValueB = outputValueB.add(amounts[0]);
         }
 
-        require(IERC20(output).approve(address(rollupProcessor), outputValueB ), "APPROVE_FAILED");
+        TransferHelper.safeApprove(output, address(rollupProcessor), outputValueB );
 
     }
     
@@ -415,25 +418,5 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
     revert("NOT_ASYNC");
     }
 
-    function call(address payable _to, uint256 _value, bytes calldata _data) external payable returns (bytes memory) {
-        require(msg.sender == owner, "ONLY OWNER");
-        require(_to != address(0));
-        (bool _success, bytes memory _result) = _to.call{value: _value}(_data);
-        require(_success);
-        return _result;
-    }
-    
-    function delegatecall(address payable _to, bytes calldata _data) external payable returns (bytes memory) {
-        require(msg.sender == owner, "ONLY OWNER");
-        require(_to != address(0));
-        (bool _success, bytes memory _result) = _to.delegatecall(_data);
-        require(_success);
-        return _result;
-    }
 
-    function staticcall(address _to, bytes calldata _data) external returns (bytes memory) {
-        (bool _success, bytes memory _result) = _to.staticcall(_data);
-        require(_success);
-        return _result;
-    }
 }

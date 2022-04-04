@@ -110,6 +110,9 @@ contract AztecKeeper is KeeperCompatibleInterface {
         uint256 length = finalisable.length;
         for(uint i = 0; i < length; i++){
             if(finalisable[i] != 0) {
+                bytes memory payload = abi.encodeWithSignature("trigger(uint256)", finalisable[i]);
+                (bool result, bytes memory data) = address(bridge).call(payload);
+                (uint256 out0, uint256 out1) = abi.decode(data, (uint256, uint256));
                 rollupProcessor.processAsyncDeFiInteraction(finalisable[i]);
             }
         }

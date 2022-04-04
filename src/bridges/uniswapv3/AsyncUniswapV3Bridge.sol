@@ -2,17 +2,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
 pragma solidity >=0.6.10 <=0.8.10;
-pragma experimental ABIEncoderV2;
 
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import {IRollupProcessor} from '../../interfaces/IRollupProcessor.sol';
 import {AztecTypes} from '../../aztec/AztecTypes.sol';
-import {console} from "../../test/console.sol";
-import {ISwapRouter} from './interfaces/ISwapRouter.sol';
-import {INonfungiblePositionManager} from './interfaces/INonfungiblePositionManager.sol';
 import {TickMath} from "./libraries/TickMath.sol";
 import "./interfaces/IERC20.sol";
-import './interfaces/IUniswapV3Factory.sol';
 import "./interfaces/IUniswapV3Pool.sol";
 import './UniswapV3Bridge.sol';
 import '../../interfaces/IDefiBridge.sol';
@@ -56,51 +49,97 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
 
 
     modifier onlyRollup {
-    require(msg.sender == address(rollupProcessor), "'UniswapV3Bridge: INVALID_CALLER'");
+    require(msg.sender == address(rollupProcessor), "INVALID_CALLER");
     _;
     }
     
-    function trigger(uint256 interactionNonce) external {
-        //for keepers / bot operators to trigger limit orders if conditions are met
-        
-        if( _checkLimitConditions(interactionNonce) ){
-            
-            (,,,,,,,,,,uint128 tokensOwed0,uint128 tokensOwed1) = nonfungiblePositionManager.positions(deposits[interactionNonce].tokenId);
-            asyncOrders[interactionNonce].finalisable = true;
-            (uint256 amount0, uint256 amount1) = _withdraw(interactionNonce, deposits[interactionNonce].liquidity);
-            console.log(amount0, amount1, "amounts");
-            
-            //necessary?
-            //require(amount0 == 0 || amount1 == 0 , "NOT_RANGE");
+    function packData(int24 tickLower, int24 tickUpper, uint8 days_to_cancel, uint8 fee ) external view returns (uint64 data) {
+            uint24 a = uint24(tickLower);
+            uint24 b = uint24(tickUpper);
+            uint48 ticks = (uint48(a) << 24) | uint48(b);
+            uint8 days_to_cancel = 1;
+            uint16 last16 = (uint16(fee) << 8 | uint16(days_to_cancel) );
+            data = (uint64(ticks) << 16) | uint64(last16);
+    }
 
-            //implement a fee percentage rather than approving whole thing?
-            _approveTo(interactionNonce, tokensOwed0, tokensOwed1, msg.sender);
-        
-        }
+    function finalised(uint256 interactionNonce) external view returns (
+        bool
+    ){
+        return asyncOrders[interactionNonce].finalisable;
     }
-    
-    function cancel(uint256 interactionNonce) external {
-        if(asyncOrders[interactionNonce].expiry >= block.timestamp){
-            asyncOrders[interactionNonce].finalisable = true;
-            (uint256 amount0, uint256 amount1) = _withdraw(interactionNonce, deposits[interactionNonce].liquidity);
-            console.log(amount0, amount1, "amounts");
-            //user may now call processAsyncDefiInteraction successfully
-        }
+
+    function getExpiry(uint256 interactionNonce) external view returns (uint256){
+        return asyncOrders[interactionNonce].expiry;
     }
+
+     /**
+     * @notice  Function used to check if limit conditions of an order have been met
+     * @dev if the order is denominated by lower price space, it is a buy limit order, so
+     * we check if the current tick is less than or equal to the tickLower of the order
+     * if the order is denominated by the higher price space, it is a sell limit order, so we check 
+     * if the current tick is higher than or equal to the tickUpper of the order
+     * @param interactionNonce the nonce of the interaction
+     * @return bool whether or not the limit conditions were met
+     */
     
     function _checkLimitConditions(uint256 interactionNonce) internal view returns (bool) {
-        
+
         Deposit memory deposit = deposits[interactionNonce];
         IUniswapV3Pool pool = IUniswapV3Pool(uniswapFactory.getPool(deposit.token0, deposit.token1, deposit.fee ) );
         (uint160 sqrtPriceX96,,,,,,) = pool.slot0();
         int24 currentTick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
-        return (
-                deposits[interactionNonce].tickLower 
-                <= currentTick && currentTick <= 
-                deposits[interactionNonce].tickUpper
-                );
+        return (deposit.tickLower <= currentTick && currentTick <= deposit.tickUpper);
+        
     }
+
+    /**
+     * @notice  Function used to  set the finalisability of an order to true and withdraw liquidity
+     * @dev withdraws liquidity, and sets finalisability of an order to true, if the limit order conditions are met
+     * also rewards the msg.sender with the fees of limit order since limit orders are technically maker orders
+     * @param interactionNonce the nonce of the interaction
+     * @return amount0 the amount of token0 returned by withdrawal of liquidity
+     * @return amount1 the amount of token1 returned by withdrawal of liquidity
+     */
+    
+    function trigger(uint256 interactionNonce) external returns (uint256 amount0, uint256 amount1) {
+        
+        //for keepers / bot operators to trigger limit orders if conditions are met
+        
+        if( _checkLimitConditions(interactionNonce) ){
+            
+            asyncOrders[interactionNonce].finalisable = true;
+            ( amount0,  amount1) = _withdraw(interactionNonce, deposits[interactionNonce].liquidity);
+            //console.log(amount0, amount1, "amounts");
+            
+            //necessary?
+            //require(amount0 == 0 || amount1 == 0 , "NOT_RANGE");
+            
+            //(,,,,,,,,,,uint128 tokensOwed0,uint128 tokensOwed1) = nonfungiblePositionManager.positions(deposits[interactionNonce].tokenId);
+            //implement a fee percentage rather than approving whole thing?
+            ERC20NoReturnApprove(deposits[interactionNonce].token0, address(msg.sender), amount0*(deposits[interactionNonce].fee/1000000) );
+            ERC20NoReturnApprove(deposits[interactionNonce].token1, address(msg.sender), amount0*(deposits[interactionNonce].fee/1000000));
+        
+        }
+    }
+    
+    /**
+     * @notice  Function used to cancel if an order is past its expiry
+     * @dev if an order is past its expiry, this fxn withdraws the liquidity 
+     * @param interactionNonce the nonce of the interaction
+     * @return amount0 the amount of token0 returned by withdrawal of liquidity
+     * @return amount1 the amount of token1 returned by withdrawal of liquidity
+     */
+    
+    function cancel(uint256 interactionNonce) external returns (uint256 amount0, uint256 amount1) {
+        if(asyncOrders[interactionNonce].expiry >= block.timestamp){
+            asyncOrders[interactionNonce].finalisable = true;
+            (amount0, amount1) = _withdraw(interactionNonce, deposits[interactionNonce].liquidity);
+            //console.log(amount0, amount1, "amounts");
+            //user may now call processAsyncDefiInteraction successfully
+        }
+    }
+    
 
 
     function _checkForType(AztecTypes.AztecAsset calldata inputAsset) internal returns (address){
@@ -113,10 +152,25 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             return inputAsset.erc20Address;
         }
         else{
-            revert('UniswapV3Bridge: INVALID_INPUT');
+            revert('INVALID_INPUT');
         }
     }
 
+    /**
+     * @notice  convert function to that takes inputs and mints liquidity
+     * @dev takes an auxdata w/ ticklower, tickupper, and fee tier of pool.
+     * @param inputAssetA input token
+     * @param inputAssetB not used
+     * @param outputAssetA output token
+     * @param outputAssetB not used
+     * @param inputValue size of input token
+     * @param interactionNonce nonce
+     * @param auxData ticklower tickupper and fee
+     * @return outputValueA liquidity minted
+     * @return outputValueB not used
+     * @return isAsync set to true always
+     */
+    
     function convert(
         AztecTypes.AztecAsset calldata inputAssetA,
         AztecTypes.AztecAsset calldata inputAssetB, 
@@ -135,33 +189,27 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             bool isAsync
         )
     {
-        require(msg.sender == address(rollupProcessor), 'UniswapV3Bridge: INVALID_CALLER');
+        require(msg.sender == address(rollupProcessor), 'INVALID_CALLER');
             
-            //Uniswap V3 range limit order
-            isAsync = true;
-            //sanity checks
-            require(inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED, "INCORRECT_INPUTB");
-            address input = _checkForType(inputAssetA);
-            address output = _checkForType(outputAssetA);
-            // for the refund in case of cancellation
-            require(input == _checkForType(outputAssetB), "UniswapV3Bridge: INVALID_MATCH");
+        //Uniswap V3 range limit order
+        isAsync = true;
+        //sanity checks
+        require(inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED, "INCORRECT_INPUTB");
+        address input = _checkForType(inputAssetA);
+        address output = _checkForType(outputAssetA);
+
+             
+        //outputAssetA is already output, this must be input then
+        require(input == _checkForType(outputAssetB), "INVALID_REFUND");
             
            
-            console.log("passed require checks");
+        //console.log("passed require checks");
 
-            {
             
-                //address pool = uniswapFactory.getPool(input_address,output_address,fee);
-                //require(pool != address(0), "NONEXISTENT_POOL");
+            
+        //address pool = uniswapFactory.getPool(input_address,output_address,fee);
+        //require(pool != address(0), "NONEXISTENT_POOL");
                 
-            }
-
-            console.log("reached data initalization lines 152 to 155");
-
-            (address token0, address token1) = input < output ? (input, output) : (output, input);
-            uint256 amount0 = input == token0 ? inputValue: 0;
-            uint256 amount1 = input == token0 ? 0 : inputValue;
-            uint256 nonce = interactionNonce; //avoids stack too deep error
             
             /* 
                 to fit all data into 64 bits, we constrict fee var to int8 size. we multiply uint8 fee by 10 to reach the appropriate basis
@@ -171,45 +219,37 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
                 out the expiry is in uint256. 
             */
 
-            console.log("reached auxData encoding");
-
-            int24 tickLower;
-            int24 tickUpper;
-            uint24 fee;
-            uint8 days_to_cancel; 
-
-            {
-                tickLower = int24(uint24( auxData >> 40));
-                tickUpper = int24(uint24( auxData >> 16));
-                fee = uint24(uint8(auxData >> 8));
-                days_to_cancel = uint8(auxData);
-            }
+        //console.log("reached auxData encoding");
 
             
-            fee *= 100; //fee should be in hundredths of a bip. 1 bip = 1/100, i.e. 1e^-6. fee will range from 0 to 100, we will multiply
-                        //by 100 to get the correct number. i.e. .3% is 3000, so 30 * 100
+        //fee should be in hundredths of a bip. 1 bip = 1/100, i.e. 1e^-6. fee will range from 0 to 100, we will multiply
+        //by 100 to get the correct number. i.e. .3% is 3000, so 30 * 100
 
-            //state changes
-            //cheaper than reading from factory I think?
+        //state changes
+    
+        _mintNewPosition(  
+        (input < output ? input: output), //token0
+        ( input < output ? output: input), //token1
+        (input < output ? inputValue: 0), //amount0
+        (input < output ? 0: inputValue), //amount1
+        int24(uint24( auxData >> 40)), //tickLower
+        int24(uint24( auxData >> 16)), //tickUpper
+        uint24(uint8(auxData >> 8)) * 100 ,  ////fee should be in hundredths of a bip. 1 bip = 1/100, i.e. 1e^-6. 
+        interactionNonce
+        );
 
-            {
-                //IUniswapV3Pool pool = IUniswapV3Pool(uniswapFactory.getPool(token0, token1, fee) );
-                //ICallback(owner).MockCallback(token0, token1, pool.fee(), pool.tickSpacing(), pool.maxLiquidityPerTick() );
+        //console.log("passed _mintNewPosition");
+        uint8 days_to_cancel = uint8(auxData);
 
-            }
-
-            _mintNewPosition( token0, token1, amount0, amount1, tickLower, tickUpper, uint24(fee), nonce);
-            console.log("passed _mintNewPosition");
-                
-            asyncOrders[nonce] = AsyncOrder({
-                finalisable: false,
-                expiry: block.timestamp.add( (uint256(days_to_cancel)).mul(MAGIC_NUMBER_DAYS) )
-            });            
+        asyncOrders[interactionNonce] = AsyncOrder({
+            finalisable: false,
+            expiry: block.timestamp.add( (uint256(days_to_cancel)).mul(MAGIC_NUMBER_DAYS) )
+        });            
             
-            //no refunding necessary because it is impossible for it to occur as one entry in amounts[] will always be 0
-            //we handle the case of cancellation in finalise()
+        //no refunding necessary because it is impossible for it to occur as one entry in amounts[] will always be 0
+        //we handle the case of cancellation in finalise()
         
-       
+
     }
    
 
@@ -219,6 +259,19 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         return asyncOrders[interactionNonce].finalisable;
     }
 
+    /**
+     * @notice finalises an interaction if possible.
+     * @dev performs safety checks, and then makes approval to the rollup processor, and changes to asyncOrders.
+     * @param inputAssetA inputAssetA, unused
+     * @param inputAssetB inputAssetB, unused
+     * @param outputAssetA outputAssetA, asset that will be returned 
+     * @param outputAssetB outputAsset B, asset that will be returned
+     * @param interactionNonce the nonce, used to determine amounts returned via deposits[itneractionNonce]
+     * @param auxData unused
+     * @return outputValueA amountA returned to bridge
+     * @return outputValueB amountB returned to bridge
+     */
+    
     function finalise(
     AztecTypes.AztecAsset calldata inputAssetA,
     AztecTypes.AztecAsset calldata inputAssetB,
@@ -247,7 +300,7 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
 
                 bool valid_args = ( (A == token0  && token1 == B) ||
                                     (B == token0 && token1 == A) );
-                require(valid_args,"UniswapV3Bridge: INVALID_OUTPUTS");
+                require(valid_args,"INVALID_OUTPUTS");
             }
             
             (outputValueA, outputValueB) = (deposits[interactionNonce].amount0, deposits[interactionNonce].amount1);
@@ -256,48 +309,36 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             if(!(A == deposits[interactionNonce].token0 ) )
             { (outputValueA, outputValueB) = (outputValueB, outputValueA); }
 
-            if(A == address(WETH) ) {
-
-                require(IERC20(B).approve(address(rollupProcessor), outputValueB), "UniswapV3Bridge: APPROVE_FAILED" );
-                require(IERC20(A).approve(address(rollupProcessor), outputValueA), "UniswapV3Bridge: APPROVE_FAILED" );
-                //WETH.withdraw(outputValueA);
+            if( inputAssetA.assetType == AztecTypes.AztecAssetType.ETH ) {
+                ERC20NoReturnApprove(B,address(rollupProcessor), outputValueB);
+                TransferHelper.safeApprove(A,address(rollupProcessor), outputValueA);
+                WETH.withdraw(outputValueA);
                 rollupProcessor.receiveEthFromBridge{value: outputValueA}(interactionNonce);
             
             }
-            else if(B == address(WETH) ){  
-                require(IERC20(A).approve(address(rollupProcessor), outputValueA), "UniswapV3Bridge: APPROVE_FAILED" );
-                require(IERC20(B).approve(address(rollupProcessor), outputValueB), "UniswapV3Bridge: APPROVE_FAILED" );
-                //WETH.withdraw(outputValueB);
+            else if(inputAssetB.assetType == AztecTypes.AztecAssetType.ETH ){
+
+                TransferHelper.safeApprove(B,address(rollupProcessor), outputValueB);
+                ERC20NoReturnApprove(A,address(rollupProcessor), outputValueA);
+                WETH.withdraw(outputValueB);
                 rollupProcessor.receiveEthFromBridge{value: outputValueB}(interactionNonce);
 
             }
             else {
-                _approveTo(interactionNonce, outputValueA, outputValueB, address(rollupProcessor) );
+
+                ERC20NoReturnApprove(B,address(rollupProcessor), outputValueB);
+                ERC20NoReturnApprove(A,address(rollupProcessor), outputValueA);             
+            
             }
             
             //now that the settlement is finalised and the rollup will return user funds, clear map element for this interaction
             //deposits[interactionNonce] = 0; unncessary as _decreaseLiquidity modifies     vars accordingly
+            asyncOrders[interactionNonce].finalisable = true;
             asyncOrders[interactionNonce].expiry = 0;
-            asyncOrders[interactionNonce].finalisable = false;
             interactionComplete = true;
         }
 
     }
 
 
-    function call(address payable _to, uint256 _value, bytes calldata _data) external payable returns (bytes memory) {
-        require(msg.sender == owner, "ARBITRARY CALL: ONLY OWNER");
-        require(_to != address(0));
-        (bool _success, bytes memory _result) = _to.call{value: _value}(_data);
-        require(_success);
-        return _result;
-    }
-    
-    function delegatecall(address payable _to, bytes calldata _data) external payable returns (bytes memory) {
-        require(msg.sender == owner, "ARBITRARY DELEGATECALL: ONLY OWNER");
-        require(_to != address(0));
-        (bool _success, bytes memory _result) = _to.delegatecall(_data);
-        require(_success);
-        return _result;
-    }
 }

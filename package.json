@@ -3,7 +3,6 @@
     "setup": "yarn install:foundry && yarn setup:foundry",
     "setup:foundry": "foundryup && git submodule update --init",
     "install:foundry": "curl -L https://foundry.paradigm.xyz | bash",
-<<<<<<< HEAD
     "compile:contracts": "yarn clean forge build",
     "compile:typechain": "yarn compile:contracts && hardhat compile ",
     "compile:client-dest:watch": "yarn compile:typechain && tsc --project tsconfig.client-dest.json --watch",
@@ -20,28 +19,6 @@
   },
   "dependencies": {
     "axios": "^0.26.1"
-=======
-    "compile:contracts": "forge build",
-    "compile:typechain": "forge build && hardhat compile ",
-    "compile:client-dest": "tsc --project tsconfig.client-dest.json && node package-client-dest.js",
-    "clean": "rm -rf ./cache ./dest ./out ./artifacts ./typechain-types",
-    "test": "yarn test:contracts && yarn test:clients",
-    "test:client": "jest test",
-    "test:contracts": "forge test -vv",
-    "build": "yarn clean && yarn compile:typechain && yarn compile:client-dest"
-  },
-  "dependencies": {
-    "@ethersproject/constants": "^5.5.0",
-    "@nomiclabs/hardhat-ethers": "^2.0.4",
-    "@nomiclabs/hardhat-waffle": "^2.0.2",
-    "@openzeppelin/contracts": "^4.5.0",
-    "@typechain/ethers-v4": "^7.0.0",
-    "crypto": "^1.0.1",
-    "ethers": "^5.5.4",
-    "hardhat": "^2.8.3",
-    "jest": "^27.5.0",
-    "typescript": "^4.5.5"
->>>>>>> bridge
   },
   "jest": {
     "transform": {

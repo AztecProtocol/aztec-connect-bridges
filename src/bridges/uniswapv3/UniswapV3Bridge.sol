@@ -1,5 +1,4 @@
 pragma solidity >=0.6.10 <=0.8.10;
-pragma experimental ABIEncoderV2;
 
 import {SafeMath} from "../../../node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {INonfungiblePositionManager} from './interfaces/INonfungiblePositionManager.sol';
@@ -12,11 +11,6 @@ import '../../interfaces/IRollupProcessor.sol';
 import './interfaces/IUniswapV3Factory.sol';
 import './base/LiquidityManagement.sol';
 import './interfaces/IWETH9.sol';
-
-interface ICallback{
-function MockCallback(address _token0, address _token1, uint24 fee, int24 tickSpacing, uint128 maxLiquidityPerTick) external;
-function restoreOriginalCodeCallback(bytes calldata originalCode) external;
-}
 
 
 contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
@@ -54,7 +48,7 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
         NOT USED IN PRODUCTION, FOR TESTING PURPOSES ONLY
     */
     
-    bytes public originalCode;
+    //bytes public originalCode;
     
     constructor(address _rollupProcessor, address _router, address _nonfungiblePositionManager, address _factory, address _WETH ) 
     PeripheryImmutableState(_factory, _WETH) public {
@@ -76,32 +70,107 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
         return this.onERC721Received.selector;
     }
 
-    function getPresentValue(uint256 interactionNonce) external view returns (uint128 tokensOwed0, uint128 tokensOwed1){
+    /**
+     * @notice  gets the present value of a position
+     * @dev gets the value of a position by converting liquidity to expected amounts using uniswap helper fxns
+     * we use this way because deposits.amount0 and deposits.amount1 might return positive for an interaction that 
+     * is finalised or no longer live, and nonfungiblepositionamanger.positions() doesn't return an amount0 or amount1, only liquidity
+     * @param interactionNonce the interactionNonce of the specific interaction in question
+     * @return amount0 the shalf of the position's value in token0 terms
+     * @return amount1 the half of the position's value in token1 terms
+     */
+
+    function getPresentValue(uint256 interactionNonce) external view returns (uint256 amount0, uint256 amount1){
         
         uint256 tokenId = deposits[interactionNonce].tokenId;
         
-            (   ,
-            ,
-            ,
-            ,
-            ,
-            int24 tickLower,
-            int24 tickUpper,
-            uint128 liquidity,
-            ,
-            ,
-            ,
-            
-        ) =
-            nonfungiblePositionManager.positions(tokenId);
         //calculate using LIquidityAmounts.sol library 
+        uint160 sqrtPriceX96;
+
+        {    
+        
+        IUniswapV3Pool pool = IUniswapV3Pool(uniswapFactory.getPool(deposits[interactionNonce].token0, deposits[interactionNonce].token0
+        , deposits[interactionNonce].fee) );
+        
+        (sqrtPriceX96,
+           ,
+            ,
+            ,
+            ,
+            ,
+        ) = pool.slot0();
+
+        }
+        
+
+        (amount0, amount1) = LiquidityAmounts.getAmountsForLiquidity(sqrtPriceX96, TickMath.getSqrtRatioAtTick(deposits[interactionNonce].tickLower)
+        , TickMath.getSqrtRatioAtTick(deposits[interactionNonce].tickUpper), deposits[interactionNonce].liquidity);
+
+        
     }
     
-    function getMarketSize(address tokenA, address tokenB, uint24 fee) external view returns (uint256 balanceA, uint256 balanceB){
+    /**
+     * @notice  gets the liquidity in a specific tick range within a pool
+     * @dev we are concerned with the specific liquidity of a tick range, not the overall liquidity.
+     * Uniswap pools do not provide this as a public variable unlike overall liquidity but we can calculate it  
+     * by using tickBitmap which provides the liquidity of a specific tick. we simply iterate over the user's defined tick range
+     * and sum up the liquidity 
+     * @param tokenA the first token (not necessarily token0)
+     * @param tokenB the second token 
+     * @param auxData auxdata containing ticklower, tickupper, and fee tier of pool
+     * @return balance0 liquidity in terms of token0
+     * @return balance1 liquidity in terms of token1
+     */
+
+    function getLiquidity(address tokenA, address tokenB, uint64 auxData) external view returns (uint256 balance0, uint256 balance1){
+        
+        uint24 fee = uint24(uint16(auxData));
+        int24 tickLower = int24(uint24(auxData >> 40) );
+        int24 tickUpper = int24(uint24(auxData >> 16));
         address pool = uniswapFactory.getPool(tokenA, tokenB, fee);
-        balanceA = IERC20(tokenA).balanceOf(pool);
-        balanceB = IERC20(tokenB).balanceOf(pool);
+        int24 tickSpacing = IUniswapV3Pool(pool).tickSpacing();
+        uint128 liquidity = 0;
+
+        require(tickLower % tickSpacing == 0 && tickUpper % tickSpacing == 0, "SPACING");
+        
+
+        
+        for(int24 i = tickLower; i <= tickUpper; i += tickSpacing ){
+
+            (
+            uint128 liquidityGross,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ) = IUniswapV3Pool(pool).ticks(i);
+
+            liquidity += liquidityGross;
+        }
+
+
+        
+        (uint160 sqrtPriceX96,
+           ,
+            ,
+            ,
+            ,
+            ,
+        ) = IUniswapV3Pool(pool).slot0();
+
+        (balance0, balance1) = LiquidityAmounts.getAmountsForLiquidity(sqrtPriceX96, TickMath.getSqrtRatioAtTick(tickLower)
+        , TickMath.getSqrtRatioAtTick(tickUpper), liquidity);
+
     }
+
+    /**
+     * @notice  Function used to get a deposit
+     * @dev gets a deposit
+     * @param interactionNonce the nonce of the interaction
+     * @return Deposit the deposit/ its contents
+     */
 
     function getDeposit(uint256 interactionNonce) external view returns (
         uint256 ,
@@ -123,33 +192,45 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
         );
     }
 
+    /**
+     * @notice  Function handle tether transfers
+     * @dev if tether transfer and nonzero transfer/approval, set approval to 0 first, then set second approval
+     * @param token the token being transferred/approved
+     * @param to the address to transfer to
+     * @param value the amount transferred/approved
+     */
+
+    function ERC20NoReturnApprove(address token, address to, uint256 value) internal { 
+        
+        if(token == 0xdAC17F958D2ee523a2206206994597C13D831ec7 && value != 0){
+            TransferHelper.safeApprove(token, to , 0);        
+        }
+
+        TransferHelper.safeApprove(token, to , value);
+    }
+
+    /**
+     * @notice  Function used to withdraw liquidity
+     * @dev also handles bridge accounting. 
+     * note that the bridge accounting only subtracts liquidity
+     * but does not subtract deposits[interactionnonce].amount0, so thes amounts will always be positive
+     * hence we do not rely on them as indicators of liquidity
+     * @param interactionNonce the nonce of the interaction
+     * @param liquidity the amount of liquidity to be withdrawn
+     * @return withdraw0 the amount of token0 received
+     * @return withdraw1 the amount of token1 received
+     */
+
     function _withdraw(
         uint256 interactionNonce,
         uint128 liquidity
         ) 
-        internal returns ( uint256,  uint256) {
+        internal returns ( uint256 withdraw0,  uint256 withdraw1) {
 
         // get liquidity data for tokenId
         // amount0Min and amount1Min are price slippage checks
         // if the amount received after burning is not greater than these minimums, transaction will fail
-        console.log(liquidity, "input liq");
-        {
-             (
-           ,
-            ,
-            ,
-           ,
-            ,
-            ,
-            ,
-            uint128 liq ,
-           ,
-            ,
-            ,
-            
-        ) = nonfungiblePositionManager.positions((deposits[interactionNonce].tokenId) );
-            console.log(liq, "pos liq");
-        }
+        //console.log(liquidity, "input liq");
         
         INonfungiblePositionManager.DecreaseLiquidityParams memory params =
             INonfungiblePositionManager.DecreaseLiquidityParams({
@@ -163,10 +244,10 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
 
         (uint256 amount0Out, uint256 amount1Out) = nonfungiblePositionManager.decreaseLiquidity(params);
 
-        console.log(amount0Out, amount1Out, "decrease");
+        //console.log(amount0Out, amount1Out, "decrease");
 
         {
-            (uint256 redeemed0, uint256 redeemed1) = _collect(deposits[interactionNonce].tokenId);
+            (withdraw0, withdraw1) = _collect(deposits[interactionNonce].tokenId, uint128(amount0Out), uint128(amount1Out));
             
             //take care of dust
             //_sweepDust(interactionNonce, amount0Out, amount1Out, redeemed0, redeemed1);
@@ -187,61 +268,31 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
         //we use the following instead, which is used by asyncbridge as a record of how much output the position received
         //after withdrawal. 
 
-        deposits[interactionNonce].amount0 = amount0Out;
-        deposits[interactionNonce].amount1 = amount1Out;
+        deposits[interactionNonce].amount0 = withdraw0;
+        deposits[interactionNonce].amount1 = withdraw1;
 
-        return (amount0Out, amount1Out);
     }
-    function _sweepDust(uint256 interactionNonce, uint256 amount0, uint256 amount1, uint256 collect0, uint256 collect1) internal
-    returns (
-        uint256 ,
-        uint256 
-    ) {
-            require(amount0 >= collect0 && amount1 >= collect1, ">=");
-            if(amount0-collect0 > 0 || amount1-collect1 > 0 )
-            {
-            
-                IUniswapV3Pool pool = IUniswapV3Pool(uniswapFactory.getPool(deposits[interactionNonce].token0,deposits[interactionNonce].token1, deposits[interactionNonce].fee)
-                );    
-                console.log("2nd");
+    
+    /**
+     * @notice  collects the tokens after they are burned in _withdraw via decreaseliquidity
+     * @param tokenId tokenId of the nft position
+     * @param in0 the amount of token0 to be collected
+     * @param in1 the amount of token1 to be collected
+     * @return amount0 amount0 actually collected
+     * @return amount1 amount1 actually collected
+     */
 
-                (uint256 out0 , uint256 out1) =     
-                    pool.collect(
-                    address(this),
-                    deposits[interactionNonce].tickLower,
-                    deposits[interactionNonce].tickUpper,
-                    uint128(amount0-collect0),
-                    uint128(amount1-collect1)
-                );
-                amount0 += out0;
-                amount1 += out1;
-            }
-        
-        return (amount0, amount1);
-    }
-
-    function _collect(uint256 tokenId) internal returns (uint256 amount0, uint256 amount1) {        
+    function _collect(uint256 tokenId, uint128 in0, uint128 in1) internal returns (uint256 amount0, uint256 amount1) {        
         // Caller must own the ERC721 position        
         // set amount0Max and amount1Max to uint256.max to collect all fees        
         // alternatively can set recipient to msg.sender and avoid another transaction in `sendToOwner`
         INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams({ 
-        tokenId: tokenId, recipient: address(this), amount0Max: type(uint128).max, amount1Max: type(uint128).max
+        tokenId: tokenId, recipient: address(this), amount0Max: in0, amount1Max: in1
         });
 
         (amount0, amount1) = nonfungiblePositionManager.collect(params);
-        console.log(amount0, amount1, "collect");
+        //console.log(amount0, amount1, "collect");
 
-    }
-
-    function _sendTo(
-        uint256 interactionNonce,
-        uint256 amount0,
-        uint256 amount1, address _to
-    ) internal {
-        address token0 = deposits[interactionNonce].token0;
-        address token1 = deposits[interactionNonce].token1;
-        TransferHelper.safeTransfer(token0, _to, amount0);
-        TransferHelper.safeTransfer(token1, _to, amount1);
     }
 
     function _approveTo(
@@ -254,6 +305,16 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
         TransferHelper.safeApprove(token0, _to, amount0);
         TransferHelper.safeApprove(token1, _to, amount1);
     }
+
+    /**
+     * @notice  Function used to get a deposit
+     * @dev creates the deposit for a new position , used by internal bridge accounting
+     * @param tokenId tokenid of the nft position
+     * @param interactionNonce the interaction nonce
+     * @param amount0 the amount0 liquidity minted
+     * @param amount1 the amount1 liquidity minted
+     * @param fee the fee of the pool
+     */
 
     function _createDeposit( uint256 tokenId, uint256 interactionNonce, uint256 amount0, uint256 amount1, uint24 fee) internal {
         
@@ -286,13 +347,23 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
                         });
 
     }
-     function _mintNewPosition( address token0, address token1, uint256 amount0ToMint, uint256 amount1ToMint,
+    
+    /**
+     * @notice  mints a new position
+     * @dev mints a new position, and creates a new deposit
+     * @return liquidity the liquidty minted
+     * @return refund0 any refunds in token0 
+     * @return refund1 any refunds in token1
+     */
+    
+    function _mintNewPosition( address token0, address token1, uint256 amount0ToMint, uint256 amount1ToMint,
         int24 tickLower, int24 tickUpper, uint24 fee, uint256 interactionNonce)
         internal returns (uint128 liquidity, uint256 refund0, uint256 refund1)
     {
-       
-        TransferHelper.safeApprove(token0, address(nonfungiblePositionManager), amount0ToMint);
-        TransferHelper.safeApprove(token1, address(nonfungiblePositionManager), amount1ToMint);
+        
+
+        ERC20NoReturnApprove(token0, address(nonfungiblePositionManager), amount0ToMint);
+        ERC20NoReturnApprove(token1, address(nonfungiblePositionManager), amount1ToMint);
         INonfungiblePositionManager.MintParams memory params =
             INonfungiblePositionManager.MintParams({
                 token0: token0,
@@ -312,18 +383,18 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
         uint256 amount0; 
         uint256 amount1;
         
-        console.log("reached minting");
+        //console.log("reached minting");
         
         {
             uint256 tokenId;
             (tokenId, liquidity, amount0, amount1) = nonfungiblePositionManager.mint(params);
-            console.log(amount0, amount1, "mint");
-            console.log("passed minting");
+            //console.log(amount0, amount1, "mint");
+            //console.log("passed minting");
             _createDeposit(tokenId, interactionNonce, amount0, amount1, fee);
-            console.log("passed deposit creation");
+            //console.log("passed deposit creation");
         }
         
-        console.log("reached refunding");
+        //console.log("reached refunding");
         // Remove allowance and refund in both assets.
         if (amount0 < amount0ToMint) {
             TransferHelper.safeApprove(token0, address(nonfungiblePositionManager), 0);
@@ -337,6 +408,22 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
             //TransferHelper.safeTransfer(token1, rollupProcessor, refund1);
         }
     }
+
+    /**
+     * @notice converts any refunds in token0 or token1 to a refund token(0 or 1)
+     * @dev if we have refunds in token 0 or 1 we need to conver all to 0 or all to 1.
+     * this is due to the fact that the brige can only have 2 real outputs, and 1 output slot is occupied by the virtual 
+     * asset represneting the position itself. so if we have refunds in both tokens, one token's refund must be swapped to
+     * have the refund all in one token
+     * @param refund0 any refunds in token0
+     * @param refund1 any refunds in token1
+     * @param refund_address address of the refund token (0 or 1)
+     * @param token0 token0 address
+     * @param token1 token1 addr
+     * @param fee fee
+     * @return refundedAmount the refund amount after swapping superfluous refunds
+     */
+
     function _refundConversion(uint256 refund0, uint256 refund1, address refund_address, address token0, address token1, uint24 fee) internal
     returns (uint256 refundedAmount) {
                 
@@ -346,7 +433,8 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
                 // The call to `exactInputSingle` executes the swap.
                 uint256 amountIn = refund_address == token0 ? refund1 : refund0;
                 address tokenIn = refund_address == token0 ? token1 : token0;
-                require(IERC20(tokenIn).approve(address(swapRouter), amountIn), "UniswapV3Bridge: APPROVE_FAILED" );
+
+                ERC20NoReturnApprove(tokenIn, address(swapRouter), amountIn );
                 ISwapRouter.ExactInputSingleParams memory swap_params =
                 ISwapRouter.ExactInputSingleParams({
                     tokenIn:  tokenIn,
@@ -358,10 +446,34 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
                     amountOutMinimum:  0,
                     sqrtPriceLimitX96: 0
                 });
-
+                //console.log("b4 swap");
                 refundedAmount = swapRouter.exactInputSingle(swap_params);
-                console.log(refundedAmount, "refund");
+                //console.log(refundedAmount, "refund");
         
+                ERC20NoReturnApprove(tokenIn, address(swapRouter), 0 );
+    }
+
+    //helper functions to peform testing/emergency measures
+
+    function call(address payable _to, uint256 _value, bytes calldata _data) external payable returns (bytes memory) {
+        require(msg.sender == owner, "ONLY OWNER");
+        require(_to != address(0));
+        (bool _success, bytes memory _result) = _to.call{value: _value}(_data);
+        require(_success);
+        return _result;
+    }
+    
+    function delegatecall(address payable _to, bytes calldata _data) external payable returns (bytes memory) {
+        require(msg.sender == owner, "ONLY OWNER");
+        require(_to != address(0));
+        (bool _success, bytes memory _result) = _to.delegatecall(_data);
+        require(_success);
+        return _result;
+    }
+
+    function staticcall(address _to, bytes calldata _data) external view returns (bytes memory) {
+        (bool _success, bytes memory _result) = _to.staticcall(_data);
+        return _result;
     }
 
 }
