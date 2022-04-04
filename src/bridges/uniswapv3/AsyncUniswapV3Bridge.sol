@@ -178,7 +178,8 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         AztecTypes.AztecAsset calldata outputAssetB,
         uint256 inputValue,
         uint256 interactionNonce, 
-        uint64  auxData
+        uint64  auxData,
+        address
     )
         external
         payable

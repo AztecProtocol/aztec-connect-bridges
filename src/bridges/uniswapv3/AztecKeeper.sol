@@ -37,7 +37,7 @@ interface IDefiBridge {
 }
 
 interface IRollupProcessor {
-    function processAsyncDeFiInteraction(uint256 interactionNonce) external;
+    function processAsyncDefiInteraction(uint256 interactionNonce) external;
 }
 
 contract AztecKeeper is KeeperCompatibleInterface {
@@ -113,7 +113,7 @@ contract AztecKeeper is KeeperCompatibleInterface {
                 bytes memory payload = abi.encodeWithSignature("trigger(uint256)", finalisable[i]);
                 (bool result, bytes memory data) = address(bridge).call(payload);
                 (uint256 out0, uint256 out1) = abi.decode(data, (uint256, uint256));
-                rollupProcessor.processAsyncDeFiInteraction(finalisable[i]);
+                rollupProcessor.processAsyncDefiInteraction(finalisable[i]);
             }
         }
             

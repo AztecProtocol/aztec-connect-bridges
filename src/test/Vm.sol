@@ -30,4 +30,6 @@ interface Vm {
     function expectRevert(bytes calldata) external;
 
     function getCode(string calldata) external returns (bytes memory);
+
+    function assume(bool condition) external; 
 }

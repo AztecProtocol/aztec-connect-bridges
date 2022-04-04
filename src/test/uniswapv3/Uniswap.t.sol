@@ -378,7 +378,7 @@ contract UniswapTest is DSTest {
 
         console.log("trigger");
         (uint256 out0, uint256 out1) = asyncBridge.trigger(1);
-        rollupProcessor.processAsyncDeFiInteraction(1);
+        rollupProcessor.processAsyncDefiInteraction(1);
 
         //we use require isntead of assertEq because the price manipulation we use in this always results in more output than input
         //so they never are equal
@@ -476,7 +476,7 @@ contract UniswapTest is DSTest {
 
         console.log("cancel");
         (uint256 out0, uint256 out1) = asyncBridge.cancel(1);
-        rollupProcessor.processAsyncDeFiInteraction(1);
+        rollupProcessor.processAsyncDefiInteraction(1);
 
         
         //one of the outputs will always be 0, we will onyl need to test the non zero one

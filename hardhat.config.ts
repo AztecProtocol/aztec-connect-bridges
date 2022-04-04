@@ -3,16 +3,11 @@ import '@typechain/hardhat';
 
 const config: HardhatUserConfig = {
   solidity: {
-    compilers: [
-      {
-        version: '0.8.10',
-      },
-    ],
+    version: "0.8.10",
     settings: {
-      evmVersion: 'london',
-      optimizer: { enabled: true, runs: 200 },
+    optimizer: { enabled: true, runs: 200 },
     },
-  },
+    },
   typechain: {
     target: 'ethers-v5',
   },
