@@ -34,6 +34,7 @@ describe('element bridge data', () => {
           failed: false,
         };
       }),
+      getTrancheDeploymentBlockNumber: jest.fn().mockResolvedValue((nonce: bigint) => BigNumber.from(100000n)),
     } as any;
     const bridgeId = new BridgeId(67, 123, 456, 7890, 78, new BitConfig(false, true, false, true, false, false), 78);
 
