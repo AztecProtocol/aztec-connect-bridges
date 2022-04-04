@@ -1,0 +1,201 @@
+Question:
+
+can i change the input erc20 address
+
+Note: 
+i changed line 150ish of uniswapv3bridge _decreaseliquidity from a .sub() using safemath to a normal - operator
+plus a require guard before because for some reason it makes the tests fail
+Note:
+
+Several files were changed to make them compatiable with later solidity compiler versions, mostly it is type conversions
+
+TickBitmap.sol edited because of type conversions.  Failed to compile and throws explicit type conversion error reminiscent of trying 
+to compile a contract that only works with older solidity verions  despite the fact that there are no version conflicts, nor did I 
+change the version for TickBitmap.sol. I am now forced to hand-fix the type conversion error.
+
+Other notes regarding errors:
+weird error where the Uniswap pool thinks I am doing a delegatecall, and so the NoDelegateCall.sol anti-delegatecall check fails
+
+
+NoDelegateCall error progress report:
+
+When I called nonfingublePositionManager.mint() inside Uniswap.t.sol before anything else, it worked
+When I changed the code such that in the test it is not rollupProcessor.convert(...) but rather syncBridge.convert(...) to
+see if somehow the delegatecall in rollupProcessor.convert(...) makes a difference, there was still a NoDelegateCall error.
+so the delegatecall error must be coming from inside syncBridge.
+When I called nonfingublePositionManager.mint() inside syncbridge, but before _mintNewPosition, there was still an error.
+
+
+
+Things to do: 
+packing/ gas optimizations for structs / make sure thigns are cached when necessary
+fix slippage 
+impelmeent a typescript class. 'brige-data.ts'
+handle cancellation of an async order edge case
+
+handle _decreaseliquidity proper functioning for private limit orders
+things done:
+
+Implement a view function for deposit/virtual notes
+
+Notes on how the bridge works:
+Virtual assets do not record addreses
+The bridge constrains the user to inputting equal quantities of inputAssets
+
+Questions:
+
+block.coinbase
+
+
+function _withdraw( 
+        uint256 interactionNonce,
+        uint128 liquidity
+        ) internal returns (uint256 amount0, uint256 amount1) { 
+
+        uint128 fraction = liquidity/deposits[interactionNonce].liquidity;
+        uint128 amount0Max = fraction * uint128(deposits[interactionNonce].amount0);
+        uint128 amount1Max = fraction * uint128(deposits[interactionNonce].amount1);
+        console.log(amount0Max, amount1Max, fraction, "withdraw");
+        uint256 tokenId =  deposits[interactionNonce].tokenId;
+        // Caller must own the ERC721 position        
+        // set amount0Max and amount1Max to uint256.max to collect all fees        
+        // alternatively can set recipient to msg.sender and avoid another transaction in `sendToOwner`
+        INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams({ 
+        tokenId: tokenId, recipient: address(this), amount0Max: amount0Max, amount1Max: amount1Max
+        });
+
+        (amount0, amount1) = nonfungiblePositionManager.collect(params);
+        console.log(amount0, amount1, "0/1");
+        
+        require(deposits[interactionNonce].liquidity >= liquidity, "!GTE");
+        deposits[interactionNonce].liquidity = deposits[interactionNonce].liquidity-liquidity;
+        deposits[interactionNonce].amount0 =  deposits[interactionNonce].amount0.sub(amount0);
+        deposits[interactionNonce].amount1 = deposits[interactionNonce].amount1.sub(amount1);   
+
+        return (amount0, amount1);
+    }
+
+
+
+
+    uint256 amount0Max = deposits[interactionNonce].amount0 * liquidity/deposits[interactionNonce].liquidity;
+        uint256 amount1Max = deposits[interactionNonce].amount1 * liquidity/deposits[interactionNonce].liquidity;
+
+        require(amount0Max > 0 || amount1Max > 0);
+        // allow collecting to the nft position manager address with address 0
+
+        Position memory position = nonfungiblePositionManager.positions(deposits[interactionNonce].tokenId);
+
+        IUniswapV3Pool pool = IUniswapV3Pool(uniswapFactory.getPool(deposits[interactionNOnce].token0, deposits[interactionNOnce].token1,
+        deposits[interactionNOnce].fee)
+        );
+
+        (uint128 tokensOwed0, uint128 tokensOwed1) = (position.tokensOwed0, position.tokensOwed1);
+
+        // trigger an update of the position fees owed and fee growth snapshots if it has any liquidity
+        if (position.liquidity > 0) {
+            pool.burn(position.tickLower, position.tickUpper, position.liquidity);
+            (, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128, , ) =
+                pool.positions(PositionKey.compute(address(this), position.tickLower, position.tickUpper));
+
+            tokensOwed0 += uint128(
+                FullMath.mulDiv(
+                    feeGrowthInside0LastX128 - position.feeGrowthInside0LastX128,
+                    position.liquidity,
+                    FixedPoint128.Q128
+                )
+            );
+            tokensOwed1 += uint128(
+                FullMath.mulDiv(
+                    feeGrowthInside1LastX128 - position.feeGrowthInside1LastX128,
+                    position.liquidity,
+                    FixedPoint128.Q128
+                )
+            );
+
+            position.feeGrowthInside0LastX128 = feeGrowthInside0LastX128;
+            position.feeGrowthInside1LastX128 = feeGrowthInside1LastX128;
+        }
+
+        // compute the arguments to give to the pool#collect method
+        (uint128 amount0Collect, uint128 amount1Collect) =
+            (
+                amount0Max > tokensOwed0 ? tokensOwed0 : amount0Max,
+                amount1Max > tokensOwed1 ? tokensOwed1 : amount1Max
+            );
+
+        // the actual amounts collected are returned
+        (amount0, amount1) = pool.collect(
+            address(this),
+            position.tickLower,
+            position.tickUpper,
+            amount0Collect,
+            amount1Collect
+        );
+
+        // sometimes there will be a few less wei than expected due to rounding down in core, but we just subtract the full amount expected
+        // instead of the actual amount so we can burn the token
+        (position.tokensOwed0, position.tokensOwed1) = (tokensOwed0 - amount0Collect, tokensOwed1 - amount1Collect);
+
+
+            function _withdraw(
+        uint256 interactionNonce,
+        uint128 liquidity
+    ) internal returns (uint256 amount0, uint256 amount1) {
+
+        
+        
+
+        IUniswapV3Pool pool = IUniswapV3Pool(uniswapFactory.getPool(deposits[interactionNonce].token0,deposits[interactionNonce].token1, deposits[interactionNonce].fee)
+        );
+        
+        (amount0, amount1) = pool.burn( 
+            deposits[interactionNonce].tickLower,
+            deposits[interactionNonce].tickUpper,
+            liquidity
+            );
+        // the actual amounts collected are returned
+        (amount0, amount1) = pool.collect(
+            address(this),
+            deposits[interactionNonce].tickLower,
+            deposits[interactionNonce].tickUpper,
+            uint128(amount0),
+            uint128(amount1)
+        );
+        console.log(amount0, amount1, "0 and 1");
+        
+        require(deposits[interactionNonce].liquidity >= liquidity, "!GTE");
+        deposits[interactionNonce].liquidity = deposits[interactionNonce].liquidity-liquidity;
+        deposits[interactionNonce].amount0 =  deposits[interactionNonce].amount0.sub(amount0);
+        deposits[interactionNonce].amount1 = deposits[interactionNonce].amount1.sub(amount1);   
+
+        return (amount0, amount1);
+    }
+
+
+        function restoreMaps(
+    mapping(int24 => Tick.Info) _ticks,
+    mapping(int16 => uint256)  _tickBitmap,
+    mapping(bytes32 => Position.Info)  _positions,
+    Oracle.Observation[65535] _observations) external {
+        ticks = _ticks;
+        tickBitmap = _tickBitmap;
+        positions = _positions;
+        observations = _observations;
+    }
+
+    function restoreSlot0(
+        uint160 sqrtPriceX96,
+        int24 tick,
+        uint16 observationIndex,
+        uint16 observationCardinality,
+        uint16 observationCardinalityNext,
+        uint8 feeProtocol,
+        bool unlocked,
+
+
+        {
+            console.log(IUniswapV3Pool(pool).feeGrowthGlobal0X128(),
+                        uint256(IUniswapV3Pool(pool).liquidity())
+            );
+        }
