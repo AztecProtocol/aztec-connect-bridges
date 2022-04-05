@@ -35,6 +35,7 @@ contract AaveLendingBridge is IDefiBridge {
         addressesProvider = ILendingPoolAddressesProvider(_addressesProvider);
     }
 
+    // sets underlying address to zkAToken address in underlyingToZkAToken map
     function setUnderlyingToZkAToken(address underlyingAsset) external {
         IPool pool = IPool(addressesProvider.getLendingPool());
 
@@ -49,7 +50,7 @@ contract AaveLendingBridge is IDefiBridge {
         );
     }
 
-    function convert(
+function convert(
         AztecTypes.AztecAsset memory inputAssetA,
         AztecTypes.AztecAsset memory inputAssetB,
         AztecTypes.AztecAsset memory outputAssetA,
@@ -108,6 +109,7 @@ contract AaveLendingBridge is IDefiBridge {
 
     function _exit(address outputAsset, uint256 scaledAmount) internal returns (uint256) {
         IPool pool = IPool(addressesProvider.getLendingPool());
+        // get aToken contract of corresponding underlying aTokenAddress
         IERC20 aToken = IERC20(pool.getReserveData(outputAsset).aTokenAddress);
 
         // 1. Compute the amount from the scaledAmount supplied

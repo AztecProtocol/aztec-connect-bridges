@@ -70,11 +70,11 @@ contract AaveTest is DSTest {
     //     aaveLendingBridge.setUnderlyingToZkAToken(address(dai));
     // }
 
-    // function testEnterWithDai(uint128 depositAmount, uint16 timeDiff) public {
-    //     _setupDai();
-    //     _enterWithDai(1000000);
-    //     _accrueInterest(timeDiff);
-    // }
+    function testEnterWithDai(uint128 depositAmount, uint16 timeDiff) public {
+        _setupDai();
+        _enterWithDai(1000000);
+        _accrueInterest(timeDiff);
+    }
 
     // function testAdditionalEnter(
     //     uint128 depositAmount1,
