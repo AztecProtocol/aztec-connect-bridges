@@ -842,7 +842,7 @@ contract ElementBridge is BridgeBase {
             }
             Interaction storage interaction = interactions[nextNonce];
             if (interaction.expiry == 0 || interaction.finalised || interaction.failed) {
-                // this shouldn't happen, suggests the interaction has been finalised already but not removed from the sets of nonces for this expiry
+                // this shouldn"t happen, suggests the interaction has been finalised already but not removed from the sets of nonces for this expiry
                 // remove the nonce and continue searching
                 nonces.pop();
                 unchecked {
@@ -904,7 +904,7 @@ contract ElementBridge is BridgeBase {
             // this interaction can be finalised. we don't need to redeem the tranche, we just need to allocate the redeemed asset
             return (true, "");
         }
-        // tranche hasn't been redeemed, now check to see if we can redeem it
+        // tranche hasn"t been redeemed, now check to see if we can redeem it
         ITranche tranche = ITranche(interaction.trancheAddress);
         uint256 speedbump = tranche.speedbump();
         if (speedbump != 0) {

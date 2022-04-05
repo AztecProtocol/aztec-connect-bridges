@@ -8,7 +8,7 @@ import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 
 // Example-specific imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ExampleBridgeContract} from "./../../bridges/example/ExampleBridge.sol";
+import {RibbonFinanceBridgeContract} from "./../../bridges/ribbon_finance/RibbonFinanceBridge.sol";
 
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 
@@ -16,14 +16,14 @@ import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 import "../../../lib/ds-test/src/test.sol";
 
 
-contract ExampleTest is DSTest {
+contract RibbonFinanceBridgeTest is DSTest {
 
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     DefiBridgeProxy defiBridgeProxy;
     RollupProcessor rollupProcessor;
 
-    ExampleBridgeContract exampleBridge;
+    RibbonFinanceBridgeContract ribbonFinanceBridge;
 
     IERC20 constant dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
 
@@ -36,18 +36,18 @@ contract ExampleTest is DSTest {
     function setUp() public {
         _aztecPreSetup();
 
-        exampleBridge = new ExampleBridgeContract(
+        ribbonFinanceBridge = new RibbonFinanceBridgeContract(
             address(rollupProcessor)
         );
+
+        rollupProcessor.setBridgeGasLimit(address(ribbonFinanceBridge), 100000);
 
         _setTokenBalance(address(dai), address(0xdead), 42069);
     }
 
-
-    function testExampleBridge() public {
-       uint256 depositAmount = 15000;
+    function testDepositEthThetaV2() public {
+        uint256 depositAmount = 10000;
         _setTokenBalance(address(dai), address(rollupProcessor), depositAmount);
-
 
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
@@ -56,8 +56,8 @@ contract ExampleTest is DSTest {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
         AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(dai),
+            id: 2,
+            erc20Address: address(0),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
@@ -66,36 +66,34 @@ contract ExampleTest is DSTest {
             uint256 outputValueB,
             bool isAsync
         ) = rollupProcessor.convert(
-                address(exampleBridge),
-                inputAsset,
-                empty,
-                outputAsset,
-                empty,
-                depositAmount,
-                1,
-                0
-            );
-
-        uint256 rollupDai = dai.balanceOf(address(rollupProcessor));
-
-        assertEq(
+            address(ribbonFinanceBridge),
+            inputAsset,
+            empty,
+            outputAsset,
+            empty,
             depositAmount,
-            rollupDai,
-            "Balances must match"
+            1,
+            0
         );
-
     }
 
-
-    function assertNotEq(address a, address b) internal {
-        if (a == b) {
-            emit log("Error: a != b not satisfied [address]");
-            emit log_named_address("  Expected", b);
-            emit log_named_address("    Actual", a);
-            fail();
-        }
+    function testWithdrawalEthThetaV2() public {
     }
 
+    // function testDepositWBTCThetaV2() {
+    // }
+
+    // function testDepositEthCallThetaV1() {
+    // }
+
+    // function testDepositWBTCCallThetaV1() {
+    // }
+
+    // function testDepositEthPutThetaV1() {
+    // }
+
+    // function testDepositEthPutyvUSDCV1() {
+    // }
 
     function _setTokenBalance(
         address token,
