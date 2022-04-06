@@ -50,18 +50,4 @@ contract TestHelper is DSTestPlus {
             fail();
         }
     }
-
-    function assertCloseTo(
-        uint256 a,
-        uint256 b,
-        uint256 c
-    ) internal {
-        uint256 diff = a > b ? a - b : b - a;
-        if (diff > c) {
-            emit log('Error: a close to b not satisfied [uint256]');
-            emit log_named_uint(' Expected', b);
-            emit log_named_uint('   Actual', a);
-            fail();
-        }
-    }
 }

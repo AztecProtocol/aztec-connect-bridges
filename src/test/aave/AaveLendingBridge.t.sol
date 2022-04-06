@@ -580,7 +580,7 @@ contract AaveLendingTest is TestHelper {
             assertEq(STK_AAVE.balanceOf(address(aaveLendingBridge)), 0, 'The bridge received the rewards');
 
             // The claiming of liquidity rewards is not always returning the actual value increase
-            assertCloseTo(STK_AAVE.balanceOf(BENEFICIARY), expectedRewards + beneficiaryCurrentStakedAaveBalance, 2);
+            assertApproxEq(STK_AAVE.balanceOf(BENEFICIARY), expectedRewards + beneficiaryCurrentStakedAaveBalance, 2);
         }
     }
 
@@ -603,7 +603,7 @@ contract AaveLendingTest is TestHelper {
         assertEq(STK_AAVE.balanceOf(address(aaveLendingBridge)), 0, 'The bridge received the rewards');
 
         // The claiming of liquidity rewards is not always returning the actual value increase
-        assertCloseTo(STK_AAVE.balanceOf(BENEFICIARY), expectedRewards + beneficiaryCurrentStakedAaveBalance, 2);
+        assertApproxEq(STK_AAVE.balanceOf(BENEFICIARY), expectedRewards + beneficiaryCurrentStakedAaveBalance, 2);
     }
 
     /// Helpers
