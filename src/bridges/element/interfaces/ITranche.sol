@@ -25,4 +25,10 @@ interface ITranche is IERC20Permit {
   function position() external view returns (IERC20);
 
   function underlying() external view returns (IERC20);
+
+  function speedbump() external view returns (uint256);
+
+  function unlockTimestamp() external view returns (uint256);
+
+  function hitSpeedbump() external;
 }

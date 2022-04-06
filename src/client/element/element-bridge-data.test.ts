@@ -18,15 +18,23 @@ describe('element bridge data', () => {
   let balancerContract: Mockify<IVault>;
 
   it('should return the correct amount of interest', async () => {
-    const inputValue = 100000n;
-    const outputValue = 101000n;
-    const expiration = BigInt(Date.now() + 86400 * 60);
-    const startDate = BigInt(Date.now() - 86400 * 30);
+    const inputValue = 1n * 10n ** 18n;
+    const outputValue = 10n * 10n ** 18n;
+    const now = Math.floor(Date.now() / 1000);
+    const expiration = BigInt(now + 86400 * 60);
+    const startDate = BigInt(now - 86400 * 30);
 
     elementBridge = {
-      ...elementBridge,
-      interactions: jest.fn().mockResolvedValue(['', BigNumber.from(expiration), BigNumber.from(outputValue), false]),
-    };
+      interactions: jest.fn().mockImplementation(() => {
+        return {
+          quantityPT: BigNumber.from(outputValue),
+          trancheAddress: '',
+          expiry: BigNumber.from(expiration),
+          finalised: false,
+          failed: false,
+        };
+      }),
+    } as any;
     const bridgeId = new BridgeId(67, 123, 456, 7890, 78, new BitConfig(false, true, false, true, false, false), 78);
 
     rollupContract = {
@@ -38,30 +46,40 @@ describe('element bridge data', () => {
         },
       ]),
       filters: {
-        DefiBridgeProcessed: jest.fn(),
+        AsyncDefiBridgeProcessed: jest.fn(),
       } as any,
+      getDefiInteractionBlockNumber: jest.fn().mockImplementation((nonce: bigint) => BigNumber.from(nonce / 32n)),
     };
     const elementBridgeData = new ElementBridgeData(
       elementBridge as any,
       balancerContract as any,
       rollupContract as any,
     );
-    const [daiValue] = await elementBridgeData.getInteractionPresentValue(1n);
+    const nonce = 12345n;
+    const [daiValue] = await elementBridgeData.getInteractionPresentValue(nonce);
     const delta = outputValue - inputValue;
-    const scalingFactor = 1000000000n;
-    const ratio = (((BigInt(Date.now()) - startDate) * scalingFactor) / (expiration - startDate)) * scalingFactor;
+    const scalingFactor = elementBridgeData.scalingFactor;
+    const ratio = ((BigInt(now) - startDate) * scalingFactor) / (expiration - startDate);
     const out = inputValue + (delta * ratio) / scalingFactor;
+
     expect(daiValue.amount).toBe(out);
     expect(daiValue.assetId).toBe(123n);
   });
 
   it('should return the correct expiration of the tranche', async () => {
-    const endDate = Date.now() + 86400 * 60;
+    const endDate = Math.floor(Date.now() / 1000) + 86400 * 60;
 
     elementBridge = {
-      ...elementBridge,
-      interactions: jest.fn().mockResolvedValue(['', BigNumber.from(endDate), BigNumber.from(1), false]),
-    };
+      interactions: jest.fn().mockImplementation(() => {
+        return {
+          quantityPT: BigNumber.from(1),
+          trancheAddress: '',
+          expiry: BigNumber.from(endDate),
+          finalised: false,
+          failed: false,
+        };
+      }),
+    } as any;
 
     const elementBridgeData = new ElementBridgeData(
       elementBridge as any,
@@ -74,7 +92,8 @@ describe('element bridge data', () => {
   });
 
   it('should return the correct yearly output of the tranche', async () => {
-    const expiry = BigInt(Date.now() + 86400 * 30);
+    const now = Math.floor(Date.now() / 1000);
+    const expiry = BigInt(now + 86400 * 30);
     const trancheAddress = '0x90ca5cef5b29342b229fb8ae2db5d8f4f894d652';
     const poolId = '0x90ca5cef5b29342b229fb8ae2db5d8f4f894d6520002000000000000000000b5';
     const interest = 100000n;
@@ -123,7 +142,7 @@ describe('element bridge data', () => {
       BigInt(inputValue),
     );
     const YEAR = 60 * 60 * 24 * 365;
-    const timeToExpiration = expiry - BigInt(Date.now());
+    const timeToExpiration = expiry - BigInt(now);
     const scaledOut = (BigInt(interest) * elementBridgeData.scalingFactor) / timeToExpiration;
     const yearlyOut = (scaledOut * BigInt(YEAR)) / elementBridgeData.scalingFactor;
 

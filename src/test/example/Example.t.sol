@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.10;
 
-import {Vm} from "../Vm.sol";
+import {Vm} from "../../../lib/forge-std/src/Vm.sol";
 
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
@@ -39,6 +39,8 @@ contract ExampleTest is DSTest {
         exampleBridge = new ExampleBridgeContract(
             address(rollupProcessor)
         );
+
+        rollupProcessor.setBridgeGasLimit(address(exampleBridge), 100000);
 
         _setTokenBalance(address(dai), address(0xdead), 42069);
     }
