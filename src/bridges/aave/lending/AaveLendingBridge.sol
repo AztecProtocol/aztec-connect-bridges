@@ -116,7 +116,8 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         AztecTypes.AztecAsset calldata outputAssetB,
         uint256 totalInputValue,
         uint256 interactionNonce,
-        uint64 auxData
+        uint64 auxData,
+        address rollupBeneficiary
     )
         external
         payable

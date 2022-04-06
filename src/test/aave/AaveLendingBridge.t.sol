@@ -156,45 +156,117 @@ contract AaveLendingTest is TestHelper {
 
         // Invalid caller //
         VM.expectRevert(bytes(Errors.INVALID_CALLER));
-        IDefiBridge(address(aaveLendingBridge)).convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0);
+        IDefiBridge(address(aaveLendingBridge)).convert(
+            emptyAsset,
+            emptyAsset,
+            emptyAsset,
+            emptyAsset,
+            0,
+            0,
+            0,
+            BENEFICIARY
+        );
 
         VM.startPrank(address(rollupProcessor));
 
         // Eth as input and output //
         VM.expectRevert(bytes(Errors.INPUT_ASSET_A_AND_OUTPUT_ASSET_A_IS_ETH));
-        IDefiBridge(address(aaveLendingBridge)).convert(ethAsset, emptyAsset, ethAsset, emptyAsset, 0, 0, 0);
+        IDefiBridge(address(aaveLendingBridge)).convert(
+            ethAsset,
+            emptyAsset,
+            ethAsset,
+            emptyAsset,
+            0,
+            0,
+            0,
+            BENEFICIARY
+        );
 
         // Input asset empty
         VM.expectRevert(bytes(Errors.INPUT_ASSET_A_NOT_ERC20_OR_ETH));
-        IDefiBridge(address(aaveLendingBridge)).convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0);
+        IDefiBridge(address(aaveLendingBridge)).convert(
+            emptyAsset,
+            emptyAsset,
+            emptyAsset,
+            emptyAsset,
+            0,
+            0,
+            0,
+            BENEFICIARY
+        );
 
         // Input asset virtual
         VM.expectRevert(bytes(Errors.INPUT_ASSET_A_NOT_ERC20_OR_ETH));
-        IDefiBridge(address(aaveLendingBridge)).convert(virtualAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0);
+        IDefiBridge(address(aaveLendingBridge)).convert(
+            virtualAsset,
+            emptyAsset,
+            emptyAsset,
+            emptyAsset,
+            0,
+            0,
+            0,
+            BENEFICIARY
+        );
 
         // Output asset empty
         VM.expectRevert(bytes(Errors.OUTPUT_ASSET_A_NOT_ERC20_OR_ETH));
-        IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0);
+        IDefiBridge(address(aaveLendingBridge)).convert(
+            daiAsset,
+            emptyAsset,
+            emptyAsset,
+            emptyAsset,
+            0,
+            0,
+            0,
+            BENEFICIARY
+        );
 
         // Output asset virtual
         VM.expectRevert(bytes(Errors.OUTPUT_ASSET_A_NOT_ERC20_OR_ETH));
-        IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, emptyAsset, virtualAsset, emptyAsset, 0, 0, 0);
+        IDefiBridge(address(aaveLendingBridge)).convert(
+            daiAsset,
+            emptyAsset,
+            virtualAsset,
+            emptyAsset,
+            0,
+            0,
+            0,
+            BENEFICIARY
+        );
 
         // Non empty input asset B
         VM.expectRevert(bytes(Errors.INPUT_ASSET_B_NOT_EMPTY));
-        IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, daiAsset, ethAsset, emptyAsset, 0, 0, 0);
+        IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, daiAsset, ethAsset, emptyAsset, 0, 0, 0, BENEFICIARY);
         VM.expectRevert(bytes(Errors.INPUT_ASSET_B_NOT_EMPTY));
-        IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, virtualAsset, ethAsset, emptyAsset, 0, 0, 0);
+        IDefiBridge(address(aaveLendingBridge)).convert(
+            daiAsset,
+            virtualAsset,
+            ethAsset,
+            emptyAsset,
+            0,
+            0,
+            0,
+            BENEFICIARY
+        );
         VM.expectRevert(bytes(Errors.INPUT_ASSET_B_NOT_EMPTY));
-        IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, ethAsset, ethAsset, emptyAsset, 0, 0, 0);
+        IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, ethAsset, ethAsset, emptyAsset, 0, 0, 0, BENEFICIARY);
 
         // Non empty output asset B
         VM.expectRevert(bytes(Errors.OUTPUT_ASSET_B_NOT_EMPTY));
-        IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, emptyAsset, ethAsset, daiAsset, 0, 0, 0);
+        IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, emptyAsset, ethAsset, daiAsset, 0, 0, 0, BENEFICIARY);
         VM.expectRevert(bytes(Errors.OUTPUT_ASSET_B_NOT_EMPTY));
-        IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, emptyAsset, ethAsset, virtualAsset, 0, 0, 0);
+        IDefiBridge(address(aaveLendingBridge)).convert(
+            daiAsset,
+            emptyAsset,
+            ethAsset,
+            virtualAsset,
+            0,
+            0,
+            0,
+            BENEFICIARY
+        );
         VM.expectRevert(bytes(Errors.OUTPUT_ASSET_B_NOT_EMPTY));
-        IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, emptyAsset, ethAsset, ethAsset, 0, 0, 0);
+        IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, emptyAsset, ethAsset, ethAsset, 0, 0, 0, BENEFICIARY);
 
         // address(0) as input asset
         VM.expectRevert(bytes(Errors.INPUT_ASSET_INVALID));
@@ -205,7 +277,8 @@ contract AaveLendingTest is TestHelper {
             emptyAsset,
             0,
             0,
-            0
+            0,
+            BENEFICIARY
         );
 
         // address(0) as output asset
@@ -217,13 +290,23 @@ contract AaveLendingTest is TestHelper {
             emptyAsset,
             0,
             0,
-            0
+            0,
+            BENEFICIARY
         );
 
         // Trying to enter with non-supported asset. Is assumed to be zkAtoken for exit,
         // Will revert because zkAToken for other tokens is address 0
         VM.expectRevert(bytes(Errors.INPUT_ASSET_NOT_EQ_ZK_ATOKEN));
-        IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, emptyAsset, ethAsset, emptyAsset, 0, 0, 0);
+        IDefiBridge(address(aaveLendingBridge)).convert(
+            daiAsset,
+            emptyAsset,
+            ethAsset,
+            emptyAsset,
+            0,
+            0,
+            0,
+            BENEFICIARY
+        );
     }
 
     function testFailEnterWithToken() public {
