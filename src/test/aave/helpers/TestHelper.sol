@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import '../../../../lib/ds-test/src/test.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Vm} from './../../Vm.sol';
+import {DSTestPlus} from '../../../../lib/solmate/src/test/utils/DSTestPlus.sol';
 
-contract TestHelper is DSTest {
-    Vm internal constant VM = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+contract TestHelper is DSTestPlus {
+    Vm internal constant VM = Vm(HEVM_ADDRESS);
 
     function max(uint256 a, uint256 b) internal pure returns (uint256) {
         return a > b ? a : b;
@@ -14,14 +14,6 @@ contract TestHelper is DSTest {
 
     function min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
-    }
-
-    function cut(
-        uint256 a,
-        uint256 maxVal,
-        uint256 minVal
-    ) internal pure returns (uint256) {
-        return max(min(a, maxVal), minVal);
     }
 
     function _setTokenBalance(

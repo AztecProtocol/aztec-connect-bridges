@@ -325,14 +325,14 @@ contract AaveLendingTest is TestHelper {
         for (uint256 i = 0; i < tokens.length; i++) {
             _tokenSetup(tokens[i]);
             _addTokenPool();
-            _enterWithToken(cut(type(uint128).max, maxValue, minValue));
+            _enterWithToken(bound(type(uint128).max, minValue, maxValue));
         }
     }
 
     function testEnterWithEtherBigValues() public {
         _tokenSetup(WETH);
         _addTokenPool();
-        _enterWithEther(cut(type(uint128).max, maxValue, minValue));
+        _enterWithEther(bound(type(uint128).max, minValue, maxValue));
     }
 
     function testFailExitPartially() public {
@@ -355,7 +355,7 @@ contract AaveLendingTest is TestHelper {
         for (uint256 i = 0; i < tokens.length; i++) {
             _tokenSetup(tokens[i]);
             _addTokenPool();
-            _enterWithToken(cut(depositAmount / divisor, maxValue, minValue));
+            _enterWithToken(bound(depositAmount / divisor, minValue, maxValue));
             _accrueInterest(timeDiff);
         }
     }
@@ -363,14 +363,14 @@ contract AaveLendingTest is TestHelper {
     function testEnterWithEther(uint128 depositAmount, uint16 timeDiff) public {
         _tokenSetup(WETH);
         _addTokenPool();
-        _enterWithEther(cut(depositAmount / divisor, maxValue, minValue));
+        _enterWithEther(bound(depositAmount / divisor, minValue, maxValue));
         _accrueInterest(timeDiff);
     }
 
     function testEnterWithNoEther() public {
         _tokenSetup(WETH);
         _addTokenPool();
-        _enterWithEther(cut(0, maxValue, minValue));
+        _enterWithEther(bound(0, minValue, maxValue));
         _accrueInterest(0);
     }
 
@@ -382,9 +382,9 @@ contract AaveLendingTest is TestHelper {
         for (uint256 i = 0; i < tokens.length; i++) {
             _tokenSetup(tokens[i]);
             _addTokenPool();
-            _enterWithToken(cut(depositAmount1 / divisor, maxValue, minValue));
+            _enterWithToken(bound(depositAmount1 / divisor, minValue, maxValue));
             _accrueInterest(timeDiff);
-            _enterWithToken(cut(depositAmount2 / divisor, maxValue, minValue));
+            _enterWithToken(bound(depositAmount2 / divisor, minValue, maxValue));
         }
     }
 
@@ -395,9 +395,9 @@ contract AaveLendingTest is TestHelper {
     ) public {
         _tokenSetup(WETH);
         _addTokenPool();
-        _enterWithEther(cut(depositAmount1 / divisor, maxValue, minValue));
+        _enterWithEther(bound(depositAmount1 / divisor, minValue, maxValue));
         _accrueInterest(timeDiff);
-        _enterWithEther(cut(depositAmount2 / divisor, maxValue, minValue));
+        _enterWithEther(bound(depositAmount2 / divisor, minValue, maxValue));
     }
 
     function testExitPartially(
@@ -408,7 +408,7 @@ contract AaveLendingTest is TestHelper {
         for (uint256 i = 0; i < tokens.length; i++) {
             _tokenSetup(tokens[i]);
 
-            uint256 depositAmount = cut(_depositAmount / divisor, maxValue, minValue);
+            uint256 depositAmount = bound(_depositAmount / divisor, minValue, maxValue);
             uint256 index = pool.getReserveNormalizedIncome(address(token));
             uint256 scaledDepositAmount = uint256(depositAmount).rayDiv(index);
 
@@ -416,7 +416,7 @@ contract AaveLendingTest is TestHelper {
             _enterWithToken(depositAmount);
             _accrueInterest(timeDiff);
 
-            withdrawAmount = uint128(cut(withdrawAmount, scaledDepositAmount / 2, minValue / 2));
+            withdrawAmount = uint128(bound(withdrawAmount, minValue / 2, scaledDepositAmount / 2));
 
             _exitWithToken(withdrawAmount);
         }
@@ -429,7 +429,7 @@ contract AaveLendingTest is TestHelper {
     ) public {
         _tokenSetup(WETH);
 
-        uint256 depositAmount = cut(_depositAmount / divisor, maxValue, minValue);
+        uint256 depositAmount = bound(_depositAmount / divisor, minValue, maxValue);
         uint256 index = pool.getReserveNormalizedIncome(address(token));
         uint256 scaledDepositAmount = uint256(depositAmount).rayDiv(index);
 
@@ -437,7 +437,7 @@ contract AaveLendingTest is TestHelper {
         _enterWithEther(depositAmount);
         _accrueInterest(timeDiff);
 
-        withdrawAmount = uint128(cut(withdrawAmount, scaledDepositAmount / 2, minValue / 2));
+        withdrawAmount = uint128(bound(withdrawAmount, minValue / 2, scaledDepositAmount / 2));
 
         _exitWithEther(withdrawAmount);
     }
@@ -450,7 +450,7 @@ contract AaveLendingTest is TestHelper {
         for (uint256 i = 0; i < tokens.length; i++) {
             _tokenSetup(tokens[i]);
 
-            uint256 depositAmount = cut(_depositAmount / divisor, maxValue, minValue);
+            uint256 depositAmount = bound(_depositAmount / divisor, minValue, maxValue);
 
             _addTokenPool();
             _enterWithToken(depositAmount);
@@ -479,7 +479,7 @@ contract AaveLendingTest is TestHelper {
     ) public {
         _tokenSetup(WETH);
 
-        uint256 depositAmount = cut(_depositAmount / divisor, maxValue, minValue);
+        uint256 depositAmount = bound(_depositAmount / divisor, minValue, maxValue);
 
         _addTokenPool();
         _enterWithEther(depositAmount);
@@ -505,7 +505,7 @@ contract AaveLendingTest is TestHelper {
             _tokenSetup(tokens[i]);
 
             _addTokenPool();
-            uint256 depositAmount = cut(_depositAmount / divisor, maxValue, minValue);
+            uint256 depositAmount = bound(_depositAmount / divisor, minValue, maxValue);
 
             _enterWithToken(depositAmount);
 
@@ -526,7 +526,7 @@ contract AaveLendingTest is TestHelper {
         _tokenSetup(WETH);
 
         _addTokenPool();
-        uint256 depositAmount = cut(_depositAmount / divisor, maxValue, minValue);
+        uint256 depositAmount = bound(_depositAmount / divisor, minValue, maxValue);
 
         _enterWithEther(depositAmount);
 
@@ -546,7 +546,7 @@ contract AaveLendingTest is TestHelper {
         _tokenSetup(tokens[0]);
 
         _addTokenPool();
-        _enterWithToken(cut(depositAmount / divisor, maxValue, minValue));
+        _enterWithToken(bound(depositAmount / divisor, minValue, maxValue));
         _accrueInterest(timeDiff);
 
         address[] memory assets = new address[](1);
@@ -563,7 +563,7 @@ contract AaveLendingTest is TestHelper {
             _tokenSetup(tokens[i]);
 
             _addTokenPool();
-            _enterWithToken(cut(depositAmount / divisor, maxValue, minValue));
+            _enterWithToken(bound(depositAmount / divisor, minValue, maxValue));
             _accrueInterest(timeDiff);
 
             address[] memory assets = new address[](1);
@@ -587,7 +587,7 @@ contract AaveLendingTest is TestHelper {
     function testClaimRewardsEther(uint128 depositAmount, uint16 timeDiff) public {
         _tokenSetup(WETH);
         _addTokenPool();
-        _enterWithEther(cut(depositAmount / divisor, maxValue, minValue));
+        _enterWithEther(bound(depositAmount / divisor, minValue, maxValue));
         _accrueInterest(timeDiff);
 
         address[] memory assets = new address[](1);
