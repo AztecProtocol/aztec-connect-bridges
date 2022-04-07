@@ -125,6 +125,9 @@ contract ElementBridge is IDefiBridge {
     // cahce of all of our tranche accounts
     mapping(address => TrancheAccount) private trancheAccounts;
 
+    // mapping containing the block number in which a tranche was configured
+    mapping (address => uint256) private trancheDeploymentBlockNumbers;
+
     // the aztec rollup processor contract
     address public immutable rollupProcessor;
 
@@ -330,6 +333,7 @@ contract ElementBridge is IDefiBridge {
         if (expiryIndex == expiriesForAsset.length) {
             expiriesForAsset.push(trancheExpiry);
         }
+        setTrancheDeploymentBlockNumber(poolSpec.trancheAddress);
         
         // initialising the expiry -> nonce mapping here like this reduces a chunk of gas later when we start to add interactions for this expiry
         uint256[] storage nonces = expiryToNonce[trancheExpiry];
@@ -337,6 +341,32 @@ contract ElementBridge is IDefiBridge {
             expiryToNonce[trancheExpiry].push(MAX_INT);
         }
         emit PoolAdded(poolAddress, wrappedPositionAddress, trancheExpiry);
+    }
+
+    /**
+    * @dev Sets the current block number as the block in which the given tranche was first configured
+    * Only stores the block number if this is the first time this tranche has been configured
+    * @param trancheAddress the address of the tranche against which to store the current block number
+     */
+    function setTrancheDeploymentBlockNumber(address trancheAddress) internal {
+        uint256 trancheDeploymentBlock = trancheDeploymentBlockNumbers[trancheAddress];
+        if (trancheDeploymentBlock == 0) {
+            // only set the deployment block on the first time this tranche is configured
+            trancheDeploymentBlockNumbers[trancheAddress] = block.number;
+        }
+    }
+
+    /**
+    * @dev Returns the block number in which a tranche was first configured on the bridge based on the nonce of an interaction in that tranche
+    * @param interactionNonce the nonce of the interaction to query
+    * @return blockNumber the number of the block in which the tranche was first configured
+     */
+    function getTrancheDeploymentBlockNumber(uint256 interactionNonce) public view returns (uint256 blockNumber) {
+        Interaction storage interaction = interactions[interactionNonce];
+        if (interaction.expiry == 0) {
+            revert UNKNOWN_NONCE();
+        }
+        blockNumber = trancheDeploymentBlockNumbers[interaction.trancheAddress];
     }
 
     /**

@@ -1,6 +1,5 @@
 import { BridgeId } from '../aztec/bridge_id';
 import { AddressZero } from '@ethersproject/constants';
-
 import { AssetValue, AsyncYieldBridgeData, AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
 import { ElementBridge, RollupProcessor, IVault } from '../../../typechain-types';
 import { AsyncDefiBridgeProcessedEvent } from '../../../typechain-types/RollupProcessor';
@@ -41,6 +40,21 @@ function divide(a: bigint, b: bigint, precision: bigint) {
   return (a * precision) / b;
 }
 
+const decodeEvent = async (event: AsyncDefiBridgeProcessedEvent) => {
+  const {
+    args: [bridgeId, nonce, totalInputValue],
+  } = event;
+  const block = await event.getBlock();
+  const newEventBlock = {
+    nonce: nonce.toBigInt(),
+    blockNumber: block.number,
+    bridgeId: bridgeId.toBigInt(),
+    totalInputValue: totalInputValue.toBigInt(),
+    timestamp: block.timestamp,
+  };
+  return newEventBlock;
+};
+
 export class ElementBridgeData implements AsyncYieldBridgeData {
   private elementBridgeContract: ElementBridge;
   private rollupContract: RollupProcessor;
@@ -64,92 +78,71 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
       return;
     }
     const storeBlock = async (event: AsyncDefiBridgeProcessedEvent) => {
-      const {
-        args: [bridgeId, nonce, totalInputValue],
-      } = event;
-      const block = await event.getBlock();
-      const newEventBlock = {
-        nonce: nonce.toBigInt(),
-        blockNumber: block.number,
-        bridgeId: bridgeId.toBigInt(),
-        totalInputValue: totalInputValue.toBigInt(),
-        timestamp: block.timestamp,
-      };
-      const index = this.interactionBlockNumbers.findIndex(value => value.nonce > newEventBlock.nonce);
-      this.interactionBlockNumbers.splice(index === -1 ? this.interactionBlockNumbers.length : index, 0, newEventBlock);
+      const newEventBlock = await decodeEvent(event);
+      for (let i = 0; i < this.interactionBlockNumbers.length; i++) {
+        const currentBlock = this.interactionBlockNumbers[i];
+        if (currentBlock.nonce === newEventBlock.nonce) {
+          return;
+        }
+        if (currentBlock.nonce > newEventBlock.nonce) {
+          this.interactionBlockNumbers.splice(i, 0, newEventBlock);
+          return;
+        }
+      }
+      this.interactionBlockNumbers.push(newEventBlock);
     };
     // store the first event and the last (if there are more than one)
-    storeBlock(events[0]);
-    if (events.length > 0) {
-      storeBlock(events[events.length - 1]);
+    await storeBlock(events[0]);
+    if (events.length > 1) {
+      await storeBlock(events[events.length - 1]);
     }
   }
 
   private async findDefiEventForNonce(interactionNonce: bigint) {
-    const storedBlock = this.interactionBlockNumbers.find(value => value.nonce === interactionNonce);
-    if (storedBlock) {
-      return storedBlock;
-    }
-
-    // start of with the earliest possible block being the block in which the tranche was first deployed
-    let earliestBlock = await this.elementBridgeContract.getTrancheDeploymentBlockNumber(interactionNonce);
+    // start off with the earliest possible block being the block in which the tranche was first deployed
+    let earliestBlock = Number(await this.elementBridgeContract.getTrancheDeploymentBlockNumber(interactionNonce));
     // start with the last block being the current block
-    let lastBlock = await this.elementBridgeContract.provider.getBlockNumber();
-    // try and find a previously stored event with a nonce greater than ours
-    const firstNonceAfterIndex = this.interactionBlockNumbers.findIndex(value => value.nonce > interactionNonce);
-
-    // attempt to constrain the search using results from previous searches
-    if (firstNonceAfterIndex !== -1) {
-      // we have a previous stored event whose nonce is later than the one requested
-      // so we only need to search back from there
-      lastBlock = this.interactionBlockNumbers[firstNonceAfterIndex].blockNumber;
-      if (
-        firstNonceAfterIndex > 0 &&
-        this.interactionBlockNumbers[firstNonceAfterIndex - 1].nonce < interactionNonce &&
-        this.interactionBlockNumbers[firstNonceAfterIndex - 1].blockNumber > earliestBlock
-      ) {
-        // here, we have a previous stored event that has
-        // a nonce that is less than that given
-        // a block that is later than the tranche deployment block
-        // so use this as the 'earliest' block
-        earliestBlock = this.interactionBlockNumbers[firstNonceAfterIndex - 1].blockNumber;
+    let lastBlock = Number(await this.elementBridgeContract.provider.getBlockNumber());
+    // try and find previously stored events that encompass the nonce we are looking for
+    // also if we find the exact nonce then just return the stored data
+    for (let i = 0; i < this.interactionBlockNumbers.length; i++) {
+      const storedBlock = this.interactionBlockNumbers[i];
+      if (storedBlock.nonce == interactionNonce) {
+        return storedBlock;
+      }
+      if (storedBlock.nonce < interactionNonce) {
+        earliestBlock = storedBlock.blockNumber;
+      }
+      if (storedBlock.nonce > interactionNonce) {
+        // this is the first block beyond the one we are looking for, we can break here
+        lastBlock = storedBlock.blockNumber;
+        break;
       }
     }
 
     let end = lastBlock;
-    let start = end - this.chainProperties.chunkSize;
+    let start = end - (this.chainProperties.chunkSize - 1);
     start = Math.max(start, earliestBlock);
 
     while (end > earliestBlock) {
       const events = await this.rollupContract.queryFilter(
         this.rollupContract.filters.AsyncDefiBridgeProcessed(undefined, interactionNonce),
-        end,
         start,
+        end,
       );
       // capture these event markers
       await this.storeEventBlocks(events);
       // there should just be one event, the one we are searching for. but to be sure we will process everything received
       for (const event of events) {
-        const {
-          args: [bridgeId, nonce, totalInputValue],
-        } = event;
-        if (nonce.toBigInt() === interactionNonce) {
-          // this is our event so return it
-          const block = await event.getBlock();
-          const newEventBlock = {
-            nonce: nonce.toBigInt(),
-            blockNumber: block.number,
-            bridgeId: bridgeId.toBigInt(),
-            totalInputValue: totalInputValue.toBigInt(),
-            timestamp: block.timestamp,
-          };
+        const newEventBlock = await decodeEvent(event);
+        if (newEventBlock.nonce == interactionNonce) {
           return newEventBlock;
         }
       }
 
       // if we didn't find an event then go round again but search further back in time
       end = start - 1;
-      start = end - this.chainProperties.chunkSize;
+      start = end - (this.chainProperties.chunkSize - 1);
       start = Math.max(start, earliestBlock);
     }
   }
@@ -284,7 +277,6 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
 
   async getExpiration(interactionNonce: bigint): Promise<bigint> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
-
     return BigInt(interaction.expiry.toString());
   }
 

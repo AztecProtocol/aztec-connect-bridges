@@ -9,6 +9,7 @@ import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ElementBridge} from "../../bridges/element/ElementBridge.sol";
 import {ITranche} from "../../bridges/element/interfaces/ITranche.sol";
+import {IPool} from "../../bridges/element/interfaces/IPool.sol";
 import {IWrappedPosition} from "../../bridges/element/interfaces/IWrappedPosition.sol";
 import {MockDeploymentValidator} from "./MockDeploymentValidator.sol";
 
@@ -700,6 +701,41 @@ contract ElementTest is DSTest {
         );
         assertZeroBalance(address(elementBridge), address(tokens['DAI']));
         assertNonZeroBalance(address(elementBridge), interactionConfig.tranche.trancheAddress);
+    }
+
+    function testCanRetrieveTrancheDeploymentBlockNumber() public {
+        TrancheConfig storage config = trancheConfigs['DAI'][0];
+        vm.warp(timestamps[0]);
+        Interaction memory interactionConfig = Interaction(
+            config,
+            15000,
+            6,
+            0
+        );
+        uint256 convergentPoolBlockNumber = block.number;
+        setupConvergentPool(config);
+        _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
+        uint256 balancerBefore = tokens['DAI'].balanceOf(address(balancer));
+        vm.expectEmit(false, false, false, true);
+        emit Convert(interactionConfig.nonce, interactionConfig.depositAmount);
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
+        assertEq(isAsync, true);
+        assertEq(outputValueA, 0);
+        assertEq(outputValueB, 0);
+
+        // now retrieve the tranche's deployment block number based on the interaction nonce
+        (uint256 blockNumber) = elementBridge.getTrancheDeploymentBlockNumber(interactionConfig.nonce);
+        assertEq(blockNumber, convergentPoolBlockNumber);
+    }
+
+    function testRetrieveTrancheDeploymentBlockNumberFailsForUnknownNonce() public {
+        uint256 convergentPoolBlockNumber = block.number;
+        TrancheConfig storage config = trancheConfigs['DAI'][0];
+        setupConvergentPool(config);
+
+        // unknown nonce should revert
+        vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNKNOWN_NONCE.selector));
+        (uint256 blockNumber) = elementBridge.getTrancheDeploymentBlockNumber(12345);
     }
 
     function testRejectConvertDuplicateNonce() public {
