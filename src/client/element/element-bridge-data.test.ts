@@ -1,7 +1,8 @@
 import { ElementBridgeData } from './element-bridge-data';
-import { BigNumber, Signer } from 'ethers';
+import { BigNumber } from 'ethers';
 import { randomBytes } from 'crypto';
 import { RollupProcessor, ElementBridge, IVault } from '../../../typechain-types';
+import { AsyncDefiBridgeProcessedEventFilter } from '../../../typechain-types/RollupProcessor';
 import { BridgeId, BitConfig } from '../aztec/bridge_id';
 import { AztecAssetType } from '../bridge-data';
 import { AddressZero } from '@ethersproject/constants';
@@ -12,65 +13,184 @@ type Mockify<T> = {
 
 const randomAddress = () => `0x${randomBytes(20).toString('hex')}`;
 
+const tranche1DeploymentBlockNumber = 45n;
+const tranche2DeploymentBlockNumber = 87n;
+
+interface DefiEvent {
+  bridgeId: bigint;
+  nonce: number;
+  totalInputValue: bigint;
+  blockNumber: number;
+}
+
+interface Interaction {
+  quantityPT: BigNumber;
+  trancheAddress: string;
+  expiry: BigNumber;
+  finalised: boolean;
+  failed: boolean;
+}
+
+const interactions: { [key: number]: Interaction } = {};
+
 describe('element bridge data', () => {
   let rollupContract: Mockify<RollupProcessor>;
   let elementBridge: Mockify<ElementBridge>;
   let balancerContract: Mockify<IVault>;
+  const now = Math.floor(Date.now() / 1000);
+  const expiration1 = BigInt(now + 86400 * 60);
+  const expiration2 = BigInt(now + 86400 * 90);
+  const startDate = BigInt(now - 86400 * 30);
+  const bridge1 = new BridgeId(1, 4, 4, 0, 0, BitConfig.EMPTY, Number(expiration1));
+  const bridge2 = new BridgeId(1, 5, 5, 0, 0, BitConfig.EMPTY, Number(expiration2));
+  const outputValue = 10n * 10n ** 18n;
 
-  it('should return the correct amount of interest', async () => {
-    const inputValue = 1n * 10n ** 18n;
-    const outputValue = 10n * 10n ** 18n;
-    const now = Math.floor(Date.now() / 1000);
-    const expiration = BigInt(now + 86400 * 60);
-    const startDate = BigInt(now - 86400 * 30);
+  const defiEvents = [
+    { bridgeId: bridge1.toBigInt(), nonce: 56, totalInputValue: 56n * 10n ** 16n, blockNumber: 59 } as DefiEvent,
+    { bridgeId: bridge1.toBigInt(), nonce: 158, totalInputValue: 158n * 10n ** 16n, blockNumber: 62 } as DefiEvent,
+    { bridgeId: bridge1.toBigInt(), nonce: 190, totalInputValue: 190n * 10n ** 16n, blockNumber: 76 } as DefiEvent,
+    { bridgeId: bridge2.toBigInt(), nonce: 194, totalInputValue: 194n * 10n ** 16n, blockNumber: 91 } as DefiEvent,
+    { bridgeId: bridge1.toBigInt(), nonce: 203, totalInputValue: 203n * 10n ** 16n, blockNumber: 103 } as DefiEvent,
+    { bridgeId: bridge2.toBigInt(), nonce: 216, totalInputValue: 216n * 10n ** 16n, blockNumber: 116 } as DefiEvent,
+    { bridgeId: bridge2.toBigInt(), nonce: 227, totalInputValue: 227n * 10n ** 16n, blockNumber: 125 } as DefiEvent,
+    { bridgeId: bridge1.toBigInt(), nonce: 242, totalInputValue: 242n * 10n ** 16n, blockNumber: 134 } as DefiEvent,
+    { bridgeId: bridge1.toBigInt(), nonce: 289, totalInputValue: 289n * 10n ** 16n, blockNumber: 147 } as DefiEvent,
+  ];
 
-    elementBridge = {
-      interactions: jest.fn().mockImplementation(() => {
+  const getDefiEvents = (nonce: number, from: number, to: number) => {
+    return defiEvents.filter(x => x.nonce == nonce && x.blockNumber >= from && x.blockNumber <= to);
+  };
+
+  const getDefiEvent = (nonce: number) => {
+    return defiEvents.find(x => x.nonce == nonce);
+  };
+
+  const getTrancheDeploymentBlockNumber = (nonce: bigint) => {
+    const bridge = defiEvents.find(x => x.nonce == Number(nonce));
+    if (bridge?.bridgeId ?? 1n == 1n) {
+      return tranche1DeploymentBlockNumber;
+    }
+    return tranche2DeploymentBlockNumber;
+  };
+
+  elementBridge = {
+    interactions: jest.fn().mockImplementation(async (nonce: bigint) => {
+      return interactions[Number(nonce)];
+    }),
+    getTrancheDeploymentBlockNumber: jest.fn().mockImplementation(async (nonce: bigint) => {
+      const promise = Promise.resolve(getTrancheDeploymentBlockNumber(nonce));
+      return promise;
+    }),
+    provider: {
+      getBlockNumber: jest.fn().mockResolvedValue(200),
+    },
+  } as any;
+
+  rollupContract = {
+    queryFilter: jest.fn().mockImplementation((filter: any, from: number, to: number) => {
+      const nonce = filter.interactionNonce;
+      const [defiEvent] = getDefiEvents(nonce, from, to);
+      if (defiEvent === undefined) {
+        return [];
+      }
+      const bridgeId = BridgeId.fromBigInt(defiEvent.bridgeId);
+      return [
+        {
+          getBlock: jest.fn().mockResolvedValue({ timestamp: +startDate.toString(), number: defiEvent.blockNumber }),
+          args: [
+            BigNumber.from(bridgeId.toBigInt()),
+            BigNumber.from(defiEvent.nonce),
+            BigNumber.from(defiEvent.totalInputValue),
+          ],
+        },
+      ];
+    }),
+    filters: {
+      AsyncDefiBridgeProcessed: jest.fn().mockImplementation((bridgeId: any, interactionNonce: number) => {
         return {
-          quantityPT: BigNumber.from(outputValue),
-          trancheAddress: '',
-          expiry: BigNumber.from(expiration),
-          finalised: false,
-          failed: false,
+          bridgeId,
+          interactionNonce,
         };
       }),
-    } as any;
-    const bridgeId = new BridgeId(67, 123, 456, 7890, 78, new BitConfig(false, true, false, true, false, false), 78);
+    } as any,
+  } as any;
 
-    rollupContract = {
-      ...rollupContract,
-      queryFilter: jest.fn().mockResolvedValue([
-        {
-          getBlock: jest.fn().mockResolvedValue({ timestamp: +startDate.toString() }),
-          args: [bridgeId, undefined, BigNumber.from(inputValue)],
-        },
-      ]),
-      filters: {
-        AsyncDefiBridgeProcessed: jest.fn(),
-      } as any,
-      getDefiInteractionBlockNumber: jest.fn().mockImplementation((nonce: bigint) => BigNumber.from(nonce / 32n)),
-    };
+  it('should return the correct amount of interest', async () => {
     const elementBridgeData = new ElementBridgeData(
       elementBridge as any,
       balancerContract as any,
       rollupContract as any,
     );
-    const nonce = 12345n;
-    const [daiValue] = await elementBridgeData.getInteractionPresentValue(nonce);
-    const delta = outputValue - inputValue;
+    interactions[56] = {
+      quantityPT: BigNumber.from(outputValue),
+      expiry: BigNumber.from(expiration1),
+      trancheAddress: '',
+      finalised: false,
+      failed: false,
+    } as Interaction;
+    const defiEvent = getDefiEvent(56)!;
+    const [daiValue] = await elementBridgeData.getInteractionPresentValue(56n);
+    const delta = outputValue - defiEvent.totalInputValue;
     const scalingFactor = elementBridgeData.scalingFactor;
-    const ratio = ((BigInt(now) - startDate) * scalingFactor) / (expiration - startDate);
-    const out = inputValue + (delta * ratio) / scalingFactor;
+    const ratio = ((BigInt(now) - startDate) * scalingFactor) / (expiration1 - startDate);
+    const out = defiEvent.totalInputValue + (delta * ratio) / scalingFactor;
 
-    expect(daiValue.amount).toBe(out);
-    expect(daiValue.assetId).toBe(123n);
+    expect(daiValue.amount).toStrictEqual(out);
+    expect(Number(daiValue.assetId)).toStrictEqual(bridge1.inputAssetId);
+  });
+
+  it('should return the correct amount of interest for multiple interactions', async () => {
+    const elementBridgeData = new ElementBridgeData(
+      elementBridge as any,
+      balancerContract as any,
+      rollupContract as any,
+      { chunkSize: 10 },
+    );
+
+    const testInteraction = async (nonce: number) => {
+      const defiEvent = getDefiEvent(nonce)!;
+      const bridgeId = BridgeId.fromBigInt(defiEvent.bridgeId);
+      interactions[nonce] = {
+        quantityPT: BigNumber.from(10n * 10n ** 18n),
+        expiry: BigNumber.from(bridgeId.auxData),
+        trancheAddress: '',
+        finalised: false,
+        failed: false,
+      } as Interaction;
+
+      const [daiValue] = await elementBridgeData.getInteractionPresentValue(BigInt(nonce));
+      const delta = interactions[nonce].quantityPT.toBigInt() - defiEvent.totalInputValue;
+      const scalingFactor = elementBridgeData.scalingFactor;
+      const ratio = ((BigInt(now) - startDate) * scalingFactor) / (BigInt(bridgeId.auxData) - startDate);
+      const out = defiEvent.totalInputValue + (delta * ratio) / scalingFactor;
+
+      expect(daiValue.amount).toStrictEqual(out);
+      expect(Number(daiValue.assetId)).toStrictEqual(bridgeId.inputAssetId);
+    };
+    await testInteraction(56);
+    await testInteraction(190);
+    await testInteraction(242);
+    await testInteraction(216);
+    await testInteraction(194);
+    await testInteraction(203);
+    await testInteraction(216);
+    await testInteraction(190);
+  });
+
+  it('requesting the present value of an unknown interaction should return empty values', async () => {
+    const elementBridgeData = new ElementBridgeData(
+      elementBridge as any,
+      balancerContract as any,
+      rollupContract as any,
+    );
+    const values = await elementBridgeData.getInteractionPresentValue(57n);
+    expect(values).toStrictEqual([]);
   });
 
   it('should return the correct expiration of the tranche', async () => {
     const endDate = Math.floor(Date.now() / 1000) + 86400 * 60;
-
     elementBridge = {
-      interactions: jest.fn().mockImplementation(() => {
+      interactions: jest.fn().mockImplementation(async () => {
         return {
           quantityPT: BigNumber.from(1),
           trancheAddress: '',
