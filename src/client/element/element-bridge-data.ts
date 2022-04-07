@@ -153,6 +153,9 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
 
   async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
+    if (interaction === undefined) {
+      return [];
+    }
     const exitTimestamp = interaction.expiry;
     const endValue = interaction.quantityPT;
 

@@ -135,8 +135,8 @@ describe('element bridge data', () => {
     const ratio = ((BigInt(now) - startDate) * scalingFactor) / (expiration1 - startDate);
     const out = defiEvent.totalInputValue + (delta * ratio) / scalingFactor;
 
-    expect(daiValue.amount).toBe(out);
-    expect(Number(daiValue.assetId)).toBe(bridge1.inputAssetId);
+    expect(daiValue.amount).toStrictEqual(out);
+    expect(Number(daiValue.assetId)).toStrictEqual(bridge1.inputAssetId);
   });
 
   it('should return the correct amount of interest for multiple interactions', async () => {
@@ -164,8 +164,8 @@ describe('element bridge data', () => {
       const ratio = ((BigInt(now) - startDate) * scalingFactor) / (BigInt(bridgeId.auxData) - startDate);
       const out = defiEvent.totalInputValue + (delta * ratio) / scalingFactor;
 
-      expect(daiValue.amount).toBe(out);
-      expect(Number(daiValue.assetId)).toBe(bridgeId.inputAssetId);
+      expect(daiValue.amount).toStrictEqual(out);
+      expect(Number(daiValue.assetId)).toStrictEqual(bridgeId.inputAssetId);
     };
     await testInteraction(56);
     await testInteraction(190);
@@ -175,6 +175,16 @@ describe('element bridge data', () => {
     await testInteraction(203);
     await testInteraction(216);
     await testInteraction(190);
+  });
+
+  it('requesting the present value of an unknown interaction should return empty values', async () => {
+    const elementBridgeData = new ElementBridgeData(
+      elementBridge as any,
+      balancerContract as any,
+      rollupContract as any,
+    );
+    const values = await elementBridgeData.getInteractionPresentValue(57n);
+    expect(values).toStrictEqual([]);
   });
 
   it('should return the correct expiration of the tranche', async () => {
