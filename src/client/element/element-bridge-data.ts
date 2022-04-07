@@ -24,6 +24,10 @@ export type FundManagement = {
   toInternalBalance: boolean;
 };
 
+// Some operations on this class require us to scan back over the blockchain
+// to find published events. This is done in batches of blocks. The chunk size in this set of properties
+// determines how many blocks to request in each batch.
+// Users of this class can customise this to their provider requirements
 export type ChainProperties = {
   chunkSize: number;
 };
@@ -98,11 +102,20 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
     }
   }
 
+  private async getCurrentBlock() {
+    const currentBlockNumber = await this.elementBridgeContract.provider.getBlockNumber();
+    const currentBlock = await this.elementBridgeContract.provider.getBlock(currentBlockNumber);
+    return currentBlock;
+  }
+
   private async findDefiEventForNonce(interactionNonce: bigint) {
     // start off with the earliest possible block being the block in which the tranche was first deployed
-    let earliestBlock = Number(await this.elementBridgeContract.getTrancheDeploymentBlockNumber(interactionNonce));
+    let earliestBlockNumber = Number(
+      await this.elementBridgeContract.getTrancheDeploymentBlockNumber(interactionNonce),
+    );
     // start with the last block being the current block
-    let lastBlock = Number(await this.elementBridgeContract.provider.getBlockNumber());
+    let lastBlock = await this.getCurrentBlock();
+    let latestBlockNumber = lastBlock.number;
     // try and find previously stored events that encompass the nonce we are looking for
     // also if we find the exact nonce then just return the stored data
     for (let i = 0; i < this.interactionBlockNumbers.length; i++) {
@@ -111,20 +124,20 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
         return storedBlock;
       }
       if (storedBlock.nonce < interactionNonce) {
-        earliestBlock = storedBlock.blockNumber;
+        earliestBlockNumber = storedBlock.blockNumber;
       }
       if (storedBlock.nonce > interactionNonce) {
         // this is the first block beyond the one we are looking for, we can break here
-        lastBlock = storedBlock.blockNumber;
+        latestBlockNumber = storedBlock.blockNumber;
         break;
       }
     }
 
-    let end = lastBlock;
+    let end = latestBlockNumber;
     let start = end - (this.chainProperties.chunkSize - 1);
-    start = Math.max(start, earliestBlock);
+    start = Math.max(start, earliestBlockNumber);
 
-    while (end > earliestBlock) {
+    while (end > earliestBlockNumber) {
       const events = await this.rollupContract.queryFilter(
         this.rollupContract.filters.AsyncDefiBridgeProcessed(undefined, interactionNonce),
         start,
@@ -143,7 +156,7 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
       // if we didn't find an event then go round again but search further back in time
       end = start - 1;
       start = end - (this.chainProperties.chunkSize - 1);
-      start = Math.max(start, earliestBlock);
+      start = Math.max(start, earliestBlockNumber);
     }
   }
 
@@ -165,7 +178,9 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
       return [];
     }
 
-    const now = Math.floor(Date.now() / 1000);
+    const latestBlock = await this.getCurrentBlock();
+
+    const now = latestBlock.timestamp;
     const totalInterest = endValue.toBigInt() - defiEvent.totalInputValue;
     const elapsedTime = BigInt(now - defiEvent.timestamp);
     const totalTime = exitTimestamp.toBigInt() - BigInt(defiEvent.timestamp);
@@ -245,9 +260,11 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
       funds,
     );
 
+    const latestBlock = await this.getCurrentBlock();
+
     const outputAssetAValue = deltas[1];
 
-    const timeToExpiration = auxData - BigInt(Math.floor(Date.now() / 1000));
+    const timeToExpiration = auxData - BigInt(latestBlock.timestamp);
 
     const YEAR = 60n * 60n * 24n * 365n;
     const interest = -outputAssetAValue.toBigInt() - precision;
