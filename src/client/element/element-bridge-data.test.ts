@@ -83,6 +83,7 @@ describe('element bridge data', () => {
     }),
     provider: {
       getBlockNumber: jest.fn().mockResolvedValue(200),
+      getBlock: jest.fn().mockResolvedValue({ timestamp: +now.toString(), number: 200 }),
     },
   } as any;
 
@@ -199,6 +200,10 @@ describe('element bridge data', () => {
           failed: false,
         };
       }),
+      provider: {
+        getBlockNumber: jest.fn().mockResolvedValue(200),
+        getBlock: jest.fn().mockResolvedValue({ timestamp: +now.toString(), number: 200 }),
+      },
     } as any;
 
     const elementBridgeData = new ElementBridgeData(
@@ -221,6 +226,10 @@ describe('element bridge data', () => {
       elementBridge = {
         hashAssetAndExpiry: jest.fn().mockResolvedValue('0xa'),
         pools: jest.fn().mockResolvedValue([trancheAddress, '', poolId]),
+        provider: {
+          getBlockNumber: jest.fn().mockResolvedValue(200),
+          getBlock: jest.fn().mockResolvedValue({ timestamp: +now.toString(), number: 200 }),
+        },
       };
 
     balancerContract = {
@@ -277,6 +286,10 @@ describe('element bridge data', () => {
       elementBridge = {
         hashAssetAndExpiry: jest.fn().mockResolvedValue('0xa'),
         pools: jest.fn().mockResolvedValue([tokenAddress, '', poolId]),
+        provider: {
+          getBlockNumber: jest.fn().mockResolvedValue(200),
+          getBlock: jest.fn().mockResolvedValue({ timestamp: +now.toString(), number: 200 }),
+        },
       };
 
     balancerContract = {
