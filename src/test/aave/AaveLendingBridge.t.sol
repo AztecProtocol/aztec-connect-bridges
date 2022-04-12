@@ -928,6 +928,11 @@ contract AaveLendingTest is TestHelper {
         VM.expectRevert(bytes(Errors.INVALID_CALLER));
         aaveLendingBridge.setUnderlyingToZkAToken(address(token), address(token));
 
+        // Add as invalid caller (revert)
+        VM.expectRevert('Ownable: caller is not the owner');
+        VM.prank(address(0x1));
+        configurator.addPoolFromV2(address(aaveLendingBridge), address(token));
+
         /// Add invalid (revert)
         VM.expectRevert(bytes(Errors.INVALID_ATOKEN));
         configurator.addPoolFromV2(address(aaveLendingBridge), address(0xdead));
@@ -971,6 +976,12 @@ contract AaveLendingTest is TestHelper {
         VM.mockCall(lendingPool, inputData, mockData);
         VM.expectRevert(bytes(Errors.INVALID_ATOKEN));
         configurator.addPoolFromV3(address(aaveLendingBridge), address(0xdead));
+
+        // Add as invalid caller (revert);
+        VM.mockCall(lendingPool, inputData, mockData);
+        VM.expectRevert('Ownable: caller is not the owner');
+        VM.prank(address(0x01));
+        configurator.addPoolFromV3(address(aaveLendingBridge), address(token));
 
         /// Add token as configurator
         VM.mockCall(lendingPool, inputData, mockData);
