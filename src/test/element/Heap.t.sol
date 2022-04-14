@@ -4,13 +4,11 @@ import { HeapTestContract } from './HeapTestContract.sol';
 import "../../../lib/ds-test/src/test.sol";
 
 import { console } from '../console.sol';
-import {Vm} from  'forge-std/Vm.sol';
 
 contract HeapTest is DSTest {
     HeapTestContract heap;
-    Vm vm;
 
-    // randomInts default initalization
+    // default randomInts
     uint64[] randomInts = [
         207, 628, 47, 920, 864, 132, 942, 684, 573, 451, 476, 594, 152, 466, 885, 300, 357, 266, 803, 320, 80, 184, 318, 949, 983, 917, 925, 808, 270,
         757, 981, 336, 458, 973, 907, 586, 869, 194, 418, 824, 847, 28, 575, 400, 249, 956, 216, 548, 699, 461, 914, 95, 482, 265, 617, 208, 954, 685,
@@ -18,16 +16,15 @@ contract HeapTest is DSTest {
         304, 497, 665, 245, 953, 262, 398, 743, 363, 639, 723, 935, 807
     ];
 
+    function setUp() public {
+        heap = new HeapTestContract(100);
+    }
+
     function genRandomInts(uint64 salt) public {
         // generate randomInts based on a salt 
         for (uint i = 0; i < randomInts.length; i++) {
             randomInts[i] = uint64(uint256(keccak256(abi.encode(salt, i))));
         }
-    }
-    
-    function setUp() public {
-        heap = new HeapTestContract(100);
-        vm = Vm(HEVM_ADDRESS);
     }
 
     function testCanAddToHeap() public {
