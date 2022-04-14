@@ -49,8 +49,8 @@ contract IssuanceBridge is IDefiBridge {
         AztecTypes.AztecAsset calldata,
         uint256 inputValue,
         uint256 interactionNonce,
-        uint64 auxData,
-        address rollupBeneficiary
+        uint64,
+        address 
     )
         external
         payable
@@ -186,12 +186,12 @@ contract IssuanceBridge is IDefiBridge {
     receive() external payable {}
     
     function finalise(
-        AztecTypes.AztecAsset calldata inputAssetA,
-        AztecTypes.AztecAsset calldata inputAssetB,
-        AztecTypes.AztecAsset calldata outputAssetA,
-        AztecTypes.AztecAsset calldata outputAssetB,
-        uint256 interactionNonce,
-        uint64 auxData
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        uint256,
+        uint64
     ) external payable override returns (uint256, uint256, bool) {
         require(false, "IssuanceBridge: ASYNC_MODE_DISABLED");
     }
