@@ -13,6 +13,7 @@ export enum AztecAssetType {
 export enum SolidityType {
   uint8,
   uint16,
+  uint24,
   uint32,
   uint64,
   boolean,
