@@ -55,6 +55,15 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         closedByRedemption
     }
 
+    error NonZeroTotalSupply();
+    error ApproveFailed(address token);
+    error InvalidCaller();
+    error IncorrectStatus(Status expected, Status received);
+    error IncorrectInput();
+    error OwnerNotLast();
+    error TransferFailed();
+    error AsyncModeDisabled();
+
     /**
      * @notice Set the address of RollupProcessor.sol and initial ICR
      * @param _processor Address of the RollupProcessor.sol
@@ -80,10 +89,10 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
      */
     function openTrove(address _upperHint, address _lowerHint) external payable onlyOwner {
         // Checks whether the trove can be safely opened/reopened
-        require(this.totalSupply() == 0, "TroveBridge: INCORRECT_TOTAL_SUPPLY");
+        if (this.totalSupply() != 0) revert NonZeroTotalSupply();
 
-        require(IERC20(LUSD).approve(processor, type(uint256).max), "TroveBridge: LUSD_APPROVE_FAILED");
-        require(this.approve(processor, type(uint256).max), "TroveBridge: TB_APPROVE_FAILED");
+        if (!IERC20(LUSD).approve(processor, type(uint256).max)) revert ApproveFailed(LUSD);
+        if (!this.approve(processor, type(uint256).max)) revert ApproveFailed(address(this));
 
         uint256 amtToBorrow = computeAmtToBorrow(msg.value);
 
@@ -120,7 +129,6 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         uint256 interactionNonce,
         uint64,
         address
-
     )
         external
         payable
@@ -130,7 +138,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             bool isAsync
         )
     {
-        require(msg.sender == processor, "TroveBridge: INVALID_CALLER");
+        if (msg.sender != processor) revert InvalidCaller();
         Status troveStatus = Status(troveManager.getTroveStatus(address(this)));
 
         address upperHint = sortedTroves.getPrev(address(this));
@@ -142,7 +150,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             outputAssetB.erc20Address == LUSD
         ) {
             // Borrowing
-            require(troveStatus == Status.active, "TroveBridge: INACTIVE_TROVE");
+            if (troveStatus != Status.active) revert IncorrectStatus(Status.active, troveStatus);
             // outputValueA = by how much debt will increase and how much TB to mint
             outputValueB = computeAmtToBorrow(inputValue); // LUSD amount to borrow
 
@@ -159,7 +167,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
             // Repaying
-            require(troveStatus == Status.active, "TroveBridge: INACTIVE_TROVE");
+            if (troveStatus != Status.active) revert IncorrectStatus(Status.active, troveStatus);
             (, uint256 coll, , ) = troveManager.getEntireDebtAndColl(address(this));
             outputValueA = (coll * inputValue) / this.totalSupply(); // Amount of collateral to withdraw
             operations.adjustTrove(maxFee, outputValueA, inputValue, false, upperHint, lowerHint);
@@ -169,7 +177,8 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             inputAssetA.erc20Address == address(this) && outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
             // Redeeming
-            require(troveStatus == Status.closedByRedemption, "TroveBridge: INCORRECT_STATUS");
+            if (troveStatus != Status.closedByRedemption)
+                revert IncorrectStatus(Status.closedByRedemption, troveStatus);
             if (!_collateralClaimed) {
                 operations.claimCollateral();
                 _collateralClaimed = true;
@@ -178,7 +187,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             _burn(address(this), inputValue);
             IRollupProcessor(processor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
         } else {
-            require(false, "TroveBridge: INCORRECT_INPUT");
+            revert IncorrectInput();
         }
     }
 
@@ -189,7 +198,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
     function closeTrove() public onlyOwner {
         address payable owner = payable(owner());
         uint256 ownerTBBalance = balanceOf(owner);
-        require(ownerTBBalance == totalSupply(), "TroveBridge: OWNER_MUST_BE_LAST");
+        if (ownerTBBalance != totalSupply()) revert OwnerNotLast();
 
         _burn(owner, ownerTBBalance);
 
@@ -197,10 +206,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         if (troveStatus == Status.active) {
             (uint256 remainingDebt, , , ) = troveManager.getEntireDebtAndColl(address(this));
             // 200e18 is a part of debt which gets repaid from LUSD_GAS_COMPENSATION.
-            require(
-                IERC20(LUSD).transferFrom(owner, address(this), remainingDebt - 200e18),
-                "TroveBridge: LUSD_TRANSFER_FAILED"
-            );
+            if (!IERC20(LUSD).transferFrom(owner, address(this), remainingDebt - 200e18)) revert TransferFailed();
             operations.closeTrove();
         } else if (troveStatus == Status.closedByRedemption) {
             if (!_collateralClaimed) {
@@ -273,7 +279,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             bool
         )
     {
-        require(false, "TroveBridge: ASYNC_MODE_DISABLED");
+        revert AsyncModeDisabled();
     }
 
     receive() external payable {}

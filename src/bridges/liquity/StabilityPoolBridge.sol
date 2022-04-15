@@ -42,6 +42,11 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
     address public immutable processor;
     address public immutable frontEndTag; // see StabilityPool.sol for details
 
+    error ApproveFailed(address token);
+    error InvalidCaller();
+    error IncorrectInput();
+    error AsyncModeDisabled();
+
     /**
      * @notice Set addresses and token approvals.
      * @param _processor Address of the RollupProcessor.sol
@@ -61,24 +66,12 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
      * efficient.
      */
     function setApprovals() public {
-        require(this.approve(processor, type(uint256).max), "StabilityPoolBridge: SPB_APPROVE_FAILED");
-        require(IERC20(LUSD).approve(processor, type(uint256).max), "StabilityPoolBridge: LUSD_APPROVE_FAILED");
-        require(
-            IERC20(LUSD).approve(address(STABILITY_POOL), type(uint256).max),
-            "StabilityPoolBridge: LUSD_APPROVE_FAILED"
-        );
-        require(
-            IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max),
-            "StabilityPoolBridge: WETH_APPROVE_FAILED"
-        );
-        require(
-            IERC20(LQTY).approve(address(UNI_ROUTER), type(uint256).max),
-            "StabilityPoolBridge: LQTY_APPROVE_FAILED"
-        );
-        require(
-            IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max),
-            "StabilityPoolBridge: USDC_APPROVE_FAILED"
-        );
+        if (!this.approve(processor, type(uint256).max)) revert ApproveFailed(address(this));
+        if (!IERC20(LUSD).approve(processor, type(uint256).max)) revert ApproveFailed(LUSD);
+        if (!IERC20(LUSD).approve(address(STABILITY_POOL), type(uint256).max)) revert ApproveFailed(LUSD);
+        if (!IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(WETH);
+        if (!IERC20(LQTY).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(LQTY);
+        if (!IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(USDC);
     }
 
     /**
@@ -117,11 +110,11 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
             bool isAsync
         )
     {
-        require(msg.sender == processor, "StabilityPoolBridge: INVALID_CALLER");
+        if (msg.sender != processor) revert InvalidCaller();
 
         if (inputAssetA.erc20Address == LUSD) {
             // Deposit
-            require(outputAssetA.erc20Address == address(this), "StabilityPoolBridge: INCORRECT_DEPOSIT_INPUT");
+            if (outputAssetA.erc20Address != address(this)) revert IncorrectInput();
             // Deposit LUSD and claim rewards.
             STABILITY_POOL.provideToSP(inputValue, frontEndTag);
             _swapRewardsToLUSDAndDeposit();
@@ -138,10 +131,7 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
             _mint(address(this), outputValueA);
         } else {
             // Withdrawal
-            require(
-                inputAssetA.erc20Address == address(this) && outputAssetA.erc20Address == LUSD,
-                "StabilityPoolBridge: INCORRECT_WITHDRAWAL_INPUT"
-            );
+            if (inputAssetA.erc20Address != address(this) || outputAssetA.erc20Address != LUSD) revert IncorrectInput();
             // Claim rewards and swap them to LUSD.
             STABILITY_POOL.withdrawFromSP(0);
             _swapRewardsToLUSDAndDeposit();
@@ -211,6 +201,6 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
             bool
         )
     {
-        require(false, "StabilityPoolBridge: ASYNC_MODE_DISABLED");
+        revert AsyncModeDisabled();
     }
 }
