@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.6.6 <0.8.10;
+pragma solidity >=0.6.6 <=0.8.10;
 
 import {Vm} from "../../../lib/forge-std/src/Vm.sol";
 
@@ -26,10 +26,6 @@ interface ICERC20 {
 
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 
-interface IComptroller {
-  function getAllMarkets() external view returns (ICERC20[] memory);
-}
-
 import "../../../lib/ds-test/src/test.sol";
 import "../../test/console.sol";
 
@@ -43,8 +39,6 @@ contract CompoundTest is DSTest {
     CompoundBridge compoundBridge;
 
     // Get a list of active cToken contracts and underlying tokens
-    IComptroller comptroller = IComptroller(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
-
     ICERC20 constant cAAVE  = ICERC20(0xe65cdB6479BaC1e22340E4E755fAE7E509EcD06c);
     ICERC20 constant cBAT   = ICERC20(0x6C8c6b02E7b2BE14d4fA6022Dfd6d75921D90E4E);
     ICERC20 constant cCOMP  = ICERC20(0x70e36f6BF80a52b3B46b3aF8e106CC0ed743E8e4);
