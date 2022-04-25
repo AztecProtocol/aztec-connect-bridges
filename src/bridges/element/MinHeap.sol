@@ -10,7 +10,7 @@ library MinHeap {
     error HEAP_EMPTY();
 
     // maximum value of uint64. used as initial value in pre-allocated array 
-    uint64 internal constant MAX_INT = 2**64 - 1;
+    uint64 internal constant MAX_INT = type(uint64).max;
 
     /**
      * @dev Encapsulates the underlyding data structure used to manage the heap

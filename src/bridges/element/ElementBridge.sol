@@ -12,6 +12,7 @@ import {IERC20Permit, IERC20} from '../../interfaces/IERC20Permit.sol';
 import {IWrappedPosition} from './interfaces/IWrappedPosition.sol';
 import {IRollupProcessor} from '../../interfaces/IRollupProcessor.sol';
 import {MinHeap} from './MinHeap.sol';
+import {FullMath} from '../uniswapv3/libraries/FullMath.sol';
 
 import {IDefiBridge} from '../../interfaces/IDefiBridge.sol';
 
@@ -144,7 +145,7 @@ contract ElementBridge is IDefiBridge {
     // 48 hours in seconds, usd for calculating speeedbump expiries
     uint256 internal constant _FORTY_EIGHT_HOURS = 172800;
 
-    uint256 internal constant MAX_INT = 2**256 - 1;
+    uint256 internal constant MAX_INT = type(uint256).max;
 
     uint256 internal constant MIN_GAS_FOR_CHECK_AND_FINALISE = 50000;
     uint256 internal constant MIN_GAS_FOR_FUNCTION_COMPLETION = 5000;
@@ -606,7 +607,9 @@ contract ElementBridge is IDefiBridge {
             amountToAllocate = trancheAccount.quantityAssetRedeemed / trancheAccount.numDeposits;
         } else {
             // apportion the output asset based on the interaction's holding of the principle token
-            amountToAllocate = (trancheAccount.quantityAssetRedeemed * interaction.quantityPT) / trancheAccount.quantityTokensHeld;
+            // protects against phantom overflow in the operation of
+            // amountToAllocate = (trancheAccount.quantityAssetRedeemed * interaction.quantityPT) / trancheAccount.quantityTokensHeld;
+            amountToAllocate = FullMath.mulDiv(trancheAccount.quantityAssetRedeemed, interaction.quantityPT, trancheAccount.quantityTokensHeld);
         }
         // numDeposits and numFinalised are uint32 types, so easily within range for an int256
         int256 numRemainingInteractionsForTranche = int256(uint256(trancheAccount.numDeposits)) - int256(uint256(trancheAccount.numFinalised));
