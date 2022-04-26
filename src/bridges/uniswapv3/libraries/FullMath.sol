@@ -4,12 +4,13 @@
 pragma solidity >=0.6.10 <=0.8.10;
 
 ///note: @dev of Aztec Connect Uniswap V3 Bridge for LP. This library has been modified to conform to version 0.8.x of solidity.
-///the change is in line 73, which was originally a unary negation of an unsigned integer like thus:
+///the first change is on line 74, which was originally a unary negation of an unsigned integer like thus:
 ///uint256 twos = -denominator & denominator;
 /// unary negation on unsigned integers has been disallowed in solidity versions 0.8.x
-///the fix for this is to change line 73 from uint256 twos = -denominator & denominator; to uint256 twos = (type(uint256).max - denominator + 1 ) & denominator; 
+///the fix for this is to change line 74 from uint256 twos = -denominator & denominator; to uint256 twos = (type(uint256).max - denominator + 1 ) & denominator; 
 ///see https://docs.soliditylang.org/en/v0.8.11/080-breaking-changes.html
-///this is the only change in the entire file
+///the second change is the introduction of an unchecked block starting on line 70
+///the code within this block relies on integer wraparound
 /// @title Contains 512-bit math functions
 /// @notice Facilitates multiplication and division that can have overflow of an intermediate value without any loss of precision
 /// @dev Handles "phantom overflow" i.e., allows multiplication and division where an intermediate value overflows 256 bits
