@@ -22,12 +22,12 @@ contract BeefyBridge is IDefiBridge, Ownable {
         rollupProcessor = _rollupProcessor;
     }
 
-    function registerVaultTokenPair(address v, address t) public onlyOwner {
+    /**     function registerVaultTokenPair(address v, address t) public onlyOwner {
         require(address(IBeefyVault(v).want()) == t, 'invalid vault token pair');
         tokenToVault[t] = v;
         vaultToToken[v] = t;
     }
-
+    **/
     function convert(
         AztecTypes.AztecAsset memory inputAssetA,
         AztecTypes.AztecAsset memory inputAssetB,
@@ -49,19 +49,18 @@ contract BeefyBridge is IDefiBridge, Ownable {
     {
         // // ### INITIALIZATION AND SANITY CHECKS
         require(msg.sender == rollupProcessor, 'ExampleBridge: INVALID_CALLER');
-
-        if (
-            tokenToVault[inputAssetA.erc20Address] != address(0) &&
-            vaultToToken[outputAssetA.erc20Address] != address(0)
-        ) {
+       
+        // case 1 output is beefy vault share token
+        bool validVaultOutputPair = (address(IBeefyVault(outputAssetA.erc20Address).want()) ==
+        // case 2 input 
+        bool validVaultInputPair = (address(IBeefyVault(inputAssetA.erc20Address).want()) == outputAssetA.erc20Address);
+            inputAssetA.erc20Address);
+        if (validVaultOutputPair) {
             outputValueA = enter(outputAssetA.erc20Address, inputAssetA.erc20Address, totalInputValue);
-        } else if (
-            tokenToVault[outputAssetA.erc20Address] != address(0) &&
-            vaultToToken[outputAssetA.erc20Address] != address(0)
-        ) {
+        } else if (validVaultInputPair) {
             outputValueA = exit(inputAssetA.erc20Address, outputAssetA.erc20Address, totalInputValue);
         } else {
-            revert('invalid vault address');
+            revert('invalid vault token pair address');
         }
     }
 
