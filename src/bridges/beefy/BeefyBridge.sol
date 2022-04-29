@@ -15,14 +15,17 @@ contract BeefyBridge is IDefiBridge, Ownable {
     using SafeMath for uint256;
 
     address public immutable rollupProcessor;
-    mapping(address => bool) validVaults;
+    mapping(address => address) tokenToVault;
+    mapping(address => address) vaultToToken;
 
     constructor(address _rollupProcessor) public {
         rollupProcessor = _rollupProcessor;
     }
 
-    function validateVault(address v) public onlyOwner {
-        validVaults[v] = true;
+    function registerVaultTokenPair(address v, address t) public onlyOwner {
+        require(address(IBeefyVault(v).want()) == t, 'invalid vault token pair');
+        tokenToVault[t] = v;
+        vaultToToken[v] = t;
     }
 
     function convert(
@@ -47,17 +50,27 @@ contract BeefyBridge is IDefiBridge, Ownable {
         // // ### INITIALIZATION AND SANITY CHECKS
         require(msg.sender == rollupProcessor, 'ExampleBridge: INVALID_CALLER');
 
-        if (validVaults[inputAssetA.erc20Address] == true) {
-            outputValueA = enter(inputAssetA.erc20Address, totalInputValue);
-        } else if (validVaults[outputAssetA.erc20Address] == true) {
-            outputValueA = exit(outputAssetA.erc20Address, totalInputValue);
+        if (
+            tokenToVault[inputAssetA.erc20Address] != address(0) &&
+            vaultToToken[outputAssetA.erc20Address] != address(0)
+        ) {
+            outputValueA = enter(outputAssetA.erc20Address, inputAssetA.erc20Address, totalInputValue);
+        } else if (
+            tokenToVault[outputAssetA.erc20Address] != address(0) &&
+            vaultToToken[outputAssetA.erc20Address] != address(0)
+        ) {
+            outputValueA = exit(inputAssetA.erc20Address, outputAssetA.erc20Address, totalInputValue);
         } else {
             revert('invalid vault address');
         }
     }
 
-    function enter(address vault, uint256 amount) internal returns (uint256) {
-        IERC20 depositToken = IBeefyVault(vault).want();
+    function enter(
+        address vault,
+        address token,
+        uint256 amount
+    ) internal returns (uint256) {
+        IERC20 depositToken = IERC20(token);
         depositToken.approve(vault, amount);
         uint256 prev = IBeefyVault(vault).balanceOf(address(this));
         IBeefyVault(vault).deposit(amount);
@@ -66,8 +79,12 @@ contract BeefyBridge is IDefiBridge, Ownable {
         return _after.sub(prev);
     }
 
-    function exit(address vault, uint256 amount) internal returns (uint256) {
-        IERC20 withdrawToken = IBeefyVault(vault).want();
+    function exit(
+        address vault,
+        address token,
+        uint256 amount
+    ) internal returns (uint256) {
+        IERC20 withdrawToken = IERC20(token);
         uint256 prev = withdrawToken.balanceOf(address(this));
         IBeefyVault(vault).withdraw(amount);
         uint256 _after = withdrawToken.balanceOf(address(this));
