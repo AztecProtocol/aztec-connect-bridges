@@ -3,21 +3,17 @@ pragma solidity 0.8.10;
 
 import "../../../lib/ds-test/src/test.sol";
 
-import {Vm} from "../../../lib/forge-std/src/Vm.sol";
+import { Vm } from "../../../lib/forge-std/src/Vm.sol";
 
 import { DefiBridgeProxy } from "./../../aztec/DefiBridgeProxy.sol";
 import { RollupProcessor } from "./../../aztec/RollupProcessor.sol";
 
-// Aave-specific imports
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { IssuanceBridge } from "./../../bridges/set/IssuanceBridge.sol";
 import { IController } from "./../../bridges/set/interfaces/IController.sol";
 import { ISetToken } from "./../../bridges/set/interfaces/ISetToken.sol";
 import { AztecTypes } from "./../../aztec/AztecTypes.sol";
-
-// Runs only yhis tests (and print traces for failed tests):
-// $ forge test --match-contract SetTest -vvv
 
 contract SetTest is DSTest {
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
@@ -28,7 +24,7 @@ contract SetTest is DSTest {
 
     // Bridges
     IssuanceBridge issuanceBridge;
-
+    
     // Set-Protocol related contracts
     address exchangeIssuanceAddress = 0xc8C85A3b4d03FB3451e7248Ff94F780c92F884fD;
     address setControllerAddress = 0xa4c8d221d8BB851f83aadd0223a8900A6921A349;
@@ -36,7 +32,7 @@ contract SetTest is DSTest {
     // ERC20 tokens
     IERC20 constant dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     IERC20 constant dpi = IERC20(0x1494CA1F11D487c2bBe4543E90080AeBa4BA3C2b);
-
+    
     function _aztecPreSetup() internal {
         defiBridgeProxy = new DefiBridgeProxy();
         rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
@@ -71,13 +67,13 @@ contract SetTest is DSTest {
             rollupBalanceDai,
             "DAI balance must match"
         );
-
+        
         assertEq(
             depositAmountDpi,
             rollupBalanceDpi,
             "DPI balance must match"
         );
-
+        
         assertEq(
             depositAmountEth,
             rollupBalanceEth,
@@ -89,7 +85,7 @@ contract SetTest is DSTest {
         // Pre-fund contract with DAI
         uint256 depositAmountDai = 1000000000000000000000; // $1000
         _setTokenBalance(address(dai), address(rollupProcessor), depositAmountDai, 2);
-
+ 
         // Used for unused input/output assets
         AztecTypes.AztecAsset memory empty;
 
@@ -164,7 +160,7 @@ contract SetTest is DSTest {
         // Pre-fund contract with ETH
         uint256 depositAmountEth = 100000000000000000; // 0.1 ETH
         _setEthBalance(address(rollupProcessor), depositAmountEth);
-
+ 
         // Used for unused input/output assets
         AztecTypes.AztecAsset memory empty;
 
@@ -235,10 +231,10 @@ contract SetTest is DSTest {
     }
 
     function testRedeemExactSetForToken() public {
-        // Pre-fund rollup contract DPI
+        // Pre-fund rollup contract DPI 
         uint256 depositAmountDpi = 100000000000000000000; // 100
         _setTokenBalance(address(dpi), address(rollupProcessor), depositAmountDpi, 0);
-
+ 
         // Used for unused input/output assets
         AztecTypes.AztecAsset memory empty;
 
@@ -316,7 +312,7 @@ contract SetTest is DSTest {
         // prefund rollup with tokens
         uint256 depositAmountDpi = 100000000000000000000; // 100
         _setTokenBalance(address(dpi), address(rollupProcessor), depositAmountDpi, 0);
-
+ 
         // Used for unused input/output assets
         AztecTypes.AztecAsset memory empty;
 
@@ -387,7 +383,7 @@ contract SetTest is DSTest {
             "ETH balance after must be > 0"
         );
     }
-
+    
     function _setTokenBalance(
         address token,
         address user,
