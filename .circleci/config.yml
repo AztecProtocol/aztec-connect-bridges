@@ -28,15 +28,7 @@ jobs:
             yarn config set script-shell /bin/bash
             export PATH=/home/circleci/.foundry/bin:$PATH
             export PATH=/home/circleci/.forge/bin:$PATH
-            yarn test:contracts:noelement
-      - run:
-          name: Test Element
-          shell: /bin/bash
-          command: |
-            yarn config set script-shell /bin/bash
-            export PATH=/home/circleci/.foundry/bin:$PATH
-            export PATH=/home/circleci/.forge/bin:$PATH
-            yarn test:element
+            yarn test:contracts
       - run:
           name: Test Client
           shell: /bin/bash
