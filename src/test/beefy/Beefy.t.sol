@@ -19,27 +19,26 @@ contract Beefytest is DSTest {
     IBeefyVault vault;
     BeefyBridge beefybridge;
 
-    IERC20 constant dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-    IBeefyVault constant beefy = IBeefyVault(0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5);
+    IERC20 constant dai = IERC20(0x396E655C309676cAF0acf4607a868e0CDed876dB);
+    //https://polygonscan.com/address/0xE695fCeD8fD93eeE54204a7fC33323a60d41865A#readContract
+    IBeefyVault constant beefy = IBeefyVault(0xE695fCeD8fD93eeE54204a7fC33323a60d41865A);
 
     function _aztecPreSetup() internal {
-        console.log('start test');
         defiBridgeProxy = new DefiBridgeProxy();
         rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
     }
 
     function setUp() public {
         _aztecPreSetup();
-        console.log('setup');
+
         beefybridge = new BeefyBridge(address(rollupProcessor));
-        beefybridge.validateVault(address(beefy));
+        //beefybridge.validateVault(address(beefy));
         rollupProcessor.setBridgeGasLimit(address(beefybridge), 10000000);
 
         _setTokenBalance(address(dai), address(0xdead), 42069);
     }
 
     function testBeefyBridge() public {
-        console.log('start test');
         uint256 depositAmount = 15000;
 
         _setTokenBalance(address(beefy), address(rollupProcessor), depositAmount);
@@ -86,7 +85,7 @@ contract Beefytest is DSTest {
         address user,
         uint256 balance
     ) internal {
-        uint256 slot = 4; // May vary depending on token
+        uint256 slot = 2; // May vary depending on token
 
         vm.store(token, keccak256(abi.encode(user, slot)), bytes32(uint256(balance)));
 

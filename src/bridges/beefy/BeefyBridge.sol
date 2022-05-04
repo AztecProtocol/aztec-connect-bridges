@@ -15,8 +15,7 @@ contract BeefyBridge is IDefiBridge, Ownable {
     using SafeMath for uint256;
 
     address public immutable rollupProcessor;
-    mapping(address => address) tokenToVault;
-    mapping(address => address) vaultToToken;
+  \
 
     constructor(address _rollupProcessor) public {
         rollupProcessor = _rollupProcessor;
@@ -49,12 +48,13 @@ contract BeefyBridge is IDefiBridge, Ownable {
     {
         // // ### INITIALIZATION AND SANITY CHECKS
         require(msg.sender == rollupProcessor, 'ExampleBridge: INVALID_CALLER');
-       
-        // case 1 output is beefy vault share token
+
+        // case 1 output is beefy vault share token (ENTER)
         bool validVaultOutputPair = (address(IBeefyVault(outputAssetA.erc20Address).want()) ==
-        // case 2 input 
-        bool validVaultInputPair = (address(IBeefyVault(inputAssetA.erc20Address).want()) == outputAssetA.erc20Address);
             inputAssetA.erc20Address);
+        // case 2 input a vault share token receive underlying asser (EXIT)
+        bool validVaultInputPair = (address(IBeefyVault(inputAssetA.erc20Address).want()) == outputAssetA.erc20Address);
+
         if (validVaultOutputPair) {
             outputValueA = enter(outputAssetA.erc20Address, inputAssetA.erc20Address, totalInputValue);
         } else if (validVaultInputPair) {
