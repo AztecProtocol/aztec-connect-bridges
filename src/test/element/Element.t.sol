@@ -1397,7 +1397,7 @@ contract ElementTest is DSTest {
         assertEq(bridgeBalancesEnd.startingAsset, 0);
     }
 
-    function testOnlyFinalisesUpToGasLimit() public {
+    function testOnlyFinalisesUpToGasLimit1() public {
         // set the gas limit so that only the first interaction finalises
         rollupProcessor.setBridgeGasLimit(address(elementBridge), 570000);
         setupAssetPools('DAI');
@@ -1406,14 +1406,13 @@ contract ElementTest is DSTest {
         uint256 usdcDepositAmount = quantities[asset];
         TrancheConfig storage config = trancheConfigs[asset][0];
         uint256 numUsdcInteractions = 5;
-        uint8[5] memory depositMultipliers = [1, 1, 1, 1, 1];
         uint256 nonce = 1;
         Interaction[] memory interactions = new Interaction[](numUsdcInteractions);
         _increaseTokenBalance(asset, address(rollupProcessor), usdcDepositAmount * 5);
         for (uint256 i = 0; i < numUsdcInteractions; i++) {
             Interaction memory interaction = Interaction(
                 config,
-                usdcDepositAmount * depositMultipliers[i],
+                usdcDepositAmount,
                 nonce,
                 0
             );
@@ -1470,14 +1469,13 @@ contract ElementTest is DSTest {
         uint256 usdcDepositAmount = quantities[asset];
         TrancheConfig storage config = trancheConfigs[asset][0];
         uint256 numUsdcInteractions = 5;
-        uint8[5] memory depositMultipliers = [1, 1, 1, 1, 1];
         uint256 nonce = 1;
         Interaction[] memory interactions = new Interaction[](numUsdcInteractions);
         _increaseTokenBalance(asset, address(rollupProcessor), usdcDepositAmount * 5);
         for (uint256 i = 0; i < numUsdcInteractions; i++) {
             Interaction memory interaction = Interaction(
                 config,
-                usdcDepositAmount * depositMultipliers[i],
+                usdcDepositAmount,
                 nonce,
                 0
             );
@@ -1536,14 +1534,13 @@ contract ElementTest is DSTest {
         uint256 usdcDepositAmount = quantities[asset];
         TrancheConfig storage config = trancheConfigs[asset][0];
         uint256 numUsdcInteractions = 5;
-        uint8[5] memory depositMultipliers = [1, 1, 1, 1, 1];
         uint256 nonce = 1;
         Interaction[] memory interactions = new Interaction[](numUsdcInteractions);
         _increaseTokenBalance(asset, address(rollupProcessor), usdcDepositAmount * 5);
         for (uint256 i = 0; i < numUsdcInteractions; i++) {
             Interaction memory interaction = Interaction(
                 config,
-                usdcDepositAmount * depositMultipliers[i],
+                usdcDepositAmount,
                 nonce,
                 0
             );
