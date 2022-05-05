@@ -484,6 +484,9 @@ contract ElementBridge is IDefiBridge {
 
     /** 
     * @dev Function to exchange the input asset for tranche tokens on Balancer
+    * @param inputAsset the address of the asset we want to swap
+    * @param pool storage struct containing details of the pool we wish to use for the swap
+    * @param inputQuantity the quantity of the input asset we wish to swap
     * @return quantityReceived amount of tokens recieved
     */
     function exchangeAssetForTrancheTokens(address inputAsset, Pool storage pool, uint256 inputQuantity) internal returns (uint256 quantityReceived) {
