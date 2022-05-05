@@ -22,7 +22,7 @@ jobs:
             yarn setup:foundry
             yarn compile:typechain
       - run:
-          name: Test Contracts No Element
+          name: Test Contracts
           shell: /bin/bash
           command: |
             yarn config set script-shell /bin/bash
