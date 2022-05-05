@@ -13,7 +13,7 @@ library MinHeap {
     uint64 internal constant MAX_INT = type(uint64).max;
 
     /**
-     * @dev Encapsulates the underlyding data structure used to manage the heap
+     * @dev Encapsulates the underlying data structure used to manage the heap
      *
      * @param heap the array of values contained within the heap
      * @param heapSize the current size of the heap, usually different to the size of underlying array so tracked seperately
@@ -64,7 +64,7 @@ library MinHeap {
      * @param value the value to be removed
      */
     function remove(MinHeapData storage self, uint64 value) internal {
-        removeExpiryFromHeap(self, value);
+        removeValueFromHeap(self, value);
     }
 
     /**
@@ -110,8 +110,6 @@ library MinHeap {
     function addToHeap(MinHeapData storage self, uint64 value) private {
         // standard min-heap insertion
         // push to the end of the heap and sift up.
-        // there is a high probability that the expiry being added will remain where it is
-        // so this operation will end up being O(1)
         if (self.heapSize == self.heap.length) {
             self.heap.push(value);       
         } else {
@@ -170,7 +168,7 @@ library MinHeap {
      * @param self reference to the underlying data structure of the heap
      * @param value the value to be removed
      */
-    function removeExpiryFromHeap(MinHeapData storage self, uint64 value) private {
+    function removeValueFromHeap(MinHeapData storage self, uint64 value) private {
         uint256 index = 0;
         while (index < self.heapSize && self.heap[index] != value) {
             ++index;

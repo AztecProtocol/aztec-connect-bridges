@@ -145,7 +145,7 @@ contract ElementBridge is IDefiBridge {
     // 48 hours in seconds, usd for calculating speeedbump expiries
     uint256 internal constant _FORTY_EIGHT_HOURS = 172800;
 
-    uint256 internal constant MAX_INT = type(uint256).max;
+    uint256 internal constant MAX_UINT = type(uint256).max;
 
     uint256 internal constant MIN_GAS_FOR_CHECK_AND_FINALISE = 50000;
     uint256 internal constant MIN_GAS_FOR_FUNCTION_COMPLETION = 5000;
@@ -153,13 +153,13 @@ contract ElementBridge is IDefiBridge {
     uint256 internal constant MIN_GAS_FOR_EXPIRY_REMOVAL = 25000;
 
     // event emitted on every successful convert call
-    event Convert(uint256 indexed nonce, uint256 totalInputValue);
+    event LogConvert(uint256 indexed nonce, uint256 totalInputValue);
 
     // event emitted on every attempt to finalise, successful or otherwise
-    event Finalise(uint256 indexed nonce, bool success, string message);
+    event LogFinalise(uint256 indexed nonce, bool success, string message);
 
     // event emitted on wvery newly configured pool
-    event PoolAdded(address poolAddress, address wrappedPositionAddress, uint64 expiry);
+    event LogPoolAdded(address poolAddress, address wrappedPositionAddress, uint64 expiry);
 
     /**
      * @dev Constructor
@@ -321,7 +321,7 @@ contract ElementBridge is IDefiBridge {
         }
 
         // verify with Element that the provided contracts are registered
-        validatePositionAndPoolAddresses(wrappedPositionAddress, poolAddress);
+        validatePositionAndPoolAddressesWithElementRegistry(wrappedPositionAddress, poolAddress);
 
         // we store the pool information against a hash of the asset and expiry
         uint256 assetExpiryHash = hashAssetAndExpiry(poolSpec.underlyingAsset, trancheExpiry);
@@ -339,9 +339,9 @@ contract ElementBridge is IDefiBridge {
         // initialising the expiry -> nonce mapping here like this reduces a chunk of gas later when we start to add interactions for this expiry
         uint256[] storage nonces = expiryToNonce[trancheExpiry];
         if (nonces.length == 0) {
-            expiryToNonce[trancheExpiry].push(MAX_INT);
+            expiryToNonce[trancheExpiry].push(MAX_UINT);
         }
-        emit PoolAdded(poolAddress, wrappedPositionAddress, trancheExpiry);
+        emit LogPoolAdded(poolAddress, wrappedPositionAddress, trancheExpiry);
     }
 
     /**
@@ -376,7 +376,7 @@ contract ElementBridge is IDefiBridge {
     * @param wrappedPosition address of a wrapped position contract
     * @param pool address of a balancer pool contract
      */
-    function validatePositionAndPoolAddresses(address wrappedPosition, address pool) internal {
+    function validatePositionAndPoolAddressesWithElementRegistry(address wrappedPosition, address pool) internal {
         IDeploymentValidator validator = IDeploymentValidator(elementDeploymentValidatorAddress);
         if (!validator.checkPoolValidation(pool)) {
             revert UNREGISTERED_POOL();
@@ -487,13 +487,13 @@ contract ElementBridge is IDefiBridge {
         newInteraction.quantityPT = principalTokensAmount;
         newInteraction.trancheAddress = pool.trancheAddress;
         // add the nonce and expiry to our expiry heap
-        addNonceAndExpiry(interactionNonce, trancheExpiry);
+        addNonceAndExpiryToNonceMapping(interactionNonce, trancheExpiry);
         // increase our tranche account deposits and holdings
         // other members are left as their initial values (all zeros)
         TrancheAccount storage trancheAccount = trancheAccounts[newInteraction.trancheAddress];
         trancheAccount.numDeposits++;
         trancheAccount.quantityTokensHeld += newInteraction.quantityPT;
-        emit Convert(interactionNonce, totalInputValue);
+        emit LogConvert(interactionNonce, totalInputValue);
         finaliseExpiredInteractions(MIN_GAS_FOR_FUNCTION_COMPLETION);       
         // we need to get here with MIN_GAS_FOR_FUNCTION_COMPLETION gas to exit.
     }
@@ -511,7 +511,7 @@ contract ElementBridge is IDefiBridge {
         while (gasleft() > gasLoopCondition) {
             // check the heap to see if we can finalise an expired transaction
             // we provide a gas floor to the function which will enable us to leave this function without breaching our gasFloor
-            (bool expiryAvailable, uint256 nonce) = checkNextExpiry(ourGasFloor);
+            (bool expiryAvailable, uint256 nonce) = checkForNextInteractionToFinalise(ourGasFloor);
             if (!expiryAvailable) {
                 break;
             }
@@ -571,7 +571,7 @@ contract ElementBridge is IDefiBridge {
         if (trancheAccount.numDeposits == 0) {
             // shouldn't be possible, this means we have had no deposits against this tranche
             setInteractionAsFailure(interaction, interactionNonce, 'NO_DEPOSITS_FOR_TRANCHE');
-            popInteraction(interaction, interactionNonce);
+            popInteractionFromNonceMapping(interaction, interactionNonce);
             return (0, 0, false);
         }
 
@@ -587,12 +587,12 @@ contract ElementBridge is IDefiBridge {
             } catch Error(string memory errorMessage) {
                 setInteractionAsFailure(interaction, interactionNonce, errorMessage);
                 trancheAccount.redemptionStatus = TrancheRedemptionStatus.REDEMPTION_FAILED;
-                popInteraction(interaction, interactionNonce);
+                popInteractionFromNonceMapping(interaction, interactionNonce);
                 return (0, 0, false);
             } catch {
                 setInteractionAsFailure(interaction, interactionNonce, 'UNKNOWN_ERROR_FROM_TRANCHE_WITHDRAW');
                 trancheAccount.redemptionStatus = TrancheRedemptionStatus.REDEMPTION_FAILED;
-                popInteraction(interaction, interactionNonce);
+                popInteractionFromNonceMapping(interaction, interactionNonce);
                 return (0, 0, false);
             }
         }
@@ -625,11 +625,11 @@ contract ElementBridge is IDefiBridge {
         // approve the transfer of funds back to the rollup contract
         ERC20(outputAssetA.erc20Address).approve(rollupProcessor, amountToAllocate);
         interaction.finalised = true;
-        popInteraction(interaction, interactionNonce);
+        popInteractionFromNonceMapping(interaction, interactionNonce);
         outputValueA = amountToAllocate;
         outputValueB = 0;
         interactionCompleted = true;
-        emit Finalise(interactionNonce, interactionCompleted, '');
+        emit LogFinalise(interactionNonce, interactionCompleted, '');
     }
 
     /**
@@ -644,7 +644,7 @@ contract ElementBridge is IDefiBridge {
         string memory message
     ) internal {
         interaction.failed = true;
-        emit Finalise(interactionNonce, false, message);
+        emit LogFinalise(interactionNonce, false, message);
     }
 
     /**
@@ -653,12 +653,12 @@ contract ElementBridge is IDefiBridge {
      * @param expiry The expiry of the interaction to be added
      * @return expiryAdded Flag specifying whether the interactions expiry was added to the heap
      */
-    function addNonceAndExpiry(uint256 nonce, uint64 expiry) internal returns (bool expiryAdded) {
+    function addNonceAndExpiryToNonceMapping(uint256 nonce, uint64 expiry) internal returns (bool expiryAdded) {
         // get the set of nonces already against this expiry
-        // check for the MAX_INT placeholder nonce that exists to reduce gas costs at this point in the code
+        // check for the MAX_UINT placeholder nonce that exists to reduce gas costs at this point in the code
         expiryAdded = false;
         uint256[] storage nonces = expiryToNonce[expiry];
-        if (nonces.length == 1 && nonces[0] == MAX_INT) {
+        if (nonces.length == 1 && nonces[0] == MAX_UINT) {
             nonces[0] = nonce;
         } else {
             nonces.push(nonce);
@@ -677,7 +677,7 @@ contract ElementBridge is IDefiBridge {
      * @param interactionNonce The nonce of the interaction to be removed
      * @return expiryRemoved Flag specifying whether the interactions expiry was removed from the heap
      */
-    function popInteraction(Interaction storage interaction, uint256 interactionNonce) internal returns (bool expiryRemoved) {
+    function popInteractionFromNonceMapping(Interaction storage interaction, uint256 interactionNonce) internal returns (bool expiryRemoved) {
         uint256[] storage nonces = expiryToNonce[interaction.expiry];
         if (nonces.length == 0) {
             return (false);
@@ -709,7 +709,7 @@ contract ElementBridge is IDefiBridge {
      * @return expiryAvailable Flag specifying whether an expiry is available to be finalised
      * @return nonce The next interaction nonce to be finalised
      */
-    function checkNextExpiry(uint256 gasFloor)
+    function checkForNextInteractionToFinalise(uint256 gasFloor)
         internal
         returns (
             bool expiryAvailable,
@@ -731,7 +731,7 @@ contract ElementBridge is IDefiBridge {
         uint256 minGasForLoop = (gasFloor + MIN_GAS_FOR_FAILED_INTERACTION);
         while (nonces.length > 0 && gasleft() >= minGasForLoop) {
             uint256 nextNonce = nonces[nonces.length - 1];
-            if (nextNonce == MAX_INT) {
+            if (nextNonce == MAX_UINT) {
                 // this shouldn't happen, this value is the placeholder for reducing gas costs on convert
                 // we just need to pop and continue
                 nonces.pop();
