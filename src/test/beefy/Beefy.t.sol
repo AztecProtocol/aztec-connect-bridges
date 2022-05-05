@@ -11,7 +11,7 @@ import {AztecTypes} from './../../aztec/AztecTypes.sol';
 import {console} from '../console.sol';
 import '../../../lib/ds-test/src/test.sol';
 
-contract Beefytest is DSTest {
+contract Beefy is DSTest {
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     DefiBridgeProxy defiBridgeProxy;
@@ -19,9 +19,9 @@ contract Beefytest is DSTest {
     IBeefyVault vault;
     BeefyBridge beefybridge;
 
-    IERC20 constant dai = IERC20(0x396E655C309676cAF0acf4607a868e0CDed876dB);
+    IERC20 constant dai = IERC20(0x2cF7252e74036d1Da831d11089D326296e64a728);
     //https://polygonscan.com/address/0xE695fCeD8fD93eeE54204a7fC33323a60d41865A#readContract
-    IBeefyVault constant beefy = IBeefyVault(0xE695fCeD8fD93eeE54204a7fC33323a60d41865A);
+    IBeefyVault constant beefy = IBeefyVault(0x4462817b53E76b722c2D174D0148ddb81452f1dE);
 
     function _aztecPreSetup() internal {
         defiBridgeProxy = new DefiBridgeProxy();
@@ -33,20 +33,18 @@ contract Beefytest is DSTest {
 
         beefybridge = new BeefyBridge(address(rollupProcessor));
         //beefybridge.validateVault(address(beefy));
-        rollupProcessor.setBridgeGasLimit(address(beefybridge), 10000000);
-
-        _setTokenBalance(address(dai), address(0xdead), 42069);
+        rollupProcessor.setBridgeGasLimit(address(beefybridge), 1000000);
     }
 
     function testBeefyBridge() public {
-        uint256 depositAmount = 15000;
+        uint256 depositAmount = 5000;
 
-        _setTokenBalance(address(beefy), address(rollupProcessor), depositAmount);
+        _setTokenBalance(address(dai), address(rollupProcessor), depositAmount);
 
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(beefy),
+            erc20Address: address(dai),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
         AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
@@ -66,9 +64,9 @@ contract Beefytest is DSTest {
             0
         );
 
-        uint256 rollupDai = dai.balanceOf(address(rollupProcessor));
-
-        assertEq(depositAmount, rollupDai, 'Balances must match');
+        uint256 rollupBeefy = beefy.balanceOf(address(rollupProcessor));
+        console.log(rollupBeefy, 'ouput amount');
+        //assertEq(depositAmount, rollupBeefy, 'Balances must match');
     }
 
     function assertNotEq(address a, address b) internal {
@@ -85,10 +83,10 @@ contract Beefytest is DSTest {
         address user,
         uint256 balance
     ) internal {
-        uint256 slot = 2; // May vary depending on token
+        uint256 slot = 1; // May vary depending on token
 
         vm.store(token, keccak256(abi.encode(user, slot)), bytes32(uint256(balance)));
-
+        console.log('setting up token balance things');
         assertEq(IERC20(token).balanceOf(user), balance, 'wrong balance');
     }
 }

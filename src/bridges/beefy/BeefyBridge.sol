@@ -10,12 +10,12 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import {AztecTypes} from '../../aztec/AztecTypes.sol';
 import './Interfaces/IBeefyVault.sol';
+import {console} from '../../test/console.sol';
 
 contract BeefyBridge is IDefiBridge, Ownable {
     using SafeMath for uint256;
 
     address public immutable rollupProcessor;
-  \
 
     constructor(address _rollupProcessor) public {
         rollupProcessor = _rollupProcessor;
@@ -50,17 +50,26 @@ contract BeefyBridge is IDefiBridge, Ownable {
         require(msg.sender == rollupProcessor, 'ExampleBridge: INVALID_CALLER');
 
         // case 1 output is beefy vault share token (ENTER)
-        bool validVaultOutputPair = (address(IBeefyVault(outputAssetA.erc20Address).want()) ==
+        /**  bool validVaultOutputPair = (address(IBeefyVault(outputAssetA.erc20Address).want()) ==
             inputAssetA.erc20Address);
+            */
         // case 2 input a vault share token receive underlying asser (EXIT)
-        bool validVaultInputPair = (address(IBeefyVault(inputAssetA.erc20Address).want()) == outputAssetA.erc20Address);
+        //bool validVaultInputPair = (address(IBeefyVault(inputAssetA.erc20Address).want()) == outputAssetA.erc20Address);
 
-        if (validVaultOutputPair) {
+        if (testPair(outputAssetA.erc20Address, inputAssetA.erc20Address)) {
             outputValueA = enter(outputAssetA.erc20Address, inputAssetA.erc20Address, totalInputValue);
-        } else if (validVaultInputPair) {
+        } else if (testPair(inputAssetA.erc20Address, outputAssetA.erc20Address)) {
             outputValueA = exit(inputAssetA.erc20Address, outputAssetA.erc20Address, totalInputValue);
         } else {
             revert('invalid vault token pair address');
+        }
+    }
+
+    function testPair(address a, address b) public returns (bool) {
+        try IBeefyVault(a).want() returns (IERC20 token) {
+            return address(token) == b;
+        } catch {
+            return false;
         }
     }
 
@@ -87,6 +96,7 @@ contract BeefyBridge is IDefiBridge, Ownable {
         uint256 prev = withdrawToken.balanceOf(address(this));
         IBeefyVault(vault).withdraw(amount);
         uint256 _after = withdrawToken.balanceOf(address(this));
+        console.log(_after, 'after beefy balance');
         withdrawToken.approve(rollupProcessor, _after.sub(prev));
         return _after.sub(prev);
     }
