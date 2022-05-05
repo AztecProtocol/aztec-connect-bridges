@@ -51,6 +51,9 @@ contract ElementBridge is IDefiBridge {
     error UNREGISTERED_POOL();
     error UNREGISTERED_POSITION();
     error UNREGISTERED_PAIR();
+    error INVALID_TOKEN_BALANCE_RECEIVED();
+    error INVALID_CHANGE_IN_BALANCE();
+    error RECEIVED_LESS_THAN_LIMIT();
 
     /*----------------------------------------
       STRUCTS
@@ -459,26 +462,7 @@ contract ElementBridge is IDefiBridge {
         // approve the transfer of tokens to the balancer address
         ERC20(inputAssetA.erc20Address).approve(balancerAddress, totalInputValue);
         // execute the swap on balancer
-        address inputAsset = inputAssetA.erc20Address;
-
-        uint256 principalTokensAmount = IVault(balancerAddress).swap(
-            IVault.SingleSwap({
-                poolId: pool.poolId,
-                kind: IVault.SwapKind.GIVEN_IN,
-                assetIn: IAsset(inputAsset),
-                assetOut: IAsset(pool.trancheAddress),
-                amount: totalInputValue,
-                userData: '0x00'
-            }),
-            IVault.FundManagement({
-                sender: address(this), // the bridge has already received the tokens from the rollup so it owns totalInputValue of inputAssetA
-                fromInternalBalance: false,
-                recipient: payable(address(this)),
-                toInternalBalance: false
-            }),
-            totalInputValue,
-            block.timestamp
-        );
+        uint256 principalTokensAmount = exchangeAssetForTrancheTokens(inputAssetA.erc20Address, pool, totalInputValue);
         // store the tranche that underpins our interaction, the expiry and the number of received tokens against the nonce
         Interaction storage newInteraction = interactions[interactionNonce];
         newInteraction.expiry = trancheExpiry;
@@ -496,6 +480,51 @@ contract ElementBridge is IDefiBridge {
         emit LogConvert(interactionNonce, totalInputValue);
         finaliseExpiredInteractions(MIN_GAS_FOR_FUNCTION_COMPLETION);       
         // we need to get here with MIN_GAS_FOR_FUNCTION_COMPLETION gas to exit.
+    }
+
+    /** 
+    * @dev Function to exchange the input asset for tranche tokens on Balancer
+    * @return quantityReceived amount of tokens recieved
+    */
+    function exchangeAssetForTrancheTokens(address inputAsset, Pool storage pool, uint256 inputQuantity) internal returns (uint256 quantityReceived) {
+        IVault.SingleSwap memory singleSwap = IVault.SingleSwap({
+            poolId: pool.poolId, // the id of the pool we want to use
+            kind: IVault.SwapKind.GIVEN_IN, // We are exchanging a given number of input tokens
+            assetIn: IAsset(inputAsset), // the input asset for the swap
+            assetOut: IAsset(pool.trancheAddress), // the tranche token address as the output asset
+            amount: inputQuantity, // the total amount of input asset we wish to swap
+            userData: '0x00' // set to 0 as per the docs, this is unused in current balancer pools
+        });
+        IVault.FundManagement memory fundManagement = IVault.FundManagement({
+            sender: address(this), // the bridge has already received the tokens from the rollup so it owns totalInputValue of inputAssetA
+            fromInternalBalance: false,
+            recipient: payable(address(this)), // we want the output tokens transferred back to us
+            toInternalBalance: false
+        });
+
+        uint256 trancheTokenQuantityBefore = ERC20(pool.trancheAddress).balanceOf(address(this));
+        quantityReceived = IVault(balancerAddress).swap(
+            singleSwap,
+            fundManagement,
+            inputQuantity, // we won't accept less than 1 output token per input token
+            block.timestamp
+        );
+
+        uint256 trancheTokenQuantityAfter = ERC20(pool.trancheAddress).balanceOf(address(this));
+        // ensure we haven't lost tokens!
+        if (trancheTokenQuantityAfter < trancheTokenQuantityBefore) {
+            revert INVALID_CHANGE_IN_BALANCE();
+        }
+        // change in balance must be >= 0 here
+        uint256 changeInBalance = trancheTokenQuantityAfter - trancheTokenQuantityBefore;
+        // ensure the change in balance matches that reported to us
+        if (changeInBalance != quantityReceived) {
+            revert INVALID_TOKEN_BALANCE_RECEIVED();
+        }
+        // ensure we received at least the limit we placed
+        if (quantityReceived < inputQuantity) {
+            revert RECEIVED_LESS_THAN_LIMIT();
+        }
     }
 
     /**

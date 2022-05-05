@@ -1529,7 +1529,7 @@ contract ElementTest is DSTest {
 
     function testOnlyFinalisesUpToGasLimit3() public {
         // set the gas limit so that only the first 3 interactions finalise
-        rollupProcessor.setBridgeGasLimit(address(elementBridge), 635000);
+        rollupProcessor.setBridgeGasLimit(address(elementBridge), 640000);
         setupAssetPools('DAI');
         setupAssetPools('USDC');
         string memory asset = 'USDC';
