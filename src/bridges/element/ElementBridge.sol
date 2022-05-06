@@ -459,7 +459,7 @@ contract ElementBridge is IDefiBridge {
         outputValueA = 0;
         outputValueB = 0;
 
-        // capture the proficed arguments in a struct to prevent 'stack too deep' errors
+        // capture the provided arguments in a struct to prevent 'stack too deep' errors
         ConvertArgs memory convertArgs = ConvertArgs({
             inputAssetAddress: inputAssetA.erc20Address,
             totalInputValue: totalInputValue,
