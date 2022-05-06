@@ -624,7 +624,7 @@ contract ElementBridge is IDefiBridge {
         TrancheAccount storage trancheAccount = trancheAccounts[interaction.trancheAddress];
         if (trancheAccount.numDeposits == 0) {
             // shouldn't be possible, this means we have had no deposits against this tranche
-            setInteractionAsFailure(interaction, interactionNonce, 'NO_DEPOSITS_FOR_TRANCHE', 0);
+            setInteractionAsFailure(interaction, interactionNonce, 'NO_DEPOSITS_2', 0);
             popInteractionFromNonceMapping(interaction, interactionNonce);
             return (0, 0, false);
         }
@@ -646,7 +646,7 @@ contract ElementBridge is IDefiBridge {
                 return (0, 0, false);
             } catch {
                 unchecked { gasUsed = gasAtStart - int64(int256(gasleft())); }
-                setInteractionAsFailure(interaction, interactionNonce, 'UNKNOWN_ERROR_FROM_TRANCHE_WITHDRAW', gasUsed);
+                setInteractionAsFailure(interaction, interactionNonce, 'WITHDRAW_ERR', gasUsed);
                 trancheAccount.redemptionStatus = TrancheRedemptionStatus.REDEMPTION_FAILED;
                 popInteractionFromNonceMapping(interaction, interactionNonce);
                 return (0, 0, false);
@@ -835,17 +835,17 @@ contract ElementBridge is IDefiBridge {
         TrancheAccount storage trancheAccount = trancheAccounts[interaction.trancheAddress];
         if (trancheAccount.numDeposits == 0) {
             // shouldn't happen, suggests we don't have an account for this tranche!
-            return (false, 'NO_DEPOSITS_FOR_TRANCHE');
+            return (false, 'NO_DEPOSITS_1');
         }
         if (trancheAccount.redemptionStatus == TrancheRedemptionStatus.REDEMPTION_FAILED) {
-            return (false, 'TRANCHE_REDEMPTION_FAILED');
+            return (false, 'REDEMPTION_FAILED');
         }
         // determine if the tranche has already been redeemed
         if (trancheAccount.redemptionStatus == TrancheRedemptionStatus.REDEMPTION_SUCCEEDED) {
             // tranche was previously redeemed
             if (trancheAccount.quantityAssetRemaining == 0) {
                 // this is a problem. we have already allocated out all of the redeemed assets!
-                return (false, 'ASSET_ALREADY_FULLY_ALLOCATED');
+                return (false, 'FULLY_ALLOCATED');
             }
             // this interaction can be finalised. we don't need to redeem the tranche, we just need to allocate the redeemed asset
             return (true, '');
