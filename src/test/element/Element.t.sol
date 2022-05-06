@@ -99,9 +99,11 @@ contract ElementTest is DSTest {
     AztecTypes.AztecAsset emptyAsset;
     uint256 private numTranches = 0;
 
-    event LogConvert(uint256 indexed nonce, uint256 totalInputValue);
+    int64 constant daiConvertGas = 238860;
 
-    event LogFinalise(uint256 indexed nonce, bool success, string message);
+    event LogConvert(uint256 indexed nonce, uint256 totalInputValue, int64 gasUsed);
+
+    event LogFinalise(uint256 indexed nonce, bool success, string message, int64 gasUsed);
 
     event LogPoolAdded(address poolAddress, address wrappedPositionAddress, uint64 expiry);
 
@@ -688,7 +690,7 @@ contract ElementTest is DSTest {
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
         uint256 balancerBefore = tokens['DAI'].balanceOf(address(balancer));
         vm.expectEmit(false, false, false, true);
-        emit LogConvert(interactionConfig.nonce, interactionConfig.depositAmount);
+        emit LogConvert(interactionConfig.nonce, interactionConfig.depositAmount, daiConvertGas);
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
         assertEq(isAsync, true);
         assertEq(outputValueA, 0);
@@ -717,7 +719,7 @@ contract ElementTest is DSTest {
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount);
         uint256 balancerBefore = tokens['DAI'].balanceOf(address(balancer));
         vm.expectEmit(false, false, false, true);
-        emit LogConvert(interactionConfig.nonce, interactionConfig.depositAmount);
+        emit LogConvert(interactionConfig.nonce, interactionConfig.depositAmount, daiConvertGas);
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
         assertEq(isAsync, true);
         assertEq(outputValueA, 0);
@@ -751,7 +753,7 @@ contract ElementTest is DSTest {
         _setTokenBalance('DAI', address(elementBridge), interactionConfig.depositAmount * 2);
         uint256 balancerBefore = tokens['DAI'].balanceOf(address(balancer));
         vm.expectEmit(false, false, false, true);
-        emit LogConvert(interactionConfig.nonce, interactionConfig.depositAmount);
+        emit LogConvert(interactionConfig.nonce, interactionConfig.depositAmount, daiConvertGas);
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert('DAI', interactionConfig);
         assertEq(isAsync, true);
         assertEq(outputValueA, 0);
@@ -1139,7 +1141,7 @@ contract ElementTest is DSTest {
         // we expect 5 Finalise events to be emitted but we can't test the data values
         for (uint256 i = 0; i <  numUsdcInteractions; i++) {
             vm.expectEmit(false, false, false, false);
-            emit LogFinalise(1 + i, true, '');
+            emit LogFinalise(1 + i, true, '', 0);
         }
         {
             (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, daiInteraction);
@@ -1203,7 +1205,7 @@ contract ElementTest is DSTest {
         // we expect 5 Finalise events to be emitted but we can't test the data values
         for (uint256 i = 0; i <  numEurInteractions; i++) {
             vm.expectEmit(false, false, false, false);
-            emit LogFinalise(1 + i, true, '');
+            emit LogFinalise(1 + i, true, '', 0);
         }
         {
             (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, daiInteraction);
@@ -1358,7 +1360,7 @@ contract ElementTest is DSTest {
         // we expect 5 Finalise events to be emitted but we can't test the data values
         for (uint256 i = 0; i <  numEurInteractions; i++) {
             vm.expectEmit(false, false, false, false);
-            emit LogFinalise(1 + i, true, '');
+            emit LogFinalise(1 + i, true, '', 0);
         }
         {
             (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, daiInteraction);
@@ -1439,7 +1441,7 @@ contract ElementTest is DSTest {
         _increaseTokenBalance(asset, address(rollupProcessor), daiDepositAmount);
         // we expect 1 Finalise events to be emitted but we can't test the data values
         vm.expectEmit(false, false, false, true);
-        emit LogFinalise(5, true, '');
+        emit LogFinalise(5, true, '', 225337);
         {
             (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, daiInteraction);
             assertEq(isAsync, true);
@@ -1503,8 +1505,8 @@ contract ElementTest is DSTest {
         // we expect 2 Finalise events to be emitted but we can't test the data values
         uint numExpectedFinalisedInteractions = 2;
         vm.expectEmit(false, false, false, false);
-        emit LogFinalise(5, true, '');
-        emit LogFinalise(4, true, '');
+        emit LogFinalise(5, true, '', 0);
+        emit LogFinalise(4, true, '', 0);
         {
             (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, daiInteraction);
             assertEq(isAsync, true);
@@ -1568,9 +1570,9 @@ contract ElementTest is DSTest {
         // we expect 3 Finalise events to be emitted but we can't test the data values
         uint numExpectedFinalisedInteractions = 3;
         vm.expectEmit(false, false, false, false);
-        emit LogFinalise(5, true, '');
-        emit LogFinalise(4, true, '');
-        emit LogFinalise(3, true, '');
+        emit LogFinalise(5, true, '', 0);
+        emit LogFinalise(4, true, '', 0);
+        emit LogFinalise(3, true, '', 0);
         {
             (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, daiInteraction);
             assertEq(isAsync, true);

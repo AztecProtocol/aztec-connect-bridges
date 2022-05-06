@@ -156,10 +156,10 @@ contract ElementBridge is IDefiBridge {
     uint256 internal constant MIN_GAS_FOR_EXPIRY_REMOVAL = 25000;
 
     // event emitted on every successful convert call
-    event LogConvert(uint256 indexed nonce, uint256 totalInputValue);
+    event LogConvert(uint256 indexed nonce, uint256 totalInputValue, int64 gasUsed);
 
     // event emitted on every attempt to finalise, successful or otherwise
-    event LogFinalise(uint256 indexed nonce, bool success, string message);
+    event LogFinalise(uint256 indexed nonce, bool success, string message, int64 gasUsed);
 
     // event emitted on wvery newly configured pool
     event LogPoolAdded(address poolAddress, address wrappedPositionAddress, uint64 expiry);
@@ -400,6 +400,13 @@ contract ElementBridge is IDefiBridge {
         hashValue = uint256(keccak256(abi.encodePacked(asset, uint256(expiry))));
     }
 
+    struct ConvertArgs {
+        address inputAssetAddress;
+        uint256 totalInputValue;
+        uint256 interactionNonce;
+        uint64 auxData;
+    }
+
     /**
      * @dev Function to add a new interaction to the bridge
      * Converts the amount of input asset given to the market determined amount of tranche asset
@@ -431,6 +438,8 @@ contract ElementBridge is IDefiBridge {
             bool isAsync
         )
     {
+        int64 gasAtStart = int64(int256(gasleft()));
+        int64 gasUsed = 0;
         // ### INITIALIZATION AND SANITY CHECKS
         if (msg.sender != rollupProcessor) {
             revert INVALID_CALLER();
@@ -449,36 +458,47 @@ contract ElementBridge is IDefiBridge {
         isAsync = true;
         outputValueA = 0;
         outputValueB = 0;
+
+        // capture the provided arguments in a struct to prevent 'stack too deep' errors
+        ConvertArgs memory convertArgs = ConvertArgs({
+            inputAssetAddress: inputAssetA.erc20Address,
+            totalInputValue: totalInputValue,
+            interactionNonce: interactionNonce,
+            auxData: auxData
+        });
+
         // retrieve the appropriate pool for this interaction and verify that it exists
-        Pool storage pool = pools[hashAssetAndExpiry(inputAssetA.erc20Address, auxData)];
+        Pool storage pool = pools[hashAssetAndExpiry(convertArgs.inputAssetAddress, convertArgs.auxData)];
         if (pool.trancheAddress == address(0)) {
             revert POOL_NOT_FOUND();
         }
         ITranche tranche = ITranche(pool.trancheAddress);
-        if (block.timestamp >= tranche.unlockTimestamp()) {
+        uint64 trancheExpiry = uint64(tranche.unlockTimestamp());
+        if (block.timestamp >= trancheExpiry) {
             revert TRANCHE_ALREADY_EXPIRED();
         }
-        uint64 trancheExpiry = uint64(tranche.unlockTimestamp());
+        
         // approve the transfer of tokens to the balancer address
-        ERC20(inputAssetA.erc20Address).approve(balancerAddress, totalInputValue);
+        ERC20(convertArgs.inputAssetAddress).approve(balancerAddress, convertArgs.totalInputValue);
         // execute the swap on balancer
-        uint256 principalTokensAmount = exchangeAssetForTrancheTokens(inputAssetA.erc20Address, pool, totalInputValue);
+        uint256 principalTokensAmount = exchangeAssetForTrancheTokens(convertArgs.inputAssetAddress, pool, convertArgs.totalInputValue);
         // store the tranche that underpins our interaction, the expiry and the number of received tokens against the nonce
-        Interaction storage newInteraction = interactions[interactionNonce];
+        Interaction storage newInteraction = interactions[convertArgs.interactionNonce];
         newInteraction.expiry = trancheExpiry;
         newInteraction.failed = false;
         newInteraction.finalised = false;
         newInteraction.quantityPT = principalTokensAmount;
         newInteraction.trancheAddress = pool.trancheAddress;
         // add the nonce and expiry to our expiry heap
-        addNonceAndExpiryToNonceMapping(interactionNonce, trancheExpiry);
+        addNonceAndExpiryToNonceMapping(convertArgs.interactionNonce, trancheExpiry);
         // increase our tranche account deposits and holdings
         // other members are left as their initial values (all zeros)
         TrancheAccount storage trancheAccount = trancheAccounts[newInteraction.trancheAddress];
         trancheAccount.numDeposits++;
         trancheAccount.quantityTokensHeld += newInteraction.quantityPT;
-        emit LogConvert(interactionNonce, totalInputValue);
-        finaliseExpiredInteractions(MIN_GAS_FOR_FUNCTION_COMPLETION);       
+        unchecked { gasUsed = gasAtStart - int64(int256(gasleft())); }
+        emit LogConvert(convertArgs.interactionNonce, convertArgs.totalInputValue, gasUsed);
+        finaliseExpiredInteractions(MIN_GAS_FOR_FUNCTION_COMPLETION);
         // we need to get here with MIN_GAS_FOR_FUNCTION_COMPLETION gas to exit.
     }
 
@@ -584,6 +604,8 @@ contract ElementBridge is IDefiBridge {
             bool interactionCompleted
         )
     {
+        int64 gasAtStart = int64(int256(gasleft()));
+        int64 gasUsed = 0;
         if (msg.sender != rollupProcessor) {
             revert INVALID_CALLER();
         }
@@ -602,7 +624,7 @@ contract ElementBridge is IDefiBridge {
         TrancheAccount storage trancheAccount = trancheAccounts[interaction.trancheAddress];
         if (trancheAccount.numDeposits == 0) {
             // shouldn't be possible, this means we have had no deposits against this tranche
-            setInteractionAsFailure(interaction, interactionNonce, 'NO_DEPOSITS_FOR_TRANCHE');
+            setInteractionAsFailure(interaction, interactionNonce, 'NO_DEPOSITS_FOR_TRANCHE', 0);
             popInteractionFromNonceMapping(interaction, interactionNonce);
             return (0, 0, false);
         }
@@ -617,12 +639,14 @@ contract ElementBridge is IDefiBridge {
                 trancheAccount.quantityAssetRemaining = valueRedeemed;
                 trancheAccount.redemptionStatus = TrancheRedemptionStatus.REDEMPTION_SUCCEEDED;
             } catch Error(string memory errorMessage) {
-                setInteractionAsFailure(interaction, interactionNonce, errorMessage);
+                unchecked { gasUsed = gasAtStart - int64(int256(gasleft())); }
+                setInteractionAsFailure(interaction, interactionNonce, errorMessage, gasUsed);
                 trancheAccount.redemptionStatus = TrancheRedemptionStatus.REDEMPTION_FAILED;
                 popInteractionFromNonceMapping(interaction, interactionNonce);
                 return (0, 0, false);
             } catch {
-                setInteractionAsFailure(interaction, interactionNonce, 'UNKNOWN_ERROR_FROM_TRANCHE_WITHDRAW');
+                unchecked { gasUsed = gasAtStart - int64(int256(gasleft())); }
+                setInteractionAsFailure(interaction, interactionNonce, 'UNKNOWN_ERROR_FROM_TRANCHE_WITHDRAW', gasUsed);
                 trancheAccount.redemptionStatus = TrancheRedemptionStatus.REDEMPTION_FAILED;
                 popInteractionFromNonceMapping(interaction, interactionNonce);
                 return (0, 0, false);
@@ -661,7 +685,8 @@ contract ElementBridge is IDefiBridge {
         outputValueA = amountToAllocate;
         outputValueB = 0;
         interactionCompleted = true;
-        emit LogFinalise(interactionNonce, interactionCompleted, '');
+        unchecked { gasUsed = gasAtStart - int64(int256(gasleft())); }
+        emit LogFinalise(interactionNonce, interactionCompleted, '', gasUsed);
     }
 
     /**
@@ -673,10 +698,11 @@ contract ElementBridge is IDefiBridge {
     function setInteractionAsFailure(
         Interaction storage interaction,
         uint256 interactionNonce,
-        string memory message
+        string memory message,
+        int64 gasUsed
     ) internal {
         interaction.failed = true;
-        emit LogFinalise(interactionNonce, false, message);
+        emit LogFinalise(interactionNonce, false, message, gasUsed);
     }
 
     /**
@@ -780,7 +806,7 @@ contract ElementBridge is IDefiBridge {
             (bool canBeFinalised, string memory message) = interactionCanBeFinalised(interaction);
             if (!canBeFinalised) {
                 // can't be finalised, add to failures and pop from nonces
-                setInteractionAsFailure(interaction, nextNonce, message);
+                setInteractionAsFailure(interaction, nextNonce, message, 0);
                 nonces.pop();
                 continue;
             }
