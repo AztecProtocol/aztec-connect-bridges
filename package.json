@@ -17,6 +17,7 @@
     "build": "yarn clean && yarn compile:typechain && yarn compile:client-dest"
   },
   "dependencies": {
+    "@ethersproject/providers": "^5.6.5",
     "axios": "^0.26.1"
   },
   "jest": {

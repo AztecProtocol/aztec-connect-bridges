@@ -1,14 +1,23 @@
-import { AssetValue, AsyncYieldBridgeData, AuxDataConfig, AztecAsset,AztecAssetType, SolidityType } from '../bridge-data';
-import { AsyncUniswapV3Bridge, RollupProcessor } from '../../../typechain-types';
+import {
+  AssetValue,
+  AsyncYieldBridgeData,
+  AuxDataConfig,
+  AztecAsset,
+  AztecAssetType,
+  SolidityType,
+} from '../bridge-data';
+import { AsyncUniswapV3Bridge, AsyncUniswapV3Bridge__factory } from '../../../typechain-types';
 import { BigNumber } from '@ethersproject/bignumber';
-
-
+import { EthereumProvider } from '../aztec/provider/ethereum_provider';
+import { createWeb3Provider } from '../aztec/provider';
 
 export class AsyncUniswapBridgeData implements AsyncYieldBridgeData {
-  private bridge: AsyncUniswapV3Bridge;
+  private constructor(private bridgeContract: AsyncUniswapV3Bridge) {}
 
-  constructor(bridge: AsyncUniswapV3Bridge) {
-    this.bridge = bridge;
+  static create(uniSwapAddress: string, provider: EthereumProvider) {
+    return new AsyncUniswapBridgeData(
+      AsyncUniswapV3Bridge__factory.connect(uniSwapAddress, createWeb3Provider(provider)),
+    );
   }
 
   // @dev This function should be implemented for stateful bridges. It should return an array of AssetValue's
@@ -16,18 +25,17 @@ export class AsyncUniswapBridgeData implements AsyncYieldBridgeData {
   // @param bigint interactionNonce the interaction nonce to return the value for
 
   async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
-
     // we get the present value of the interaction
-    const amounts = await this.bridge.getPresentValue(interactionNonce);
+    const amounts = await this.bridgeContract.getPresentValue(interactionNonce);
     return [
       {
         assetId: interactionNonce,
-        amount: BigInt(amounts[0].toBigInt())
+        amount: BigInt(amounts[0].toBigInt()),
       },
       {
         assetId: interactionNonce,
-        amount: BigInt(amounts[1].toBigInt())
-      }
+        amount: BigInt(amounts[1].toBigInt()),
+      },
     ];
   }
 
@@ -37,7 +45,7 @@ export class AsyncUniswapBridgeData implements AsyncYieldBridgeData {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
-    return [0n,0n,0n];
+    return [0n, 0n, 0n];
   }
 
   public auxDataConfig: AuxDataConfig[] = [
@@ -54,14 +62,14 @@ export class AsyncUniswapBridgeData implements AsyncYieldBridgeData {
       solidityType: SolidityType.uint24,
       description: 'tickLower',
     },
-    
+
     {
       start: 48,
       length: 56,
       solidityType: SolidityType.uint8,
       description: 'fee',
     },
-    
+
     {
       start: 56,
       length: 64,
@@ -90,7 +98,6 @@ export class AsyncUniswapBridgeData implements AsyncYieldBridgeData {
     auxData: bigint,
     precision: bigint,
   ): Promise<bigint[]> {
-   
     //no interest for this bridge
     return [0n];
   }
@@ -102,67 +109,67 @@ export class AsyncUniswapBridgeData implements AsyncYieldBridgeData {
     outputAssetB: AztecAsset,
     auxData: bigint,
   ): Promise<AssetValue[]> {
-    const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
-    const zero = "0x0000000000000000000000000000000000000000";
+    const WETH = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
+    const zero = '0x0000000000000000000000000000000000000000';
 
     let inA = zero;
     let inB = zero;
 
-
     //gets the liquidity of the AMM pair in the tick range indicated by the provided auxData
-    //the user should input the pairs via inputAssetA and inputAssetB , rather than 
+    //the user should input the pairs via inputAssetA and inputAssetB , rather than
     //following the structure of the convert call they would actually take, since the limitations of
-    //the convert call don't really matter here 
-    
-    if(inputAssetA.assetType == AztecAssetType.ETH){ inA = WETH; }
-    else if(inputAssetA.assetType == AztecAssetType.ERC20){
+    //the convert call don't really matter here
+
+    if (inputAssetA.assetType == AztecAssetType.ETH) {
+      inA = WETH;
+    } else if (inputAssetA.assetType == AztecAssetType.ERC20) {
       inA = inputAssetA.erc20Address;
     }
 
-    if(inputAssetB.assetType == AztecAssetType.ETH){ inB = WETH; }
-    else if(inputAssetB.assetType == AztecAssetType.ERC20){
+    if (inputAssetB.assetType == AztecAssetType.ETH) {
+      inB = WETH;
+    } else if (inputAssetB.assetType == AztecAssetType.ERC20) {
       inB = inputAssetB.erc20Address;
     }
 
+    let balances = await this.bridgeContract.getLiquidity(inA, inB, BigNumber.from(auxData));
 
-
-    let balances = await this.bridge.getLiquidity(inA,inB,BigNumber.from(auxData));
-    
-    return [{
-      assetId: ( BigInt(inputAssetA.erc20Address) < BigInt(inputAssetB.erc20Address) ? BigInt(inputAssetA.erc20Address) : BigInt(inputAssetB.erc20Address) ),
-      amount: balances[0].toBigInt()
-    }, 
-    {
-      assetId: ( BigInt(inputAssetA.erc20Address) < BigInt(inputAssetB.erc20Address) ? BigInt(inputAssetB.erc20Address) : BigInt(inputAssetA.erc20Address) ),
-      amount: balances[1].toBigInt()
-    } 
+    return [
+      {
+        assetId:
+          BigInt(inputAssetA.erc20Address) < BigInt(inputAssetB.erc20Address)
+            ? BigInt(inputAssetA.erc20Address)
+            : BigInt(inputAssetB.erc20Address),
+        amount: balances[0].toBigInt(),
+      },
+      {
+        assetId:
+          BigInt(inputAssetA.erc20Address) < BigInt(inputAssetB.erc20Address)
+            ? BigInt(inputAssetB.erc20Address)
+            : BigInt(inputAssetA.erc20Address),
+        amount: balances[1].toBigInt(),
+      },
     ];
-    
-
   }
-  async getAuxDataLP(
-    data: bigint[]
-  ): Promise<bigint[]> {
+  async getAuxDataLP(data: bigint[]): Promise<bigint[]> {
     let tickLower = BigNumber.from(data[0]);
     let tickUpper = BigNumber.from(data[1]);
     let fee = BigNumber.from(data[2]);
     let days = BigNumber.from(data[3]);
-    
-    const auxData = await this.bridge.packData(tickLower, tickUpper, fee, days);
+
+    const auxData = await this.bridgeContract.packData(tickLower, tickUpper, fee, days);
 
     return [auxData.toBigInt()];
-
   }
 
   async getExpiration(interactionNonce: bigint): Promise<bigint> {
-  
-    const expiry = await this.bridge.getExpiry(interactionNonce)
+    const expiry = await this.bridgeContract.getExpiry(interactionNonce);
     console.log(expiry);
-    return BigInt( expiry.toBigInt() );
+    return BigInt(expiry.toBigInt());
   }
 
   async hasFinalised(interactionNonce: bigint): Promise<Boolean> {
-    const finalised = await this.bridge.finalised(interactionNonce);
+    const finalised = await this.bridgeContract.finalised(interactionNonce);
     console.log(finalised);
     return finalised;
   }
