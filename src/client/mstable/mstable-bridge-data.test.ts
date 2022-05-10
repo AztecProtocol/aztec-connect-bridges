@@ -148,7 +148,7 @@ describe('element bridge data', () => {
       rollupContract as any,
       mStableAsset as any,
     );
-    const output = await mStableBridgeData.getExpectedYearlyOuput(
+    const output = await mStableBridgeData.getExpectedYield(
       {
         assetType: AztecAssetType.ERC20,
         erc20Address: '0x30647a72dc82d7fbb1123ea74716ab8a317eac19',
@@ -173,6 +173,6 @@ describe('element bridge data', () => {
       BigInt(inputValue),
     );
 
-    expect(output[0]).toBeGreaterThan(inputValue);
+    expect(output[0]).toBeGreaterThan(0);
   });
 });

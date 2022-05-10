@@ -108,8 +108,7 @@ describe('lido bridge data', () => {
 
   it('should correctly return the expectedYearlyOutput', async () => {
     const depositAmount = BigInt(1 * 10e18);
-    const expectedOutput = 10432001397269423610n;
-
+    const expectedOutput = 4.32;
 
     wstethContract = {
       ...wstethContract,
@@ -138,7 +137,7 @@ describe('lido bridge data', () => {
 
     lidoBridgeData = new LidoBridgeData(wstethContract as any, lidoOracleContract as any, curvePoolContract as any);
 
-    const output = await lidoBridgeData.getExpectedYearlyOuput(
+    const output = await lidoBridgeData.getExpectedYield(
       wstETHAsset,
       emptyAsset,
       ethAsset,
