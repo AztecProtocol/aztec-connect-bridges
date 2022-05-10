@@ -66,8 +66,10 @@ contract TroveBridgeTest is TestUtil {
             )
         {
             assertTrue(false, "convert(...) has to revert when trove is in an incorrect state.");
-        } catch Error(string memory reason) {
-            assertEq(reason, "TroveBridge: INACTIVE_TROVE");
+        } catch (bytes memory reason) {
+            bytes4 expectedSelector = bytes4(keccak256(bytes("IncorrectStatus(uint8,uint8)")));
+            bytes4 receivedSelector = bytes4(reason);
+            assertEq(expectedSelector, receivedSelector);
         }
     }
 
@@ -87,8 +89,10 @@ contract TroveBridgeTest is TestUtil {
             )
         {
             assertTrue(false, "convert(...) has to revert on incorrect input.");
-        } catch Error(string memory reason) {
-            assertEq(reason, "TroveBridge: INCORRECT_INPUT");
+        } catch (bytes memory reason) {
+            bytes4 expectedSelector = bytes4(keccak256(bytes("IncorrectInput()")));
+            bytes4 receivedSelector = bytes4(reason);
+            assertEq(expectedSelector, receivedSelector);
         }
     }
 
@@ -118,14 +122,18 @@ contract TroveBridgeTest is TestUtil {
         // Bridge is now defunct so check that closing and reopening fails with appropriate errors
         try bridge.closeTrove() {
             assertTrue(false, "closeTrove() has to revert in case owner's balance != TB total supply.");
-        } catch Error(string memory reason) {
-            assertEq(reason, "TroveBridge: OWNER_MUST_BE_LAST");
+        } catch (bytes memory reason) {
+            bytes4 expectedSelector = bytes4(keccak256(bytes("OwnerNotLast()")));
+            bytes4 receivedSelector = bytes4(reason);
+            assertEq(expectedSelector, receivedSelector);
         }
 
         try bridge.openTrove(address(0), address(0)) {
             assertTrue(false, "openTrove() has to revert in case TB total supply != 0.");
-        } catch Error(string memory reason) {
-            assertEq(reason, "TroveBridge: INCORRECT_TOTAL_SUPPLY");
+        } catch (bytes memory reason) {
+            bytes4 expectedSelector = bytes4(keccak256(bytes("NonZeroTotalSupply()")));
+            bytes4 receivedSelector = bytes4(reason);
+            assertEq(expectedSelector, receivedSelector);
         }
 
         vm.stopPrank();

@@ -10,15 +10,17 @@
     "clean": "rm -rf ./cache ./dest ./out ./artifacts ./typechain-types ./client-dest",
     "test": "yarn test:contracts && yarn test:client",
     "test:client": "yarn compile:typechain && jest test",
-    "test:element": "forge test --fork-block-number 14000000 --match-contract Element -vvv --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c",
+    "test:pinned": "forge test --fork-block-number 14000000 --match-contract 'Element|Set' -vvv --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c",
     "test:contracts:block": "forge test --fork-block-number",
     "cast": "cast",
-    "test:contracts": "forge test --no-match-contract Element -vvv && yarn test:element",
-    "test:contracts:noelement": "forge test --no-match-contract Element -vvv",
+    "test:contracts": "forge test --no-match-contract 'Element|Set' --no-match-test 'testRedeemFlow|testAsyncLimitOrder|testTwoPartMint' -vvv && yarn test:pinned",
     "build": "yarn clean && yarn compile:typechain && yarn compile:client-dest"
   },
   "dependencies": {
-    "axios": "^0.26.1"
+    "@ethersproject/providers": "^5.6.5",
+    "axios": "^0.26.1",
+    "detect-node": "^2.1.0",
+    "sha3": "^2.1.4"
   },
   "jest": {
     "transform": {
@@ -28,7 +30,7 @@
     "rootDir": "./src"
   },
   "name": "@aztec/bridge-clients",
-  "version": "0.1.30",
+  "version": "0.1.35",
   "description": "This repo contains the solidity files and typescript helper class for all of the Aztec Connect Bridge Contracts",
   "repository": "git@github.com:AztecProtocol/aztec-connect-bridges.git",
   "license": "MIT",
@@ -40,6 +42,7 @@
     "@typechain/ethers-v4": "^7.0.0",
     "@typechain/ethers-v5": "^9.0.0",
     "@typechain/hardhat": "^4.0.0",
+    "@types/detect-node": "^2.0.0",
     "@types/jest": "^27.4.0",
     "ethers": "^5.5.4",
     "hardhat": "^2.6.8",

@@ -1,6 +1,13 @@
 import axios from 'axios';
-import { AuxDataConfig, AztecAsset, SolidityType, YieldBridgeData } from '../bridge-data';
-import { MStableBridge, IRollupProcessor, IMStableSavingsContract, IMStableAsset } from '../../../typechain-types';
+import { AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
+import {
+  IMStableSavingsContract,
+  IMStableAsset,
+  IMStableSavingsContract__factory,
+  IMStableAsset__factory,
+} from '../../../typechain-types';
+import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
+import { EthAddress } from '../aztec/eth_address';
 
 export type BatchSwapStep = {
   poolId: string;
@@ -23,25 +30,20 @@ export type FundManagement = {
 };
 
 export class MStableBridgeData {
-  private mStableBridgeContract: MStableBridge;
-  private rollupContract: IRollupProcessor;
-  private mStableSavingsContract: IMStableSavingsContract;
-  private mStableAssetContract: IMStableAsset;
-  private imUSD = '0x30647a72Dc82d7Fbb1123EA74716aB8A317Eac19';
   private dai = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 
   public scalingFactor = 1000000000n;
 
-  constructor(
-    mStableBridge: MStableBridge,
-    mStableSavings: IMStableSavingsContract,
-    rollupContract: IRollupProcessor,
-    mStableAsset: IMStableAsset,
-  ) {
-    this.mStableBridgeContract = mStableBridge;
-    this.rollupContract = rollupContract;
-    this.mStableSavingsContract = mStableSavings;
-    this.mStableAssetContract = mStableAsset;
+  private constructor(
+    private mStableSavingsContract: IMStableSavingsContract,
+    private mStableAssetContract: IMStableAsset,
+  ) {}
+
+  static create(provider: EthereumProvider, mStableSavingsAddress: EthAddress, mStableAssetAddress: EthAddress) {
+    const ethersProvider = createWeb3Provider(provider);
+    const savingsContract = IMStableSavingsContract__factory.connect(mStableSavingsAddress.toString(), ethersProvider);
+    const assetContract = IMStableAsset__factory.connect(mStableAssetAddress.toString(), ethersProvider);
+    return new MStableBridgeData(savingsContract, assetContract);
   }
 
   async getAuxData(
