@@ -9,13 +9,14 @@ import {
 import { AsyncUniswapV3Bridge, AsyncUniswapV3Bridge__factory } from '../../../typechain-types';
 import { BigNumber } from '@ethersproject/bignumber';
 import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
+import { EthAddress } from '../aztec/eth_address';
 
 export class AsyncUniswapBridgeData implements AsyncYieldBridgeData {
   private constructor(private bridgeContract: AsyncUniswapV3Bridge) {}
 
-  static create(uniSwapAddress: string, provider: EthereumProvider) {
+  static create(uniSwapAddress: EthAddress, provider: EthereumProvider) {
     return new AsyncUniswapBridgeData(
-      AsyncUniswapV3Bridge__factory.connect(uniSwapAddress, createWeb3Provider(provider)),
+      AsyncUniswapV3Bridge__factory.connect(uniSwapAddress.toString(), createWeb3Provider(provider)),
     );
   }
 

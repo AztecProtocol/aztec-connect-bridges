@@ -3,13 +3,14 @@ import { SyncUniswapV3Bridge, SyncUniswapV3Bridge__factory } from '../../../type
 import { defaultAbiCoder, Interface } from '@ethersproject/abi';
 import { BigNumber } from 'ethers';
 import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
+import { EthAddress } from '../aztec/eth_address';
 
 export class SyncUniswapBridgeData implements BridgeData {
   private constructor(private bridgeContract: SyncUniswapV3Bridge) {}
 
-  static create(uniSwapAddress: string, provider: EthereumProvider) {
+  static create(uniSwapAddress: EthAddress, provider: EthereumProvider) {
     return new SyncUniswapBridgeData(
-      SyncUniswapV3Bridge__factory.connect(uniSwapAddress, createWeb3Provider(provider)),
+      SyncUniswapV3Bridge__factory.connect(uniSwapAddress.toString(), createWeb3Provider(provider)),
     );
   }
 

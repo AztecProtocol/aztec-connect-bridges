@@ -7,6 +7,7 @@ import {
   IMStableAsset__factory,
 } from '../../../typechain-types';
 import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
+import { EthAddress } from '../aztec/eth_address';
 
 export type BatchSwapStep = {
   poolId: string;
@@ -38,10 +39,10 @@ export class MStableBridgeData {
     private mStableAssetContract: IMStableAsset,
   ) {}
 
-  static create(provider: EthereumProvider, mStableSavingsAddress: string, mStableAssetAddress: string) {
+  static create(provider: EthereumProvider, mStableSavingsAddress: EthAddress, mStableAssetAddress: EthAddress) {
     const ethersProvider = createWeb3Provider(provider);
-    const savingsContract = IMStableSavingsContract__factory.connect(mStableSavingsAddress, ethersProvider);
-    const assetContract = IMStableAsset__factory.connect(mStableAssetAddress, ethersProvider);
+    const savingsContract = IMStableSavingsContract__factory.connect(mStableSavingsAddress.toString(), ethersProvider);
+    const assetContract = IMStableAsset__factory.connect(mStableAssetAddress.toString(), ethersProvider);
     return new MStableBridgeData(savingsContract, assetContract);
   }
 

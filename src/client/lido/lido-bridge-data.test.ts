@@ -9,6 +9,7 @@ import {
 } from '../../../typechain-types';
 import { AztecAsset, AztecAssetType } from '../bridge-data';
 import { BigNumber } from 'ethers';
+import { EthAddress } from '../aztec/eth_address';
 
 jest.mock('../aztec/provider', () => ({
   createWeb3Provider: jest.fn(),
@@ -36,7 +37,7 @@ describe('lido bridge data', () => {
     IWstETH__factory.connect = () => wsteth as any;
     ICurvePool__factory.connect = () => curvePool as any;
     ILidoOracle__factory.connect = () => lidoOracle as any;
-    return LidoBridgeData.create({} as any, '', '', ''); // can pass in dummy values here as the above factories do all of the work
+    return LidoBridgeData.create(undefined, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO); // can pass in dummy values here as the above factories do all of the work
   };
 
   beforeAll(() => {

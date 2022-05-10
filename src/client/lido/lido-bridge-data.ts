@@ -9,6 +9,7 @@ import {
   ICurvePool__factory,
 } from '../../../typechain-types';
 import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
+import { EthAddress } from '../aztec/eth_address';
 
 export class LidoBridgeData implements YieldBridgeData {
   public scalingFactor: bigint = 1n * 10n ** 18n;
@@ -21,14 +22,14 @@ export class LidoBridgeData implements YieldBridgeData {
 
   static create(
     provider: EthereumProvider,
-    wstEthAddress: string,
-    lidoOracleAddress: string,
-    curvePoolAddress: string,
+    wstEthAddress: EthAddress,
+    lidoOracleAddress: EthAddress,
+    curvePoolAddress: EthAddress,
   ) {
     const ethersProvider = createWeb3Provider(provider);
-    const wstEthContract = IWstETH__factory.connect(wstEthAddress, ethersProvider);
-    const lidoContract = ILidoOracle__factory.connect(lidoOracleAddress, ethersProvider);
-    const curvePoolContract = ICurvePool__factory.connect(curvePoolAddress, ethersProvider);
+    const wstEthContract = IWstETH__factory.connect(wstEthAddress.toString(), ethersProvider);
+    const lidoContract = ILidoOracle__factory.connect(lidoOracleAddress.toString(), ethersProvider);
+    const curvePoolContract = ICurvePool__factory.connect(curvePoolAddress.toString(), ethersProvider);
     return new LidoBridgeData(wstEthContract, lidoContract, curvePoolContract);
   }
 

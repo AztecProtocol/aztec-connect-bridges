@@ -18,7 +18,9 @@
   },
   "dependencies": {
     "@ethersproject/providers": "^5.6.5",
-    "axios": "^0.26.1"
+    "axios": "^0.26.1",
+    "detect-node": "^2.1.0",
+    "sha3": "^2.1.4"
   },
   "jest": {
     "transform": {

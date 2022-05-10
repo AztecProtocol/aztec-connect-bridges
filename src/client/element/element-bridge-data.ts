@@ -11,6 +11,7 @@ import {
 } from '../../../typechain-types';
 import { AsyncDefiBridgeProcessedEvent } from '../../../typechain-types/RollupProcessor';
 import { createWeb3Provider, EthereumProvider } from '../aztec/provider/';
+import { EthAddress } from '../aztec/eth_address';
 
 export type BatchSwapStep = {
   poolId: string;
@@ -80,15 +81,15 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
 
   static create(
     provider: EthereumProvider,
-    elementBridgeAddress: string,
-    balancerAddress: string,
-    rollupContractAddress: string,
+    elementBridgeAddress: EthAddress,
+    balancerAddress: EthAddress,
+    rollupContractAddress: EthAddress,
     chainProperties: ChainProperties = { chunkSize: 10000 },
   ) {
     const ethersProvider = createWeb3Provider(provider);
-    const elementBridgeContract = ElementBridge__factory.connect(elementBridgeAddress, ethersProvider);
-    const rollupContract = RollupProcessor__factory.connect(rollupContractAddress, ethersProvider);
-    const vaultContract = IVault__factory.connect(balancerAddress, ethersProvider);
+    const elementBridgeContract = ElementBridge__factory.connect(elementBridgeAddress.toString(), ethersProvider);
+    const rollupContract = RollupProcessor__factory.connect(rollupContractAddress.toString(), ethersProvider);
+    const vaultContract = IVault__factory.connect(balancerAddress.toString(), ethersProvider);
     return new ElementBridgeData(elementBridgeContract, vaultContract, rollupContract, chainProperties);
   }
 
