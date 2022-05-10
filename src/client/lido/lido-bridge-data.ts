@@ -1,4 +1,4 @@
-import { AssetValue, AuxDataConfig, AztecAsset, SolidityType, AztecAssetType, YieldBridgeData } from '../bridge-data';
+import { AssetValue, AuxDataConfig, AztecAsset, SolidityType, AztecAssetType, BridgeDataFieldGetters } from '../bridge-data';
 
 import {
   IWstETH,
@@ -11,7 +11,7 @@ import {
 import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
 import { EthAddress } from '../aztec/eth_address';
 
-export class LidoBridgeData implements YieldBridgeData {
+export class LidoBridgeData implements BridgeDataFieldGetters {
   public scalingFactor: bigint = 1n * 10n ** 18n;
 
   private constructor(
@@ -84,14 +84,14 @@ export class LidoBridgeData implements YieldBridgeData {
     }
     return [0n];
   }
-  async getExpectedYearlyOuput(
+  async getExpectedYield(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
     precision: bigint,
-  ): Promise<bigint[]> {
+  ): Promise<Number[]> {
     const YEAR = 60n * 60n * 24n * 365n;
     if (outputAssetA.assetType === AztecAssetType.ETH) {
       const { postTotalPooledEther, preTotalPooledEther, timeElapsed } =
@@ -100,13 +100,10 @@ export class LidoBridgeData implements YieldBridgeData {
       const scaledAPR =
         ((postTotalPooledEther.toBigInt() - preTotalPooledEther.toBigInt()) * YEAR * this.scalingFactor) /
         (preTotalPooledEther.toBigInt() * timeElapsed.toBigInt());
-      const stETHBalance = await this.wstETHContract.getStETHByWstETH(precision);
-      const ETHBalance = (await this.curvePoolContract.get_dy(1, 0, stETHBalance)).toBigInt();
-      const expectedYearlyOutputETH = ETHBalance + (ETHBalance * scaledAPR) / this.scalingFactor;
 
-      return [expectedYearlyOutputETH];
+      return [Number(scaledAPR / (this.scalingFactor / 10000n)) / 100];
     }
-    return [0n];
+    return [0];
   }
 
   async getMarketSize(

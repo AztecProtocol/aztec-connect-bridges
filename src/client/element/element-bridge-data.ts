@@ -1,6 +1,6 @@
 import { BridgeId } from '../aztec/bridge_id';
 import { AddressZero } from '@ethersproject/constants';
-import { AssetValue, AsyncYieldBridgeData, AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
+import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
 import {
   ElementBridge,
   IVault,
@@ -68,7 +68,7 @@ const decodeEvent = async (event: AsyncDefiBridgeProcessedEvent) => {
   return newEventBlock;
 };
 
-export class ElementBridgeData implements AsyncYieldBridgeData {
+export class ElementBridgeData implements BridgeDataFieldGetters {
   public scalingFactor = BigInt(1n * 10n ** 18n);
   private interactionBlockNumbers: Array<EventBlock> = [];
 
@@ -211,13 +211,44 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
     ];
   }
 
+  async getCurrentYield(interactionNonce: bigint): Promise<number[]> {
+    const interaction = await this.elementBridgeContract.interactions(interactionNonce);
+    if (interaction === undefined) {
+      return [];
+    }
+    const exitTimestamp = interaction.expiry;
+    const endValue = interaction.quantityPT;
+
+    // we get the present value of the interaction
+    const defiEvent = await this.findDefiEventForNonce(interactionNonce);
+    if (defiEvent === undefined) {
+      return [];
+    }
+
+    const latestBlock = await this.getCurrentBlock();
+
+    const now = latestBlock.timestamp;
+    const totalInterest = endValue.toBigInt() - defiEvent.totalInputValue;
+    const elapsedTime = BigInt(now - defiEvent.timestamp);
+    const totalTime = exitTimestamp.toBigInt() - BigInt(defiEvent.timestamp);
+    const timeRatio = divide(elapsedTime, totalTime, this.scalingFactor);
+    const accruedInterst = (totalInterest * timeRatio) / this.scalingFactor;
+
+    const currentYield = (defiEvent.totalInputValue / (defiEvent.totalInputValue + accruedInterst)) * 100n;
+    return [Number(currentYield)];
+  }
+
   async getAuxData(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
-    return (await this.elementBridgeContract.getAssetExpiries(inputAssetA.erc20Address)).map(a => a.toBigInt());
+    const assetExpiries = await this.elementBridgeContract.getAssetExpiries(inputAssetA.erc20Address);
+    if (assetExpiries && assetExpiries.length) {
+      return assetExpiries.map(a => a.toBigInt());
+    }
+    return [];
   }
 
   public auxDataConfig: AuxDataConfig[] = [
@@ -241,14 +272,14 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
     return [BigInt(0), BigInt(0), BigInt(1)];
   }
 
-  async getExpectedYearlyOuput(
+  async getExpectedYield(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
     precision: bigint,
-  ): Promise<bigint[]> {
+  ): Promise<number[]> {
     const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(inputAssetA.erc20Address, auxData);
     const pool = await this.elementBridgeContract.pools(assetExpiryHash);
     const poolId = pool.poolId;
@@ -287,7 +318,7 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
     const scaledOutput = divide(interest, timeToExpiration, this.scalingFactor);
     const yearlyOutput = (scaledOutput * YEAR) / this.scalingFactor;
 
-    return [yearlyOutput + precision, BigInt(0)];
+    return [Number((precision * this.scalingFactor) / (yearlyOutput + precision) / this.scalingFactor / 10000n) / 100];
   }
 
   async getMarketSize(

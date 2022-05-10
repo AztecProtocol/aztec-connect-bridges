@@ -125,49 +125,50 @@ describe('mstable bridge data', () => {
     expect(output[0]).toBe(1168856153388928910000000000000000000n);
   });
 
-  // it('should return the correct yearly output', async () => {
-  //   const exchangeRateOutput = 116885615338892891n;
-  //   const inputValue = 10e18;
-  //   mStableAsset = {
-  //     ...mStableAsset,
-  //     getRedeemOutput: jest.fn().mockImplementation((...args) => {
-  //       const amount = args[0];
-  //       return Promise.resolve(BigNumber.from(BigInt(amount)));
-  //     }),
-  //   };
+  it('should return the correct yearly output', async () => {
+    const exchangeRateOutput = 116885615338892891n;
+    const inputValue = 10e18;
+    mStableAsset = {
+      ...mStableAsset,
+      getRedeemOutput: jest.fn().mockImplementation((...args) => {
+        const amount = args[0];
+        return Promise.resolve(BigNumber.from(BigInt(amount)));
+      }),
+    };
 
-  //   mStableSavingsContract = {
-  //     ...mStableSavingsContract,
-  //     exchangeRate: jest.fn().mockImplementation((...args) => {
-  //       return Promise.resolve(BigNumber.from(BigInt(exchangeRateOutput)));
-  //     }),
-  //   };
-  //   const mStableBridgeData = createMStableBridgeData(mStableAsset as any, mStableSavingsContract as any);
-  //   const output = await mStableBridgeData.getExpectedYearlyOuput(
-  //     {
-  //       assetType: AztecAssetType.ERC20,
-  //       erc20Address: '0x30647a72dc82d7fbb1123ea74716ab8a317eac19',
-  //       id: 1n,
-  //     },
-  //     {
-  //       assetType: AztecAssetType.NOT_USED,
-  //       erc20Address: AddressZero,
-  //       id: 0n,
-  //     },
-  //     {
-  //       assetType: AztecAssetType.ERC20,
-  //       erc20Address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
-  //       id: 1n,
-  //     },
-  //     {
-  //       assetType: AztecAssetType.NOT_USED,
-  //       erc20Address: AddressZero,
-  //       id: 0n,
-  //     },
-  //     50n,
-  //     BigInt(inputValue),
-  //   );
+    mStableSavingsContract = {
+      ...mStableSavingsContract,
+      exchangeRate: jest.fn().mockImplementation((...args) => {
+        return Promise.resolve(BigNumber.from(BigInt(exchangeRateOutput)));
+      }),
+    };
+    const mStableBridgeData = createMStableBridgeData(mStableAsset as any, mStableSavingsContract as any);
 
-  //   expect(output[0]).toBeGreaterThan(inputValue);
-  // });
+    const output = await mStableBridgeData.getExpectedYield(
+      {
+        assetType: AztecAssetType.ERC20,
+        erc20Address: '0x30647a72dc82d7fbb1123ea74716ab8a317eac19',
+        id: 1n,
+      },
+      {
+        assetType: AztecAssetType.NOT_USED,
+        erc20Address: AddressZero,
+        id: 0n,
+      },
+      {
+        assetType: AztecAssetType.ERC20,
+        erc20Address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+        id: 1n,
+      },
+      {
+        assetType: AztecAssetType.NOT_USED,
+        erc20Address: AddressZero,
+        id: 0n,
+      },
+      50n,
+      BigInt(inputValue),
+    );
+
+    expect(output[0]).toBeGreaterThan(0);
+  });
 });

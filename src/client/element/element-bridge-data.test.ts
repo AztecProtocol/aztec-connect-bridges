@@ -251,7 +251,7 @@ describe('element bridge data', () => {
       balancerContract as any,
       rollupContract as any,
     );
-    const output = await elementBridgeData.getExpectedYearlyOuput(
+    const output = await elementBridgeData.getExpectedYield(
       {
         assetType: AztecAssetType.ERC20,
         erc20Address: 'test',
@@ -280,7 +280,7 @@ describe('element bridge data', () => {
     const scaledOut = (BigInt(interest) * elementBridgeData.scalingFactor) / timeToExpiration;
     const yearlyOut = (scaledOut * BigInt(YEAR)) / elementBridgeData.scalingFactor;
 
-    expect(output[0]).toBe(yearlyOut + BigInt(inputValue));
+    expect(output[0]).toBe(Number((BigInt(inputValue) / (yearlyOut + BigInt(inputValue))) * 100n));
   });
 
   it('should return the correct market size for a given tranche', async () => {
