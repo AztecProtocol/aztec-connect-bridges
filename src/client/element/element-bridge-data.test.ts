@@ -43,10 +43,6 @@ interface Interaction {
 
 const interactions: { [key: number]: Interaction } = {};
 
-function mockFactory<T>(instance: T): T {
-  return instance;
-}
-
 describe('element bridge data', () => {
   let rollupContract: Mockify<RollupProcessor>;
   let elementBridge: Mockify<ElementBridge>;

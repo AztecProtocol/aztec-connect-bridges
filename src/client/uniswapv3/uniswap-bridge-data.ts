@@ -2,8 +2,7 @@ import { AssetValue, AuxDataConfig, AztecAsset, AztecAssetType, BridgeData, Soli
 import { SyncUniswapV3Bridge, SyncUniswapV3Bridge__factory } from '../../../typechain-types';
 import { defaultAbiCoder, Interface } from '@ethersproject/abi';
 import { BigNumber } from 'ethers';
-import { EthereumProvider } from '../aztec/provider/ethereum_provider';
-import { createWeb3Provider } from '../aztec/provider';
+import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
 
 export class SyncUniswapBridgeData implements BridgeData {
   private constructor(private bridgeContract: SyncUniswapV3Bridge) {}

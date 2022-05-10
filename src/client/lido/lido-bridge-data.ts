@@ -8,8 +8,7 @@ import {
   ILidoOracle__factory,
   ICurvePool__factory,
 } from '../../../typechain-types';
-import { EthereumProvider } from '../aztec/provider/ethereum_provider';
-import { createWeb3Provider } from '../aztec/provider';
+import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
 
 export class LidoBridgeData implements YieldBridgeData {
   public scalingFactor: bigint = 1n * 10n ** 18n;

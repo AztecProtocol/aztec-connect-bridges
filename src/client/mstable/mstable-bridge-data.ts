@@ -6,8 +6,7 @@ import {
   IMStableSavingsContract__factory,
   IMStableAsset__factory,
 } from '../../../typechain-types';
-import { EthereumProvider } from '../aztec/provider/ethereum_provider';
-import { createWeb3Provider } from '../aztec/provider';
+import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
 
 export type BatchSwapStep = {
   poolId: string;
