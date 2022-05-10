@@ -35,12 +35,12 @@ describe('sync bridge data && async bridge data', () => {
 
   const createSyncBridgeData = (bridge: SyncUniswapV3Bridge = syncBridge as any) => {
     SyncUniswapV3Bridge__factory.connect = () => bridge as any;
-    return SyncUniswapBridgeData.create(EthAddress.ZERO, undefined); // can pass in dummy values here as the above factories do all of the work
+    return SyncUniswapBridgeData.create(EthAddress.ZERO, {} as any); // can pass in dummy values here as the above factories do all of the work
   };
 
   const createASyncBridgeData = (bridge: AsyncUniswapV3Bridge = syncBridge as any) => {
     AsyncUniswapV3Bridge__factory.connect = () => bridge as any;
-    return AsyncUniswapBridgeData.create(EthAddress.ZERO, undefined); // can pass in dummy values here as the above factories do all of the work
+    return AsyncUniswapBridgeData.create(EthAddress.ZERO, {} as any); // can pass in dummy values here as the above factories do all of the work
   };
 
   beforeAll(() => {

@@ -136,7 +136,7 @@ describe('element bridge data', () => {
     ElementBridge__factory.connect = () => element as any;
     IVault__factory.connect = () => balancer as any;
     RollupProcessor__factory.connect = () => rollup as any;
-    return ElementBridgeData.create(undefined, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO, chainProperties); // can pass in dummy values here as the above factories do all of the work
+    return ElementBridgeData.create({} as any, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO, chainProperties); // can pass in dummy values here as the above factories do all of the work
   };
 
   it('should return the correct amount of interest', async () => {

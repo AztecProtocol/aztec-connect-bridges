@@ -37,7 +37,7 @@ describe('lido bridge data', () => {
     IWstETH__factory.connect = () => wsteth as any;
     ICurvePool__factory.connect = () => curvePool as any;
     ILidoOracle__factory.connect = () => lidoOracle as any;
-    return LidoBridgeData.create(undefined, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO); // can pass in dummy values here as the above factories do all of the work
+    return LidoBridgeData.create({} as any, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO); // can pass in dummy values here as the above factories do all of the work
   };
 
   beforeAll(() => {

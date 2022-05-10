@@ -28,7 +28,7 @@ describe('mstable bridge data', () => {
   ) => {
     IMStableAsset__factory.connect = () => asset as any;
     IMStableSavingsContract__factory.connect = () => savings as any;
-    return MStableBridgeData.create(undefined, EthAddress.ZERO, EthAddress.ZERO); // can pass in dummy values here as the above factories do all of the work
+    return MStableBridgeData.create({} as any, EthAddress.ZERO, EthAddress.ZERO); // can pass in dummy values here as the above factories do all of the work
   };
 
   it('should return the correct expected output for dai -> imUSD', async () => {
