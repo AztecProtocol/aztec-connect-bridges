@@ -13,10 +13,14 @@
     "test:pinned": "forge test --fork-block-number 14000000 --match-contract 'Element|Set' -vvv --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c",
     "test:contracts:block": "forge test --fork-block-number",
     "cast": "cast",
-    "test:contracts": "forge test --no-match-contract 'Element|Set' -vvv && yarn test:pinned",
+    "test:contracts": "forge test --no-match-contract 'Element|Set' --no-match-test 'testRedeemFlow|testAsyncLimitOrder|testTwoPartMint' -vvv && yarn test:pinned",
     "build": "yarn clean && yarn compile:typechain && yarn compile:client-dest"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@ethersproject/providers": "^5.6.5",
+    "detect-node": "^2.1.0",
+    "sha3": "^2.1.4"
+  },
   "jest": {
     "transform": {
       "^.+\\.ts$": "ts-jest"
@@ -37,6 +41,7 @@
     "@typechain/ethers-v4": "^7.0.0",
     "@typechain/ethers-v5": "^9.0.0",
     "@typechain/hardhat": "^4.0.0",
+    "@types/detect-node": "^2.0.0",
     "@types/jest": "^27.4.0",
     "@types/node-fetch": "^2.6.1",
     "ethers": "^5.5.4",

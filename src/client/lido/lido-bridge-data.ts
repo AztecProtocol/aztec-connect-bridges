@@ -1,24 +1,36 @@
-import {
-  AssetValue,
-  AuxDataConfig,
-  AztecAsset,
-  SolidityType,
-  BridgeDataFieldGetters,
-  AztecAssetType,
-} from '../bridge-data';
+import { AssetValue, AuxDataConfig, AztecAsset, SolidityType, AztecAssetType, BridgeDataFieldGetters } from '../bridge-data';
 
-import { IWstETH, ILidoOracle, ICurvePool } from '../../../typechain-types';
+import {
+  IWstETH,
+  ILidoOracle,
+  ICurvePool,
+  IWstETH__factory,
+  ILidoOracle__factory,
+  ICurvePool__factory,
+} from '../../../typechain-types';
+import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
+import { EthAddress } from '../aztec/eth_address';
 
 export class LidoBridgeData implements BridgeDataFieldGetters {
-  private wstETHContract: IWstETH;
-  private lidoOracleContract: ILidoOracle;
-  private curvePoolContract: ICurvePool;
   public scalingFactor: bigint = 1n * 10n ** 18n;
 
-  constructor(wstETHContract: IWstETH, lidoOracleContract: ILidoOracle, curvePoolContract: ICurvePool) {
-    this.wstETHContract = wstETHContract;
-    this.lidoOracleContract = lidoOracleContract;
-    this.curvePoolContract = curvePoolContract;
+  private constructor(
+    private wstETHContract: IWstETH,
+    private lidoOracleContract: ILidoOracle,
+    private curvePoolContract: ICurvePool,
+  ) {}
+
+  static create(
+    provider: EthereumProvider,
+    wstEthAddress: EthAddress,
+    lidoOracleAddress: EthAddress,
+    curvePoolAddress: EthAddress,
+  ) {
+    const ethersProvider = createWeb3Provider(provider);
+    const wstEthContract = IWstETH__factory.connect(wstEthAddress.toString(), ethersProvider);
+    const lidoContract = ILidoOracle__factory.connect(lidoOracleAddress.toString(), ethersProvider);
+    const curvePoolContract = ICurvePool__factory.connect(curvePoolAddress.toString(), ethersProvider);
+    return new LidoBridgeData(wstEthContract, lidoContract, curvePoolContract);
   }
 
   // Unused

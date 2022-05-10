@@ -1,19 +1,23 @@
 import {
   AssetValue,
+  BridgeDataFieldGetters,
   AuxDataConfig,
   AztecAsset,
   AztecAssetType,
-  BridgeDataFieldGetters,
   SolidityType,
 } from '../bridge-data';
-import { AsyncUniswapV3Bridge, RollupProcessor } from '../../../typechain-types';
+import { AsyncUniswapV3Bridge, AsyncUniswapV3Bridge__factory } from '../../../typechain-types';
 import { BigNumber } from '@ethersproject/bignumber';
+import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
+import { EthAddress } from '../aztec/eth_address';
 
 export class AsyncUniswapBridgeData implements BridgeDataFieldGetters {
-  private bridge: AsyncUniswapV3Bridge;
+  private constructor(private bridgeContract: AsyncUniswapV3Bridge) {}
 
-  constructor(bridge: AsyncUniswapV3Bridge) {
-    this.bridge = bridge;
+  static create(uniSwapAddress: EthAddress, provider: EthereumProvider) {
+    return new AsyncUniswapBridgeData(
+      AsyncUniswapV3Bridge__factory.connect(uniSwapAddress.toString(), createWeb3Provider(provider)),
+    );
   }
 
   // @dev This function should be implemented for stateful bridges. It should return an array of AssetValue's
@@ -22,7 +26,7 @@ export class AsyncUniswapBridgeData implements BridgeDataFieldGetters {
 
   async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
     // we get the present value of the interaction
-    const amounts = await this.bridge.getPresentValue(interactionNonce);
+    const amounts = await this.bridgeContract.getPresentValue(interactionNonce);
     return [
       {
         assetId: interactionNonce,
@@ -116,7 +120,7 @@ export class AsyncUniswapBridgeData implements BridgeDataFieldGetters {
       inB = inputAssetB.erc20Address;
     }
 
-    let balances = await this.bridge.getLiquidity(inA, inB, BigNumber.from(auxData));
+    let balances = await this.bridgeContract.getLiquidity(inA, inB, BigNumber.from(auxData));
 
     return [
       {
@@ -141,20 +145,18 @@ export class AsyncUniswapBridgeData implements BridgeDataFieldGetters {
     let fee = BigNumber.from(data[2]);
     let days = BigNumber.from(data[3]);
 
-    const auxData = await this.bridge.packData(tickLower, tickUpper, fee, days);
+    const auxData = await this.bridgeContract.packData(tickLower, tickUpper, fee, days);
 
     return [auxData.toBigInt()];
   }
 
   async getExpiration(interactionNonce: bigint): Promise<bigint> {
-    const expiry = await this.bridge.getExpiry(interactionNonce);
-    console.log(expiry);
+    const expiry = await this.bridgeContract.getExpiry(interactionNonce);
     return BigInt(expiry.toBigInt());
   }
 
   async hasFinalised(interactionNonce: bigint): Promise<Boolean> {
-    const finalised = await this.bridge.finalised(interactionNonce);
-    console.log(finalised);
+    const finalised = await this.bridgeContract.finalised(interactionNonce);
     return finalised;
   }
 }

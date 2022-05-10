@@ -1,22 +1,17 @@
-import {
-  AssetValue,
-  AuxDataConfig,
-  AztecAsset,
-  AztecAssetType,
-  BridgeDataFieldGetters,
-  SolidityType,
-} from '../bridge-data';
-import { SyncUniswapV3Bridge } from '../../../typechain-types';
-import { AbiCoder, defaultAbiCoder, Interface } from '@ethersproject/abi';
+import { AssetValue, AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from '../bridge-data';
+import { SyncUniswapV3Bridge, SyncUniswapV3Bridge__factory } from '../../../typechain-types';
+import { defaultAbiCoder, Interface } from '@ethersproject/abi';
 import { BigNumber } from 'ethers';
+import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
+import { EthAddress } from '../aztec/eth_address';
 
 export class SyncUniswapBridgeData implements BridgeDataFieldGetters {
-  private bridge: SyncUniswapV3Bridge;
-  private abiCoder: AbiCoder;
+  private constructor(private bridgeContract: SyncUniswapV3Bridge) {}
 
-  constructor(bridge: SyncUniswapV3Bridge) {
-    this.bridge = bridge;
-    this.abiCoder = new AbiCoder();
+  static create(uniSwapAddress: EthAddress, provider: EthereumProvider) {
+    return new SyncUniswapBridgeData(
+      SyncUniswapV3Bridge__factory.connect(uniSwapAddress.toString(), createWeb3Provider(provider)),
+    );
   }
 
   // @dev This function should be implemented for stateful bridges. It should return an array of AssetValue's
@@ -26,7 +21,7 @@ export class SyncUniswapBridgeData implements BridgeDataFieldGetters {
   async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
     // we get the present value of the interaction
 
-    const amounts = await this.bridge.getPresentValue(interactionNonce);
+    const amounts = await this.bridgeContract.getPresentValue(interactionNonce);
     return [
       {
         assetId: interactionNonce,
@@ -57,7 +52,7 @@ export class SyncUniswapBridgeData implements BridgeDataFieldGetters {
     let tickLower = BigNumber.from(data[0]);
     let tickUpper = BigNumber.from(data[1]);
     let fee = BigNumber.from(data[2]);
-    const auxData = await this.bridge.packData(tickLower, tickUpper, fee);
+    const auxData = await this.bridgeContract.packData(tickLower, tickUpper, fee);
 
     return [auxData.toBigInt()];
   }
@@ -142,9 +137,8 @@ export class SyncUniswapBridgeData implements BridgeDataFieldGetters {
       BigNumber.from(1),
       BigNumber.from(auxData),
     ]);
-    //console.log(payload)
     iface = new Interface(['function staticcall(address _to, bytes calldata _data) returns (bytes memory)']);
-    const data = await this.bridge.staticcall(this.bridge.address, calldata);
+    const data = await this.bridgeContract.staticcall(this.bridgeContract.address, calldata);
     let abiCoder = defaultAbiCoder;
     const convertOutput = await abiCoder.decode(['uint256', 'uint256', 'bool'], data);
     return [convertOutput[0], convertOutput[1]];
@@ -180,7 +174,7 @@ export class SyncUniswapBridgeData implements BridgeDataFieldGetters {
       inB = inputAssetB.erc20Address;
     }
 
-    let balances = await this.bridge.getLiquidity(inA, inB, BigNumber.from(auxData));
+    let balances = await this.bridgeContract.getLiquidity(inA, inB, BigNumber.from(auxData));
 
     return [
       {
