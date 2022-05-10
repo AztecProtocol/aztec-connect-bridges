@@ -325,14 +325,14 @@ contract AaveLendingTest is TestHelper {
         for (uint256 i = 0; i < tokens.length; i++) {
             _tokenSetup(tokens[i]);
             _addTokenPool();
-            _enterWithToken(bound(type(uint128).max, minValue, maxValue));
+            _enterWithToken(maxValue);
         }
     }
 
     function testEnterWithEtherBigValues() public {
         _tokenSetup(WETH);
         _addTokenPool();
-        _enterWithEther(bound(type(uint128).max, minValue, maxValue));
+        _enterWithEther(maxValue);
     }
 
     function testFailExitPartially() public {
@@ -416,7 +416,7 @@ contract AaveLendingTest is TestHelper {
             _enterWithToken(depositAmount);
             _accrueInterest(timeDiff);
 
-            withdrawAmount = uint128(bound(withdrawAmount, minValue / 2, scaledDepositAmount / 2));
+            withdrawAmount = uint128(bound(withdrawAmount, minValue.rayDiv(index) / 2, scaledDepositAmount / 2));
 
             _exitWithToken(withdrawAmount);
         }
@@ -437,7 +437,7 @@ contract AaveLendingTest is TestHelper {
         _enterWithEther(depositAmount);
         _accrueInterest(timeDiff);
 
-        withdrawAmount = uint128(bound(withdrawAmount, minValue / 2, scaledDepositAmount / 2));
+        withdrawAmount = uint128(bound(withdrawAmount, minValue.rayDiv(index) / 2, scaledDepositAmount / 2));
 
         _exitWithEther(withdrawAmount);
     }
