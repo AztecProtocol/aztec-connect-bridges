@@ -1,8 +1,17 @@
 import { BridgeId } from '../aztec/bridge_id';
 import { AddressZero } from '@ethersproject/constants';
 import { AssetValue, AsyncYieldBridgeData, AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
-import { ElementBridge, RollupProcessor, IVault } from '../../../typechain-types';
+import {
+  ElementBridge,
+  IVault,
+  RollupProcessor,
+  ElementBridge__factory,
+  IVault__factory,
+  RollupProcessor__factory,
+} from '../../../typechain-types';
 import { AsyncDefiBridgeProcessedEvent } from '../../../typechain-types/RollupProcessor';
+import { createWeb3Provider, EthereumProvider } from '../aztec/provider/';
+import { EthAddress } from '../aztec/eth_address';
 
 export type BatchSwapStep = {
   poolId: string;
@@ -60,21 +69,28 @@ const decodeEvent = async (event: AsyncDefiBridgeProcessedEvent) => {
 };
 
 export class ElementBridgeData implements AsyncYieldBridgeData {
-  private elementBridgeContract: ElementBridge;
-  private rollupContract: RollupProcessor;
-  private balancerContract: IVault;
   public scalingFactor = BigInt(1n * 10n ** 18n);
   private interactionBlockNumbers: Array<EventBlock> = [];
 
-  constructor(
-    elementBridge: ElementBridge,
-    balancer: IVault,
-    rollupContract: RollupProcessor,
-    private chainProperties: ChainProperties = { chunkSize: 10000 },
+  private constructor(
+    private elementBridgeContract: ElementBridge,
+    private balancerContract: IVault,
+    private rollupContract: RollupProcessor,
+    private chainProperties: ChainProperties,
+  ) {}
+
+  static create(
+    provider: EthereumProvider,
+    elementBridgeAddress: EthAddress,
+    balancerAddress: EthAddress,
+    rollupContractAddress: EthAddress,
+    chainProperties: ChainProperties = { chunkSize: 10000 },
   ) {
-    this.elementBridgeContract = elementBridge;
-    this.rollupContract = rollupContract;
-    this.balancerContract = balancer;
+    const ethersProvider = createWeb3Provider(provider);
+    const elementBridgeContract = ElementBridge__factory.connect(elementBridgeAddress.toString(), ethersProvider);
+    const rollupContract = RollupProcessor__factory.connect(rollupContractAddress.toString(), ethersProvider);
+    const vaultContract = IVault__factory.connect(balancerAddress.toString(), ethersProvider);
+    return new ElementBridgeData(elementBridgeContract, vaultContract, rollupContract, chainProperties);
   }
 
   private async storeEventBlocks(events: AsyncDefiBridgeProcessedEvent[]) {

@@ -1,11 +1,22 @@
 import { ElementBridgeData } from './element-bridge-data';
 import { BigNumber } from 'ethers';
 import { randomBytes } from 'crypto';
-import { RollupProcessor, ElementBridge, IVault } from '../../../typechain-types';
-import { AsyncDefiBridgeProcessedEventFilter } from '../../../typechain-types/RollupProcessor';
+import {
+  RollupProcessor,
+  ElementBridge,
+  IVault,
+  ElementBridge__factory,
+  RollupProcessor__factory,
+  IVault__factory,
+} from '../../../typechain-types';
 import { BridgeId, BitConfig } from '../aztec/bridge_id';
 import { AztecAssetType } from '../bridge-data';
 import { AddressZero } from '@ethersproject/constants';
+import { EthAddress } from '../aztec/eth_address';
+
+jest.mock('../aztec/provider', () => ({
+  createWeb3Provider: jest.fn(),
+}));
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -116,12 +127,20 @@ describe('element bridge data', () => {
     } as any,
   } as any;
 
+  const createElementBridgeData = (
+    element: ElementBridge = elementBridge as any,
+    balancer: IVault = balancerContract as any,
+    rollup: RollupProcessor = rollupContract as any,
+    chainProperties: { chunkSize: number } = { chunkSize: 10 },
+  ) => {
+    ElementBridge__factory.connect = () => element as any;
+    IVault__factory.connect = () => balancer as any;
+    RollupProcessor__factory.connect = () => rollup as any;
+    return ElementBridgeData.create({} as any, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO, chainProperties); // can pass in dummy values here as the above factories do all of the work
+  };
+
   it('should return the correct amount of interest', async () => {
-    const elementBridgeData = new ElementBridgeData(
-      elementBridge as any,
-      balancerContract as any,
-      rollupContract as any,
-    );
+    const elementBridgeData = createElementBridgeData();
     interactions[56] = {
       quantityPT: BigNumber.from(outputValue),
       expiry: BigNumber.from(expiration1),
@@ -141,13 +160,7 @@ describe('element bridge data', () => {
   });
 
   it('should return the correct amount of interest for multiple interactions', async () => {
-    const elementBridgeData = new ElementBridgeData(
-      elementBridge as any,
-      balancerContract as any,
-      rollupContract as any,
-      { chunkSize: 10 },
-    );
-
+    const elementBridgeData = createElementBridgeData();
     const testInteraction = async (nonce: number) => {
       const defiEvent = getDefiEvent(nonce)!;
       const bridgeId = BridgeId.fromBigInt(defiEvent.bridgeId);
@@ -179,11 +192,7 @@ describe('element bridge data', () => {
   });
 
   it('requesting the present value of an unknown interaction should return empty values', async () => {
-    const elementBridgeData = new ElementBridgeData(
-      elementBridge as any,
-      balancerContract as any,
-      rollupContract as any,
-    );
+    const elementBridgeData = createElementBridgeData();
     const values = await elementBridgeData.getInteractionPresentValue(57n);
     expect(values).toStrictEqual([]);
   });
@@ -206,11 +215,7 @@ describe('element bridge data', () => {
       },
     } as any;
 
-    const elementBridgeData = new ElementBridgeData(
-      elementBridge as any,
-      balancerContract as any,
-      rollupContract as any,
-    );
+    const elementBridgeData = createElementBridgeData(elementBridge as any);
     const expiration = await elementBridgeData.getExpiration(1n);
 
     expect(expiration).toBe(BigInt(endDate));
@@ -241,7 +246,7 @@ describe('element bridge data', () => {
       }),
     };
 
-    const elementBridgeData = new ElementBridgeData(
+    const elementBridgeData = createElementBridgeData(
       elementBridge as any,
       balancerContract as any,
       rollupContract as any,
@@ -297,7 +302,7 @@ describe('element bridge data', () => {
       getPoolTokens: jest.fn().mockResolvedValue([[tokenAddress], [BigNumber.from(BigInt(tokenBalance))]]),
     };
 
-    const elementBridgeData = new ElementBridgeData(
+    const elementBridgeData = createElementBridgeData(
       elementBridge as any,
       balancerContract as any,
       rollupContract as any,

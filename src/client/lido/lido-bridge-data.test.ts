@@ -1,7 +1,19 @@
 import { LidoBridgeData } from './lido-bridge-data';
-import { IWstETH, ICurvePool, ILidoOracle } from '../../../typechain-types';
+import {
+  IWstETH,
+  ICurvePool,
+  ILidoOracle,
+  IWstETH__factory,
+  ICurvePool__factory,
+  ILidoOracle__factory,
+} from '../../../typechain-types';
 import { AztecAsset, AztecAssetType } from '../bridge-data';
 import { BigNumber } from 'ethers';
+import { EthAddress } from '../aztec/eth_address';
+
+jest.mock('../aztec/provider', () => ({
+  createWeb3Provider: jest.fn(),
+}));
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock | any;
@@ -16,6 +28,17 @@ describe('lido bridge data', () => {
   let ethAsset: AztecAsset;
   let wstETHAsset: AztecAsset;
   let emptyAsset: AztecAsset;
+
+  const createLidoBridgeData = (
+    wsteth: IWstETH = wstethContract as any,
+    curvePool: ICurvePool = curvePoolContract as any,
+    lidoOracle: ILidoOracle = lidoOracleContract as any,
+  ) => {
+    IWstETH__factory.connect = () => wsteth as any;
+    ICurvePool__factory.connect = () => curvePool as any;
+    ILidoOracle__factory.connect = () => lidoOracle as any;
+    return LidoBridgeData.create({} as any, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO); // can pass in dummy values here as the above factories do all of the work
+  };
 
   beforeAll(() => {
     ethAsset = {
@@ -44,7 +67,7 @@ describe('lido bridge data', () => {
       get_dy: jest.fn().mockResolvedValue(BigNumber.from(expectedOutput)),
     };
 
-    lidoBridgeData = new LidoBridgeData(wstethContract as any, lidoOracleContract as any, curvePoolContract as any);
+    lidoBridgeData = createLidoBridgeData(wstethContract as any, curvePoolContract as any, lidoOracleContract as any);
 
     const output = await lidoBridgeData.getExpectedOutput(
       ethAsset,
@@ -65,7 +88,7 @@ describe('lido bridge data', () => {
       get_dy: jest.fn().mockResolvedValue(BigNumber.from(depositAmount - 1n)),
     };
 
-    lidoBridgeData = new LidoBridgeData(wstethContract as any, lidoOracleContract as any, curvePoolContract as any);
+    lidoBridgeData = createLidoBridgeData(wstethContract as any, curvePoolContract as any, lidoOracleContract as any);
 
     const output = await lidoBridgeData.getExpectedOutput(
       ethAsset,
@@ -92,7 +115,7 @@ describe('lido bridge data', () => {
       get_dy: jest.fn().mockResolvedValue(BigNumber.from(expectedOutput)),
     };
 
-    lidoBridgeData = new LidoBridgeData(wstethContract as any, lidoOracleContract as any, curvePoolContract as any);
+    lidoBridgeData = createLidoBridgeData(wstethContract as any, curvePoolContract as any, lidoOracleContract as any);
 
     const output = await lidoBridgeData.getExpectedOutput(
       wstETHAsset,
@@ -109,7 +132,6 @@ describe('lido bridge data', () => {
   it('should correctly return the expectedYearlyOutput', async () => {
     const depositAmount = BigInt(1 * 10e18);
     const expectedOutput = 10432001397269423610n;
-
 
     wstethContract = {
       ...wstethContract,
@@ -136,7 +158,7 @@ describe('lido bridge data', () => {
       }),
     };
 
-    lidoBridgeData = new LidoBridgeData(wstethContract as any, lidoOracleContract as any, curvePoolContract as any);
+    lidoBridgeData = createLidoBridgeData(wstethContract as any, curvePoolContract as any, lidoOracleContract as any);
 
     const output = await lidoBridgeData.getExpectedYearlyOuput(
       wstETHAsset,
