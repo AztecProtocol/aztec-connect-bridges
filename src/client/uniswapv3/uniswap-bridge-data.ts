@@ -1,11 +1,11 @@
-import { AssetValue, AuxDataConfig, AztecAsset, AztecAssetType, BridgeData, SolidityType } from '../bridge-data';
+import { AssetValue, AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from '../bridge-data';
 import { SyncUniswapV3Bridge, SyncUniswapV3Bridge__factory } from '../../../typechain-types';
 import { defaultAbiCoder, Interface } from '@ethersproject/abi';
 import { BigNumber } from 'ethers';
 import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
 import { EthAddress } from '../aztec/eth_address';
 
-export class SyncUniswapBridgeData implements BridgeData {
+export class SyncUniswapBridgeData implements BridgeDataFieldGetters {
   private constructor(private bridgeContract: SyncUniswapV3Bridge) {}
 
   static create(uniSwapAddress: EthAddress, provider: EthereumProvider) {
@@ -137,25 +137,11 @@ export class SyncUniswapBridgeData implements BridgeData {
       BigNumber.from(1),
       BigNumber.from(auxData),
     ]);
-    //console.log(payload)
     iface = new Interface(['function staticcall(address _to, bytes calldata _data) returns (bytes memory)']);
     const data = await this.bridgeContract.staticcall(this.bridgeContract.address, calldata);
     let abiCoder = defaultAbiCoder;
     const convertOutput = await abiCoder.decode(['uint256', 'uint256', 'bool'], data);
     return [convertOutput[0], convertOutput[1]];
-  }
-
-  async getExpectedYearlyOuput(
-    inputAssetA: AztecAsset,
-    inputAssetB: AztecAsset,
-    outputAssetA: AztecAsset,
-    outputAssetB: AztecAsset,
-    auxData: bigint,
-    precision: bigint,
-  ): Promise<bigint[]> {
-    //this bridge is synchronous
-    //return 0 or else return getExpectedOutput()
-    return [0n];
   }
 
   async getMarketSize(

@@ -1,6 +1,6 @@
 import {
   AssetValue,
-  AsyncYieldBridgeData,
+  BridgeDataFieldGetters,
   AuxDataConfig,
   AztecAsset,
   AztecAssetType,
@@ -11,7 +11,7 @@ import { BigNumber } from '@ethersproject/bignumber';
 import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
 import { EthAddress } from '../aztec/eth_address';
 
-export class AsyncUniswapBridgeData implements AsyncYieldBridgeData {
+export class AsyncUniswapBridgeData implements BridgeDataFieldGetters {
   private constructor(private bridgeContract: AsyncUniswapV3Bridge) {}
 
   static create(uniSwapAddress: EthAddress, provider: EthereumProvider) {
@@ -90,18 +90,6 @@ export class AsyncUniswapBridgeData implements AsyncYieldBridgeData {
     return [BigInt(0), BigInt(0), BigInt(1)];
   }
 
-  async getExpectedYearlyOuput(
-    inputAssetA: AztecAsset,
-    inputAssetB: AztecAsset,
-    outputAssetA: AztecAsset,
-    outputAssetB: AztecAsset,
-    auxData: bigint,
-    precision: bigint,
-  ): Promise<bigint[]> {
-    //no interest for this bridge
-    return [0n];
-  }
-
   async getMarketSize(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
@@ -164,13 +152,11 @@ export class AsyncUniswapBridgeData implements AsyncYieldBridgeData {
 
   async getExpiration(interactionNonce: bigint): Promise<bigint> {
     const expiry = await this.bridgeContract.getExpiry(interactionNonce);
-    console.log(expiry);
     return BigInt(expiry.toBigInt());
   }
 
   async hasFinalised(interactionNonce: bigint): Promise<Boolean> {
     const finalised = await this.bridgeContract.finalised(interactionNonce);
-    console.log(finalised);
     return finalised;
   }
 }

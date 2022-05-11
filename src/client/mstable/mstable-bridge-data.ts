@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
+import fetch from 'node-fetch';
+import { AuxDataConfig, AztecAsset, SolidityType, BridgeDataFieldGetters } from '../bridge-data';
 import {
   IMStableSavingsContract,
   IMStableAsset,
@@ -9,27 +9,7 @@ import {
 import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
 import { EthAddress } from '../aztec/eth_address';
 
-export type BatchSwapStep = {
-  poolId: string;
-  assetInIndex: number;
-  assetOutIndex: number;
-  amount: string;
-  userData: string;
-};
-
-export enum SwapType {
-  SwapExactIn,
-  SwapExactOut,
-}
-
-export type FundManagement = {
-  sender: string;
-  recipient: string;
-  fromInternalBalance: boolean;
-  toInternalBalance: boolean;
-};
-
-export class MStableBridgeData {
+export class MStableBridgeData implements BridgeDataFieldGetters {
   private dai = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 
   public scalingFactor = 1000000000n;
@@ -83,23 +63,26 @@ export class MStableBridgeData {
     }
   }
 
-  async getExpectedYearlyOuput(
+  async getExpectedYield(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
     precision: bigint,
-  ): Promise<bigint[]> {
+  ): Promise<number[]> {
     if (outputAssetA.erc20Address === this.dai) {
       // input asset is IMUSD
-      let res = await axios('https://api.mstable.org/pools');
-      const scaledApy = BigInt(Math.floor(res.data.pools[2].apy * Number(this.scalingFactor))) / 100n;
-      const exchangeRate = (await this.mStableSavingsContract.exchangeRate()).toBigInt();
-      const redeemOutput = (await this.mStableAssetContract.getRedeemOutput(this.dai, precision)).toBigInt();
-      const expectedYearlyOutput = exchangeRate * (redeemOutput + (redeemOutput * scaledApy) / this.scalingFactor);
+      const res = await fetch('https://api.thegraph.com/subgraphs/name/mstable/mstable-protocol', {
+        method: 'POST',
+        body: JSON.stringify({
+          query: 'query MyQuery {\n  savingsContracts {\n    dailyAPY\n  }\n}\n',
+          variables: null,
+          operationName: 'MyQuery',
+        }),
+      }).then(response => response.json());
 
-      return [expectedYearlyOutput];
+      return [Number(res.data.savingsContracts[2].dailyAPY)];
     }
     return [];
   }

@@ -34,18 +34,18 @@ export interface AuxDataConfig {
   solidityType: SolidityType;
 }
 
-export interface BridgeData {
+export interface BridgeDataFieldGetters {
   /*
   @dev This function should be implemented for stateful bridges. It's purpose is to tell the developer using the bridge the value of a given interaction.
   @dev The value should be returned as an array of AssetValue's
   */
-  getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]>;
+  getInteractionPresentValue?(interactionNonce: bigint): Promise<AssetValue[]>;
 
   /*
   @dev This function should be implemented for all bridges that use auxData that require onchain data. It's purpose is to tell the developer using the bridge
   @dev the set of possible auxData's that they can use for a given set of inputOutputAssets.
   */
-  getAuxData(
+  getAuxData?(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
@@ -70,44 +70,50 @@ export interface BridgeData {
     auxData: bigint,
     inputValue: bigint,
   ): Promise<bigint[]>;
-}
 
-export interface AsyncBridgeData extends BridgeData {
   /*
   @dev This function should be implemented for async bridges. It should return the date at which the bridge is expected to be finalised.
   @dev For limit orders this should be the expiration.
   */
-  getExpiration(interactionNonce: bigint): Promise<bigint>;
+  getExpiration?(interactionNonce: bigint): Promise<bigint>;
 
-  hasFinalised(interactionNonce: bigint): Promise<Boolean>;
-}
+  hasFinalised?(interactionNonce: bigint): Promise<Boolean>;
 
-export interface YieldBridgeData extends BridgeData {
   /*
   @dev This function should be implemented for all bridges are stateful. It should return the expected value 1 year from now of outputAssetA and outputAssetB
   @dev given inputValue of inputAssetA and inputAssetB
   */
 
-  getExpectedYearlyOutput(
+  getExpectedYeild?(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
     inputValue: bigint,
-  ): Promise<bigint[]>;
+  ): Promise<number[]>;
 
   /*
-  @dev This function should be implemented for all bridges. It should return the Layer liquidity this bridge call will be interacting with
+  @dev This function should be implemented for all bridges dealing with L1 liqudity pools. It should return the Layer liquidity this bridge call will be interacting with
   @dev e.g the liquidity of the underlying yield pool or AMM for a given pair
   */
-  getMarketSize(
+  getMarketSize?(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
   ): Promise<AssetValue[]>;
-}
 
-export interface AsyncYieldBridgeData extends YieldBridgeData, AsyncBridgeData {}
+  /*
+  @dev This function should be implemented for all async yield bridges.
+  @dev It should return the yield for a given interaction
+  */
+  getCurrentYield?(interactionNonce: bigint): Promise<number[]>;
+
+  /*
+  @dev This function should be implemented for swap / LP bridges.
+  @dev It should return a packed aux data taking into account a dynamic price and fee
+  */
+  lPAuxData?(data: bigint[]): Promise<bigint[]>;
+}

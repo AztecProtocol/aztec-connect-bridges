@@ -1,6 +1,6 @@
-import { AssetValue, AuxDataConfig, AztecAsset, BridgeData, SolidityType } from '../bridge-data';
+import { AssetValue, AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from '../bridge-data';
 
-export class ExampleBridgeData implements BridgeData {
+export class ExampleBridgeData implements BridgeDataFieldGetters {
   constructor() {}
 
   // @dev This function should be implemented for stateful bridges. It should return an array of AssetValue's
@@ -35,17 +35,6 @@ export class ExampleBridgeData implements BridgeData {
   ];
 
   async getExpectedOutput(
-    inputAssetA: AztecAsset,
-    inputAssetB: AztecAsset,
-    outputAssetA: AztecAsset,
-    outputAssetB: AztecAsset,
-    auxData: bigint,
-    precision: bigint,
-  ): Promise<bigint[]> {
-    return [100n, 0n];
-  }
-
-  async getExpectedYearlyOuput(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
