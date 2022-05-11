@@ -29,7 +29,7 @@
     "rootDir": "./src"
   },
   "name": "@aztec/bridge-clients",
-  "version": "0.1.36",
+  "version": "0.1.37",
   "description": "This repo contains the solidity files and typescript helper class for all of the Aztec Connect Bridge Contracts",
   "repository": "git@github.com:AztecProtocol/aztec-connect-bridges.git",
   "license": "MIT",
