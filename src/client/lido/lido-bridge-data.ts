@@ -1,4 +1,11 @@
-import { AssetValue, AuxDataConfig, AztecAsset, SolidityType, AztecAssetType, BridgeDataFieldGetters } from '../bridge-data';
+import {
+  AssetValue,
+  AuxDataConfig,
+  AztecAsset,
+  SolidityType,
+  AztecAssetType,
+  BridgeDataFieldGetters,
+} from '../bridge-data';
 
 import {
   IWstETH,
@@ -91,7 +98,7 @@ export class LidoBridgeData implements BridgeDataFieldGetters {
     outputAssetB: AztecAsset,
     auxData: bigint,
     precision: bigint,
-  ): Promise<Number[]> {
+  ): Promise<number[]> {
     const YEAR = 60n * 60n * 24n * 365n;
     if (outputAssetA.assetType === AztecAssetType.ETH) {
       const { postTotalPooledEther, preTotalPooledEther, timeElapsed } =
