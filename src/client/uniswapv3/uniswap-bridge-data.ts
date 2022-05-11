@@ -1,9 +1,17 @@
-import { AssetValue, AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from '../bridge-data';
+import {
+  AssetValue,
+  AuxDataConfig,
+  AztecAsset,
+  AztecAssetType,
+  BridgeDataFieldGetters,
+  SolidityType,
+} from '../bridge-data';
 import { SyncUniswapV3Bridge, SyncUniswapV3Bridge__factory } from '../../../typechain-types';
 import { defaultAbiCoder, Interface } from '@ethersproject/abi';
 import { BigNumber } from 'ethers';
-import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
-import { EthAddress } from '../aztec/eth_address';
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { createWeb3Provider } from '../aztec/provider';
+import { EthAddress } from '@aztec/barretenberg/address';
 
 export class SyncUniswapBridgeData implements BridgeDataFieldGetters {
   private constructor(private bridgeContract: SyncUniswapV3Bridge) {}

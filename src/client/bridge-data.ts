@@ -84,7 +84,7 @@ export interface BridgeDataFieldGetters {
   @dev given inputValue of inputAssetA and inputAssetB
   */
 
-  getExpectedYeild?(
+  getExpectedYield?(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,

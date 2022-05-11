@@ -10,7 +10,7 @@ import {
 import { AztecAsset, AztecAssetType } from '../bridge-data';
 import { AddressZero } from '@ethersproject/constants';
 import { defaultAbiCoder } from '@ethersproject/abi';
-import { EthAddress } from '../aztec/eth_address';
+import { EthAddress } from '@aztec/barretenberg/address';
 //import '@types/jest';
 
 jest.mock('../aztec/provider', () => ({
