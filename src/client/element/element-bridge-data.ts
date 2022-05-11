@@ -318,8 +318,10 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     const interest = -outputAssetAValue.toBigInt() - precision;
     const scaledOutput = divide(interest, timeToExpiration, this.scalingFactor);
     const yearlyOutput = (scaledOutput * YEAR) / this.scalingFactor;
+    const percentageScaled = divide(yearlyOutput, precision, this.scalingFactor);
+    const percentage2sf = (percentageScaled * 10000n) / this.scalingFactor;
 
-    return [Number((precision * this.scalingFactor) / (yearlyOutput + precision) / this.scalingFactor / 10000n) / 100];
+    return [Number(percentage2sf) / 100];
   }
 
   async getMarketSize(

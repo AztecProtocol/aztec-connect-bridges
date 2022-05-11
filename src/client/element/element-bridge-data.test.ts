@@ -221,13 +221,13 @@ describe('element bridge data', () => {
     expect(expiration).toBe(BigInt(endDate));
   });
 
-  it('should return the correct yearly output of the tranche', async () => {
+  it('should return the correct yield of the tranche', async () => {
     const now = Math.floor(Date.now() / 1000);
     const expiry = BigInt(now + 86400 * 30);
     const trancheAddress = '0x90ca5cef5b29342b229fb8ae2db5d8f4f894d652';
     const poolId = '0x90ca5cef5b29342b229fb8ae2db5d8f4f894d6520002000000000000000000b5';
-    const interest = 100000n;
-    const inputValue = 10e18,
+    const interest = BigInt(1e16);
+    const inputValue = BigInt(10e18),
       elementBridge = {
         hashAssetAndExpiry: jest.fn().mockResolvedValue('0xa'),
         pools: jest.fn().mockResolvedValue([trancheAddress, '', poolId]),
@@ -240,9 +240,7 @@ describe('element bridge data', () => {
     balancerContract = {
       ...balancerContract,
       queryBatchSwap: jest.fn().mockImplementation((...args) => {
-        const amount = args[1][0].amount;
-
-        return Promise.resolve([BigNumber.from(BigInt(amount)), BigNumber.from(-BigInt(BigInt(amount) + interest))]);
+        return Promise.resolve([BigNumber.from(inputValue), BigNumber.from(-BigInt(inputValue + interest))]);
       }),
     };
 
@@ -279,8 +277,11 @@ describe('element bridge data', () => {
     const timeToExpiration = expiry - BigInt(now);
     const scaledOut = (BigInt(interest) * elementBridgeData.scalingFactor) / timeToExpiration;
     const yearlyOut = (scaledOut * BigInt(YEAR)) / elementBridgeData.scalingFactor;
+    const scaledPercentage = (yearlyOut * elementBridgeData.scalingFactor) / inputValue;
+    const percentage2sf = scaledPercentage / (elementBridgeData.scalingFactor / 10000n);
+    const percent = Number(percentage2sf) / 100;
 
-    expect(output[0]).toBe(Number((BigInt(inputValue) / (yearlyOut + BigInt(inputValue))) * 100n));
+    expect(output[0]).toBe(percent);
   });
 
   it('should return the correct market size for a given tranche', async () => {
