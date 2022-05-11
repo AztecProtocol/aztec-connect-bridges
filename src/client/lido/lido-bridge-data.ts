@@ -15,8 +15,9 @@ import {
   ILidoOracle__factory,
   ICurvePool__factory,
 } from '../../../typechain-types';
-import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
-import { EthAddress } from '../aztec/eth_address';
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { createWeb3Provider } from '../aztec/provider';
+import { EthAddress } from '@aztec/barretenberg/address';
 
 export class LidoBridgeData implements BridgeDataFieldGetters {
   public scalingFactor: bigint = 1n * 10n ** 18n;

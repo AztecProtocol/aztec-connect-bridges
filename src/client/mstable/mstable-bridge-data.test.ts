@@ -8,7 +8,7 @@ import {
 } from '../../../typechain-types';
 import { AztecAssetType } from '../bridge-data';
 import { AddressZero } from '@ethersproject/constants';
-import { EthAddress } from '../aztec/eth_address';
+import { EthAddress } from '@aztec/barretenberg/address';
 
 jest.mock('../aztec/provider', () => ({
   createWeb3Provider: jest.fn(),

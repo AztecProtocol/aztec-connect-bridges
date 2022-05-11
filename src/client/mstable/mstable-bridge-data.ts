@@ -6,8 +6,9 @@ import {
   IMStableSavingsContract__factory,
   IMStableAsset__factory,
 } from '../../../typechain-types';
-import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
-import { EthAddress } from '../aztec/eth_address';
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { createWeb3Provider } from '../aztec/provider';
+import { EthAddress } from '@aztec/barretenberg/address';
 
 export class MStableBridgeData implements BridgeDataFieldGetters {
   private dai = '0x6B175474E89094C44Da98b954EedeAC495271d0F';

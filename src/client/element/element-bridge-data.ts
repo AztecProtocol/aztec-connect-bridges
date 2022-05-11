@@ -1,4 +1,3 @@
-import { BridgeId } from '../aztec/bridge_id';
 import { AddressZero } from '@ethersproject/constants';
 import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
 import {
@@ -10,8 +9,10 @@ import {
   RollupProcessor__factory,
 } from '../../../typechain-types';
 import { AsyncDefiBridgeProcessedEvent } from '../../../typechain-types/RollupProcessor';
-import { createWeb3Provider, EthereumProvider } from '../aztec/provider/';
-import { EthAddress } from '../aztec/eth_address';
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { createWeb3Provider } from '../aztec/provider';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 
 export type BatchSwapStep = {
   poolId: string;
@@ -205,7 +206,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
 
     return [
       {
-        assetId: BigInt(BridgeId.fromBigInt(defiEvent.bridgeId).inputAssetId),
+        assetId: BigInt(BridgeId.fromBigInt(defiEvent.bridgeId).inputAssetIdA),
         amount: defiEvent.totalInputValue + accruedInterst,
       },
     ];

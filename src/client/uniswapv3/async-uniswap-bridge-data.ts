@@ -8,8 +8,9 @@ import {
 } from '../bridge-data';
 import { AsyncUniswapV3Bridge, AsyncUniswapV3Bridge__factory } from '../../../typechain-types';
 import { BigNumber } from '@ethersproject/bignumber';
-import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
-import { EthAddress } from '../aztec/eth_address';
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { createWeb3Provider } from '../aztec/provider';
+import { EthAddress } from '@aztec/barretenberg/address';
 
 export class AsyncUniswapBridgeData implements BridgeDataFieldGetters {
   private constructor(private bridgeContract: AsyncUniswapV3Bridge) {}

@@ -9,10 +9,10 @@ import {
   RollupProcessor__factory,
   IVault__factory,
 } from '../../../typechain-types';
-import { BridgeId, BitConfig } from '../aztec/bridge_id';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { AztecAssetType } from '../bridge-data';
 import { AddressZero } from '@ethersproject/constants';
-import { EthAddress } from '../aztec/eth_address';
+import { EthAddress } from '@aztec/barretenberg/address';
 
 jest.mock('../aztec/provider', () => ({
   createWeb3Provider: jest.fn(),
@@ -52,8 +52,8 @@ describe('element bridge data', () => {
   const expiration1 = BigInt(now + 86400 * 60);
   const expiration2 = BigInt(now + 86400 * 90);
   const startDate = BigInt(now - 86400 * 30);
-  const bridge1 = new BridgeId(1, 4, 4, 0, 0, BitConfig.EMPTY, Number(expiration1));
-  const bridge2 = new BridgeId(1, 5, 5, 0, 0, BitConfig.EMPTY, Number(expiration2));
+  const bridge1 = new BridgeId(1, 4, 4, undefined, undefined, Number(expiration1));
+  const bridge2 = new BridgeId(1, 5, 5, undefined, undefined, Number(expiration2));
   const outputValue = 10n * 10n ** 18n;
 
   const defiEvents = [
@@ -156,7 +156,7 @@ describe('element bridge data', () => {
     const out = defiEvent.totalInputValue + (delta * ratio) / scalingFactor;
 
     expect(daiValue.amount).toStrictEqual(out);
-    expect(Number(daiValue.assetId)).toStrictEqual(bridge1.inputAssetId);
+    expect(Number(daiValue.assetId)).toStrictEqual(bridge1.inputAssetIdA);
   });
 
   it('should return the correct amount of interest for multiple interactions', async () => {
@@ -179,7 +179,7 @@ describe('element bridge data', () => {
       const out = defiEvent.totalInputValue + (delta * ratio) / scalingFactor;
 
       expect(daiValue.amount).toStrictEqual(out);
-      expect(Number(daiValue.assetId)).toStrictEqual(bridgeId.inputAssetId);
+      expect(Number(daiValue.assetId)).toStrictEqual(bridgeId.inputAssetIdA);
     };
     await testInteraction(56);
     await testInteraction(190);
