@@ -34,11 +34,11 @@ export type FundManagement = {
 };
 
 // Some operations on this class require us to scan back over the blockchain
-// to find published events. This is done in batches of blocks. The chunk size in this set of properties
+// to find published events. This is done in batches of blocks. The batch size in this set of properties
 // determines how many blocks to request in each batch.
 // Users of this class can customise this to their provider requirements
 export type ChainProperties = {
-  chunkSize: number;
+  eventBatchSize: number;
 };
 
 interface EventBlock {
@@ -84,7 +84,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     elementBridgeAddress: EthAddress,
     balancerAddress: EthAddress,
     rollupContractAddress: EthAddress,
-    chainProperties: ChainProperties = { chunkSize: 10000 },
+    chainProperties: ChainProperties = { eventBatchSize: 10000 },
   ) {
     const ethersProvider = createWeb3Provider(provider);
     const elementBridgeContract = ElementBridge__factory.connect(elementBridgeAddress.toString(), ethersProvider);
@@ -150,7 +150,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     }
 
     let end = latestBlockNumber;
-    let start = end - (this.chainProperties.chunkSize - 1);
+    let start = end - (this.chainProperties.eventBatchSize - 1);
     start = Math.max(start, earliestBlockNumber);
 
     while (end > earliestBlockNumber) {
@@ -171,7 +171,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
 
       // if we didn't find an event then go round again but search further back in time
       end = start - 1;
-      start = end - (this.chainProperties.chunkSize - 1);
+      start = end - (this.chainProperties.eventBatchSize - 1);
       start = Math.max(start, earliestBlockNumber);
     }
   }
