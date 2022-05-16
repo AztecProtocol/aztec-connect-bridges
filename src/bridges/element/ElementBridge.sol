@@ -35,6 +35,8 @@ contract ElementBridge is IDefiBridge {
     error INVALID_CALLER();
     error ASSET_IDS_NOT_EQUAL();
     error ASSET_NOT_ERC20();
+    error INPUT_ASSETB_NOT_UNUSED();
+    error OUTPUT_ASSETB_NOT_UNUSED();
     error INTERACTION_ALREADY_EXISTS();
     error POOL_NOT_FOUND();
     error UNKNOWN_NONCE();
@@ -421,9 +423,9 @@ contract ElementBridge is IDefiBridge {
      */
     function convert(
         AztecTypes.AztecAsset calldata inputAssetA,
-        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata inputAssetB,
         AztecTypes.AztecAsset calldata outputAssetA,
-        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata outputAssetB,
         uint256 totalInputValue,
         uint256 interactionNonce,
         uint64 auxData,
@@ -449,6 +451,12 @@ contract ElementBridge is IDefiBridge {
         }
         if (inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) {
             revert ASSET_NOT_ERC20();
+        }
+        if (inputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED) {
+            revert INPUT_ASSETB_NOT_UNUSED();
+        }
+        if (outputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED) {
+            revert OUTPUT_ASSETB_NOT_UNUSED();
         }
         if (interactions[interactionNonce].expiry != 0) {
             revert INTERACTION_ALREADY_EXISTS();
