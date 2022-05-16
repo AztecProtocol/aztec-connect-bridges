@@ -1,30 +1,15 @@
 pragma solidity 0.8.10;
 
-import { HeapTestContract } from './HeapTestContract.sol';
-import "../../../lib/ds-test/src/test.sol";
+import {HeapTestContract} from './HeapTestContract.sol';
+import '../../../lib/ds-test/src/test.sol';
 
-import { console } from '../console.sol';
+import {console} from '../console.sol';
 
 contract HeapTest is DSTest {
     HeapTestContract heap;
 
-    // default randomInts
-    uint64[] randomInts = [
-        207, 628, 47, 920, 864, 132, 942, 684, 573, 451, 476, 594, 152, 466, 885, 300, 357, 266, 803, 320, 80, 184, 318, 949, 983, 917, 925, 808, 270,
-        757, 981, 336, 458, 973, 907, 586, 869, 194, 418, 824, 847, 28, 575, 400, 249, 956, 216, 548, 699, 461, 914, 95, 482, 265, 617, 208, 954, 685,
-        512, 429, 172, 292, 952, 288, 762, 362, 711, 138, 506, 443, 417, 264, 272, 108, 127, 814, 936, 158, 298, 797, 106, 175, 871, 722, 151, 26, 720,
-        304, 497, 665, 245, 953, 262, 398, 743, 363, 639, 723, 935, 807
-    ];
-
     function setUp() public {
         heap = new HeapTestContract(100);
-    }
-
-    function genRandomInts(uint64 salt) public {
-        // generate randomInts based on a salt 
-        for (uint i = 0; i < randomInts.length; i++) {
-            randomInts[i] = uint64(uint256(keccak256(abi.encode(salt, i))));
-        }
     }
 
     function testCanAddToHeap() public {
@@ -106,7 +91,38 @@ contract HeapTest is DSTest {
     }
 
     function testWorksWithDuplicateValues() public {
-        uint8[30] memory values = [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 10];
+        uint8[30] memory values = [
+            1,
+            1,
+            1,
+            2,
+            2,
+            2,
+            3,
+            3,
+            3,
+            4,
+            4,
+            4,
+            5,
+            5,
+            5,
+            6,
+            6,
+            6,
+            7,
+            7,
+            7,
+            8,
+            8,
+            8,
+            9,
+            9,
+            9,
+            10,
+            10,
+            10
+        ];
         for (uint256 i = 0; i < values.length; i++) {
             heap.add(values[i]);
         }
@@ -116,15 +132,8 @@ contract HeapTest is DSTest {
         }
     }
 
-    function testAddAndRemoveMinMultiples(uint64 randomSalt) public {
-        genRandomInts(randomSalt);
-        uint64[] memory values = new uint64[](randomInts.length);
-        uint64[] memory sortedValues = new uint64[](randomInts.length);
-        for (uint256 i = 0; i < randomInts.length; i++) {
-            values[i] = randomInts[i];
-            sortedValues[i] = randomInts[i];
-        }
-        sortArray(sortedValues);
+    function testAddAndRemoveMinMultiples(uint64[100] memory values) public {
+        uint64[] memory sortedValues = sortArray(values);
         uint64 minimum = type(uint64).max;
         for (uint256 i = 0; i < values.length; i++) {
             heap.add(values[i]);
@@ -132,9 +141,8 @@ contract HeapTest is DSTest {
                 minimum = values[i];
             }
             assertEq(heap.min(), minimum, 'insert');
-        }    
+        }
         assertEq(heap.size(), values.length);
-
 
         for (uint256 i = 0; i < sortedValues.length; i++) {
             assertEq(heap.min(), sortedValues[i], 'pop');
@@ -144,15 +152,7 @@ contract HeapTest is DSTest {
         assertEq(heap.size(), 0);
     }
 
-    function testAddAndRemoveNonMinMultiples(uint64 randomSalt) public {
-        genRandomInts(randomSalt);
-        uint64[] memory values = new uint64[](randomInts.length);
-        uint64[] memory sortedValues = new uint64[](randomInts.length);
-        for (uint256 i = 0; i < randomInts.length; i++) {
-            values[i] = randomInts[i];
-            sortedValues[i] = randomInts[i];
-        }
-        sortArray(sortedValues);
+    function testAddAndRemoveNonMinMultiples(uint64[100] memory values) public {
         uint64 minimum = type(uint64).max;
         for (uint256 i = 0; i < values.length; i++) {
             heap.add(values[i]);
@@ -160,27 +160,20 @@ contract HeapTest is DSTest {
                 minimum = values[i];
             }
             assertEq(heap.min(), minimum, 'insert');
-        }    
+        }
         assertEq(heap.size(), values.length);
 
-        for (uint256 i = 0; i < randomInts.length - 1; i++) {
-            heap.remove(randomInts[randomInts.length - (i + 1)]);
-            assertEq(heap.size(), randomInts.length - (i + 1));
-            assertEq(heap.min(), getMinOfRandomInts(randomInts.length - (i + 1)));
+        for (uint256 i = 0; i < values.length - 1; i++) {
+            heap.remove(values[values.length - (i + 1)]);
+            assertEq(heap.size(), values.length - (i + 1));
+            assertEq(heap.min(), getMin(values, values.length - (i + 1)));
         }
         assertEq(heap.size(), 1);
-        assertEq(heap.min(), randomInts[0]);
+        assertEq(heap.min(), values[0]);
     }
 
-    function testAddAndRemoveMinViaSearch(uint64 randomSalt) public {
-        genRandomInts(randomSalt);
-        uint64[] memory values = new uint64[](randomInts.length);
-        uint64[] memory sortedValues = new uint64[](randomInts.length);
-        for (uint256 i = 0; i < randomInts.length; i++) {
-            values[i] = randomInts[i];
-            sortedValues[i] = randomInts[i];
-        }
-        sortArray(sortedValues);
+    function testAddAndRemoveMinViaSearch(uint64[100] memory values) public {
+        uint64[] memory sortedValues = sortArray(values);
         uint64 minimum = type(uint64).max;
         for (uint256 i = 0; i < values.length; i++) {
             heap.add(values[i]);
@@ -188,31 +181,22 @@ contract HeapTest is DSTest {
                 minimum = values[i];
             }
             assertEq(heap.min(), minimum, 'insert');
-        }    
+        }
         assertEq(heap.size(), values.length);
 
-        uint256[] memory gasValues = new uint256[](100);
         for (uint256 i = 0; i < sortedValues.length; i++) {
             assertEq(heap.min(), sortedValues[i], 'pop');
             assertEq(heap.size(), sortedValues.length - i);
             uint64 min = heap.min();
-            uint256 gasBefore = gasleft();
             heap.remove(min);
-            gasValues[i] = gasBefore - gasleft();
         }
         assertEq(heap.size(), 0);
     }
 
-    function testCanBuildHeapGreaterThanInitialised(uint64 randomSalt) public {
-        genRandomInts(randomSalt);
+    function testCanBuildHeapGreaterThanInitialised(uint64[100] memory values) public {
+        uint64[] memory sortedValues = sortArray(values);
+
         HeapTestContract newHeap = new HeapTestContract(1);
-        uint64[] memory values = new uint64[](randomInts.length);
-        uint64[] memory sortedValues = new uint64[](randomInts.length);
-        for (uint256 i = 0; i < randomInts.length; i++) {
-            values[i] = randomInts[i];
-            sortedValues[i] = randomInts[i];
-        }
-        sortArray(sortedValues);
         uint64 minimum = type(uint64).max;
         for (uint256 i = 0; i < values.length; i++) {
             newHeap.add(values[i]);
@@ -220,9 +204,8 @@ contract HeapTest is DSTest {
                 minimum = values[i];
             }
             assertEq(newHeap.min(), minimum, 'insert');
-        }    
+        }
         assertEq(newHeap.size(), values.length);
-
 
         for (uint256 i = 0; i < sortedValues.length; i++) {
             assertEq(newHeap.min(), sortedValues[i], 'pop');
@@ -232,28 +215,33 @@ contract HeapTest is DSTest {
         assertEq(newHeap.size(), 0);
     }
 
-    function getMinOfRandomInts(uint256 upperBound) internal view returns (uint64 min) {
+    function getMin(uint64[100] memory array, uint256 upperBound) internal pure returns (uint64 min) {
         min = type(uint64).max;
         for (uint256 i = 0; i < upperBound; i++) {
-            if (randomInts[i] < min) {
-                min = randomInts[i];
+            if (array[i] < min) {
+                min = array[i];
             }
         }
     }
 
-    function sortArray(uint64[] memory array) private pure {
+    function sortArray(uint64[100] memory array) private pure returns (uint64[] memory outputArray) {
         if (array.length == 0) {
-            return;
+            return new uint64[](0);
         }
         uint256 l = array.length;
+        outputArray = new uint64[](l);
+        for (uint256 i = 0; i < l; i++) {
+            outputArray[i] = array[i];
+        }
+
         bool swapped = false;
-        for(uint i = 0; i < l - 1; i++) {
+        for (uint256 i = 0; i < l - 1; i++) {
             swapped = false;
-            for(uint j = 0; j < l - i - 1; j++) {
-                if(array[j] > array[j + 1]) {
-                    uint64 temp = array[j];
-                    array[j] = array[j + 1];
-                    array[j + 1] = temp;
+            for (uint256 j = 0; j < l - i - 1; j++) {
+                if (outputArray[j] > outputArray[j + 1]) {
+                    uint64 temp = outputArray[j];
+                    outputArray[j] = outputArray[j + 1];
+                    outputArray[j + 1] = temp;
                     swapped = true;
                 }
             }
@@ -261,5 +249,7 @@ contract HeapTest is DSTest {
                 break;
             }
         }
+
+        return outputArray;
     }
 }
