@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.10;
 
-import {Vm} from "../../../lib/forge-std/src/Vm.sol";
+import "forge-std/Test.sol";
 
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
@@ -14,18 +14,10 @@ import {IWrappedPosition} from "../../bridges/element/interfaces/IWrappedPositio
 import {MockDeploymentValidator} from "./MockDeploymentValidator.sol";
 
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
-import "../../../lib/forge-std/src/stdlib.sol";
 
-import "../../../lib/ds-test/src/test.sol";
-
-import { console } from '../console.sol';
-
-contract ElementTest is DSTest {
+contract ElementTest is Test {
     using stdStorage for StdStorage;
-
     StdStorage stdStore;
-
-    Vm private vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     DefiBridgeProxy private defiBridgeProxy;
     RollupProcessor private rollupProcessor;
@@ -2016,15 +2008,6 @@ contract ElementTest is DSTest {
         }
     }
 
-    function assertEq(bool a, bool b) internal {
-        if (a != b) {
-            emit log("Error: a == b not satisfied [bool]");
-            emit log_named_uint("  Expected", boolToUint(b));
-            emit log_named_uint("    Actual", boolToUint(a));
-            fail();
-        }
-    }
-
     function boolToUint(bool a) internal pure returns (uint256) {
         return a ? 1 : 0;
     }
@@ -2065,14 +2048,8 @@ contract ElementTest is DSTest {
         address account,
         uint256 balance
     ) internal {
-        bytes32 slot = _findTokenBalanceSlot(asset, account);
         address tokenAddress = address(tokens[asset]);
-
-        vm.store(
-            tokenAddress,
-            slot,
-            bytes32(uint256(balance))
-        );
+        deal(tokenAddress, account, balance);
 
         assertEq(tokens[asset].balanceOf(account), balance, "wrong balance");
     }
@@ -2082,29 +2059,13 @@ contract ElementTest is DSTest {
         address account,
         uint256 additionalBalance
     ) internal {
-        bytes32 slot = _findTokenBalanceSlot(asset, account);
         address tokenAddress = address(tokens[asset]);
         uint256 currentBalance = tokens[asset].balanceOf(account);
         uint256 newBalance = currentBalance + additionalBalance;
 
+        deal(tokenAddress, account, newBalance);
 
-        vm.store(
-            tokenAddress,
-            slot,
-            bytes32(uint256(newBalance))
-        );
         assertEq(tokens[asset].balanceOf(account), newBalance, "wrong balance");
-    }
-
-    function _findTokenBalanceSlot(string memory asset, address account) internal returns (bytes32 slot) {
-        string memory usdc = 'USDC';
-        if (!compareStrings(asset, usdc)) {
-            bytes4 selector = bytes4(keccak256(abi.encodePacked('balanceOf(address)')));
-            uint256 foundSlot = stdStore.target(address(tokens[asset])).sig(selector).with_key(account).find();
-            slot = bytes32(foundSlot);
-        } else {
-            slot = keccak256(abi.encode(account, uint256(9)));
-        }
     }
 
     function _findSpeedbumpSlot(string memory asset, uint256 expiry) internal returns (bytes32 slot) {

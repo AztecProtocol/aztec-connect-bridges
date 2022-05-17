@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.10;
 
-import {Vm} from "../../../lib/forge-std/src/Vm.sol";
-
+import "forge-std/Test.sol";
+import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 
@@ -10,28 +10,14 @@ import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MStableBridge} from "./../../bridges/mStable/MStableBridge.sol";
 
-import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 
-import "../../../lib/forge-std/src/stdlib.sol";
-import "../../../lib/ds-test/src/test.sol";
-
-
-contract MStableTest is DSTest {
-
-    using stdStorage for StdStorage;
-
-    StdStorage stdStore;
-
-    Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
+contract MStableTest is Test {
     DefiBridgeProxy defiBridgeProxy;
     RollupProcessor rollupProcessor;
 
     MStableBridge mStableBridge;
 
     mapping (string => IERC20) tokens;
-
-
 
     function _aztecPreSetup() internal {
         defiBridgeProxy = new DefiBridgeProxy();
@@ -57,8 +43,9 @@ contract MStableTest is DSTest {
 
     function testMStableIMUSDToDai() public {
        uint256 depositAmount = 1 * 10 ** 21;
-        _setTokenBalance("DAI", address(rollupProcessor), depositAmount);
-        
+
+        deal(address(tokens["DAI"]), address(rollupProcessor), depositAmount);
+
         AztecTypes.AztecAsset memory empty;
 
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
@@ -118,8 +105,8 @@ contract MStableTest is DSTest {
 	function testMStableDaiToImusd() public {
 	
         uint256 daiDepositAmount = 1000 * 10 ** 18;
-            
-        _setTokenBalance("DAI", address(rollupProcessor), daiDepositAmount);
+
+        deal(address(tokens["DAI"]), address(rollupProcessor), daiDepositAmount);
 			
 			AztecTypes.AztecAsset memory empty;
 
@@ -186,37 +173,5 @@ contract MStableTest is DSTest {
 						!isAsync,
 						"Should be sync"
 			);
-    }
-
-     function _setTokenBalance(
-        string memory asset,
-        address account,
-        uint256 balance
-    ) internal {
-        bytes32 slot = _findTokenBalanceSlot(asset, account);
-        address tokenAddress = address(tokens[asset]);
-
-        vm.store(
-            tokenAddress,
-            slot,
-            bytes32(uint256(balance))
-        );
-
-        assertEq(tokens[asset].balanceOf(account), balance, "wrong balance");
-    }
-
-    function compareStrings(string memory a, string memory b) public view returns (bool) {
-        return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))));
-    }
-
-    function _findTokenBalanceSlot(string memory asset, address account) internal returns (bytes32 slot) {
-        string memory usdc = "USDC";
-        if (!compareStrings(asset, usdc)) {
-            bytes4 selector = bytes4(keccak256(abi.encodePacked("balanceOf(address)")));
-            uint256 foundSlot = stdStore.target(address(tokens[asset])).sig(selector).with_key(account).find();        
-            slot = bytes32(foundSlot);
-		} else {
-            slot = keccak256(abi.encode(account, uint256(9)));
-        }
     }
 }
