@@ -3,6 +3,7 @@
 pragma solidity >=0.8.0 <=0.8.10;
 pragma abicoder v2;
 
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
@@ -13,6 +14,8 @@ import "./interfaces/ICETH.sol";
 import "../../test/console.sol";
 
 contract CompoundBridge is IDefiBridge {
+    using SafeERC20 for IERC20;
+
     address public immutable rollupProcessor;
 
     error InvalidCaller();
@@ -61,7 +64,7 @@ contract CompoundBridge is IDefiBridge {
             } else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
                 IERC20 tokenIn = IERC20(inputAssetA.erc20Address);
                 ICERC20 tokenOut = ICERC20(outputAssetA.erc20Address);
-                tokenIn.approve(address(tokenOut), totalInputValue);
+                tokenIn.safeIncreaseAllowance(address(tokenOut), totalInputValue);
                 tokenOut.mint(totalInputValue);
                 outputValueA = tokenOut.balanceOf(address(this));
                 tokenOut.approve(rollupProcessor, outputValueA);
@@ -83,7 +86,7 @@ contract CompoundBridge is IDefiBridge {
                 IERC20 tokenOut = IERC20(outputAssetA.erc20Address);
                 tokenIn.redeem(totalInputValue);
                 outputValueA = tokenOut.balanceOf(address(this));
-                tokenOut.approve(rollupProcessor, outputValueA);
+                tokenOut.safeIncreaseAllowance(rollupProcessor, outputValueA);
             } else {
                 revert IncorrectOutputAsset();
             }

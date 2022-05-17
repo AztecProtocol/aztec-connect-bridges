@@ -33,7 +33,7 @@ contract CompoundTest is Test {
         0x35A18000230DA775CAc24873d00Ff85BccdeD550, // cUNI
         0x39AA39c021dfbaE8faC545936693aC917d5E7563, // cUSDC
         0x041171993284df560249B57358F931D9eB7b925D, // cUSDP
-//        0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9, // cUSDT
+        0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9, // cUSDT
         0xccF4429DB6322D5C611ee964527D42E5d685DD6a, // cWBTC2
         0x80a2AE356fc9ef4305676f7a3E2Ed04e12C33946, // cYFI
         0xB3319f5D18Bc0D84dD1b4825Dcde5d5f7266d407 // cZRX
@@ -104,7 +104,11 @@ contract CompoundTest is Test {
         // Note: if Foundry implements parametrized tests remove this for loop,
         // stop calling setup() from _depositAndWithdrawERC20 and use the native
         // functionality
-        vm.assume(depositAmount > 1e11 && depositAmount < 2**96);
+
+        // For the tests to pass a return value of cTokens has to be >0.
+        // Since the ratio of token/cToken is very skewed plenty of the times
+        // I set relatively high minimum value.
+        vm.assume(depositAmount > 1e14 && depositAmount < 2**96);
         for (uint256 i; i < cTokens.length; ++i) {
             _depositAndWithdrawERC20(cTokens[i], depositAmount);
         }
@@ -136,7 +140,7 @@ contract CompoundTest is Test {
             depositOutputAssetA,
             empty,
             depositAmount,
-            1,
+            0,
             0
         );
 
