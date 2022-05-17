@@ -33,7 +33,7 @@ interface IDefiBridge {
    * 3 4: DAO voting stuff.
    */
 
-  // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy. It receives the aggreagte sum of all users funds for the input assets.
+  // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy. It receives the aggregate sum of all users funds for the input assets.
   // @param AztecAsset inputAssetA a struct detailing the first input asset, this will always be set
   // @param AztecAsset inputAssetB an optional struct detailing the second input asset, this is used for repaying borrows and should be virtual
   // @param AztecAsset outputAssetA a struct detailing the first output asset, this will always be set
@@ -63,7 +63,7 @@ interface IDefiBridge {
       bool isAsync
     );
 
-  // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy. It receives the aggreagte sum of all users funds for the input assets.
+  // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy. It receives the aggregate sum of all users funds for the input assets.
   // @param AztecAsset inputAssetA a struct detailing the first input asset, this will always be set
   // @param AztecAsset inputAssetB an optional struct detailing the second input asset, this is used for repaying borrows and should be virtual
   // @param AztecAsset outputAssetA a struct detailing the first output asset, this will always be set
