@@ -8,32 +8,10 @@ import {Vm} from "forge-std/Vm.sol";
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
-
-// Compound-specific imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import  "./../../bridges/compound/interfaces/ICERC20.sol";
 import {CompoundBridge} from "./../../bridges/compound/CompoundBridge.sol";
 
-interface ICERC20 {
-    function accrueInterest() external;
-
-    function approve(address, uint256) external returns (uint256);
-
-    function balanceOf(address) external view returns (uint256);
-
-    function balanceOfUnderlying(address) external view returns (uint256);
-
-    function exchangeRateStored() external view returns (uint256);
-
-    function transfer(address, uint256) external returns (uint256);
-
-    function mint(uint256) external returns (uint256);
-
-    function redeem(uint256) external returns (uint256);
-
-    function redeemUnderlying(uint256) external returns (uint256);
-
-    function underlying() external returns (address);
-}
 
 contract CompoundTest is Test {
     DefiBridgeProxy defiBridgeProxy;
@@ -123,6 +101,9 @@ contract CompoundTest is Test {
     }
 
     function testERC20DepositAndWithdrawal(uint256 depositAmount) public {
+        // Note: if Foundry implements parametrized tests remove this for loop,
+        // stop calling setup() from _depositAndWithdrawERC20 and use the native
+        // functionality
         vm.assume(depositAmount > 1e11 && depositAmount < 2**96);
         for (uint256 i; i < cTokens.length; ++i) {
             _depositAndWithdrawERC20(cTokens[i], depositAmount);
@@ -147,7 +128,7 @@ contract CompoundTest is Test {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-        // cETH minting
+        // cToken minting
         (uint256 outputValueA, , ) = rollupProcessor.convert(
             address(compoundBridge),
             depositInputAssetA,
@@ -177,8 +158,8 @@ contract CompoundTest is Test {
             1
         );
 
-        // ETH withdrawn should be approximately equal to ETH deposited
-        // --> the amounts are not the same due to rounding errors in Compound
+        // token withdrawn should be approximately equal to token deposited
+        // --> the amounts are not exactly the same due to rounding errors in Compound
         assertLt(
             depositAmount - outputValueA,
             1e10,

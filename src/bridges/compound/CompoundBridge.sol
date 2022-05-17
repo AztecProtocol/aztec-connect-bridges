@@ -7,46 +7,10 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 import "../../interfaces/IRollupProcessor.sol";
+import "./interfaces/ICERC20.sol";
+import "./interfaces/ICETH.sol";
 
 import "../../test/console.sol";
-
-interface ICETH {
-    function approve(address, uint256) external returns (uint256);
-
-    function balanceOf(address) external view returns (uint256);
-
-    function exchangeRateStored() external view returns (uint256);
-
-    function transfer(address, uint256) external returns (uint256);
-
-    function mint() external payable;
-
-    function redeem(uint256) external returns (uint256);
-
-    function redeemUnderlying(uint256) external returns (uint256);
-}
-
-interface ICERC20 {
-    function accrueInterest() external;
-
-    function approve(address, uint256) external returns (uint256);
-
-    function balanceOf(address) external view returns (uint256);
-
-    function balanceOfUnderlying(address) external view returns (uint256);
-
-    function exchangeRateStored() external view returns (uint256);
-
-    function transfer(address, uint256) external returns (uint256);
-
-    function mint(uint256) external returns (uint256);
-
-    function redeem(uint256) external returns (uint256);
-
-    function redeemUnderlying(uint256) external returns (uint256);
-
-    function underlying() external returns (address);
-}
 
 contract CompoundBridge is IDefiBridge {
     address public immutable rollupProcessor;
@@ -57,7 +21,7 @@ contract CompoundBridge is IDefiBridge {
     error IncorrectAuxData();
     error AsyncModeDisabled();
 
-    constructor(address _rollupProcessor) public {
+    constructor(address _rollupProcessor) {
         rollupProcessor = _rollupProcessor;
     }
 
@@ -131,17 +95,17 @@ contract CompoundBridge is IDefiBridge {
     function finalise(
         AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata outputAssetA,
         AztecTypes.AztecAsset calldata,
-        uint256 interactionNonce,
+        AztecTypes.AztecAsset calldata,
+        uint256,
         uint64
     )
         external
         payable
         returns (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool interactionComplete
+            uint256,
+            uint256,
+            bool
         )
     {
         revert AsyncModeDisabled();
