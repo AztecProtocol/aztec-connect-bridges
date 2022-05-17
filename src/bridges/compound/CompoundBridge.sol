@@ -13,6 +13,11 @@ import "./interfaces/ICETH.sol";
 
 import "../../test/console.sol";
 
+/**
+ * @title Aztec Connect Bridge for Compound protocol
+ * @notice You can use this contract to mint or redeem cTokens.
+ * @dev Implementation of the IDefiBridge interface for cTokens.
+ */
 contract CompoundBridge is IDefiBridge {
     using SafeERC20 for IERC20;
 
@@ -30,14 +35,24 @@ contract CompoundBridge is IDefiBridge {
 
     receive() external payable {}
 
-    // ATC: To do: extend bridge to handle borrows and repays
+    /**
+     * @notice Function which mints and burns cTokens in echange for the underlying asset.
+     * @dev This method can only be called from RollupProcessor.sol. If auxData is 0 the mint flow is executed,
+     * if 1 deposit flow.
+     *
+     * @param inputAssetA - ETH or ERC20 (Mint) or cToken ERC20 (Redeem)
+     * @param outputAssetA - cToken (Mint) or ETH or ERC20 (Redeem)
+     * @param totalInputValue - the amount of token or ETH deposit (Mint), the amount of cToken to burn (Redeem)
+     * @param auxData - 0 (Mint), 1 (Redeem)
+     * @return outputValueA - the amount of cToken (Mint) or ETH/ERC20 (redeem) transferred to RollupProcessor.sol
+     */
     function convert(
         AztecTypes.AztecAsset calldata inputAssetA,
         AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata outputAssetA,
         AztecTypes.AztecAsset calldata,
         uint256 totalInputValue,
-        uint256 interactionNonce,
+        uint256,
         uint64 auxData,
         address
     )
