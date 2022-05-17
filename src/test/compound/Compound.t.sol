@@ -110,28 +110,28 @@ contract CompoundTest is DSTest {
         compoundBridge = new CompoundBridge(address(rollupProcessor));
     }
 
-    /* TEST DEPOSIT OF ETH */
-    function testCompoundBridgeETH(uint256 depositAmount) public {
+    function testETHDepositAndWithdrawal(uint256 depositAmount) public {
         if (depositAmount < 1e9 || depositAmount >= 2**96) return;
         vm.deal(address(rollupProcessor), depositAmount);
 
         AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
+        AztecTypes.AztecAsset memory depositInputAssetA = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: address(0x0000000000000000000000000000000000000000),
             assetType: AztecTypes.AztecAssetType.ETH
         });
-        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset({
+        AztecTypes.AztecAsset memory depositOutputAssetA = AztecTypes.AztecAsset({
             id: 2,
             erc20Address: cETHaddress,
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
+        // cETH minting
         (uint256 outputValueA, , ) = rollupProcessor.convert(
             address(compoundBridge),
-            inputAssetA,
+            depositInputAssetA,
             empty,
-            outputAssetA,
+            depositOutputAssetA,
             empty,
             depositAmount,
             1,
@@ -139,6 +139,30 @@ contract CompoundTest is DSTest {
         );
 
         assertGt(outputValueA, 0, "cETH received is zero");
+
+        uint256 redeemAmount = outputValueA;
+        AztecTypes.AztecAsset memory redeemInputAssetA = depositOutputAssetA;
+        AztecTypes.AztecAsset memory redeemOutputAssetA = depositInputAssetA;
+
+        // withdrawing ETH (cETH burning)
+        (outputValueA, , ) = rollupProcessor.convert(
+            address(compoundBridge),
+            redeemInputAssetA,
+            empty,
+            redeemOutputAssetA,
+            empty,
+            redeemAmount,
+            1,
+            1
+        );
+
+        // ETH withdrawn should be approximately equal to ETH deposited
+        // --> the amounts are not the same due to rounding errors in Compound
+        assertLt(
+            depositAmount - outputValueA,
+            1e10,
+            "amount of ETH withdrawn is not similar to the amount ofETH deposited"
+        );
     }
 
     /* TEST ALL STABLECOIN DEPOSITS */
@@ -705,42 +729,6 @@ contract CompoundTest is DSTest {
         uint256 rollupZRX = ZRX.balanceOf(address(rollupProcessor));
 
         assertGt(rollupZRX, 0, "ZRX received is zero");
-    }
-
-    function testCompoundBridgeETHout(uint256 redeemAmount) public {
-        //uint256 redeemAmount = 170900000;
-        if (redeemAmount == 0 || redeemAmount >= 2**96) return;
-        vm.deal(address(rollupProcessor), redeemAmount);
-        _setTokenBalance(cETHaddress, address(rollupProcessor), redeemAmount);
-        uint256 rollupEth = address(rollupProcessor).balance;
-
-        AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: cETHaddress,
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
-            id: 2,
-            erc20Address: address(0x0000000000000000000000000000000000000000),
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
-
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
-            address(compoundBridge),
-            inputAsset,
-            empty,
-            outputAsset,
-            empty,
-            redeemAmount,
-            1,
-            1
-        );
-
-        console.log("ETH balance after convert = ", address(rollupProcessor).balance);
-        rollupEth = address(rollupProcessor).balance - rollupEth;
-
-        assertGt(rollupEth, 0, "ETH received is zero");
     }
 
     function _setTokenBalance(
