@@ -100,6 +100,7 @@ contract ElementTest is DSTest {
     uint256 private numTranches = 0;
 
     int64 constant daiConvertGas = 239188;
+    int64 constant usdcFinaliseGas = 225143;
 
     event LogConvert(uint256 indexed nonce, uint256 totalInputValue, int64 gasUsed);
 
@@ -1002,7 +1003,7 @@ contract ElementTest is DSTest {
                 }
             }
         }
-        vm.warp(expiries[expiries.length - 1]);
+        vm.warp(expiries[expiries.length - 1] + 1);
 
         for (uint256 interactionIndex = 0; interactionIndex < interactions.length; interactionIndex++) {
             Interaction memory interaction = interactions[interactionIndex];
@@ -1079,7 +1080,7 @@ contract ElementTest is DSTest {
                 }
             }
         }
-        vm.warp(expiries[expiries.length - 1]);
+        vm.warp(expiries[expiries.length - 1] + 1);
 
         // we are now going to call finalise on every interaction
         // but we are going to do it out of order
@@ -1330,7 +1331,7 @@ contract ElementTest is DSTest {
 
     function testCanFinaliseAllInteractionsOnConvert() public {
         // set the gas limit high as we want all of our interactions to finalise
-        rollupProcessor.setBridgeGasLimit(address(elementBridge), 2000000);
+        rollupProcessor.setBridgeGasLimit(address(elementBridge), 900000);
         setupAllPools();
         uint256 numInteractionsPerTranche = 5;
         uint8[5] memory depositMultipliers = [1, 2, 3, 4, 5];
@@ -1368,7 +1369,7 @@ contract ElementTest is DSTest {
                 }
             }
         }
-        vm.warp(expiries[expiries.length - 2]);
+        vm.warp(expiries[expiries.length - 2] + 1);
         for (uint256 trancheCount = 0; trancheCount < numTranches; trancheCount++) {
             string memory asset = 'DAI';
             uint256 daiDepositAmount = quantities[asset];
@@ -1705,7 +1706,7 @@ contract ElementTest is DSTest {
         _increaseTokenBalance(asset, address(rollupProcessor), daiDepositAmount);
         // we expect 1 Finalise events to be emitted but we can't test the data values
         vm.expectEmit(false, false, false, true);
-        emit LogFinalise(5, true, '', 225337);
+        emit LogFinalise(5, true, '', usdcFinaliseGas);
         {
             (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, daiInteraction);
             assertEq(isAsync, true);

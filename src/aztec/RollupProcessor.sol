@@ -186,9 +186,9 @@ contract RollupProcessor is DSTest {
             outputValueB,
             true
         );
-        defiInteractions[interactionNonce].finalised = true;
-        defiInteractions[interactionNonce].outputValueA = outputValueA;
-        defiInteractions[interactionNonce].outputValueB = outputValueB;
+        interaction.finalised = true;
+        interaction.outputValueA = outputValueA;
+        interaction.outputValueB = outputValueB;
     }
 
     struct ConvertArgs {
