@@ -14,7 +14,6 @@ import {IAaveIncentivesController} from './../imports/interfaces/IAaveIncentives
 import {IAccountingToken} from './../imports/interfaces/IAccountingToken.sol';
 import {IWETH9} from './../imports/interfaces/IWETH9.sol';
 
-import {WadRayMath} from './../imports/libraries/WadRayMath.sol';
 import {DataTypes} from './../imports/libraries/DataTypes.sol';
 
 import {IRollupProcessor} from '../../../interfaces/IRollupProcessor.sol';
@@ -34,7 +33,6 @@ import {AccountingToken} from './../AccountingToken.sol';
  */
 contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
     using SafeMath for uint256;
-    using WadRayMath for uint256;
     using SafeERC20 for IERC20;
 
     event UnderlyingAssetListed(address underlyingAsset, address zkAToken);
@@ -171,7 +169,10 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         }
 
         ILendingPool pool = ILendingPool(ADDRESSES_PROVIDER.getLendingPool());
-        uint256 scaledAmount = amount.rayDiv(pool.getReserveNormalizedIncome(underlyingAsset));
+        // Compute scaledAmount rounded down. Aave uses rayDiv which can round up and down (at 0.5).
+        // For consistency we round down.
+        uint256 scaledAmount = (amount * 1e27) / pool.getReserveNormalizedIncome(underlyingAsset);
+        require(scaledAmount > 0, Errors.ZERO_VALUE);
 
         IERC20(underlyingAsset).safeApprove(address(pool), amount);
         pool.deposit(underlyingAsset, amount, address(this), 0);
@@ -209,7 +210,10 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         IAccountingToken(zkATokenAddress).burn(scaledAmount);
 
         ILendingPool pool = ILendingPool(ADDRESSES_PROVIDER.getLendingPool());
-        uint256 underlyingAmount = scaledAmount.rayMul(pool.getReserveNormalizedIncome(underlyingAsset));
+        // Compute the underlying amount rounded down. Aave uses rayMul which can round up and down (at 0.5)
+        // For consistency we round down. Will leave aToken dust.
+        uint256 underlyingAmount = (scaledAmount * pool.getReserveNormalizedIncome(underlyingAsset)) / 1e27;
+        require(scaledAmount > 0, Errors.ZERO_VALUE);
 
         /// Return value by pool::withdraw() equal to underlyingAmount, unless underlying amount == type(uint256).max;
         uint256 outputValue = pool.withdraw(underlyingAsset, underlyingAmount, address(this));
