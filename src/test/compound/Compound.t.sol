@@ -113,7 +113,7 @@ contract CompoundTest is DSTest {
     /* TEST DEPOSIT OF ETH */
     function testCompoundBridgeETH(uint256 depositAmount) public {
         console.log("Entering Compound Bridge ETH deposit test");
-        if (depositAmount == 0 || depositAmount >= 2**96) return;
+        if (depositAmount < 1e9 || depositAmount >= 2**96) return;
         vm.deal(address(rollupProcessor), depositAmount);
 
         AztecTypes.AztecAsset memory empty;
