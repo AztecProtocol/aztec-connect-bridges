@@ -1236,11 +1236,8 @@ contract ElementTest is DSTest {
             Interaction memory interaction = interactions[interactionIndex];
             uint256 percentOfDeposit = (interaction.depositAmount * 100) / (15 * quantities[interaction.tranche.asset]);
             uint256 totalReceipt = balancesRollupAfter.startingAsset;
-            (bool finalised, uint256 outputValueA) = rollupProcessor.getDefiResult(interaction.nonce);
-            uint256 percentOfReceipt = (outputValueA * 100) / totalReceipt;
-            int256 diff = int256(percentOfDeposit) - int256(percentOfReceipt);
-            uint256 absDiff = diff >= 0 ? uint256(diff) : uint256(-diff);
-            assertLt(absDiff, 2);
+            (bool finalised, uint256 interactionOutputValue) = rollupProcessor.getDefiResult(interaction.nonce);
+            assertWithinOnePercentagePoint(interactionOutputValue, totalReceipt, percentOfDeposit);
             assertEq(finalised, true);
         }
     }
