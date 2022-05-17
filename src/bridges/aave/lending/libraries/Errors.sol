@@ -14,4 +14,5 @@ library Errors {
     string internal constant INVALID_ATOKEN = '10';
     string internal constant ZK_TOKEN_ALREADY_SET = '11';
     string internal constant ZK_TOKEN_DONT_EXISTS = '12';
+    string internal constant ZERO_VALUE = '13';
 }

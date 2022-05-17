@@ -30,6 +30,16 @@ import {Errors} from '../../bridges/aave/lending/libraries/Errors.sol';
 import {AaveV3StorageEmulator} from './helpers/AaveV3StorageEmulator.sol';
 import {TestHelper} from './helpers/TestHelper.sol';
 
+library RoundingMath {
+    function mulDiv(
+        uint256 a,
+        uint256 b,
+        uint256 c
+    ) internal pure returns (uint256) {
+        return (a * b) / c;
+    }
+}
+
 /**
  * @notice Tests for the Aave Lending Bridge
  * @dev Perform a mainnet fork to execute tests on.
@@ -37,6 +47,7 @@ import {TestHelper} from './helpers/TestHelper.sol';
  * @author Lasse Herskind
  */
 contract AaveLendingTest is TestHelper {
+    using RoundingMath for uint256;
     using WadRayMath for uint256;
 
     // Aztec defi bridge specific storage
@@ -652,8 +663,12 @@ contract AaveLendingTest is TestHelper {
             assertGt(expectedTokenAfter, expectedTokenBefore, 'Did not earn any interest');
         }
 
-        assertEq(expectedTokenBefore, balancesBefore.bridgeAToken, 'Bridge aToken not matching before time');
-        assertEq(expectedTokenAfter, balancesAfter.bridgeAToken, 'Bridge aToken not matching after time');
+        // As we are rounding down. There will be excess dust in the bridge. Ensure that there is dust and that it is small
+        assertLe(expectedTokenBefore, balancesBefore.bridgeAToken, 'Bridge aToken not matching before time');
+        assertLe(expectedTokenAfter, balancesAfter.bridgeAToken, 'Bridge aToken not matching after time');
+
+        assertApproxEq(expectedTokenBefore, balancesBefore.bridgeAToken, 3);
+        assertApproxEq(expectedTokenAfter, balancesAfter.bridgeAToken, 3);
     }
 
     function _enterWithToken(uint256 amount) public {
@@ -693,18 +708,41 @@ contract AaveLendingTest is TestHelper {
         Balances memory balanceAfter = _getBalances();
 
         uint256 index = pool.getReserveNormalizedIncome(address(token));
-        uint256 scaledDiff = depositAmount.rayDiv(index);
-        uint256 expectedScaledBalanceAfter = balanceBefore.rollupZk + scaledDiff;
-        uint256 expectedATokenBalanceAfter = expectedScaledBalanceAfter.rayMul(index);
-        assertEq(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, 'Scaled balances before not matching');
-        assertEq(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, 'Scaled balances after not matching');
-        assertEq(
-            balanceAfter.rollupZk - balanceBefore.rollupZk,
-            outputValueA,
-            'Output value and zk balance not matching'
-        );
-        assertEq(balanceAfter.rollupZk - balanceBefore.rollupZk, scaledDiff, 'Scaled balance change not matching');
-        assertEq(expectedATokenBalanceAfter, balanceAfter.bridgeAToken, 'aToken balance not matching');
+        {
+            uint256 scaledDiffZk = depositAmount.mulDiv(1e27, index);
+            assertEq(scaledDiffZk, outputValueA, 'Output value and zk balance not matching');
+
+            assertEq(
+                balanceAfter.rollupZk - balanceBefore.rollupZk,
+                scaledDiffZk,
+                'Scaled zkbalance balance change not matching'
+            );
+
+            uint256 expectedScaledBalanceAfter = balanceBefore.rollupZk + scaledDiffZk;
+            assertEq(expectedScaledBalanceAfter, balanceAfter.rollupZk, 'aToken balance not matching');
+        }
+
+        {
+            uint256 scaledDiffAToken = depositAmount.rayDiv(index);
+            assertEq(
+                balanceAfter.bridgeScaledAToken - balanceBefore.bridgeScaledAToken,
+                scaledDiffAToken,
+                'Scaled atoken balance change not matching'
+            );
+
+            assertLe(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, 'Scaled balances before not matching');
+            assertLe(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, 'Scaled balances after not matching');
+
+            uint256 expectedScaledATokenBalanceAfter = balanceBefore.bridgeScaledAToken + scaledDiffAToken;
+            uint256 expectedATokenBalanceAfter = expectedScaledATokenBalanceAfter.rayMul(index);
+            assertEq(
+                expectedScaledATokenBalanceAfter,
+                balanceAfter.bridgeScaledAToken,
+                'scaled aToken balance not matching'
+            );
+            assertEq(expectedATokenBalanceAfter, balanceAfter.bridgeAToken, 'aToken balance not matching');
+        }
+
         assertEq(balanceBefore.rollupToken - balanceAfter.rollupToken, depositAmount, 'Processor token not matching');
         assertEq(balanceBefore.bridgeToken, 0, 'Bridge token balance before not matching');
         assertEq(balanceAfter.bridgeToken, 0, 'Bridge token balance after not matching');
@@ -747,20 +785,42 @@ contract AaveLendingTest is TestHelper {
         Balances memory balanceAfter = _getBalances();
 
         uint256 index = pool.getReserveNormalizedIncome(address(token));
-        uint256 scaledDiff = depositAmount.rayDiv(index);
-        uint256 expectedScaledBalanceAfter = balanceBefore.rollupZk + scaledDiff;
-        uint256 expectedATokenBalanceAfter = expectedScaledBalanceAfter.rayMul(index);
+        {
+            uint256 scaledDiffZk = depositAmount.mulDiv(1e27, index);
+            assertEq(scaledDiffZk, outputValueA, 'Output value and zk balance not matching');
 
-        assertEq(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, 'Scaled balances before not matching');
-        assertEq(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, 'Scaled balances after not matching');
-        assertEq(
-            balanceAfter.rollupZk - balanceBefore.rollupZk,
-            outputValueA,
-            'Output value and zk balance not matching'
-        );
-        assertEq(balanceAfter.rollupZk - balanceBefore.rollupZk, scaledDiff, 'Scaled balance change not matching');
-        assertEq(expectedATokenBalanceAfter, balanceAfter.bridgeAToken, 'aToken balance not matching');
-        assertEq(balanceBefore.rollupEth - balanceAfter.rollupEth, depositAmount, 'Processor eth not matching');
+            assertEq(
+                balanceAfter.rollupZk - balanceBefore.rollupZk,
+                scaledDiffZk,
+                'Scaled zkbalance balance change not matching'
+            );
+
+            uint256 expectedScaledBalanceAfter = balanceBefore.rollupZk + scaledDiffZk;
+            assertEq(expectedScaledBalanceAfter, balanceAfter.rollupZk, 'aToken balance not matching');
+        }
+
+        {
+            uint256 scaledDiffAToken = depositAmount.rayDiv(index);
+            assertEq(
+                balanceAfter.bridgeScaledAToken - balanceBefore.bridgeScaledAToken,
+                scaledDiffAToken,
+                'Scaled atoken balance change not matching'
+            );
+
+            assertLe(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, 'Scaled balances before not matching');
+            assertLe(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, 'Scaled balances after not matching');
+
+            uint256 expectedScaledATokenBalanceAfter = balanceBefore.bridgeScaledAToken + scaledDiffAToken;
+            uint256 expectedATokenBalanceAfter = expectedScaledATokenBalanceAfter.rayMul(index);
+            assertEq(
+                expectedScaledATokenBalanceAfter,
+                balanceAfter.bridgeScaledAToken,
+                'scaled aToken balance not matching'
+            );
+            assertEq(expectedATokenBalanceAfter, balanceAfter.bridgeAToken, 'aToken balance not matching');
+        }
+
+        assertEq(balanceBefore.rollupEth - balanceAfter.rollupEth, depositAmount, 'Processor token not matching');
         assertEq(balanceBefore.bridgeEth, 0, 'Bridge eth balance before not matching');
         assertEq(balanceAfter.bridgeEth, 0, 'Bridge eth balance after not matching');
     }
@@ -768,8 +828,9 @@ contract AaveLendingTest is TestHelper {
     struct exitWithTokenParams {
         uint256 index;
         uint256 innerATokenWithdraw;
-        uint256 innerScaledChange;
+        uint256 aaveInnerScaledChange;
         uint256 expectedScaledBalanceAfter;
+        uint256 expectedScaledATokenBalanceAfter;
         uint256 expectedATokenBalanceAfter;
     }
 
@@ -810,18 +871,22 @@ contract AaveLendingTest is TestHelper {
         Balances memory balanceAfter = _getBalances();
 
         vars.index = pool.getReserveNormalizedIncome(address(token));
-        vars.innerATokenWithdraw = withdrawAmount.rayMul(vars.index);
-        vars.innerScaledChange = vars.innerATokenWithdraw.rayDiv(vars.index);
-
+        vars.innerATokenWithdraw = withdrawAmount.mulDiv(vars.index, 1e27);
+        vars.aaveInnerScaledChange = vars.innerATokenWithdraw.rayDiv(vars.index);
         vars.expectedScaledBalanceAfter = balanceBefore.rollupZk - withdrawAmount;
-
-        vars.expectedATokenBalanceAfter = vars.expectedScaledBalanceAfter.rayMul(vars.index);
-
-        assertEq(withdrawAmount, vars.innerScaledChange, 'Inner not matching');
+        vars.expectedScaledATokenBalanceAfter = balanceBefore.bridgeScaledAToken - vars.aaveInnerScaledChange;
+        vars.expectedATokenBalanceAfter = vars.expectedScaledATokenBalanceAfter.rayMul(vars.index);
 
         assertEq(vars.innerATokenWithdraw, outputValueA, 'Output token does not match expected output');
-        assertEq(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, 'Scaled balance before not matching');
-        assertEq(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, 'Scaled balance after not matching');
+        // Ensure that there are at least as much scaled aToken as zkAToken.
+        assertLe(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, 'Scaled balances before not matching');
+        assertLe(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, 'Scaled balances after not matching');
+
+        assertEq(
+            vars.expectedScaledATokenBalanceAfter,
+            balanceAfter.bridgeScaledAToken,
+            'Scaled balance after not matching'
+        );
         assertEq(balanceAfter.rollupZk, vars.expectedScaledBalanceAfter, 'Scaled balance after not matching');
         assertEq(
             balanceBefore.rollupZk - balanceAfter.rollupZk,
@@ -877,18 +942,23 @@ contract AaveLendingTest is TestHelper {
         Balances memory balanceAfter = _getBalances();
 
         vars.index = pool.getReserveNormalizedIncome(address(token));
-        vars.innerATokenWithdraw = withdrawAmount.rayMul(vars.index);
-        vars.innerScaledChange = vars.innerATokenWithdraw.rayDiv(vars.index);
+        vars.innerATokenWithdraw = withdrawAmount.mulDiv(vars.index, 1e27);
+        vars.aaveInnerScaledChange = vars.innerATokenWithdraw.rayDiv(vars.index);
 
         vars.expectedScaledBalanceAfter = balanceBefore.rollupZk - withdrawAmount;
-
-        vars.expectedATokenBalanceAfter = vars.expectedScaledBalanceAfter.rayMul(vars.index);
-
-        assertEq(withdrawAmount, vars.innerScaledChange, 'Inner not matching');
+        vars.expectedScaledATokenBalanceAfter = balanceBefore.bridgeScaledAToken - vars.aaveInnerScaledChange;
+        vars.expectedATokenBalanceAfter = vars.expectedScaledATokenBalanceAfter.rayMul(vars.index);
 
         assertEq(vars.innerATokenWithdraw, outputValueA, 'Output token does not match expected output');
-        assertEq(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, 'Scaled balance before not matching');
-        assertEq(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, 'Scaled balance after not matching');
+        // Ensure that there are at least as much scaled aToken as zkAToken.
+        assertLe(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, 'Scaled balances before not matching');
+        assertLe(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, 'Scaled balances after not matching');
+
+        assertEq(
+            vars.expectedScaledATokenBalanceAfter,
+            balanceAfter.bridgeScaledAToken,
+            'Scaled balance after not matching'
+        );
         assertEq(balanceAfter.rollupZk, vars.expectedScaledBalanceAfter, 'Scaled balance after not matching');
         assertEq(
             balanceBefore.rollupZk - balanceAfter.rollupZk,

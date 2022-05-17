@@ -8,7 +8,7 @@ import {WadRayMath} from './../../bridges/aave/imports/libraries/WadRayMath.sol'
 contract AaveRoundingTest is DSTest {
     using WadRayMath for uint256;
 
-    function testRounding(uint128 amountIn, uint104 indexAdd) public {
+    function testRoundingMulDiv(uint128 amountIn, uint104 indexAdd) public {
         uint256 amount = amountIn;
         uint256 index = uint256(1e27) + indexAdd;
 
@@ -16,5 +16,15 @@ contract AaveRoundingTest is DSTest {
         uint256 output = intermediateVal.rayDiv(index);
 
         assertEq(amount, output, "Scaled amounts don't match due to rounding issues");
+    }
+
+    function testFailRoundingDivMul() public {
+        uint256 amount = 70124217620;
+        uint256 index = uint256(1e27) + 7684960890848208697334640374;
+
+        uint256 intermediateVal = amount.rayDiv(index);
+        uint256 output = intermediateVal.rayMul(index);
+
+        assertGe(output, amount, 'Same tx deposit and withdraw will lose funds');
     }
 }
