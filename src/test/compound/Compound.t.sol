@@ -112,36 +112,33 @@ contract CompoundTest is DSTest {
 
     /* TEST DEPOSIT OF ETH */
     function testCompoundBridgeETH(uint256 depositAmount) public {
-        console.log("Entering Compound Bridge ETH deposit test");
         if (depositAmount < 1e9 || depositAmount >= 2**96) return;
         vm.deal(address(rollupProcessor), depositAmount);
 
         AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
+        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: address(0x0000000000000000000000000000000000000000),
             assetType: AztecTypes.AztecAssetType.ETH
         });
-        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
+        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset({
             id: 2,
             erc20Address: cETHaddress,
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
+        (uint256 outputValueA, , ) = rollupProcessor.convert(
             address(compoundBridge),
-            inputAsset,
+            inputAssetA,
             empty,
-            outputAsset,
+            outputAssetA,
             empty,
             depositAmount,
             1,
             0
         );
 
-        uint256 rollupcEth = cETH.balanceOf(address(rollupProcessor));
-
-        assertGt(rollupcEth, 0, "cETH received is zero");
+        assertGt(outputValueA, 0, "cETH received is zero");
     }
 
     /* TEST ALL STABLECOIN DEPOSITS */

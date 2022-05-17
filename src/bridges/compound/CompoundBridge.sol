@@ -91,8 +91,8 @@ contract CompoundBridge is IDefiBridge {
             );
             ICETH cToken = ICETH(outputAssetA.erc20Address);
             cToken.mint{value: msg.value}();
-            outputValueB = cToken.balanceOf(address(this));
-            cToken.transfer(rollupProcessor, outputValueB);
+            outputValueA = cToken.balanceOf(address(this));
+            cToken.approve(rollupProcessor, outputValueA);
         } else if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
             // redeem cETH case
             require(
@@ -100,15 +100,9 @@ contract CompoundBridge is IDefiBridge {
                 "CompoundBridge: INVALID_INPUT_ASSET_TYPE"
             );
             ICETH cToken = ICETH(inputAssetA.erc20Address);
-            outputValueB = address(this).balance;
-            console.log("bridge balance before redeem = ", outputValueB);
             cToken.redeem(totalInputValue);
-            console.log("bridge balance after redeem = ", address(this).balance);
-            outputValueB = address(this).balance - outputValueB;
-            console.log("ETH to send back via convert = ", outputValueB);
-            IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueB}(interactionNonce);
-            //return(outputValueB,0,true); // ATC fixing failure on CircleCI
-            return (0, 0, true);
+            outputValueA = address(this).balance;
+            IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
         } else {
             // mint or redeem cToken cases (auxData: 0 = mint, 1 = redeem)
             require(
