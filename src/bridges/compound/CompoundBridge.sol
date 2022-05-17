@@ -52,6 +52,9 @@ interface ICERC20 {
 contract CompoundBridge is IDefiBridge {
     address public immutable rollupProcessor;
 
+    error InvalidCaller();
+    error AsyncModeDisabled();
+
     constructor(address _rollupProcessor) public {
         rollupProcessor = _rollupProcessor;
     }
@@ -75,12 +78,10 @@ contract CompoundBridge is IDefiBridge {
         returns (
             uint256 outputValueA,
             uint256 outputValueB,
-            bool isAsync
+            bool
         )
     {
-        require(msg.sender == rollupProcessor, "CompoundBridge: INVALID_CALLER");
-        isAsync = true;
-        IERC20 underlying;
+        if (msg.sender != rollupProcessor) revert InvalidCaller();
 
         if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
             // mint cETH case
@@ -121,7 +122,7 @@ contract CompoundBridge is IDefiBridge {
             if (auxData == 0) {
                 // mint
                 ICERC20 cToken = ICERC20(outputAssetA.erc20Address);
-                underlying = IERC20(inputAssetA.erc20Address);
+                IERC20 underlying = IERC20(inputAssetA.erc20Address);
                 require(
                     underlying.balanceOf(address(this)) >= totalInputValue,
                     "CompoundBridge: INSUFFICIENT_TOKEN_BALANCE"
@@ -134,7 +135,7 @@ contract CompoundBridge is IDefiBridge {
             } else if (auxData == 1) {
                 // redeem
                 ICERC20 cToken = ICERC20(inputAssetA.erc20Address);
-                underlying = IERC20(outputAssetA.erc20Address);
+                IERC20 underlying = IERC20(outputAssetA.erc20Address);
                 outputValueB = underlying.balanceOf(address(this));
                 require(
                     cToken.balanceOf(address(this)) >= totalInputValue,
@@ -146,15 +147,7 @@ contract CompoundBridge is IDefiBridge {
                 underlying.transfer(rollupProcessor, outputValueB);
             } else revert("CompoundBridge: UNRECOGNIZED_ACTION_REQUESTED");
         }
-        return (0, 0, true);
     }
-
-    ////ATC: This appears unnecessary for Compound...
-    //function canFinalise(
-    //  uint256 /*interactionNonce*/
-    //) external view override returns (bool) {
-    //  return false;
-    //}
 
     function finalise(
         AztecTypes.AztecAsset calldata,
@@ -172,6 +165,6 @@ contract CompoundBridge is IDefiBridge {
             bool interactionComplete
         )
     {
-        require(msg.sender == rollupProcessor, "CompoundBridge: INVALID_CALLER");
+        revert AsyncModeDisabled();
     }
 }
