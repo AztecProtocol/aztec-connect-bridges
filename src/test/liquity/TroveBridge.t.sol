@@ -147,7 +147,7 @@ contract TroveBridgeTest is TestUtil {
         // Keep on redeeming 20 million LUSD until the trove is in the closedByRedemption status
         uint256 amountToRedeem = 2e25;
         do {
-            mint("LUSD", address(this), amountToRedeem);
+            deal(tokens["LUSD"].addr, address(this), amountToRedeem);
             bridge.troveManager().redeemCollateral(amountToRedeem, address(0), address(0), address(0), 0, 0, 1e18);
         } while (Status(bridge.troveManager().getTroveStatus(address(bridge))) != Status.closedByRedemption);
 
@@ -239,7 +239,7 @@ contract TroveBridgeTest is TestUtil {
 
         uint256 borrowerFee = processorTBBalance - processorLUSDBalance;
         // Mint the borrower fee to ROLLUP_PROCESSOR in order to have a big enough balance for repaying
-        mint("LUSD", address(rollupProcessor), borrowerFee);
+        deal(tokens["LUSD"].addr, address(rollupProcessor), borrowerFee);
 
         rollupProcessor.convert(
             address(bridge),
@@ -274,7 +274,7 @@ contract TroveBridgeTest is TestUtil {
         uint256 borrowerFee = ownerTBBalance - ownerLUSDBalance - 200e18;
         uint256 amountToRepay = ownerLUSDBalance + borrowerFee;
 
-        mint("LUSD", OWNER, borrowerFee);
+        deal(tokens["LUSD"].addr, OWNER, borrowerFee);
         tokens["LUSD"].erc.approve(address(bridge), amountToRepay);
 
         bridge.closeTrove();
