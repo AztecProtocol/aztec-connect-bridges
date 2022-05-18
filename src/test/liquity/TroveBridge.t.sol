@@ -235,11 +235,10 @@ contract TroveBridgeTest is TestUtil {
 
     function _repay() private {
         uint256 processorTBBalance = bridge.balanceOf(address(rollupProcessor));
-        uint256 processorLUSDBalance = tokens["LUSD"].erc.balanceOf(address(rollupProcessor));
 
-        uint256 borrowerFee = processorTBBalance - processorLUSDBalance;
         // Mint the borrower fee to ROLLUP_PROCESSOR in order to have a big enough balance for repaying
-        deal(tokens["LUSD"].addr, address(rollupProcessor), borrowerFee);
+        // borrowerFee = processorTBBalance - processorLUSDBalance;
+        deal(tokens["LUSD"].addr, address(rollupProcessor), processorTBBalance);
 
         rollupProcessor.convert(
             address(bridge),
@@ -274,7 +273,8 @@ contract TroveBridgeTest is TestUtil {
         uint256 borrowerFee = ownerTBBalance - ownerLUSDBalance - 200e18;
         uint256 amountToRepay = ownerLUSDBalance + borrowerFee;
 
-        deal(tokens["LUSD"].addr, OWNER, borrowerFee);
+        // Increase OWNER's LUSD balance by borrowerFee
+        deal(tokens["LUSD"].addr, OWNER, amountToRepay);
         tokens["LUSD"].erc.approve(address(bridge), amountToRepay);
 
         bridge.closeTrove();
