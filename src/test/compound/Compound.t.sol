@@ -9,9 +9,8 @@ import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import  "./../../bridges/compound/interfaces/ICERC20.sol";
+import "./../../bridges/compound/interfaces/ICERC20.sol";
 import {CompoundBridge} from "./../../bridges/compound/CompoundBridge.sol";
-
 
 contract CompoundTest is Test {
     DefiBridgeProxy defiBridgeProxy;
@@ -169,5 +168,58 @@ contract CompoundTest is Test {
             1e10,
             "amount of underlying Token withdrawn is not similar to the amount of cToken deposited"
         );
+    }
+
+    function testInvalidCaller() public {
+        AztecTypes.AztecAsset memory empty;
+
+        try compoundBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0)) {
+            revert("convert(..) has to revert when caller is not rollupProcessor.");
+        } catch (bytes memory reason) {
+            // Verify that the selector encoded in reason corresponds to InvalidCaller error
+            assertEq(CompoundBridge.InvalidCaller.selector, bytes4(reason));
+        }
+    }
+
+    function testIncorrectInputAsset() public {
+        AztecTypes.AztecAsset memory empty;
+
+        AztecTypes.AztecAsset memory ethAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(0x0000000000000000000000000000000000000000),
+            assetType: AztecTypes.AztecAssetType.ETH
+        });
+
+        vm.prank(address(rollupProcessor));
+        try compoundBridge.convert(ethAsset, empty, empty, empty, 0, 0, 1, address(0)) {
+            revert("convert(..) has to revert when ETH is an input asset during redemption.");
+        } catch (bytes memory reason) {
+            // Verify that the selector encoded in reason corresponds to InvalidCaller error
+            assertEq(CompoundBridge.IncorrectInputAsset.selector, bytes4(reason));
+        }
+    }
+
+    function testIncorrectOutputAsset() public {
+        AztecTypes.AztecAsset memory empty;
+
+        vm.prank(address(rollupProcessor));
+        try compoundBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0)) {
+            revert("convert(..) has to revert when output asset is not ERC20.");
+        } catch (bytes memory reason) {
+            // Verify that the selector encoded in reason corresponds to InvalidCaller error
+            assertEq(CompoundBridge.IncorrectOutputAsset.selector, bytes4(reason));
+        }
+    }
+
+    function testIncorrectAuxData() public {
+        AztecTypes.AztecAsset memory empty;
+
+        vm.prank(address(rollupProcessor));
+        try compoundBridge.convert(empty, empty, empty, empty, 0, 0, 2, address(0)) {
+            revert("convert(..) has to revert when for auxdata not in {0, 1}.");
+        } catch (bytes memory reason) {
+            // Verify that the selector encoded in reason corresponds to InvalidCaller error
+            assertEq(CompoundBridge.IncorrectAuxData.selector, bytes4(reason));
+        }
     }
 }
