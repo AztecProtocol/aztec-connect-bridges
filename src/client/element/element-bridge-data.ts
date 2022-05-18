@@ -226,17 +226,16 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
       return [];
     }
 
-    const latestBlock = await this.getCurrentBlock();
+    const YEAR = 60n * 60n * 24n * 365n;
 
-    const now = latestBlock.timestamp;
     const totalInterest = endValue.toBigInt() - defiEvent.totalInputValue;
-    const elapsedTime = BigInt(now - defiEvent.timestamp);
     const totalTime = exitTimestamp.toBigInt() - BigInt(defiEvent.timestamp);
-    const timeRatio = divide(elapsedTime, totalTime, this.scalingFactor);
-    const accruedInterst = (totalInterest * timeRatio) / this.scalingFactor;
+    const interestPerSecondScaled = divide(totalInterest, totalTime, this.scalingFactor);
+    const yearlyInterest = (interestPerSecondScaled * YEAR) / this.scalingFactor;
 
-    const currentYield = (defiEvent.totalInputValue / (defiEvent.totalInputValue + accruedInterst)) * 100n;
-    return [Number(currentYield)];
+    const percentageScaled = divide(yearlyInterest, defiEvent.totalInputValue, this.scalingFactor);
+    const percentage2sf = (percentageScaled * 10000n) / this.scalingFactor;
+    return [Number(percentage2sf) / 100];
   }
 
   async getAuxData(

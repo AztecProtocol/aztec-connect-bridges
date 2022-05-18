@@ -49,11 +49,11 @@ contract ElementTest is DSTest {
         1643382476,
         1643382514,
         1644601070,
-        1644604852,
+        //1644604852, commented out becuase these tranches are not used
         1650025565,
         1651240496,
         1651247155,
-        1651264326,
+        //1651264326,
         1651265241,
         1651267340,
         1651275535
@@ -99,7 +99,8 @@ contract ElementTest is DSTest {
     AztecTypes.AztecAsset emptyAsset;
     uint256 private numTranches = 0;
 
-    int64 constant daiConvertGas = 237626;
+    int64 constant daiConvertGas = 239188;
+    int64 constant usdcFinaliseGas = 225143;
 
     event LogConvert(uint256 indexed nonce, uint256 totalInputValue, int64 gasUsed);
 
@@ -488,6 +489,74 @@ contract ElementTest is DSTest {
             emptyAsset,
             outputAsset,
             emptyAsset,
+            depositAmount,
+            1,
+            trancheConfigs['DAI'][0].expiry,
+            address(0)
+        );
+    }
+
+    function testShouldRejectInputAssetBNotUnused() public {
+        setupConvergentPool(trancheConfigs['DAI'][0]);
+        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(tokens['DAI']),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        AztecTypes.AztecAsset memory inputAssetB = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(tokens['DAI']),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(tokens['DAI']),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        uint256 depositAmount = 15000;
+        _setTokenBalance('DAI', address(elementBridge), depositAmount);
+
+        vm.expectRevert(abi.encodeWithSelector(ElementBridge.INPUT_ASSETB_NOT_UNUSED.selector));
+        vm.prank(address(rollupProcessor));
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = elementBridge.convert(
+            inputAsset,
+            inputAssetB,
+            outputAsset,
+            emptyAsset,
+            depositAmount,
+            1,
+            trancheConfigs['DAI'][0].expiry,
+            address(0)
+        );
+    }
+
+    function testShouldRejectOutputAssetBNotUnused() public {
+        setupConvergentPool(trancheConfigs['DAI'][0]);
+        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(tokens['DAI']),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(tokens['DAI']),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        AztecTypes.AztecAsset memory outputAssetB = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(tokens['DAI']),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        uint256 depositAmount = 15000;
+        _setTokenBalance('DAI', address(elementBridge), depositAmount);
+
+        vm.expectRevert(abi.encodeWithSelector(ElementBridge.OUTPUT_ASSETB_NOT_UNUSED.selector));
+        vm.prank(address(rollupProcessor));
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = elementBridge.convert(
+            inputAsset,
+            emptyAsset,
+            outputAsset,
+            outputAssetB,
             depositAmount,
             1,
             trancheConfigs['DAI'][0].expiry,
@@ -944,7 +1013,7 @@ contract ElementTest is DSTest {
                 }
             }
         }
-        vm.warp(expiries[expiries.length - 1]);
+        vm.warp(expiries[expiries.length - 1] + 1);
 
         for (uint256 interactionIndex = 0; interactionIndex < interactions.length; interactionIndex++) {
             Interaction memory interaction = interactions[interactionIndex];
@@ -1032,7 +1101,7 @@ contract ElementTest is DSTest {
                 }
             }
         }
-        vm.warp(expiries[expiries.length - 1]);
+        vm.warp(expiries[expiries.length - 1] + 1);
 
         // we are now going to call finalise on every interaction
         // but we are going to do it out of order
@@ -1117,12 +1186,15 @@ contract ElementTest is DSTest {
             uint256 totalDeposited = depositAmount * configs.length;
             uint256 assetInBridge = tokens[asset].balanceOf(address(elementBridge));
             assertGt(assetInBridge, totalDeposited);
+            for (uint256 trancheIndex = 0; trancheIndex < configs.length; trancheIndex++) {
+                assertZeroBalance(address(elementBridge), configs[trancheIndex].trancheAddress);
+            }
         }
     }
 
     function testMultipleInteractionsAreFinalisedOnConvert() public {
         // need to increase the gaslimit for the bridge to finalise
-        rollupProcessor.setBridgeGasLimit(address(elementBridge), 800000);
+        rollupProcessor.setBridgeGasLimit(address(elementBridge), 960000);
         setupAssetPools('DAI');
         setupAssetPools('USDC');
         string memory asset = 'USDC';
@@ -1171,6 +1243,16 @@ contract ElementTest is DSTest {
         assertEq(balancesBridgeAfter.startingAsset, 0);
         // the rollup contract's balance of USDC should now be greater than the original amount deposited
         assertGt(balancesRollupAfter.startingAsset, usdcDepositAmount * numUsdcInteractions);
+
+        // now verify that each interaction received the same proportion of the output as it gave in deposit
+        for (uint256 interactionIndex = 0; interactionIndex < interactions.length; interactionIndex++) {
+            Interaction memory interaction = interactions[interactionIndex];
+            uint256 percentOfDeposit = (interaction.depositAmount * 100) / (15 * quantities[interaction.tranche.asset]);
+            uint256 totalReceipt = balancesRollupAfter.startingAsset;
+            (bool finalised, uint256 interactionOutputValue) = rollupProcessor.getDefiResult(interaction.nonce);
+            assertWithinOnePercentagePoint(interactionOutputValue, totalReceipt, percentOfDeposit);
+            assertEq(finalised, true);
+        }
     }
 
     function testMultipleInteractionsFailToFinaliseIfInsufficientBalance() public {
@@ -1260,10 +1342,12 @@ contract ElementTest is DSTest {
     }
 
     function testCanFinaliseAllInteractionsOnConvert() public {
+        // set the gas limit high as we want all of our interactions to finalise
+        rollupProcessor.setBridgeGasLimit(address(elementBridge), 900000);
         setupAllPools();
         uint256 numInteractionsPerTranche = 5;
         uint8[5] memory depositMultipliers = [1, 2, 3, 4, 5];
-        Interaction[] memory interactions = new Interaction[](numTranches * numInteractionsPerTranche);
+        Interaction[] memory interactions = new Interaction[]((numTranches - 1) * numInteractionsPerTranche);
         uint256 nonce = 1;
         for (uint256 assetIndex = 0; assetIndex < assets.length; assetIndex++) {
             string storage asset = assets[assetIndex];
@@ -1272,7 +1356,7 @@ contract ElementTest is DSTest {
             _increaseTokenBalance(asset, address(rollupProcessor), depositAmount * configs.length * 15);
             for (uint256 configIndex = 0; configIndex < configs.length; configIndex++) {
                 TrancheConfig storage config = configs[configIndex];
-                if (config.expiry >= expiries[expiries.length - 2]) {
+                if (config.expiry >= expiries[expiries.length - 1]) {
                     continue;
                 }
                 for (uint256 interactionCount = 0; interactionCount < numInteractionsPerTranche; interactionCount++) {
@@ -1297,11 +1381,15 @@ contract ElementTest is DSTest {
                         balancesBefore.balancerTranche - balancesAfter.balancerTranche,
                         balancesAfter.bridgeTranche - balancesBefore.bridgeTranche
                     );
+                    // accumulate the tranche tokens collected by the bridge contract
+                    bridgeBalanceByTranche[config.trancheAddress] +=
+                        balancesAfter.bridgeTranche -
+                        balancesBefore.bridgeTranche;
                     nonce++;
                 }
             }
         }
-        vm.warp(expiries[expiries.length - 2]);
+        vm.warp(expiries[expiries.length - 2] + 1);
         for (uint256 trancheCount = 0; trancheCount < numTranches; trancheCount++) {
             string memory asset = 'DAI';
             uint256 daiDepositAmount = quantities[asset];
@@ -1323,7 +1411,195 @@ contract ElementTest is DSTest {
             uint256 totalDeposited = depositAmount * (configs.length * 15);
             uint256 rollupBalance = tokens[asset].balanceOf(address(rollupProcessor));
             assertGt(rollupBalance, totalDeposited);
-            assertEq(tokens[asset].balanceOf(address(elementBridge)), 0);
+            assertZeroBalance(address(elementBridge), address(tokens[asset]));
+            for (uint256 trancheIndex = 0; trancheIndex < configs.length; trancheIndex++) {
+                // the second dai tranche hasn't been finalised so don't test this
+                if (trancheIndex == 1 && keccak256(bytes(asset)) == keccak256(bytes('DAI'))) {
+                    continue;
+                }
+                assertZeroBalance(address(elementBridge), configs[trancheIndex].trancheAddress);
+            }
+        }
+
+        // now verify that each interaction received the same proportion of the output as it gave in deposit
+        for (uint256 interactionIndex = 0; interactionIndex < interactions.length; interactionIndex++) {
+            Interaction memory interaction = interactions[interactionIndex];
+            uint256 percentOfDeposit = (interaction.depositAmount * 100) / (15 * quantities[interaction.tranche.asset]);
+            // this is the amount of tranche tokens collected by the bridge contract. These should have been withdrawn pretty much one for one into the end asset
+            uint256 totalReceipt = bridgeBalanceByTranche[interaction.tranche.trancheAddress];
+            (bool finalised, uint256 interactionOutputValue) = rollupProcessor.getDefiResult(interaction.nonce);
+            assertWithinOnePercentagePoint(interactionOutputValue, totalReceipt, percentOfDeposit);
+            assertEq(finalised, true);
+        }
+    }
+
+    function testCanFinaliseInteractionsAsTimeProgresses() public {
+        // set the gas limit high as we want all of our interactions to finalise
+        rollupProcessor.setBridgeGasLimit(address(elementBridge), 2000000);
+        setupAllPools();
+        uint256 numInteractionsPerTranche = 5;
+        uint256 numTranchesPerBatch = 5;
+        uint8[5] memory depositMultipliers = [1, 2, 3, 4, 5];
+        Interaction[] memory interactions = new Interaction[]((numTranches - 1) * numInteractionsPerTranche);
+        uint256 nonce = 1;
+        for (uint256 assetIndex = 0; assetIndex < assets.length; assetIndex++) {
+            string storage asset = assets[assetIndex];
+            uint256 depositAmount = quantities[asset];
+            TrancheConfig[] storage configs = trancheConfigs[asset];
+            _increaseTokenBalance(asset, address(rollupProcessor), depositAmount * configs.length * 15);
+        }
+
+        // deposit into the the first batch of expiries
+        // we do this by looping over everything but only selecting the tranches that have their expiry in the correct range
+        for (uint256 assetIndex = 0; assetIndex < assets.length; assetIndex++) {
+            string storage asset = assets[assetIndex];
+            uint256 depositAmount = quantities[asset];
+            TrancheConfig[] storage configs = trancheConfigs[asset];
+            for (uint256 configIndex = 0; configIndex < configs.length; configIndex++) {
+                TrancheConfig storage config = configs[configIndex];
+                if (config.expiry > expiries[numTranchesPerBatch - 1]) {
+                    continue;
+                }
+                for (uint256 interactionCount = 0; interactionCount < numInteractionsPerTranche; interactionCount++) {
+                    Interaction memory interaction = Interaction(
+                        config,
+                        depositAmount * depositMultipliers[interactionCount],
+                        nonce,
+                        0
+                    );
+                    interactions[nonce - 1] = interaction;
+                    Balances memory balancesBefore = _getBalances(interaction, address(rollupProcessor));
+                    (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, interaction);
+                    assertEq(isAsync, true);
+                    assertEq(outputValueA, 0);
+                    assertEq(outputValueB, 0);
+                    Balances memory balancesAfter = _getBalances(interaction, address(rollupProcessor));
+                    assertEq(
+                        balancesBefore.startingAsset - balancesAfter.startingAsset,
+                        balancesAfter.balancerAsset - balancesBefore.balancerAsset
+                    );
+                    assertEq(
+                        balancesBefore.balancerTranche - balancesAfter.balancerTranche,
+                        balancesAfter.bridgeTranche - balancesBefore.bridgeTranche
+                    );
+                    // accumulate the tranche tokens collected by the bridge contract
+                    bridgeBalanceByTranche[config.trancheAddress] +=
+                        balancesAfter.bridgeTranche -
+                        balancesBefore.bridgeTranche;
+                    nonce++;
+                }
+            }
+        }
+        // now fast forward time to just after the end of the first batch
+        vm.warp(expiries[numTranchesPerBatch - 1] + 1);
+
+        // deposit into the the second batch of expiries
+        // we do this by looping over everything but only selecting the tranches that have their expiry in the correct range
+        // this should finalise the first batch of deposits which we can then test afterwards
+        for (uint256 assetIndex = 0; assetIndex < assets.length; assetIndex++) {
+            string storage asset = assets[assetIndex];
+            uint256 depositAmount = quantities[asset];
+            TrancheConfig[] storage configs = trancheConfigs[asset];
+            for (uint256 configIndex = 0; configIndex < configs.length; configIndex++) {
+                TrancheConfig storage config = configs[configIndex];
+                if (
+                    config.expiry < expiries[numTranchesPerBatch] ||
+                    config.expiry > expiries[numTranchesPerBatch * 2 - 1]
+                ) {
+                    continue;
+                }
+                for (uint256 interactionCount = 0; interactionCount < numInteractionsPerTranche; interactionCount++) {
+                    Interaction memory interaction = Interaction(
+                        config,
+                        depositAmount * depositMultipliers[interactionCount],
+                        nonce,
+                        0
+                    );
+                    interactions[nonce - 1] = interaction;
+                    Balances memory balancesBefore = _getBalances(interaction, address(rollupProcessor));
+                    (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, interaction);
+                    assertEq(isAsync, true);
+                    assertEq(outputValueA, 0);
+                    assertEq(outputValueB, 0);
+                    Balances memory balancesAfter = _getBalances(interaction, address(rollupProcessor));
+                    assertEq(
+                        balancesBefore.balancerTranche - balancesAfter.balancerTranche,
+                        balancesAfter.bridgeTranche - balancesBefore.bridgeTranche
+                    );
+                    // accumulate the tranche tokens collected by the bridge contract
+                    bridgeBalanceByTranche[config.trancheAddress] +=
+                        balancesAfter.bridgeTranche -
+                        balancesBefore.bridgeTranche;
+                    nonce++;
+                }
+            }
+        }
+
+        // now verify that the first batch of deposits have been finalised and they produced the correct output
+        // the second batch should not be finalised and their output should be 0
+        uint256 numInteractionsInFirstBatch = numTranchesPerBatch * numInteractionsPerTranche;
+        for (uint256 interactionIndex = 0; interactionIndex < interactions.length; interactionIndex++) {
+            Interaction memory interaction = interactions[interactionIndex];
+            (bool finalised, uint256 interactionOutputValue) = rollupProcessor.getDefiResult(interaction.nonce);
+            if (interactionIndex < numInteractionsInFirstBatch) {
+                uint256 percentOfDeposit = (interaction.depositAmount * 100) /
+                    (15 * quantities[interaction.tranche.asset]);
+                // this is the amount of tranche tokens collected by the bridge contract. These should have been withdrawn pretty much one for one into the end asset
+                uint256 totalReceipt = bridgeBalanceByTranche[interaction.tranche.trancheAddress];
+                assertWithinOnePercentagePoint(interactionOutputValue, totalReceipt, percentOfDeposit);
+                assertEq(finalised, true);
+            } else {
+                assertEq(finalised, false);
+                assertEq(interactionOutputValue, 0);
+            }
+        }
+
+        // fast forward to the final tranche
+        vm.warp(expiries[numTranchesPerBatch * 2 - 1] + 1);
+
+        // make some deposits into the final tranche
+        // this should finalise the second batch of deposits
+        for (uint256 trancheCount = 0; trancheCount < numTranches; trancheCount++) {
+            string memory asset = 'DAI';
+            uint256 daiDepositAmount = quantities[asset];
+            TrancheConfig storage config = trancheConfigs[asset][1];
+            Interaction memory daiInteraction = Interaction(config, daiDepositAmount, nonce, 0);
+            _increaseTokenBalance(asset, address(rollupProcessor), daiDepositAmount);
+            (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, daiInteraction);
+            assertEq(isAsync, true);
+            assertEq(outputValueA, 0);
+            assertEq(outputValueB, 0);
+            nonce++;
+        }
+
+        //verify rollup and bridge contract token quantities
+        for (uint256 assetIndex = 0; assetIndex < assets.length; assetIndex++) {
+            string storage asset = assets[assetIndex];
+            uint256 depositAmount = quantities[asset];
+            TrancheConfig[] storage configs = trancheConfigs[asset];
+            uint256 totalDeposited = depositAmount * configs.length * 15;
+            uint256 rollupBalance = tokens[asset].balanceOf(address(rollupProcessor));
+            assertGt(rollupBalance, totalDeposited);
+            assertZeroBalance(address(elementBridge), address(tokens[asset]));
+            for (uint256 trancheIndex = 0; trancheIndex < configs.length; trancheIndex++) {
+                // the second dai tranche hasn't been finalised so don't test this
+                if (trancheIndex == 1 && keccak256(bytes(asset)) == keccak256(bytes('DAI'))) {
+                    continue;
+                }
+                assertZeroBalance(address(elementBridge), configs[trancheIndex].trancheAddress);
+            }
+        }
+
+        // now verify that each interaction received the same proportion of the output as it gave in deposit
+        // for the first batch, this is a repeat of the check we did earlier but that's ok
+        for (uint256 interactionIndex = 0; interactionIndex < interactions.length; interactionIndex++) {
+            Interaction memory interaction = interactions[interactionIndex];
+            uint256 percentOfDeposit = (interaction.depositAmount * 100) / (15 * quantities[interaction.tranche.asset]);
+            // this is the amount of tranche tokens collected by the bridge contract. These should have been withdrawn pretty much one for one into the end asset
+            uint256 totalReceipt = bridgeBalanceByTranche[interaction.tranche.trancheAddress];
+            (bool finalised, uint256 interactionOutputValue) = rollupProcessor.getDefiResult(interaction.nonce);
+            assertWithinOnePercentagePoint(interactionOutputValue, totalReceipt, percentOfDeposit);
+            assertEq(finalised, true);
         }
     }
 
@@ -1419,7 +1695,7 @@ contract ElementTest is DSTest {
 
     function testOnlyFinalisesUpToGasLimit1() public {
         // set the gas limit so that only the first interaction finalises
-        rollupProcessor.setBridgeGasLimit(address(elementBridge), 570000);
+        rollupProcessor.setBridgeGasLimit(address(elementBridge), 600000);
         setupAssetPools('DAI');
         setupAssetPools('USDC');
         string memory asset = 'USDC';
@@ -1449,7 +1725,7 @@ contract ElementTest is DSTest {
         _increaseTokenBalance(asset, address(rollupProcessor), daiDepositAmount);
         // we expect 1 Finalise events to be emitted but we can't test the data values
         vm.expectEmit(false, false, false, true);
-        emit LogFinalise(5, true, '', 224768);
+        emit LogFinalise(5, true, '', usdcFinaliseGas);
         {
             (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, daiInteraction);
             assertEq(isAsync, true);
@@ -1472,11 +1748,17 @@ contract ElementTest is DSTest {
             balancesRollupAfter.startingAsset + balancesBridgeAfter.startingAsset,
             20
         );
+
+        for (uint256 i = 0; i < numUsdcInteractions; i++) {
+            (bool finalised, uint256 outputValueA) = rollupProcessor.getDefiResult(numUsdcInteractions - i);
+            assertEq(finalised, i == 0);
+            assertEq(outputValueA, i == 0 ? balancesRollupAfter.startingAsset : 0);
+        }
     }
 
     function testOnlyFinalisesUpToGasLimit2() public {
         // set the gas limit so that only the first 2 interactions finalise
-        rollupProcessor.setBridgeGasLimit(address(elementBridge), 600000);
+        rollupProcessor.setBridgeGasLimit(address(elementBridge), 670000);
         setupAssetPools('DAI');
         setupAssetPools('USDC');
         string memory asset = 'USDC';
@@ -1531,11 +1813,25 @@ contract ElementTest is DSTest {
             balancesRollupAfter.startingAsset + balancesBridgeAfter.startingAsset,
             numExpectedFinalisedInteractions * 20
         );
+
+        for (uint256 i = 0; i < numUsdcInteractions; i++) {
+            (bool finalised, uint256 outputValueA) = rollupProcessor.getDefiResult(numUsdcInteractions - i);
+            assertEq(finalised, i < numExpectedFinalisedInteractions);
+            if (i < numExpectedFinalisedInteractions) {
+                assertWithinOnePercentagePoint(
+                    outputValueA,
+                    balancesRollupAfter.startingAsset + balancesBridgeAfter.startingAsset,
+                    20
+                );
+            } else {
+                assertEq(outputValueA, 0);
+            }
+        }
     }
 
     function testOnlyFinalisesUpToGasLimit3() public {
         // set the gas limit so that only the first 3 interactions finalise
-        rollupProcessor.setBridgeGasLimit(address(elementBridge), 640000);
+        rollupProcessor.setBridgeGasLimit(address(elementBridge), 800000);
         setupAssetPools('DAI');
         setupAssetPools('USDC');
         string memory asset = 'USDC';
@@ -1591,6 +1887,20 @@ contract ElementTest is DSTest {
             balancesRollupAfter.startingAsset + balancesBridgeAfter.startingAsset,
             numExpectedFinalisedInteractions * 20
         );
+
+        for (uint256 i = 0; i < numUsdcInteractions; i++) {
+            (bool finalised, uint256 outputValueA) = rollupProcessor.getDefiResult(numUsdcInteractions - i);
+            assertEq(finalised, i < numExpectedFinalisedInteractions);
+            if (i < numExpectedFinalisedInteractions) {
+                assertWithinOnePercentagePoint(
+                    outputValueA,
+                    balancesRollupAfter.startingAsset + balancesBridgeAfter.startingAsset,
+                    20
+                );
+            } else {
+                assertEq(outputValueA, 0);
+            }
+        }
     }
 
     function testRedemptionFailsIfNotEnoughGas() public {

@@ -35,6 +35,8 @@ contract ElementBridge is IDefiBridge {
     error INVALID_CALLER();
     error ASSET_IDS_NOT_EQUAL();
     error ASSET_NOT_ERC20();
+    error INPUT_ASSETB_NOT_UNUSED();
+    error OUTPUT_ASSETB_NOT_UNUSED();
     error INTERACTION_ALREADY_EXISTS();
     error POOL_NOT_FOUND();
     error UNKNOWN_NONCE();
@@ -150,12 +152,12 @@ contract ElementBridge is IDefiBridge {
     mapping(uint64 => uint256[]) private expiryToNonce;
 
     // 48 hours in seconds, usd for calculating speeedbump expiries
-    uint256 internal constant _FORTY_EIGHT_HOURS = 172800;
+    uint256 internal constant FORTY_EIGHT_HOURS = 172800;
 
     uint256 internal constant MAX_UINT = type(uint256).max;
 
-    uint256 internal constant MIN_GAS_FOR_CHECK_AND_FINALISE = 50000;
-    uint256 internal constant MIN_GAS_FOR_FUNCTION_COMPLETION = 5000;
+    uint256 internal constant MIN_GAS_FOR_CHECK_AND_FINALISE = 40000;
+    uint256 internal constant MIN_GAS_FOR_FUNCTION_COMPLETION = 2000;
     uint256 internal constant MIN_GAS_FOR_FAILED_INTERACTION = 20000;
     uint256 internal constant MIN_GAS_FOR_EXPIRY_REMOVAL = 25000;
 
@@ -427,9 +429,9 @@ contract ElementBridge is IDefiBridge {
      */
     function convert(
         AztecTypes.AztecAsset calldata inputAssetA,
-        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata inputAssetB,
         AztecTypes.AztecAsset calldata outputAssetA,
-        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata outputAssetB,
         uint256 totalInputValue,
         uint256 interactionNonce,
         uint64 auxData,
@@ -455,6 +457,12 @@ contract ElementBridge is IDefiBridge {
         }
         if (inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) {
             revert ASSET_NOT_ERC20();
+        }
+        if (inputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED) {
+            revert INPUT_ASSETB_NOT_UNUSED();
+        }
+        if (outputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED) {
+            revert OUTPUT_ASSETB_NOT_UNUSED();
         }
         if (interactions[interactionNonce].expiry != 0) {
             revert INTERACTION_ALREADY_EXISTS();
@@ -633,7 +641,7 @@ contract ElementBridge is IDefiBridge {
         if (interaction.expiry == 0) {
             revert UNKNOWN_NONCE();
         }
-        if (interaction.expiry > block.timestamp) {
+        if (interaction.expiry >= block.timestamp) {
             revert BRIDGE_NOT_READY();
         }
         if (interaction.finalised) {
@@ -641,7 +649,10 @@ contract ElementBridge is IDefiBridge {
         }
 
         TrancheAccount storage trancheAccount = trancheAccounts[interaction.trancheAddress];
-        if (trancheAccount.numDeposits == 0) {
+        // cache a couple of frequently used values from the tranche account here
+        uint32 numDepositsIntoTranche = trancheAccount.numDeposits;
+        uint256 trancheTokensHeld = trancheAccount.quantityTokensHeld;
+        if (numDepositsIntoTranche == 0) {
             // shouldn't be possible, this means we have had no deposits against this tranche
             setInteractionAsFailure(interaction, interactionNonce, 'NO_DEPOSITS_2', 0);
             popInteractionFromNonceMapping(interaction, interactionNonce);
@@ -653,9 +664,7 @@ contract ElementBridge is IDefiBridge {
             // tranche not redeemed, we need to withdraw the principal
             // convert the tokens back to underlying using the tranche
             ITranche tranche = ITranche(interaction.trancheAddress);
-            try tranche.withdrawPrincipal(trancheAccount.quantityTokensHeld, address(this)) returns (
-                uint256 valueRedeemed
-            ) {
+            try tranche.withdrawPrincipal(trancheTokensHeld, address(this)) returns (uint256 valueRedeemed) {
                 trancheAccount.quantityAssetRedeemed = valueRedeemed;
                 trancheAccount.quantityAssetRemaining = valueRedeemed;
                 trancheAccount.redemptionStatus = TrancheRedemptionStatus.REDEMPTION_SUCCEEDED;
@@ -680,25 +689,20 @@ contract ElementBridge is IDefiBridge {
 
         // at this point, the tranche must have been redeemed and we can allocate proportionately to this interaction
         uint256 amountToAllocate = 0;
-        if (trancheAccount.quantityTokensHeld == 0) {
-            // what can we do here?
+        if (trancheTokensHeld == 0) {
+            // what can we do here? 
             // we seem to have 0 total principle tokens so we can't apportion the output asset as it must be the case that each interaction purchased 0
             // we know that the number of deposits against this tranche is > 0 as we check further up this function
             // so we will have to divide the output asset, if there is any, equally
-            amountToAllocate = trancheAccount.quantityAssetRedeemed / trancheAccount.numDeposits;
+            amountToAllocate = trancheAccount.quantityAssetRedeemed / numDepositsIntoTranche;
         } else {
             // apportion the output asset based on the interaction's holding of the principle token
             // protects against phantom overflow in the operation of
-            // amountToAllocate = (trancheAccount.quantityAssetRedeemed * interaction.quantityPT) / trancheAccount.quantityTokensHeld;
-            amountToAllocate = FullMath.mulDiv(
-                trancheAccount.quantityAssetRedeemed,
-                interaction.quantityPT,
-                trancheAccount.quantityTokensHeld
-            );
+            // amountToAllocate = (trancheAccount.quantityAssetRedeemed * interaction.quantityPT) / trancheTokensHeld;
+            amountToAllocate = FullMath.mulDiv(trancheAccount.quantityAssetRedeemed, interaction.quantityPT, trancheTokensHeld);
         }
         // numDeposits and numFinalised are uint32 types, so easily within range for an int256
-        int256 numRemainingInteractionsForTranche = int256(uint256(trancheAccount.numDeposits)) -
-            int256(uint256(trancheAccount.numFinalised));
+        int256 numRemainingInteractionsForTranche = int256(uint256(numDepositsIntoTranche)) - int256(uint256(trancheAccount.numFinalised));
         // the number of remaining interactions should never be less than 1 here, but test for <= 1 to ensure we catch all possibilities
         if (numRemainingInteractionsForTranche <= 1 || amountToAllocate > trancheAccount.quantityAssetRemaining) {
             // if there are no more interactions to finalise after this then allocate all the remaining
@@ -822,7 +826,7 @@ contract ElementBridge is IDefiBridge {
         }
         // retrieve the minimum (oldest) expiry and determine if it is in the past
         uint64 nextExpiry = heap.min();
-        if (nextExpiry > block.timestamp) {
+        if (nextExpiry >= block.timestamp) {
             // oldest expiry is still not expired
             return (false, 0);
         }
@@ -909,7 +913,7 @@ contract ElementBridge is IDefiBridge {
         ITranche tranche = ITranche(interaction.trancheAddress);
         uint256 speedbump = tranche.speedbump();
         if (speedbump != 0) {
-            uint256 newExpiry = speedbump + _FORTY_EIGHT_HOURS;
+            uint256 newExpiry = speedbump + FORTY_EIGHT_HOURS;
             if (newExpiry > block.timestamp) {
                 // a speedbump is in force for this tranche and it is beyond the current time
                 trancheAccount.redemptionStatus = TrancheRedemptionStatus.REDEMPTION_FAILED;
