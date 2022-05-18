@@ -485,7 +485,6 @@ contract ElementBridge is IDefiBridge {
             revert TRANCHE_ALREADY_EXPIRED();
         }
 
-        // approve the transfer of tokens to the balancer address
         // execute the swap on balancer
         uint256 principalTokensAmount = exchangeAssetForTrancheTokens(
             convertArgs.inputAssetAddress,
@@ -541,6 +540,7 @@ contract ElementBridge is IDefiBridge {
             toInternalBalance: false
         });
 
+        // approve the transfer of tokens to the balancer address
         ERC20(inputAsset).approve(balancerAddress, inputQuantity);
         quantityReceived = IVault(balancerAddress).swap(
             singleSwap,
