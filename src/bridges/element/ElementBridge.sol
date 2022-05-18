@@ -780,7 +780,8 @@ contract ElementBridge is IDefiBridge {
         nonces.pop();
 
         // if there are no more nonces left for this expiry then remove it from the heap
-        if (noncesLength == 0) {
+        // checking if length == 1 to account for the pop.
+        if (noncesLength == 1) {
             heap.remove(expiry);
             delete expiryToNonce[expiry];
             return true;
