@@ -99,7 +99,7 @@ contract ElementTest is DSTest {
     AztecTypes.AztecAsset emptyAsset;
     uint256 private numTranches = 0;
 
-    int64 constant daiConvertGas = 235242;
+    int64 constant daiConvertGas = 237626;
 
     event LogConvert(uint256 indexed nonce, uint256 totalInputValue, int64 gasUsed);
 

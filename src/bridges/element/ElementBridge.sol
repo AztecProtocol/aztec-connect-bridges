@@ -496,8 +496,7 @@ contract ElementBridge is IDefiBridge {
         newInteraction.quantityPT = principalTokensAmount;
         newInteraction.trancheAddress = trancheAddress;
         newInteraction.expiry = trancheExpiry;
-        //newInteraction.failed = false;
-        //newInteraction.finalised = false;
+
         // add the nonce and expiry to our expiry heap
         addNonceAndExpiryToNonceMapping(convertArgs.interactionNonce, trancheExpiry);
         // increase our tranche account deposits and holdings
@@ -542,12 +541,30 @@ contract ElementBridge is IDefiBridge {
 
         // approve the transfer of tokens to the balancer address
         ERC20(inputAsset).approve(balancerAddress, inputQuantity);
+
+        uint256 trancheTokenQuantityBefore = ERC20(pool.trancheAddress).balanceOf(address(this));
         quantityReceived = IVault(balancerAddress).swap(
             singleSwap,
             fundManagement,
             inputQuantity, // we won't accept less than 1 output token per input token
             block.timestamp
         );
+
+        uint256 trancheTokenQuantityAfter = ERC20(pool.trancheAddress).balanceOf(address(this));
+        // ensure we haven't lost tokens!
+        if (trancheTokenQuantityAfter < trancheTokenQuantityBefore) {
+            revert INVALID_CHANGE_IN_BALANCE();
+        }
+        // change in balance must be >= 0 here
+        uint256 changeInBalance = trancheTokenQuantityAfter - trancheTokenQuantityBefore;
+        // ensure the change in balance matches that reported to us
+        if (changeInBalance != quantityReceived) {
+            revert INVALID_TOKEN_BALANCE_RECEIVED();
+        }
+        // ensure we received at least the limit we placed
+        if (quantityReceived < inputQuantity) {
+            revert RECEIVED_LESS_THAN_LIMIT();
+        }
     }
 
     /**
