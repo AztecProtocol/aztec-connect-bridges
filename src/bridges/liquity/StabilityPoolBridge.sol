@@ -112,10 +112,9 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
     {
         if (msg.sender != processor) revert InvalidCaller();
 
-        if (inputAssetA.erc20Address == LUSD) {
+        if (inputAssetA.erc20Address == LUSD && outputAssetA.erc20Address == address(this)) {
             // Deposit
-            if (outputAssetA.erc20Address != address(this)) revert IncorrectInput();
-            // Deposit LUSD and claim rewards.
+            // Provides LUSD to the pool and claim rewards.
             STABILITY_POOL.provideToSP(inputValue, frontEndTag);
             _swapRewardsToLUSDAndDeposit();
             uint256 totalLUSDOwnedBeforeDeposit = STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) - inputValue;
@@ -129,9 +128,8 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
                 outputValueA = (this.totalSupply() * inputValue) / totalLUSDOwnedBeforeDeposit;
             }
             _mint(address(this), outputValueA);
-        } else {
+        } else if (inputAssetA.erc20Address == address(this) && outputAssetA.erc20Address == LUSD) {
             // Withdrawal
-            if (inputAssetA.erc20Address != address(this) || outputAssetA.erc20Address != LUSD) revert IncorrectInput();
             // Claim rewards and swap them to LUSD.
             STABILITY_POOL.withdrawFromSP(0);
             _swapRewardsToLUSDAndDeposit();
@@ -141,6 +139,8 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
             outputValueA = (STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) * inputValue) / this.totalSupply();
             STABILITY_POOL.withdrawFromSP(outputValueA);
             _burn(address(this), inputValue);
+        } else {
+            revert IncorrectInput();
         }
     }
 

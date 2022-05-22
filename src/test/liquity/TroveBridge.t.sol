@@ -68,9 +68,7 @@ contract TroveBridgeTest is TestUtil {
         {
             assertTrue(false, "convert(...) has to revert when trove is in an incorrect state.");
         } catch (bytes memory reason) {
-            bytes4 expectedSelector = bytes4(keccak256(bytes("IncorrectStatus(uint8,uint8)")));
-            bytes4 receivedSelector = bytes4(reason);
-            assertEq(expectedSelector, receivedSelector);
+            assertEq(TroveBridge.IncorrectStatus.selector, bytes4(reason));
         }
     }
 
@@ -91,9 +89,7 @@ contract TroveBridgeTest is TestUtil {
         {
             assertTrue(false, "convert(...) has to revert on incorrect input.");
         } catch (bytes memory reason) {
-            bytes4 expectedSelector = bytes4(keccak256(bytes("IncorrectInput()")));
-            bytes4 receivedSelector = bytes4(reason);
-            assertEq(expectedSelector, receivedSelector);
+            assertEq(TroveBridge.IncorrectInput.selector, bytes4(reason));
         }
     }
 
@@ -124,17 +120,13 @@ contract TroveBridgeTest is TestUtil {
         try bridge.closeTrove() {
             assertTrue(false, "closeTrove() has to revert in case owner's balance != TB total supply.");
         } catch (bytes memory reason) {
-            bytes4 expectedSelector = bytes4(keccak256(bytes("OwnerNotLast()")));
-            bytes4 receivedSelector = bytes4(reason);
-            assertEq(expectedSelector, receivedSelector);
+            assertEq(TroveBridge.OwnerNotLast.selector, bytes4(reason));
         }
 
         try bridge.openTrove(address(0), address(0), MAX_FEE) {
             assertTrue(false, "openTrove() has to revert in case TB total supply != 0.");
         } catch (bytes memory reason) {
-            bytes4 expectedSelector = bytes4(keccak256(bytes("NonZeroTotalSupply()")));
-            bytes4 receivedSelector = bytes4(reason);
-            assertEq(expectedSelector, receivedSelector);
+            assertEq(TroveBridge.NonZeroTotalSupply.selector, bytes4(reason));
         }
 
         vm.stopPrank();

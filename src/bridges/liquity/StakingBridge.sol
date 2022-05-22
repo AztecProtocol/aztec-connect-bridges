@@ -98,9 +98,8 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
     {
         if (msg.sender != processor) revert InvalidCaller();
 
-        if (inputAssetA.erc20Address == LQTY) {
+        if (inputAssetA.erc20Address == LQTY && outputAssetA.erc20Address == address(this)) {
             // Deposit
-            if (outputAssetA.erc20Address != address(this)) revert IncorrectInput();
             // Stake and claim rewards
             STAKING_CONTRACT.stake(inputValue);
             _swapRewardsToLQTYAndStake();
@@ -115,9 +114,8 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
                 outputValueA = (this.totalSupply() * inputValue) / totalLQTYOwnedBeforeDeposit;
             }
             _mint(address(this), outputValueA);
-        } else {
+        } else if (inputAssetA.erc20Address == address(this) && outputAssetA.erc20Address == LQTY){
             // Withdrawal
-            if (inputAssetA.erc20Address != address(this) || outputAssetA.erc20Address != LQTY) revert IncorrectInput();
             // Claim rewards
             STAKING_CONTRACT.unstake(0);
             _swapRewardsToLQTYAndStake();
@@ -127,6 +125,8 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
             outputValueA = (STAKING_CONTRACT.stakes(address(this)) * inputValue) / this.totalSupply();
             STAKING_CONTRACT.unstake(outputValueA);
             _burn(address(this), inputValue);
+        } else {
+            revert IncorrectInput();
         }
     }
 
