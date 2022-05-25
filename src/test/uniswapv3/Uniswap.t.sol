@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.10;
 pragma experimental ABIEncoderV2;
-import "../../../lib/ds-test/src/test.sol";
-import {Vm} from "../Vm.sol";
-import {console} from "../console.sol";
+
+import "forge-std/Test.sol";
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 
@@ -20,11 +19,7 @@ import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 import {LiquidityAmounts} from '../../bridges/uniswapv3/libraries/LiquidityAmounts.sol';
 import {AztecKeeper} from "./../../bridges/uniswapv3/AztecKeeper.sol";
 
-contract UniswapTest is DSTest {
-
-
-    Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
+contract UniswapTest is Test {
     DefiBridgeProxy defiBridgeProxy;
     RollupProcessor rollupProcessor;
 

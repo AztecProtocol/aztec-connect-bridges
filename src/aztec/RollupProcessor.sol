@@ -10,7 +10,7 @@ import {AztecTypes} from "./AztecTypes.sol";
 
 import "../../lib/ds-test/src/test.sol";
 
-import { console } from '../test/console.sol';
+import { console } from 'forge-std/console.sol';
 
 contract RollupProcessor is DSTest {
     DefiBridgeProxy private bridgeProxy;

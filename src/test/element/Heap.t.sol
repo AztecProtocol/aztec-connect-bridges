@@ -3,7 +3,7 @@ pragma solidity 0.8.10;
 import {HeapTestContract} from './HeapTestContract.sol';
 import '../../../lib/ds-test/src/test.sol';
 
-import {console} from '../console.sol';
+import { console } from 'forge-std/console.sol';
 
 contract HeapTest is DSTest {
     HeapTestContract heap;

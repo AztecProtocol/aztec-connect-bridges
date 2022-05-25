@@ -4,7 +4,7 @@ import "../../../lib/ds-test/src/test.sol";
 import {Vm} from "../../../lib/forge-std/src/Vm.sol";
 import {FullMath} from '../../bridges/uniswapv3/libraries/FullMath.sol';
 
-import { console } from '../console.sol';
+import { console } from 'forge-std/console.sol';
 
 contract MathTest is DSTest {
 

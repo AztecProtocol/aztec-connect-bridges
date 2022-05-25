@@ -27,7 +27,7 @@ contract StakingBridgeTest is TestUtil {
         uint256 depositAmount = 1e24;
 
         // 1. Mint the deposit amount of LQTY to the bridge
-        mint("LQTY", address(rollupProcessor), depositAmount);
+        deal(tokens["LQTY"].addr, address(rollupProcessor), depositAmount);
 
         // 2. Deposit LQTY to the staking contract through the bridge
         rollupProcessor.convert(
@@ -81,10 +81,10 @@ contract StakingBridgeTest is TestUtil {
         while (i < numIters) {
             depositAmount = rand(depositAmount);
             // 1. Mint deposit amount of LQTY to the rollupProcessor
-            mint("LQTY", address(rollupProcessor), depositAmount);
+            deal(tokens["LQTY"].addr, address(rollupProcessor), depositAmount);
             // 2. Mint rewards to the bridge
-            mint("LUSD", address(bridge), 1e20);
-            mint("WETH", address(bridge), 1e18);
+            deal(tokens["LUSD"].addr, address(bridge), 1e20);
+            deal(tokens["WETH"].addr, address(bridge), 1e18);
 
             // 3. Deposit LQTY to the staking contract through the bridge
             (uint256 outputValueA, , ) = rollupProcessor.convert(

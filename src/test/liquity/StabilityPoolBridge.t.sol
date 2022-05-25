@@ -28,7 +28,7 @@ contract StabilityPoolBridgeTest is TestUtil {
         uint256 depositAmount = 1e24;
 
         // 1. Mint the deposit amount of LUSD to the bridge
-        mint("LUSD", address(rollupProcessor), depositAmount);
+        deal(tokens["LUSD"].addr, address(rollupProcessor), depositAmount);
 
         // 2. Deposit LUSD to the StabilityPool contract through the bridge
         rollupProcessor.convert(
@@ -83,10 +83,10 @@ contract StabilityPoolBridgeTest is TestUtil {
         while (i < numIters) {
             depositAmount = rand(depositAmount);
             // 1. Mint deposit amount of LUSD to the rollupProcessor
-            mint("LUSD", address(rollupProcessor), depositAmount);
+            deal(tokens["LUSD"].addr, address(rollupProcessor), depositAmount);
             // 2. Mint rewards to the bridge
-            mint("LQTY", address(bridge), 1e20);
-            mint("WETH", address(bridge), 1e18);
+            deal(tokens["LQTY"].addr, address(bridge), 1e20);
+            deal(tokens["WETH"].addr, address(bridge), 1e18);
 
             // 3. Deposit LUSD to StabilityPool through the bridge
             (uint256 outputValueA, , ) = rollupProcessor.convert(
