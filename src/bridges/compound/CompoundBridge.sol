@@ -34,15 +34,15 @@ contract CompoundBridge is IDefiBridge {
     receive() external payable {}
 
     /**
-     * @notice Function which mints and burns cTokens in echange for the underlying asset.
+     * @notice Function which mints and burns cTokens in an exchange for the underlying asset.
      * @dev This method can only be called from RollupProcessor.sol. If auxData is 0 the mint flow is executed,
-     * if 1 deposit flow.
+     * if 1 redeem flow.
      *
-     * @param inputAssetA - ETH or ERC20 (Mint) or cToken ERC20 (Redeem)
-     * @param outputAssetA - cToken (Mint) or ETH or ERC20 (Redeem)
-     * @param totalInputValue - the amount of token or ETH deposit (Mint), the amount of cToken to burn (Redeem)
+     * @param inputAssetA - ETH/ERC20 (Mint), cToken ERC20 (Redeem)
+     * @param outputAssetA - cToken (Mint), ETH/ERC20 (Redeem)
+     * @param totalInputValue - the amount of ERC20 token/ETH to deposit (Mint), the amount of cToken to burn (Redeem)
      * @param auxData - 0 (Mint), 1 (Redeem)
-     * @return outputValueA - the amount of cToken (Mint) or ETH/ERC20 (redeem) transferred to RollupProcessor.sol
+     * @return outputValueA - the amount of cToken (Mint) or ETH/ERC20 (Redeem) transferred to RollupProcessor.sol
      */
     function convert(
         AztecTypes.AztecAsset calldata inputAssetA,
@@ -66,7 +66,7 @@ contract CompoundBridge is IDefiBridge {
         if (msg.sender != rollupProcessor) revert InvalidCaller();
 
         if (auxData == 0) {
-            // mint
+            // Mint
             if (outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert IncorrectOutputAsset();
 
             if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
@@ -77,6 +77,7 @@ contract CompoundBridge is IDefiBridge {
             } else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
                 IERC20 tokenIn = IERC20(inputAssetA.erc20Address);
                 ICERC20 tokenOut = ICERC20(outputAssetA.erc20Address);
+                // Using safeIncreaseAllowance(...) instead of approve(...) here because tokenIn can be Tether
                 tokenIn.safeIncreaseAllowance(address(tokenOut), totalInputValue);
                 tokenOut.mint(totalInputValue);
                 outputValueA = tokenOut.balanceOf(address(this));
@@ -85,11 +86,11 @@ contract CompoundBridge is IDefiBridge {
                 revert IncorrectInputAsset();
             }
         } else if (auxData == 1) {
-            // redeem
+            // Redeem
             if (inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert IncorrectInputAsset();
 
             if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
-                // redeem cETH case
+                // Redeem cETH case
                 ICETH cToken = ICETH(inputAssetA.erc20Address);
                 cToken.redeem(totalInputValue);
                 outputValueA = address(this).balance;
@@ -99,6 +100,7 @@ contract CompoundBridge is IDefiBridge {
                 IERC20 tokenOut = IERC20(outputAssetA.erc20Address);
                 tokenIn.redeem(totalInputValue);
                 outputValueA = tokenOut.balanceOf(address(this));
+                // Using safeIncreaseAllowance(...) instead of approve(...) here because tokenOut can be Tether
                 tokenOut.safeIncreaseAllowance(rollupProcessor, outputValueA);
             } else {
                 revert IncorrectOutputAsset();
