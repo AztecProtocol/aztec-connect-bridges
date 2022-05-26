@@ -8,11 +8,7 @@ import {IERC20} from "../interfaces/IERC20Permit.sol";
 import {DefiBridgeProxy} from "./DefiBridgeProxy.sol";
 import {AztecTypes} from "./AztecTypes.sol";
 
-import "../../lib/ds-test/src/test.sol";
-
-import { console } from 'forge-std/console.sol';
-
-contract RollupProcessor is DSTest {
+contract RollupProcessor {
     DefiBridgeProxy private bridgeProxy;
 
     struct DefiInteraction {
