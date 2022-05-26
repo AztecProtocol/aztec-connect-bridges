@@ -25,10 +25,6 @@ contract SetTest is DSTest {
     // Bridges
     IssuanceBridge issuanceBridge;
 
-    // Set-Protocol related contracts
-    address exchangeIssuanceAddress = 0xc8C85A3b4d03FB3451e7248Ff94F780c92F884fD;
-    address setControllerAddress = 0xa4c8d221d8BB851f83aadd0223a8900A6921A349;
-
     // ERC20 tokens
     IERC20 constant dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     IERC20 constant dpi = IERC20(0x1494CA1F11D487c2bBe4543E90080AeBa4BA3C2b);
@@ -41,7 +37,7 @@ contract SetTest is DSTest {
     function setUp() public {
         _aztecPreSetup();
 
-        issuanceBridge = new IssuanceBridge(address(rollupProcessor), exchangeIssuanceAddress, setControllerAddress);
+        issuanceBridge = new IssuanceBridge(address(rollupProcessor));
 
         address[] memory tokens = new address[](2);
         tokens[0] = address(dai);

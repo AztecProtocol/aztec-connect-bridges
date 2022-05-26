@@ -14,10 +14,10 @@ import {IExchangeIssuance} from './interfaces/IExchangeIssuance.sol';
 import {IRollupProcessor} from '../../interfaces/IRollupProcessor.sol';
 
 contract IssuanceBridge is IDefiBridge {
-    address public immutable rollupProcessor;
+    IExchangeIssuance public constant EXCHANGE_ISSUANCE = IExchangeIssuance(0xc8C85A3b4d03FB3451e7248Ff94F780c92F884fD);
+    IController public constant SET_CONTROLLER = IController(0xa4c8d221d8BB851f83aadd0223a8900A6921A349);
 
-    IExchangeIssuance exchangeIssuance;
-    IController setController; // used to check if address is SetToken
+    address public immutable rollupProcessor;
 
     error ApproveFailed(address token);
     error InvalidCaller();
@@ -26,19 +26,11 @@ contract IssuanceBridge is IDefiBridge {
     error AsyncModeDisabled();
 
     /**
-     * @notice Sets the important addresses.
+     * @notice Sets the addresses of RollupProcessor
      * @param _rollupProcessor Address of the RollupProcessor.sol
-     * @param _exchangeIssuance Address of the exchange
-     * @param _setController Address of the Set's controller contract
      */
-    constructor(
-        address _rollupProcessor,
-        address _exchangeIssuance,
-        address _setController
-    ) public {
+    constructor(address _rollupProcessor) public {
         rollupProcessor = _rollupProcessor;
-        exchangeIssuance = IExchangeIssuance(_exchangeIssuance);
-        setController = IController(_setController);
     }
 
     // Empty receive function for the contract to be able to receive ETH
@@ -53,7 +45,7 @@ contract IssuanceBridge is IDefiBridge {
         uint256 tokensLength = tokens.length;
         for (uint256 i; i < tokensLength; ) {
             if (!IERC20(tokens[i]).approve(rollupProcessor, type(uint256).max)) revert ApproveFailed(tokens[i]);
-            if (!IERC20(tokens[i]).approve(address(exchangeIssuance), type(uint256).max))
+            if (!IERC20(tokens[i]).approve(address(EXCHANGE_ISSUANCE), type(uint256).max))
                 revert ApproveFailed(tokens[i]);
             unchecked {
                 ++i;
@@ -94,11 +86,11 @@ contract IssuanceBridge is IDefiBridge {
         if (msg.sender != rollupProcessor) revert InvalidCaller();
         if (inputValue == 0) revert ZeroInputValue();
 
-        if (setController.isSet(address(inputAssetA.erc20Address))) {
+        if (SET_CONTROLLER.isSet(address(inputAssetA.erc20Address))) {
             // User wants to redeem the underlying asset
             if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 // redeem in exchange for ETH
-                outputValueA = exchangeIssuance.redeemExactSetForETH(
+                outputValueA = EXCHANGE_ISSUANCE.redeemExactSetForETH(
                     ISetToken(address(inputAssetA.erc20Address)),
                     inputValue, // _amountSetToken
                     auxData // __minEthOut
@@ -106,7 +98,7 @@ contract IssuanceBridge is IDefiBridge {
                 IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
             } else if (outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
                 // redeem in exchange for ERC20
-                outputValueA = exchangeIssuance.redeemExactSetForToken(
+                outputValueA = EXCHANGE_ISSUANCE.redeemExactSetForToken(
                     ISetToken(address(inputAssetA.erc20Address)), // _setToken,
                     IERC20(address(outputAssetA.erc20Address)), // _outputToken,
                     inputValue, //  _amountSetToken,
@@ -115,11 +107,11 @@ contract IssuanceBridge is IDefiBridge {
             } else {
                 revert IncorrectInput();
             }
-        } else if (setController.isSet(address(outputAssetA.erc20Address))) {
+        } else if (SET_CONTROLLER.isSet(address(outputAssetA.erc20Address))) {
             // User wants to issue SetToken
             if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
                 // User supplies ERC20
-                outputValueA = exchangeIssuance.issueSetForExactToken(
+                outputValueA = EXCHANGE_ISSUANCE.issueSetForExactToken(
                     ISetToken(address(outputAssetA.erc20Address)),
                     IERC20(address(inputAssetA.erc20Address)),
                     inputValue, //  _amountInput
@@ -127,7 +119,7 @@ contract IssuanceBridge is IDefiBridge {
                 );
             } else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 // User supplies ETH
-                outputValueA = exchangeIssuance.issueSetForExactETH{value: inputValue}(
+                outputValueA = EXCHANGE_ISSUANCE.issueSetForExactETH{value: inputValue}(
                     ISetToken(address(outputAssetA.erc20Address)),
                     auxData // _minSetReceive
                 );
