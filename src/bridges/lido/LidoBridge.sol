@@ -64,6 +64,11 @@ contract LidoBridge is IDefiBridge {
 
         rollupProcessor = _rollupProcessor;
         referral = _referral;
+
+        // As the contract is not supposed to hold any funds, we can pre-approve 
+        lido.safeIncreaseAllowance(address(wrappedStETH), type(uint256).max);
+        lido.safeIncreaseAllowance(address(curvePool), type(uint256).max);
+        wrappedStETH.safeIncreaseAllowance(rollupProcessor, type(uint256).max);
     }
 
     receive() external payable {}
@@ -126,11 +131,7 @@ contract LidoBridge is IDefiBridge {
         // since stETH is a rebase token, lets wrap it to wstETH before sending it back to the rollupProcessor
         uint256 outputStETHBalance = lido.balanceOf(address(this));
 
-        lido.safeIncreaseAllowance(address(wrappedStETH), outputStETHBalance);
         outputValue = wrappedStETH.wrap(outputStETHBalance);
-
-        // Give allowance for rollup processor to withdraw
-        wrappedStETH.safeIncreaseAllowance(rollupProcessor, outputValue);
     }
 
     /**
@@ -143,7 +144,6 @@ contract LidoBridge is IDefiBridge {
         uint256 stETH = wrappedStETH.unwrap(inputValue);
 
         // Exchange stETH to ETH via curve
-        lido.safeIncreaseAllowance(address(curvePool), stETH);
         uint256 dy = curvePool.exchange(curveStETHIndex, curveETHIndex, stETH, 0);
 
         outputValue = address(this).balance;
