@@ -19,6 +19,12 @@ contract IssuanceBridge is IDefiBridge {
     IExchangeIssuance exchangeIssuance;
     IController setController; // used to check if address is SetToken
 
+    error ApproveFailed(address token);
+    error InvalidCaller();
+    error ZeroInputValue();
+    error IncompatibleAssetPair();
+    error AsyncModeDisabled();
+
     constructor(
         address _rollupProcessor,
         address _exchangeIssuance,
@@ -60,13 +66,8 @@ contract IssuanceBridge is IDefiBridge {
         )
     {
         // Only Rollup Processor can call this function
-        require(
-            msg.sender == rollupProcessor,
-            "IssuanceBridge: INVALID_CALLER"
-        );
-        require(inputValue > 0, "IssuanceBridge: INVALID_INPUT_VALUE");
-
-        isAsync = false;
+        if (msg.sender != rollupProcessor) revert InvalidCaller();
+        if (inputValue == 0) revert ZeroInputValue();
 
         // -----------------------------------------------------------------------------------------
         // Check if the user wants to ISSUE or REDEEM SetToken based on the input/output asset types
@@ -81,13 +82,10 @@ contract IssuanceBridge is IDefiBridge {
                 outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20)
         ) {
             // Approve spending of input Set token
-            require(
-                IERC20(inputAssetA.erc20Address).approve(
-                    address(exchangeIssuance),
-                    inputValue
-                ),
-                "IssuanceBridge: APPROVE_FAILED"
-            );
+            if (!IERC20(inputAssetA.erc20Address).approve(
+                address(exchangeIssuance),
+                inputValue
+            )) revert ApproveFailed(inputAssetA.erc20Address);
 
             if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 // user wants to receive ETH
@@ -108,13 +106,10 @@ contract IssuanceBridge is IDefiBridge {
                 );
 
                 // approve the transfer of funds back to the rollup contract
-                require(
-                    IERC20(outputAssetA.erc20Address).approve(
+                if (!IERC20(outputAssetA.erc20Address).approve(
                         rollupProcessor,
                         outputValueA
-                    ),
-                    "IssuanceBridge: APPROVE_FAILED"
-                );
+                    )) revert ApproveFailed(outputAssetA.erc20Address);
             }
         }
         // ISSUE SET: User wants to issue SetToken in for ERC20
@@ -126,13 +121,10 @@ contract IssuanceBridge is IDefiBridge {
             setController.isSet(address(outputAssetA.erc20Address))
         ) {
             // Check that spending of the ERC20 is approved
-            require(
-                IERC20(inputAssetA.erc20Address).approve(
-                    address(exchangeIssuance),
-                    inputValue
-                ),
-                "IssuanceBridge: APPROVE_FAILED"
-            );
+            if (!IERC20(inputAssetA.erc20Address).approve(
+                address(exchangeIssuance),
+                inputValue
+            )) revert ApproveFailed(inputAssetA.erc20Address);
 
             outputValueA = exchangeIssuance.issueSetForExactToken(
                 ISetToken(address(outputAssetA.erc20Address)),
@@ -142,13 +134,10 @@ contract IssuanceBridge is IDefiBridge {
             );
 
             // approve the transfer of funds back to the rollup contract
-            require(
-                IERC20(outputAssetA.erc20Address).approve(
-                    rollupProcessor,
-                    outputValueA
-                ),
-                "IssuanceBridge: APPROVE_FAILED"
-            );
+            if (!IERC20(outputAssetA.erc20Address).approve(
+                rollupProcessor,
+                outputValueA
+            )) revert ApproveFailed(outputAssetA.erc20Address);
         }
         // ISSUE: User wants to issue SetToken for ETH
         // inputAssetA: ETH
@@ -166,15 +155,12 @@ contract IssuanceBridge is IDefiBridge {
             );
 
             // approve the transfer of funds back to the rollup contract
-            require(
-                IERC20(outputAssetA.erc20Address).approve(
-                    rollupProcessor,
-                    outputValueA
-                ),
-                "IssuanceBridge: APPROVE_FAILED"
-            );
+            if (!IERC20(outputAssetA.erc20Address).approve(
+                rollupProcessor,
+                outputValueA
+            )) revert ApproveFailed(outputAssetA.erc20Address);
         } else {
-            revert("IssuanceBridge: INCOMPATIBLE_ASSET_PAIR");
+            revert IncompatibleAssetPair();
         }
     }
 
@@ -189,6 +175,6 @@ contract IssuanceBridge is IDefiBridge {
         uint256,
         uint64
     ) external payable override returns (uint256, uint256, bool) {
-        require(false, "IssuanceBridge: ASYNC_MODE_DISABLED");
+        revert AsyncModeDisabled();
     }
 }
