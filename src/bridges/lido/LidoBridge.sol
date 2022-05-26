@@ -114,13 +114,13 @@ contract LidoBridge is IDefiBridge {
         // deposit into lido (return value is shares NOT stETH)
         lido.submit{value: inputValue}(referral);
 
-        // since stETH is a rebase token, lets wrap it to wstETH before sending it back to the rollupProcessor
         uint256 outputStETHBalance = lido.balanceOf(address(this));
 
         // Lido balance can be <=2 wei off, 1 from the submit where our shares is computed rounding down, 
         // and then again when the balance is computed from the shares, rounding down again. 
         require(outputStETHBalance + 2 >= inputValue, 'LidoBridge: Invalid wrap return value');
 
+        // since stETH is a rebase token, lets wrap it to wstETH before sending it back to the rollupProcessor
         outputValue = wrappedStETH.wrap(outputStETHBalance);
     }
 
