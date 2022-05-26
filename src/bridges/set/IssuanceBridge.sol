@@ -3,7 +3,6 @@
 pragma solidity >=0.6.10 <=0.8.10;
 pragma experimental ABIEncoderV2;
 
-import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { AztecTypes } from "../../aztec/AztecTypes.sol";
@@ -15,8 +14,6 @@ import { IExchangeIssuance } from "./interfaces/IExchangeIssuance.sol";
 import { IRollupProcessor } from "../../interfaces/IRollupProcessor.sol";
 
 contract IssuanceBridge is IDefiBridge {
-    using SafeMath for uint256;
-
     address public immutable rollupProcessor;
 
     IExchangeIssuance exchangeIssuance;
@@ -37,6 +34,7 @@ contract IssuanceBridge is IDefiBridge {
      * @param inputAssetA    - If ISSUE SET: ETH or ERC20        | If REDEEM SET: SetToken
      * @param outputAssetA   - If ISSUE SET: setToken            | If REDEEM SET: ETH or ERC20
      * @param inputValue     - If ISSUE SET: ETH or ERC20 amount | If REDEEM SET: SetToken amount
+     * @param auxData -
      * @return outputValueA  - If ISSUE SET: SetToken amount     | If REDEEM SET: ETH or ERC20 amount
      * @return isAsync a flag to toggle if this bridge interaction will return assets at a later
             date after some third party contract has interacted with it via finalise()
@@ -49,7 +47,7 @@ contract IssuanceBridge is IDefiBridge {
         AztecTypes.AztecAsset calldata,
         uint256 inputValue,
         uint256 interactionNonce,
-        uint64,
+        uint64 auxData,
         address 
     )
         external
@@ -82,7 +80,7 @@ contract IssuanceBridge is IDefiBridge {
             (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH ||
                 outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20)
         ) {
-            // Check that spending of the given SetToken is approved
+            // Approve spending of input Set token
             require(
                 IERC20(inputAssetA.erc20Address).approve(
                     address(exchangeIssuance),
@@ -91,24 +89,22 @@ contract IssuanceBridge is IDefiBridge {
                 "IssuanceBridge: APPROVE_FAILED"
             );
 
-            // user wants to receive ETH
             if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+                // user wants to receive ETH
                 outputValueA = exchangeIssuance.redeemExactSetForETH(
                     ISetToken(address(inputAssetA.erc20Address)),
                     inputValue, // _amountSetToken
-                    0 // __minEthOut
+                    auxData // __minEthOut
                 );
                 // Send ETH to rollup processor
                 IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
-            }
-
-            // user wants to receive ERC20
-            if (outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
+            } else if (outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
+                // user wants to receive ERC20
                 outputValueA = exchangeIssuance.redeemExactSetForToken(
                     ISetToken(address(inputAssetA.erc20Address)), // _setToken,
                     IERC20(address(outputAssetA.erc20Address)), // _outputToken,
                     inputValue, //  _amountSetToken,
-                    0 //  _minOutputReceive
+                    auxData //  _minOutputReceive
                 );
 
                 // approve the transfer of funds back to the rollup contract
@@ -142,7 +138,7 @@ contract IssuanceBridge is IDefiBridge {
                 ISetToken(address(outputAssetA.erc20Address)),
                 IERC20(address(inputAssetA.erc20Address)),
                 inputValue, //  _amountInput
-                0 // _minSetReceive
+                auxData // _minSetReceive
             );
 
             // approve the transfer of funds back to the rollup contract
@@ -166,7 +162,7 @@ contract IssuanceBridge is IDefiBridge {
                 value: inputValue
             }(
                 ISetToken(address(outputAssetA.erc20Address)),
-                0 // _minSetReceive
+                auxData // _minSetReceive
             );
 
             // approve the transfer of funds back to the rollup contract
