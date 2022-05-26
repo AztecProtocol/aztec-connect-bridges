@@ -2,13 +2,13 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4 <=0.8.10;
 
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
-import "../../interfaces/IRollupProcessor.sol";
-import "./interfaces/ICERC20.sol";
-import "./interfaces/ICETH.sol";
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IDefiBridge} from '../../interfaces/IDefiBridge.sol';
+import {AztecTypes} from '../../aztec/AztecTypes.sol';
+import {IRollupProcessor} from '../../interfaces/IRollupProcessor.sol';
+import {ICERC20} from './interfaces/ICERC20.sol';
+import {ICETH} from './interfaces/ICETH.sol';
 
 /**
  * @title Aztec Connect Bridge for Compound protocol
