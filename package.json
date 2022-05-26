@@ -3,7 +3,7 @@
     "setup": "yarn install:foundry && yarn setup:foundry",
     "setup:foundry": "foundryup && git submodule update --init",
     "install:foundry": "curl -L https://foundry.paradigm.xyz | bash",
-    "compile:contracts": "yarn clean forge build",
+    "compile:contracts": "yarn clean && forge build",
     "compile:typechain": "yarn compile:contracts && hardhat compile ",
     "compile:client-dest:watch": "yarn compile:typechain && tsc --project tsconfig.client-dest.json --watch",
     "compile:client-dest": "yarn compile:typechain && tsc --project tsconfig.client-dest.json",
