@@ -20,7 +20,6 @@ contract IssuanceBridge is IDefiBridge {
     IController setController; // used to check if address is SetToken
 
     error ApproveFailed(address token);
-    error NotSetToken(address token);
     error InvalidCaller();
     error ZeroInputValue();
     error IncompatibleAssetPair();
@@ -36,22 +35,16 @@ contract IssuanceBridge is IDefiBridge {
         setController = IController(_setController);
     }
 
-    function approveTokens(address[] calldata exchangeTokens, address[] calldata processorTokens) external {
-        uint256 exchangeLength = exchangeTokens.length;
-        for (uint256 i; i < exchangeLength; ) {
-            if (setController.isSet(exchangeTokens[i])) {
-                if (!IERC20(exchangeTokens[i]).approve(address(exchangeIssuance), type(uint256).max)) revert ApproveFailed(exchangeTokens[i]);
-            } else {
-                revert NotSetToken(exchangeTokens[i]);
-            }
-            unchecked {
-                ++i;
-            }
-        }
-
-        uint256 processorLength = processorTokens.length;
-        for (uint256 i; i < processorLength; ) {
-            IERC20(processorTokens[i]).approve(rollupProcessor, type(uint256).max);
+    /**
+     * @notice Sets all the important approvals.
+     * @dev This bridge never holds any ERC20s after or before an invocation of any of its functions.
+     * For this reason the following is not a security risk and makes the convert() function more gas efficient.
+     */
+    function approveTokens(address[] calldata tokens) external {
+        uint256 tokensLength = tokens.length;
+        for (uint256 i; i < tokensLength; ) {
+            if (!IERC20(tokens[i]).approve(rollupProcessor, type(uint256).max)) revert ApproveFailed(tokens[i]);
+            if (!IERC20(tokens[i]).approve(address(exchangeIssuance), type(uint256).max)) revert ApproveFailed(tokens[i]);
             unchecked {
                 ++i;
             }
@@ -104,12 +97,6 @@ contract IssuanceBridge is IDefiBridge {
             (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH ||
                 outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20)
         ) {
-            // Approve spending of input Set token
-            if (!IERC20(inputAssetA.erc20Address).approve(
-                address(exchangeIssuance),
-                inputValue
-            )) revert ApproveFailed(inputAssetA.erc20Address);
-
             if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 // user wants to receive ETH
                 outputValueA = exchangeIssuance.redeemExactSetForETH(
@@ -137,12 +124,6 @@ contract IssuanceBridge is IDefiBridge {
             !setController.isSet(address(inputAssetA.erc20Address)) &&
             setController.isSet(address(outputAssetA.erc20Address))
         ) {
-            // Check that spending of the ERC20 is approved
-            if (!IERC20(inputAssetA.erc20Address).approve(
-                address(exchangeIssuance),
-                inputValue
-            )) revert ApproveFailed(inputAssetA.erc20Address);
-
             outputValueA = exchangeIssuance.issueSetForExactToken(
                 ISetToken(address(outputAssetA.erc20Address)),
                 IERC20(address(inputAssetA.erc20Address)),

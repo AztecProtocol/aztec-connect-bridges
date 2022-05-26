@@ -47,24 +47,33 @@ contract SetTest is DSTest {
             setControllerAddress
         );
 
-        address[] memory exchangeTokens = new address[](1);
-        address[] memory processorTokens = new address[](2);
-        exchangeTokens[0] = address(dpi);
-        processorTokens[0] = address(dai);
-        processorTokens[1] = address(dpi);
-        issuanceBridge.approveTokens(exchangeTokens, processorTokens);
+        address[] memory tokens = new address[](2);
+        tokens[0] = address(dai);
+        tokens[1] = address(dpi);
+        issuanceBridge.approveTokens(tokens);
     }
 
-    function testApproveNonSetAsSet() public {
-        address[] memory exchangeTokens = new address[](1);
-        address[] memory processorTokens = new address[](0);
-        exchangeTokens[0] = address(dai);
+    function testInvalidCaller() public {
+        AztecTypes.AztecAsset memory empty;
 
-        try issuanceBridge.approveTokens(exchangeTokens, processorTokens)
+        vm.prank(address(124));
+        try issuanceBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0))
         {
-            assertTrue(false, "approveTokens(...) has when approving non-set token as set.");
+            revert("convert(...) has to revert when msg.sender != rollupProcessor.");
         } catch (bytes memory reason) {
-            assertEq(IssuanceBridge.NotSetToken.selector, bytes4(reason));
+            assertEq(IssuanceBridge.InvalidCaller.selector, bytes4(reason));
+        }
+    }
+
+    function test0InputValue() public {
+        AztecTypes.AztecAsset memory empty;
+
+        vm.prank(address(rollupProcessor));
+        try issuanceBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0))
+        {
+            revert("convert(...) has to revert inputValue == 0.");
+        } catch (bytes memory reason) {
+            assertEq(IssuanceBridge.ZeroInputValue.selector, bytes4(reason));
         }
     }
 
