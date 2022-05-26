@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.0 <=0.8.10;
-pragma abicoder v2;
+pragma solidity >=0.8.4 <=0.8.10;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
