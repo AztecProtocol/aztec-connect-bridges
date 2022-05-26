@@ -92,7 +92,7 @@ contract StakingBridge is IDefiBridge, ERC20('StakingBridge', 'SB') {
         returns (
             uint256 outputValueA,
             uint256,
-            bool isAsync
+            bool
         )
     {
         if (msg.sender != processor) revert InvalidCaller();

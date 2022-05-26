@@ -136,7 +136,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         returns (
             uint256 outputValueA,
             uint256 outputValueB,
-            bool isAsync
+            bool
         )
     {
         if (msg.sender != processor) revert InvalidCaller();

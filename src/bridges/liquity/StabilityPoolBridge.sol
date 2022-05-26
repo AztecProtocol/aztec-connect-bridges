@@ -105,7 +105,7 @@ contract StabilityPoolBridge is IDefiBridge, ERC20('StabilityPoolBridge', 'SPB')
         returns (
             uint256 outputValueA,
             uint256,
-            bool isAsync
+            bool
         )
     {
         if (msg.sender != processor) revert InvalidCaller();
