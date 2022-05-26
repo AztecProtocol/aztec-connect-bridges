@@ -111,9 +111,6 @@ contract LidoBridge is IDefiBridge {
             "LidoBridge: Invalid Output Token"
         );
 
-        // the minimum should be 1ETH:1STETH
-        uint256 minOutput = inputValue;
-
         // deposit into lido (return value is shares NOT stETH)
         lido.submit{value: inputValue}(referral);
 
