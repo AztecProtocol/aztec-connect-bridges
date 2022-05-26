@@ -144,7 +144,10 @@ contract LidoBridge is IDefiBridge {
 
         // Exchange stETH to ETH via curve
         lido.safeIncreaseAllowance(address(curvePool), stETH);
-        outputValue = curvePool.exchange(curveStETHIndex, curveETHIndex, stETH, 0);
+        uint256 dy = curvePool.exchange(curveStETHIndex, curveETHIndex, stETH, 0);
+
+        outputValue = address(this).balance;
+        require(outputValue >= dy, 'LidoBridge: Invalid return value');
 
         // Send ETH to rollup processor
         IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValue}(interactionNonce);
