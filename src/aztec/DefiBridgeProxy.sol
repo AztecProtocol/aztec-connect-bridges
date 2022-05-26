@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
-pragma solidity >=0.8.4 <0.8.11;
-pragma experimental ABIEncoderV2;
+pragma solidity >=0.8.4;
 
 import {IDefiBridge} from "../interfaces/IDefiBridge.sol";
 import {AztecTypes} from "./AztecTypes.sol";
@@ -9,36 +8,10 @@ import {AztecTypes} from "./AztecTypes.sol";
 import {TokenTransfers} from "../libraries/TokenTransfers.sol";
 
 contract DefiBridgeProxy {
-    bytes4 private constant BALANCE_OF_SELECTOR = 0x70a08231; // bytes4(keccak256('balanceOf(address)'));
-    bytes4 private constant TRANSFER_SELECTOR = 0xa9059cbb; // bytes4(keccak256('transfer(address,uint256)'));
-    bytes4 private constant DEPOSIT_SELECTOR = 0xb6b55f25; // bytes4(keccak256('deposit(uint256)'));
-    bytes4 private constant WITHDRAW_SELECTOR = 0x2e1a7d4d; // bytes4(keccak256('withdraw(uint256)'));
-    bytes4 private constant TRANSFER_FROM_SELECTOR = 0x23b872dd; // bytes4(keccak256('transferFrom(address,address,uint256)'));
-
-    error DEFI_BRIDGE_PROXY_TRANSFER_FAILED();
-    error INCORRECT_ASSET_VALUE();
-    error ASYNC_NONZERO_OUTPUT_VALUES(
-        uint256 outputValueA,
-        uint256 outputValueB
-    );
+    error OUTPUT_A_EXCEEDS_252_BITS(uint256 outputValue);
+    error OUTPUT_B_EXCEEDS_252_BITS(uint256 outputValue);
+    error ASYNC_NONZERO_OUTPUT_VALUES(uint256 outputValueA, uint256 outputValueB);
     error INSUFFICIENT_ETH_PAYMENT();
-
-    event DefiBridgeProcessed(
-        uint256 indexed bridgeId,
-        uint256 indexed nonce,
-        uint256 totalInputValue,
-        uint256 totalOutputValueA,
-        uint256 totalOutputValueB,
-        bool result
-    );
-    event AsyncDefiBridgeProcessed(
-        uint256 indexed bridgeId,
-        uint256 indexed nonce,
-        uint256 totalInputValue,
-        uint256 totalOutputValueA,
-        uint256 totalOutputValueB,
-        bool result
-    );
 
     /**
      * @dev Use interaction result data to pull tokens into DefiBridgeProxy
@@ -56,6 +29,9 @@ contract DefiBridgeProxy {
         address bridgeContract,
         uint256 ethPaymentsSlot
     ) internal {
+        if (outputValue == 0) {
+            return;
+        }
         if (asset.assetType == AztecTypes.AztecAssetType.ETH) {
             uint256 ethPayment;
             uint256 ethPaymentsSlotBase;
@@ -65,22 +41,14 @@ contract DefiBridgeProxy {
                 ethPaymentsSlotBase := keccak256(0x00, 0x40)
                 ethPayment := sload(ethPaymentsSlotBase) // ethPayment = ethPayments[interactionNonce]
             }
-            if (outputValue != ethPayment) {
+            if (outputValue > ethPayment) {
                 revert INSUFFICIENT_ETH_PAYMENT();
             }
             assembly {
                 sstore(ethPaymentsSlotBase, 0) // ethPayments[interactionNonce] = 0;
             }
-        } else if (
-            asset.assetType == AztecTypes.AztecAssetType.ERC20 &&
-            outputValue > 0
-        ) {
-            TokenTransfers.safeTransferFrom(
-                asset.erc20Address,
-                bridgeContract,
-                address(this),
-                outputValue
-            );
+        } else if (asset.assetType == AztecTypes.AztecAssetType.ERC20) {
+            TokenTransfers.safeTransferFrom(asset.erc20Address, bridgeContract, address(this), outputValue);
         }
     }
 
@@ -95,6 +63,8 @@ contract DefiBridgeProxy {
      * @param interactionNonce Integer that is unique for a given defi interaction
      * @param auxInputData Optional custom data to be sent to the bridge (defined in the L2 SNARK circuits when creating claim notes)
      * @param ethPaymentsSlot The slot value of the `ethPayments` storage mapping in RollupProcessor.sol!
+     * @param rollupBeneficiary The address that should be payed any fees / subsidy for executing this bridge.
+
      * We assume this contract is called from the RollupProcessor via `delegateCall`,
      * if not... this contract behaviour is undefined! So don't do that.
      * The idea here is that, if the defi bridge has returned native ETH, they will do so via calling
@@ -125,7 +95,8 @@ contract DefiBridgeProxy {
         uint256 totalInputValue,
         uint256 interactionNonce,
         uint256 auxInputData, // (auxData)
-        uint256 ethPaymentsSlot
+        uint256 ethPaymentsSlot,
+        address rollupBeneficiary
     )
         external
         returns (
@@ -134,30 +105,21 @@ contract DefiBridgeProxy {
             bool isAsync
         )
     {
-
         if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
             // Transfer totalInputValue to the bridge contract if erc20. ETH is sent on call to convert.
-            TokenTransfers.safeTransferTo(
-                inputAssetA.erc20Address,
-                bridgeAddress,
-                totalInputValue
-            );
+            TokenTransfers.safeTransferTo(inputAssetA.erc20Address, bridgeAddress, totalInputValue);
         }
-
         if (inputAssetB.assetType == AztecTypes.AztecAssetType.ERC20) {
             // Transfer totalInputValue to the bridge contract if erc20. ETH is sent on call to convert.
             TokenTransfers.safeTransferTo(inputAssetB.erc20Address, bridgeAddress, totalInputValue);
         }
-
         // Call bridge.convert(), which will return output values for the two output assets.
         // If input is ETH, send it along with call to convert.
-
-        IDefiBridge bridgeContract = IDefiBridge(bridgeAddress);
-        (outputValueA, outputValueB, isAsync) = bridgeContract.convert{
-            value: inputAssetA.assetType == AztecTypes.AztecAssetType.ETH
-                ? totalInputValue
-                : 0
-        }(
+        uint256 ethValue = (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH ||
+            inputAssetB.assetType == AztecTypes.AztecAssetType.ETH)
+            ? totalInputValue
+            : 0;
+        (outputValueA, outputValueB, isAsync) = IDefiBridge(bridgeAddress).convert{value: ethValue}(
             inputAssetA,
             inputAssetB,
             outputAssetA,
@@ -165,7 +127,7 @@ contract DefiBridgeProxy {
             totalInputValue,
             interactionNonce,
             uint64(auxInputData),
-            address(0)
+            rollupBeneficiary
         );
 
         if (isAsync) {
@@ -174,21 +136,14 @@ contract DefiBridgeProxy {
             }
         } else {
             address bridgeAddressCopy = bridgeAddress; // stack overflow workaround
-            recoverTokens(
-                outputAssetA,
-                outputValueA,
-                interactionNonce,
-                bridgeAddressCopy,
-                ethPaymentsSlot
-            );
-
-            recoverTokens(
-                outputAssetB,
-                outputValueB,
-                interactionNonce,
-                bridgeAddressCopy,
-                ethPaymentsSlot
-            );
+            if (outputValueA >= (1 << 252)) {
+                revert OUTPUT_A_EXCEEDS_252_BITS(outputValueA);
+            }
+            if (outputValueB >= (1 << 252)) {
+                revert OUTPUT_B_EXCEEDS_252_BITS(outputValueB);
+            }
+            recoverTokens(outputAssetA, outputValueA, interactionNonce, bridgeAddressCopy, ethPaymentsSlot);
+            recoverTokens(outputAssetB, outputValueB, interactionNonce, bridgeAddressCopy, ethPaymentsSlot);
         }
     }
 }
