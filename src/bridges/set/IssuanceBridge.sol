@@ -25,6 +25,12 @@ contract IssuanceBridge is IDefiBridge {
     error IncorrectInput();
     error AsyncModeDisabled();
 
+    /**
+     * @notice Sets the important addresses.
+     * @param _rollupProcessor Address of the RollupProcessor.sol
+     * @param _exchangeIssuance Address of the exchange
+     * @param _setController Address of the Set's controller contract
+     */
     constructor(
         address _rollupProcessor,
         address _exchangeIssuance,
@@ -35,7 +41,7 @@ contract IssuanceBridge is IDefiBridge {
         setController = IController(_setController);
     }
 
-    // Empty fallback function in order to receive ETH
+    // Empty receive function for the contract to be able to receive ETH
     receive() external payable {}
 
     /**
@@ -85,30 +91,21 @@ contract IssuanceBridge is IDefiBridge {
             bool
         )
     {
-        // Only Rollup Processor can call this function
         if (msg.sender != rollupProcessor) revert InvalidCaller();
         if (inputValue == 0) revert ZeroInputValue();
 
-        // -----------------------------------------------------------------------------------------
-        // Check if the user wants to ISSUE or REDEEM SetToken based on the input/output asset types
-        // -----------------------------------------------------------------------------------------
-
-        // REDEEM SET: User wants to redeem SetToken and receive ETH or ERC20
-        // inputAssetA: SetToken
-        // outputAssetA ERC20 or ETH
-
         if (setController.isSet(address(inputAssetA.erc20Address))) {
+            // User wants to redeem the underlying asset
             if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
-                // user wants to receive ETH
+                // redeem in exchange for ETH
                 outputValueA = exchangeIssuance.redeemExactSetForETH(
                     ISetToken(address(inputAssetA.erc20Address)),
                     inputValue, // _amountSetToken
                     auxData // __minEthOut
                 );
-                // Send ETH to rollup processor
                 IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
             } else if (outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
-                // user wants to receive ERC20
+                // redeem in exchange for ERC20
                 outputValueA = exchangeIssuance.redeemExactSetForToken(
                     ISetToken(address(inputAssetA.erc20Address)), // _setToken,
                     IERC20(address(outputAssetA.erc20Address)), // _outputToken,
@@ -119,19 +116,17 @@ contract IssuanceBridge is IDefiBridge {
                 revert IncorrectInput();
             }
         } else if (setController.isSet(address(outputAssetA.erc20Address))) {
+            // User wants to issue SetToken
             if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
+                // User supplies ERC20
                 outputValueA = exchangeIssuance.issueSetForExactToken(
                     ISetToken(address(outputAssetA.erc20Address)),
                     IERC20(address(inputAssetA.erc20Address)),
                     inputValue, //  _amountInput
                     auxData // _minSetReceive
                 );
-            }
-            // ISSUE: User wants to issue SetToken for ETH
-            // inputAssetA: ETH
-            // outputAssetA: SetToken
-            else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
-                // issue SetTokens for a given amount of ETH (=inputValue)
+            } else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+                // User supplies ETH
                 outputValueA = exchangeIssuance.issueSetForExactETH{value: inputValue}(
                     ISetToken(address(outputAssetA.erc20Address)),
                     auxData // _minSetReceive
