@@ -3,15 +3,15 @@
 pragma solidity >=0.6.10 <=0.8.10;
 pragma experimental ABIEncoderV2;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import { AztecTypes } from "../../aztec/AztecTypes.sol";
+import {AztecTypes} from '../../aztec/AztecTypes.sol';
 
-import { IDefiBridge } from "../../interfaces/IDefiBridge.sol";
-import { ISetToken } from "./interfaces/ISetToken.sol";
-import { IController } from "./interfaces/IController.sol";
-import { IExchangeIssuance } from "./interfaces/IExchangeIssuance.sol";
-import { IRollupProcessor } from "../../interfaces/IRollupProcessor.sol";
+import {IDefiBridge} from '../../interfaces/IDefiBridge.sol';
+import {ISetToken} from './interfaces/ISetToken.sol';
+import {IController} from './interfaces/IController.sol';
+import {IExchangeIssuance} from './interfaces/IExchangeIssuance.sol';
+import {IRollupProcessor} from '../../interfaces/IRollupProcessor.sol';
 
 contract IssuanceBridge is IDefiBridge {
     address public immutable rollupProcessor;
@@ -35,6 +35,9 @@ contract IssuanceBridge is IDefiBridge {
         setController = IController(_setController);
     }
 
+    // Empty fallback function in order to receive ETH
+    receive() external payable {}
+
     /**
      * @notice Sets all the important approvals.
      * @dev This bridge never holds any ERC20s after or before an invocation of any of its functions.
@@ -44,7 +47,8 @@ contract IssuanceBridge is IDefiBridge {
         uint256 tokensLength = tokens.length;
         for (uint256 i; i < tokensLength; ) {
             if (!IERC20(tokens[i]).approve(rollupProcessor, type(uint256).max)) revert ApproveFailed(tokens[i]);
-            if (!IERC20(tokens[i]).approve(address(exchangeIssuance), type(uint256).max)) revert ApproveFailed(tokens[i]);
+            if (!IERC20(tokens[i]).approve(address(exchangeIssuance), type(uint256).max))
+                revert ApproveFailed(tokens[i]);
             unchecked {
                 ++i;
             }
@@ -70,7 +74,7 @@ contract IssuanceBridge is IDefiBridge {
         uint256 inputValue,
         uint256 interactionNonce,
         uint64 auxData,
-        address 
+        address
     )
         external
         payable
@@ -139,9 +143,7 @@ contract IssuanceBridge is IDefiBridge {
             setController.isSet(address(outputAssetA.erc20Address))
         ) {
             // issue SetTokens for a given amount of ETH (=inputValue)
-            outputValueA = exchangeIssuance.issueSetForExactETH{
-                value: inputValue
-            }(
+            outputValueA = exchangeIssuance.issueSetForExactETH{value: inputValue}(
                 ISetToken(address(outputAssetA.erc20Address)),
                 auxData // _minSetReceive
             );
@@ -150,9 +152,6 @@ contract IssuanceBridge is IDefiBridge {
         }
     }
 
-    // Empty fallback function in order to receive ETH 
-    receive() external payable {}
-    
     function finalise(
         AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata,
@@ -160,7 +159,16 @@ contract IssuanceBridge is IDefiBridge {
         AztecTypes.AztecAsset calldata,
         uint256,
         uint64
-    ) external payable override returns (uint256, uint256, bool) {
+    )
+        external
+        payable
+        override
+        returns (
+            uint256,
+            uint256,
+            bool
+        )
+    {
         revert AsyncModeDisabled();
     }
 }
