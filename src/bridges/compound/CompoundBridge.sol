@@ -40,6 +40,7 @@ contract CompoundBridge is IDefiBridge {
      * @param inputAssetA - ETH/ERC20 (Mint), cToken ERC20 (Redeem)
      * @param outputAssetA - cToken (Mint), ETH/ERC20 (Redeem)
      * @param totalInputValue - the amount of ERC20 token/ETH to deposit (Mint), the amount of cToken to burn (Redeem)
+     * @param interactionNonce - interaction nonce as defined in RollupProcessor.sol
      * @param auxData - 0 (Mint), 1 (Redeem)
      * @return outputValueA - the amount of cToken (Mint) or ETH/ERC20 (Redeem) transferred to RollupProcessor.sol
      */
