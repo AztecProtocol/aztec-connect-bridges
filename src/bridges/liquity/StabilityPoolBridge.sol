@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
+pragma solidity >=0.8.4 <=0.8.10;
 
-pragma solidity >=0.8.0 <=0.8.10;
-pragma abicoder v2;
-
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../../interfaces/IDefiBridge.sol";
-import "../../interfaces/IWETH.sol";
-import "./interfaces/IStabilityPool.sol";
-import "./interfaces/ISwapRouter.sol";
+import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import '../../interfaces/IDefiBridge.sol';
+import '../../interfaces/IWETH.sol';
+import './interfaces/IStabilityPool.sol';
+import './interfaces/ISwapRouter.sol';
 
 /**
  * @title Aztec Connect Bridge for Liquity's StabilityPool.sol
@@ -30,7 +28,7 @@ import "./interfaces/ISwapRouter.sol";
  *
  * Note: StabilityPoolBridge.sol is very similar to StakingBridge.sol.
  */
-contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB") {
+contract StabilityPoolBridge is IDefiBridge, ERC20('StabilityPoolBridge', 'SPB') {
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant LQTY = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
@@ -169,11 +167,11 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
         if (wethBalance != 0) {
             uint256 lusdBalance = UNI_ROUTER.exactInput(
                 ISwapRouter.ExactInputParams({
-                path: abi.encodePacked(WETH, uint24(500), USDC, uint24(500), LUSD),
-                recipient: address(this),
-                deadline: block.timestamp,
-                amountIn: wethBalance,
-                amountOutMinimum: 0
+                    path: abi.encodePacked(WETH, uint24(500), USDC, uint24(500), LUSD),
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: wethBalance,
+                    amountOutMinimum: 0
                 })
             );
 

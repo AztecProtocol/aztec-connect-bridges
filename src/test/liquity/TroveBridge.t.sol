@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.0 <=0.8.10;
-pragma abicoder v2;
+pragma solidity >=0.8.4 <=0.8.10;
 
-import "./utils/TestUtil.sol";
-import "./interfaces/IHintHelpers.sol";
-import "../../bridges/liquity/TroveBridge.sol";
+import './utils/TestUtil.sol';
+import './interfaces/IHintHelpers.sol';
+import '../../bridges/liquity/TroveBridge.sol';
 
 contract TroveBridgeTest is TestUtil {
     TroveBridge private bridge;
@@ -46,8 +45,8 @@ contract TroveBridgeTest is TestUtil {
     }
 
     function testInitialERC20Params() public {
-        assertEq(bridge.name(), "TroveBridge");
-        assertEq(bridge.symbol(), "TB-160");
+        assertEq(bridge.name(), 'TroveBridge');
+        assertEq(bridge.symbol(), 'TB-160');
         assertEq(uint256(bridge.decimals()), 18);
     }
 
@@ -59,14 +58,14 @@ contract TroveBridgeTest is TestUtil {
                 AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH),
                 AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
                 AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
-                AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+                AztecTypes.AztecAsset(1, tokens['LUSD'].addr, AztecTypes.AztecAssetType.ERC20),
                 ROLLUP_PROCESSOR_WEI_BALANCE,
                 0,
                 MAX_FEE,
                 address(0)
             )
         {
-            assertTrue(false, "convert(...) has to revert when trove is in an incorrect state.");
+            assertTrue(false, 'convert(...) has to revert when trove is in an incorrect state.');
         } catch (bytes memory reason) {
             assertEq(TroveBridge.IncorrectStatus.selector, bytes4(reason));
         }
@@ -87,7 +86,7 @@ contract TroveBridgeTest is TestUtil {
                 address(0)
             )
         {
-            assertTrue(false, "convert(...) has to revert on incorrect input.");
+            assertTrue(false, 'convert(...) has to revert on incorrect input.');
         } catch (bytes memory reason) {
             assertEq(TroveBridge.IncorrectInput.selector, bytes4(reason));
         }
@@ -124,7 +123,7 @@ contract TroveBridgeTest is TestUtil {
         }
 
         try bridge.openTrove(address(0), address(0), MAX_FEE) {
-            assertTrue(false, "openTrove() has to revert in case TB total supply != 0.");
+            assertTrue(false, 'openTrove() has to revert in case TB total supply != 0.');
         } catch (bytes memory reason) {
             assertEq(TroveBridge.NonZeroTotalSupply.selector, bytes4(reason));
         }
@@ -139,7 +138,7 @@ contract TroveBridgeTest is TestUtil {
         // Keep on redeeming 20 million LUSD until the trove is in the closedByRedemption status
         uint256 amountToRedeem = 2e25;
         do {
-            deal(tokens["LUSD"].addr, address(this), amountToRedeem);
+            deal(tokens['LUSD'].addr, address(this), amountToRedeem);
             bridge.troveManager().redeemCollateral(amountToRedeem, address(0), address(0), address(0), 0, 0, 1e18);
         } while (Status(bridge.troveManager().getTroveStatus(address(bridge))) != Status.closedByRedemption);
 
@@ -175,12 +174,12 @@ contract TroveBridgeTest is TestUtil {
         // Check the trove's collateral equals deposit amount
         assertEq(collAfterBorrowing, OWNER_WEI_BALANCE);
 
-        uint256 lusdBalance = tokens["LUSD"].erc.balanceOf(OWNER);
+        uint256 lusdBalance = tokens['LUSD'].erc.balanceOf(OWNER);
         assertEq(lusdBalance, amtToBorrow);
 
         // Check the bridge doesn't hold any ETH or LUSD
         assertEq(address(bridge).balance, 0);
-        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), 0);
+        assertEq(tokens['LUSD'].erc.balanceOf(address(bridge)), 0);
 
         vm.stopPrank();
     }
@@ -197,7 +196,7 @@ contract TroveBridgeTest is TestUtil {
             AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
-            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(1, tokens['LUSD'].addr, AztecTypes.AztecAssetType.ERC20),
             ROLLUP_PROCESSOR_WEI_BALANCE,
             0,
             MAX_FEE
@@ -218,11 +217,11 @@ contract TroveBridgeTest is TestUtil {
 
         // Check the bridge doesn't hold any ETH or LUSD
         assertEq(address(bridge).balance, 0);
-        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), 0);
+        assertEq(tokens['LUSD'].erc.balanceOf(address(bridge)), 0);
 
         // Check the tokens were successfully sent to the rollupProcessor
         assertGt(bridge.balanceOf(address(rollupProcessor)), 0);
-        assertGt(tokens["LUSD"].erc.balanceOf(address(rollupProcessor)), 0);
+        assertGt(tokens['LUSD'].erc.balanceOf(address(rollupProcessor)), 0);
     }
 
     function _repay() private {
@@ -230,12 +229,12 @@ contract TroveBridgeTest is TestUtil {
 
         // Mint the borrower fee to ROLLUP_PROCESSOR in order to have a big enough balance for repaying
         // borrowerFee = processorTBBalance - processorLUSDBalance;
-        deal(tokens["LUSD"].addr, address(rollupProcessor), processorTBBalance);
+        deal(tokens['LUSD'].addr, address(rollupProcessor), processorTBBalance);
 
         rollupProcessor.convert(
             address(bridge),
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
-            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(1, tokens['LUSD'].addr, AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
             processorTBBalance,
@@ -245,7 +244,7 @@ contract TroveBridgeTest is TestUtil {
 
         // Check the bridge doesn't hold any ETH or LUSD
         assertEq(address(bridge).balance, 0);
-        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), 0);
+        assertEq(tokens['LUSD'].erc.balanceOf(address(bridge)), 0);
 
         // I want to check whether withdrawn amount of ETH is the same as the ROLLUP_PROCESSOR_WEI_BALANCE.
         // There is some imprecision so the amount is allowed to be different by 1 wei.
@@ -260,14 +259,14 @@ contract TroveBridgeTest is TestUtil {
         vm.startPrank(OWNER);
 
         uint256 ownerTBBalance = bridge.balanceOf(OWNER);
-        uint256 ownerLUSDBalance = tokens["LUSD"].erc.balanceOf(OWNER);
+        uint256 ownerLUSDBalance = tokens['LUSD'].erc.balanceOf(OWNER);
 
         uint256 borrowerFee = ownerTBBalance - ownerLUSDBalance - 200e18;
         uint256 amountToRepay = ownerLUSDBalance + borrowerFee;
 
         // Increase OWNER's LUSD balance by borrowerFee
-        deal(tokens["LUSD"].addr, OWNER, amountToRepay);
-        tokens["LUSD"].erc.approve(address(bridge), amountToRepay);
+        deal(tokens['LUSD'].addr, OWNER, amountToRepay);
+        tokens['LUSD'].erc.approve(address(bridge), amountToRepay);
 
         bridge.closeTrove();
 
@@ -276,7 +275,7 @@ contract TroveBridgeTest is TestUtil {
 
         // Check the bridge doesn't hold any ETH or LUSD
         assertEq(address(bridge).balance, 0);
-        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), 0);
+        assertEq(tokens['LUSD'].erc.balanceOf(address(bridge)), 0);
 
         // I want to check whether withdrawn amount of ETH is the same as the ROLLUP_PROCESSOR_WEI_BALANCE.
         // There is some imprecision so the amount is allowed to be different by 1 wei.

@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.0 <=0.8.10;
-pragma abicoder v2;
+pragma solidity >=0.8.4 <=0.8.10;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../../interfaces/IDefiBridge.sol";
-import "../../interfaces/IWETH.sol";
-import "./interfaces/ILQTYStaking.sol";
-import "./interfaces/ISwapRouter.sol";
+import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import '../../interfaces/IDefiBridge.sol';
+import '../../interfaces/IWETH.sol';
+import './interfaces/ILQTYStaking.sol';
+import './interfaces/ISwapRouter.sol';
 
 /**
  * @title Aztec Connect Bridge for Liquity's LQTYStaking.sol
@@ -27,7 +26,7 @@ import "./interfaces/ISwapRouter.sol";
  *
  * Note: StakingBridge.sol is very similar to StabilityPoolBridge.sol.
  */
-contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
+contract StakingBridge is IDefiBridge, ERC20('StakingBridge', 'SB') {
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant LQTY = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
@@ -114,7 +113,7 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
                 outputValueA = (this.totalSupply() * inputValue) / totalLQTYOwnedBeforeDeposit;
             }
             _mint(address(this), outputValueA);
-        } else if (inputAssetA.erc20Address == address(this) && outputAssetA.erc20Address == LQTY){
+        } else if (inputAssetA.erc20Address == address(this) && outputAssetA.erc20Address == LQTY) {
             // Withdrawal
             // Claim rewards
             STAKING_CONTRACT.unstake(0);

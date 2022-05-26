@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.0 <=0.8.10;
-pragma abicoder v2;
-
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
-import "../../interfaces/IDefiBridge.sol";
-import "../../interfaces/IRollupProcessor.sol";
-import "./interfaces/IBorrowerOperations.sol";
-import "./interfaces/ITroveManager.sol";
-import "./interfaces/ISortedTroves.sol";
+pragma solidity >=0.8.4 <=0.8.10;
+import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import '@openzeppelin/contracts/access/Ownable.sol';
+import '@openzeppelin/contracts/utils/Strings.sol';
+import '../../interfaces/IDefiBridge.sol';
+import '../../interfaces/IRollupProcessor.sol';
+import './interfaces/IBorrowerOperations.sol';
+import './interfaces/ITroveManager.sol';
+import './interfaces/ISortedTroves.sol';
 
 /**
  * @title Aztec Connect Bridge for opening and closing Liquity's troves
@@ -68,10 +66,9 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
      * @param _processor Address of the RollupProcessor.sol
      * @param _initialICRPerc Collateral ratio denominated in percents to be used when opening the Trove
      */
-    constructor(
-        address _processor,
-        uint256 _initialICRPerc
-    ) ERC20("TroveBridge", string(abi.encodePacked("TB-", _initialICRPerc.toString()))) {
+    constructor(address _processor, uint256 _initialICRPerc)
+        ERC20('TroveBridge', string(abi.encodePacked('TB-', _initialICRPerc.toString())))
+    {
         processor = _processor;
         initialICR = _initialICRPerc * 1e16;
     }
@@ -85,7 +82,11 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
      * @dev Sufficient amount of ETH has to be send so that at least 2000 LUSD gets borrowed. 2000 LUSD is a minimum
      * amount allowed by Liquity.
      */
-    function openTrove(address _upperHint, address _lowerHint, uint256 _maxFee) external payable onlyOwner {
+    function openTrove(
+        address _upperHint,
+        address _lowerHint,
+        uint256 _maxFee
+    ) external payable onlyOwner {
         // Checks whether the trove can be safely opened/reopened
         if (this.totalSupply() != 0) revert NonZeroTotalSupply();
 
