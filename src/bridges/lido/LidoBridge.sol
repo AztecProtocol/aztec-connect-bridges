@@ -119,8 +119,10 @@ contract LidoBridge is IDefiBridge {
 
         // since stETH is a rebase token, lets wrap it to wstETH before sending it back to the rollupProcessor
         uint256 outputStETHBalance = lido.balanceOf(address(this));
-        // Balance is with shares rounding down, so might be one-off
-        require(outputStETHBalance + 1 >= inputValue, 'LidoBridge: Invalid return value');
+
+        // Lido balance can be <=2 wei off, 1 from the submit where our shares is computed rounding down, 
+        // and then again when the balance is computed from the shares, rounding down again. 
+        require(outputStETHBalance + 2 >= inputValue, 'LidoBridge: Invalid wrap return value');
 
         outputValue = wrappedStETH.wrap(outputStETHBalance);
     }
@@ -138,7 +140,7 @@ contract LidoBridge is IDefiBridge {
         uint256 dy = curvePool.exchange(curveStETHIndex, curveETHIndex, stETH, 0);
 
         outputValue = address(this).balance;
-        require(outputValue >= dy, 'LidoBridge: Invalid return value');
+        require(outputValue >= dy, 'LidoBridge: Invalid unwrap return value');
 
         // Send ETH to rollup processor
         IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValue}(interactionNonce);

@@ -49,6 +49,16 @@ contract LidoTest is DSTest {
         validateLidoBridge(500000e18, 400000e18);
     }
 
+    function testLidoDepositAll(uint128 depositAmount) public {
+        vm.assume(depositAmount > 1000);
+        validateLidoBridge(depositAmount, depositAmount);
+    }
+
+    function testLidoDepositPartial(uint128 balance) public {
+        vm.assume(balance > 1000);
+        validateLidoBridge(balance, balance / 2);
+    }
+
     /**
         Testing flow:
         1. Send ETH to bridge
@@ -62,7 +72,7 @@ contract LidoTest is DSTest {
         vm.deal(address(rollupProcessor), balance);
 
         // Convert ETH to wstETH
-        validateETHToWstETH(balance, depositAmount);
+        validateETHToWstETH(depositAmount);
         
         // convert wstETH back to ETH using the same bridge
         validateWstETHToETH(wstETH.balanceOf(address(rollupProcessor)));
@@ -101,7 +111,7 @@ contract LidoTest is DSTest {
         assertTrue(afterETHBalance > beforeETHBalance);
     }
 
-    function validateETHToWstETH(uint256 balance, uint256 depositAmount) public {
+    function validateETHToWstETH(uint256 depositAmount) public {
         uint256 beforeETHBalance = address(rollupProcessor).balance;
         uint256 beforeWstETHBalance = wstETH.balanceOf(address(rollupProcessor));
 
@@ -131,7 +141,7 @@ contract LidoTest is DSTest {
 
         assertTrue(isAsync == false);
         assertTrue(outputValueB == 0);
-        assertTrue(afterETHBalance == balance - depositAmount);
+        assertTrue(afterETHBalance == beforeETHBalance - depositAmount);
         assertTrue(outputValueA > 0 && outputValueA <= depositAmount);
     }
 
