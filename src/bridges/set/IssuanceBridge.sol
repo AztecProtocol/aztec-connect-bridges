@@ -93,11 +93,14 @@ contract IssuanceBridge is IDefiBridge {
         // Check if the user wants to ISSUE or REDEEM SetToken based on the input/output asset types
         // -----------------------------------------------------------------------------------------
 
+        bool inputIsSet = setController.isSet(address(inputAssetA.erc20Address));
+        bool outputIsSet = setController.isSet(address(outputAssetA.erc20Address));
+
         // REDEEM SET: User wants to redeem SetToken and receive ETH or ERC20
         // inputAssetA: SetToken
         // outputAssetA ERC20 or ETH
         if (
-            setController.isSet(address(inputAssetA.erc20Address)) &&
+            inputIsSet &&
             (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH ||
                 outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20)
         ) {
@@ -123,11 +126,7 @@ contract IssuanceBridge is IDefiBridge {
         // ISSUE SET: User wants to issue SetToken in for ERC20
         // inputAssetA: ERC20 (but not SetToken)
         // outputAssetA: SetToken
-        else if (
-            inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 &&
-            !setController.isSet(address(inputAssetA.erc20Address)) &&
-            setController.isSet(address(outputAssetA.erc20Address))
-        ) {
+        else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && !inputIsSet && outputIsSet) {
             outputValueA = exchangeIssuance.issueSetForExactToken(
                 ISetToken(address(outputAssetA.erc20Address)),
                 IERC20(address(inputAssetA.erc20Address)),
@@ -138,10 +137,7 @@ contract IssuanceBridge is IDefiBridge {
         // ISSUE: User wants to issue SetToken for ETH
         // inputAssetA: ETH
         // outputAssetA: SetToken
-        else if (
-            inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
-            setController.isSet(address(outputAssetA.erc20Address))
-        ) {
+        else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH && outputIsSet) {
             // issue SetTokens for a given amount of ETH (=inputValue)
             outputValueA = exchangeIssuance.issueSetForExactETH{value: inputValue}(
                 ISetToken(address(outputAssetA.erc20Address)),
