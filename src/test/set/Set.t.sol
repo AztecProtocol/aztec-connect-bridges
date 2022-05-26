@@ -1,9 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.10;
-
-import '../../../lib/ds-test/src/test.sol';
-
-import {Vm} from '../../../lib/forge-std/src/Vm.sol';
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright 2022 Spilsbury Holdings Ltd
+pragma solidity >=0.8.0 <=0.8.10;
 
 import {DefiBridgeProxy} from './../../aztec/DefiBridgeProxy.sol';
 import {RollupProcessor} from './../../aztec/RollupProcessor.sol';
@@ -15,9 +12,9 @@ import {IController} from './../../bridges/set/interfaces/IController.sol';
 import {ISetToken} from './../../bridges/set/interfaces/ISetToken.sol';
 import {AztecTypes} from './../../aztec/AztecTypes.sol';
 
-contract SetTest is DSTest {
-    Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+import 'forge-std/Test.sol';
 
+contract SetTest is Test {
     // Aztec
     DefiBridgeProxy defiBridgeProxy;
     RollupProcessor rollupProcessor;
@@ -69,9 +66,9 @@ contract SetTest is DSTest {
 
     function testSetBridge() public {
         // test if we can prefund rollup with tokens and ETH
-        uint256 depositAmountDai = 1000000000;
-        uint256 depositAmountDpi = 2000000000;
-        uint256 depositAmountEth = 1000000000000000000; // 1 ETH
+        uint256 depositAmountDai = 1e9;
+        uint256 depositAmountDpi = 2e9;
+        uint256 depositAmountEth = 1 ether;
 
         _setTokenBalance(address(dai), address(rollupProcessor), depositAmountDai, 2);
         _setTokenBalance(address(dpi), address(rollupProcessor), depositAmountDpi, 0);
@@ -90,7 +87,7 @@ contract SetTest is DSTest {
 
     function testIssueSetForExactToken() public {
         // Pre-fund contract with DAI
-        uint256 depositAmountDai = 1000000000000000000000; // $1000
+        uint256 depositAmountDai = 1e21; // 1000 DAI
         _setTokenBalance(address(dai), address(rollupProcessor), depositAmountDai, 2);
 
         // Used for unused input/output assets
@@ -141,7 +138,7 @@ contract SetTest is DSTest {
 
     function testIssueSetForExactEth() public {
         // Pre-fund contract with ETH
-        uint256 depositAmountEth = 100000000000000000; // 0.1 ETH
+        uint256 depositAmountEth = 1e17; // 0.1 ETH
         _setEthBalance(address(rollupProcessor), depositAmountEth);
 
         // Used for unused input/output assets
@@ -191,7 +188,7 @@ contract SetTest is DSTest {
 
     function testRedeemExactSetForToken() public {
         // Pre-fund rollup contract DPI
-        uint256 depositAmountDpi = 100000000000000000000; // 100
+        uint256 depositAmountDpi = 1e20; // 100 DPI
         _setTokenBalance(address(dpi), address(rollupProcessor), depositAmountDpi, 0);
 
         // Used for unused input/output assets
@@ -244,7 +241,7 @@ contract SetTest is DSTest {
 
     function testRedeemExactSetForEth() public {
         // prefund rollup with tokens
-        uint256 depositAmountDpi = 100000000000000000000; // 100
+        uint256 depositAmountDpi = 1e20; // 100 DPI
         _setTokenBalance(address(dpi), address(rollupProcessor), depositAmountDpi, 0);
 
         // Used for unused input/output assets
