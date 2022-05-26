@@ -25,7 +25,7 @@ interface ICurvePool {
     ) external payable returns (uint256);
 }
 
-interface ILido {
+interface ILido is IERC20 {
     function submit(address _referral) external payable returns (uint256);
 }
 
@@ -33,7 +33,7 @@ interface ILidoOracle {
     function getLastCompletedReportDelta() external view returns (uint256 postTotalPooledEther, uint256 preTotalPooledEther, uint256 timeElapsed);
 }
 
-interface IWstETH {
+interface IWstETH is IERC20{
     function wrap(uint256 _stETHAmount) external returns (uint256);
     function unwrap(uint256 _wstETHAmount) external returns (uint256);
     function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256);
@@ -46,6 +46,8 @@ interface IRollupProcessor {
 
 contract LidoBridge is IDefiBridge {
     using SafeERC20 for IERC20;
+    using SafeERC20 for ILido;
+    using SafeERC20 for IWstETH;
 
     address public immutable rollupProcessor;
     address public immutable referral;
@@ -122,13 +124,13 @@ contract LidoBridge is IDefiBridge {
         }
 
         // since stETH is a rebase token, lets wrap it to wstETH before sending it back to the rollupProcessor
-        uint256 outputStETHBalance = IERC20(address(lido)).balanceOf(address(this));
+        uint256 outputStETHBalance = lido.balanceOf(address(this));
 
-        IERC20(address(lido)).safeIncreaseAllowance(address(wrappedStETH), outputStETHBalance);
+        lido.safeIncreaseAllowance(address(wrappedStETH), outputStETHBalance);
         outputValue = wrappedStETH.wrap(outputStETHBalance);
 
         // Give allowance for rollup processor to withdraw
-        IERC20(address(wrappedStETH)).safeIncreaseAllowance(rollupProcessor, outputValue);
+        wrappedStETH.safeIncreaseAllowance(rollupProcessor, outputValue);
     }
 
     /**
@@ -141,7 +143,7 @@ contract LidoBridge is IDefiBridge {
         uint256 stETH = wrappedStETH.unwrap(inputValue);
 
         // Exchange stETH to ETH via curve
-        IERC20(address(lido)).safeIncreaseAllowance(address(curvePool), stETH);
+        lido.safeIncreaseAllowance(address(curvePool), stETH);
         outputValue = curvePool.exchange(curveStETHIndex, curveETHIndex, stETH, 0);
 
         // Send ETH to rollup processor
