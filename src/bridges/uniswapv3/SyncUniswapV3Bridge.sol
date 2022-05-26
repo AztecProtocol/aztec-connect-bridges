@@ -171,7 +171,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             //outputAssetA.id = interactionNonce;
             //outputAssetA.erc20Address = input_address;
             outputValueA = inputValue;
-            console.log("finished");
+//            console.log("finished");
         }
         //INTERACTION TYPE 2 
         //1 real 1 virtual
@@ -372,8 +372,8 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
 
             amounts[0] =  input < output ? inputValue/2 : amountOut;
             amounts[1] =  input < output ? amountOut : inputValue/2;
-            console.log(amounts[0], "amount0");
-            console.log(amounts[1], "amount1");
+//            console.log(amounts[0], "amount0");
+//            console.log(amounts[1], "amount1");
 
         }
 

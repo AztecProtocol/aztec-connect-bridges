@@ -8,5 +8,4 @@ yarn-error.log
 contracts
 client-dest/
 types/
-yarn.lock
 typechain-types/
