@@ -114,22 +114,13 @@ contract LidoBridge is IDefiBridge {
         // the minimum should be 1ETH:1STETH
         uint256 minOutput = inputValue;
 
-        // Check with curve to see if we can get better exchange rate than 1 ETH : 1 STETH
-        // Yes: use curve
-        // No: deposit to Lido correct
-
-        uint256 curveStETHBalance = curvePool.get_dy(curveETHIndex, curveStETHIndex, inputValue);
-
-        if (curveStETHBalance > minOutput) {
-            // exchange via curve since we can get a better rate
-            curvePool.exchange{value: inputValue}(curveETHIndex, curveStETHIndex, inputValue, minOutput);
-        } else {
-            // deposit directly through lido since we cannot get better rate
-            lido.submit{value: inputValue}(referral);
-        }
+        // deposit into lido (return value is shares NOT stETH)
+        lido.submit{value: inputValue}(referral);
 
         // since stETH is a rebase token, lets wrap it to wstETH before sending it back to the rollupProcessor
         uint256 outputStETHBalance = lido.balanceOf(address(this));
+        // Balance is with shares rounding down, so might be one-off
+        require(outputStETHBalance + 1 >= inputValue, 'LidoBridge: Invalid return value');
 
         outputValue = wrappedStETH.wrap(outputStETHBalance);
     }
