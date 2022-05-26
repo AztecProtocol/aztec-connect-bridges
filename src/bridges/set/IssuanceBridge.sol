@@ -20,6 +20,7 @@ contract IssuanceBridge is IDefiBridge {
     IController setController; // used to check if address is SetToken
 
     error ApproveFailed(address token);
+    error NotSetToken(address token);
     error InvalidCaller();
     error ZeroInputValue();
     error IncompatibleAssetPair();
@@ -33,6 +34,28 @@ contract IssuanceBridge is IDefiBridge {
         rollupProcessor = _rollupProcessor;
         exchangeIssuance = IExchangeIssuance(_exchangeIssuance);
         setController = IController(_setController);
+    }
+
+    function approveTokens(address[] calldata exchangeTokens, address[] calldata processorTokens) external {
+        uint256 exchangeLength = exchangeTokens.length;
+        for (uint256 i; i < exchangeLength; ) {
+            if (setController.isSet(exchangeTokens[i])) {
+                if (!IERC20(exchangeTokens[i]).approve(address(exchangeIssuance), type(uint256).max)) revert ApproveFailed(exchangeTokens[i]);
+            } else {
+                revert NotSetToken(exchangeTokens[i]);
+            }
+            unchecked {
+                ++i;
+            }
+        }
+
+        uint256 processorLength = processorTokens.length;
+        for (uint256 i; i < processorLength; ) {
+            IERC20(processorTokens[i]).approve(rollupProcessor, type(uint256).max);
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     /**
@@ -104,12 +127,6 @@ contract IssuanceBridge is IDefiBridge {
                     inputValue, //  _amountSetToken,
                     auxData //  _minOutputReceive
                 );
-
-                // approve the transfer of funds back to the rollup contract
-                if (!IERC20(outputAssetA.erc20Address).approve(
-                        rollupProcessor,
-                        outputValueA
-                    )) revert ApproveFailed(outputAssetA.erc20Address);
             }
         }
         // ISSUE SET: User wants to issue SetToken in for ERC20
@@ -132,12 +149,6 @@ contract IssuanceBridge is IDefiBridge {
                 inputValue, //  _amountInput
                 auxData // _minSetReceive
             );
-
-            // approve the transfer of funds back to the rollup contract
-            if (!IERC20(outputAssetA.erc20Address).approve(
-                rollupProcessor,
-                outputValueA
-            )) revert ApproveFailed(outputAssetA.erc20Address);
         }
         // ISSUE: User wants to issue SetToken for ETH
         // inputAssetA: ETH
@@ -153,12 +164,6 @@ contract IssuanceBridge is IDefiBridge {
                 ISetToken(address(outputAssetA.erc20Address)),
                 auxData // _minSetReceive
             );
-
-            // approve the transfer of funds back to the rollup contract
-            if (!IERC20(outputAssetA.erc20Address).approve(
-                rollupProcessor,
-                outputValueA
-            )) revert ApproveFailed(outputAssetA.erc20Address);
         } else {
             revert IncompatibleAssetPair();
         }

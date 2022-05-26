@@ -46,6 +46,26 @@ contract SetTest is DSTest {
             exchangeIssuanceAddress,
             setControllerAddress
         );
+
+        address[] memory exchangeTokens = new address[](1);
+        address[] memory processorTokens = new address[](2);
+        exchangeTokens[0] = address(dpi);
+        processorTokens[0] = address(dai);
+        processorTokens[1] = address(dpi);
+        issuanceBridge.approveTokens(exchangeTokens, processorTokens);
+    }
+
+    function testApproveNonSetAsSet() public {
+        address[] memory exchangeTokens = new address[](1);
+        address[] memory processorTokens = new address[](0);
+        exchangeTokens[0] = address(dai);
+
+        try issuanceBridge.approveTokens(exchangeTokens, processorTokens)
+        {
+            assertTrue(false, "approveTokens(...) has when approving non-set token as set.");
+        } catch (bytes memory reason) {
+            assertEq(IssuanceBridge.NotSetToken.selector, bytes4(reason));
+        }
     }
 
     function testSetBridge() public {
