@@ -46,14 +46,14 @@ contract LidoBridge is IDefiBridge {
     using SafeERC20 for IERC20;
 
     address public immutable rollupProcessor;
-    address public referral;
+    address public immutable referral;
 
-    ILido public lido = ILido(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
-    IWstETH public wrappedStETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
-    ICurvePool public curvePool = ICurvePool(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022);
+    ILido public constant lido = ILido(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
+    IWstETH public constant wrappedStETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+    ICurvePool public constant curvePool = ICurvePool(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022);
 
-    int128 private curveETHIndex = 0;
-    int128 private curveStETHIndex = 1;
+    int128 private constant curveETHIndex = 0;
+    int128 private constant curveStETHIndex = 1;
 
     constructor(address _rollupProcessor, address _referral) {
         rollupProcessor = _rollupProcessor;
