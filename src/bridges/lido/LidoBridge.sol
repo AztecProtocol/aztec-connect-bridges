@@ -9,6 +9,8 @@ import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 
 interface ICurvePool {
+    function coins(uint256) external view returns(address);
+
     function get_dy(
         int128 i,
         int128 j,
@@ -56,6 +58,8 @@ contract LidoBridge is IDefiBridge {
     int128 private constant curveStETHIndex = 1;
 
     constructor(address _rollupProcessor, address _referral) {
+        require(curvePool.coins(uint256(uint128(curveStETHIndex))) == address(lido), 'LidoBridge: Invalid configuration');
+
         rollupProcessor = _rollupProcessor;
         referral = _referral;
     }
