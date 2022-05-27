@@ -116,14 +116,15 @@ contract StabilityPoolBridge is IDefiBridge, ERC20('StabilityPoolBridge', 'SPB')
             STABILITY_POOL.provideToSP(inputValue, frontEndTag);
             _swapRewardsToLUSDAndDeposit();
             uint256 totalLUSDOwnedBeforeDeposit = STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) - inputValue;
+            uint256 totalSupply = this.totalSupply();
             // outputValueA = how much SPB should be minted
-            if (this.totalSupply() == 0) {
+            if (totalSupply == 0) {
                 // When the totalSupply is 0, I set the SPB/LUSD ratio to be 1.
                 outputValueA = inputValue;
             } else {
-                // this.totalSupply() / totalLUSDOwnedBeforeDeposit = how much SPB one LUSD is worth
+                // totalSupply / totalLUSDOwnedBeforeDeposit = how much SPB one LUSD is worth
                 // When I multiply this ^ with the amount of LUSD deposited I get the amount of SPB to be minted.
-                outputValueA = (this.totalSupply() * inputValue) / totalLUSDOwnedBeforeDeposit;
+                outputValueA = (totalSupply * inputValue) / totalLUSDOwnedBeforeDeposit;
             }
             _mint(address(this), outputValueA);
         } else if (inputAssetA.erc20Address == address(this) && outputAssetA.erc20Address == LUSD) {

@@ -102,15 +102,16 @@ contract StakingBridge is IDefiBridge, ERC20('StakingBridge', 'SB') {
             // Stake and claim rewards
             STAKING_CONTRACT.stake(inputValue);
             _swapRewardsToLQTYAndStake();
+            uint256 totalSupply = this.totalSupply();
             // outputValueA = how much SB should be minted
-            if (this.totalSupply() == 0) {
+            if (totalSupply == 0) {
                 // When the totalSupply is 0, I set the SB/LQTY ratio to be 1.
                 outputValueA = inputValue;
             } else {
                 uint256 totalLQTYOwnedBeforeDeposit = STAKING_CONTRACT.stakes(address(this)) - inputValue;
-                // this.totalSupply() / totalLQTYOwnedBeforeDeposit = how much SB one LQTY is worth
+                // totalSupply / totalLQTYOwnedBeforeDeposit = how much SB one LQTY is worth
                 // When I multiply this ^ with the amount of LQTY deposited I get the amount of SB to be minted.
-                outputValueA = (this.totalSupply() * inputValue) / totalLQTYOwnedBeforeDeposit;
+                outputValueA = (totalSupply * inputValue) / totalLQTYOwnedBeforeDeposit;
             }
             _mint(address(this), outputValueA);
         } else if (inputAssetA.erc20Address == address(this) && outputAssetA.erc20Address == LQTY) {
