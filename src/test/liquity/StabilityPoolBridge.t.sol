@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.0 <=0.8.10;
-pragma abicoder v2;
+pragma solidity >=0.8.4;
 
-import "./utils/TestUtil.sol";
-import "../../bridges/liquity/StabilityPoolBridge.sol";
+import './utils/TestUtil.sol';
+import '../../bridges/liquity/StabilityPoolBridge.sol';
 
 contract StabilityPoolBridgeTest is TestUtil {
     StabilityPoolBridge private bridge;
@@ -18,9 +17,30 @@ contract StabilityPoolBridgeTest is TestUtil {
     }
 
     function testInitialERC20Params() public {
-        assertEq(bridge.name(), "StabilityPoolBridge");
-        assertEq(bridge.symbol(), "SPB");
+        assertEq(bridge.name(), 'StabilityPoolBridge');
+        assertEq(bridge.symbol(), 'SPB');
         assertEq(uint256(bridge.decimals()), 18);
+    }
+
+    function testIncorrectInput() public {
+        // Call convert with incorrect input
+        vm.prank(address(rollupProcessor));
+        try
+            bridge.convert(
+                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+                0,
+                0,
+                0,
+                address(0)
+            )
+        {
+            assertTrue(false, 'convert(...) has to revert on incorrect input.');
+        } catch (bytes memory reason) {
+            assertEq(StabilityPoolBridge.IncorrectInput.selector, bytes4(reason));
+        }
     }
 
     function testFullDepositWithdrawalFlow() public {
@@ -28,12 +48,12 @@ contract StabilityPoolBridgeTest is TestUtil {
         uint256 depositAmount = 1e24;
 
         // 1. Mint the deposit amount of LUSD to the bridge
-        deal(tokens["LUSD"].addr, address(rollupProcessor), depositAmount);
+        deal(tokens['LUSD'].addr, address(rollupProcessor), depositAmount);
 
         // 2. Deposit LUSD to the StabilityPool contract through the bridge
         rollupProcessor.convert(
             address(bridge),
-            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(1, tokens['LUSD'].addr, AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
@@ -60,7 +80,7 @@ contract StabilityPoolBridgeTest is TestUtil {
             address(bridge),
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(1, tokens['LUSD'].addr, AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
             withdrawAmount,
             1,
@@ -71,7 +91,7 @@ contract StabilityPoolBridgeTest is TestUtil {
         assertEq(bridge.totalSupply(), 0);
 
         // 10. Check the LUSD balance of rollupProcessor is equal to the initial LUSD deposit
-        assertEq(tokens["LUSD"].erc.balanceOf(address(rollupProcessor)), depositAmount);
+        assertEq(tokens['LUSD'].erc.balanceOf(address(rollupProcessor)), depositAmount);
     }
 
     function testMultipleDepositsWithdrawals() public {
@@ -83,15 +103,15 @@ contract StabilityPoolBridgeTest is TestUtil {
         while (i < numIters) {
             depositAmount = rand(depositAmount);
             // 1. Mint deposit amount of LUSD to the rollupProcessor
-            deal(tokens["LUSD"].addr, address(rollupProcessor), depositAmount);
+            deal(tokens['LUSD'].addr, address(rollupProcessor), depositAmount);
             // 2. Mint rewards to the bridge
-            deal(tokens["LQTY"].addr, address(bridge), 1e20);
-            deal(tokens["WETH"].addr, address(bridge), 1e18);
+            deal(tokens['LQTY'].addr, address(bridge), 1e20);
+            deal(tokens['WETH'].addr, address(bridge), 1e18);
 
             // 3. Deposit LUSD to StabilityPool through the bridge
             (uint256 outputValueA, , ) = rollupProcessor.convert(
                 address(bridge),
-                AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+                AztecTypes.AztecAsset(1, tokens['LUSD'].addr, AztecTypes.AztecAssetType.ERC20),
                 AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
                 AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
                 AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
@@ -111,7 +131,7 @@ contract StabilityPoolBridgeTest is TestUtil {
                 address(bridge),
                 AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
                 AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+                AztecTypes.AztecAsset(1, tokens['LUSD'].addr, AztecTypes.AztecAssetType.ERC20),
                 AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
                 spbBalances[i],
                 numIters + i,
