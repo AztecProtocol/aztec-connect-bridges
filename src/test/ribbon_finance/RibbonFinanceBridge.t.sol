@@ -19,14 +19,13 @@ import "../../../lib/ds-test/src/test.sol";
 contract RibbonFinanceBridgeTest is DSTest {
 
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+    address public immutable WETH = 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2;
 
     DefiBridgeProxy defiBridgeProxy;
     RollupProcessor rollupProcessor;
 
     RibbonFinanceBridgeContract ribbonFinanceBridge;
-
-    IERC20 constant dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-
+    AztecTypes.AztecAsset emptyAsset;
 
     function _aztecPreSetup() internal {
         defiBridgeProxy = new DefiBridgeProxy();
@@ -41,24 +40,21 @@ contract RibbonFinanceBridgeTest is DSTest {
         );
 
         rollupProcessor.setBridgeGasLimit(address(ribbonFinanceBridge), 100000);
-
-        _setTokenBalance(address(dai), address(0xdead), 42069);
     }
 
     function testDepositEthThetaV2() public {
         uint256 depositAmount = 10000;
-        _setTokenBalance(address(dai), address(rollupProcessor), depositAmount);
+        _setEthBalance(address(rollupProcessor), depositAmount);
 
-        AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(dai),
-            assetType: AztecTypes.AztecAssetType.ERC20
+            id: 1, // TODO: What should this actually be?
+            assetType: AztecTypes.AztecAssetType.ETH,
+            erc20Address: WETH
         });
         AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
             id: 2,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.ERC20
+            assetType: AztecTypes.AztecAssetType.VIRTUAL,
+            erc20Address: address(0)
         });
 
         (
@@ -68,17 +64,17 @@ contract RibbonFinanceBridgeTest is DSTest {
         ) = rollupProcessor.convert(
             address(ribbonFinanceBridge),
             inputAsset,
-            empty,
+            emptyAsset,
             outputAsset,
-            empty,
+            emptyAsset,
             depositAmount,
             1,
             0
-        );
+        );       
     }
 
-    function testWithdrawalEthThetaV2() public {
-    }
+    // function testWithdrawalEthThetaV2() public {
+    // }
 
     // function testDepositWBTCThetaV2() {
     // }
@@ -95,22 +91,13 @@ contract RibbonFinanceBridgeTest is DSTest {
     // function testDepositEthPutyvUSDCV1() {
     // }
 
-    function _setTokenBalance(
-        address token,
+    function _setEthBalance(
         address user,
         uint256 balance
     ) internal {
-        uint256 slot = 2; // May vary depending on token
 
-        vm.store(
-            token,
-            keccak256(abi.encode(user, slot)),
-            bytes32(uint256(balance))
-        );
+        vm.deal(user, balance);
 
-        assertEq(IERC20(token).balanceOf(user), balance, "wrong balance");
-    }
-
-
-
+        assertEq(user.balance, balance, "wrong ETH balance");
+    }    
 }
