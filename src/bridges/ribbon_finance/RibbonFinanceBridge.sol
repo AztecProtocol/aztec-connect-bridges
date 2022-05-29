@@ -31,7 +31,7 @@ interface IRibbonFinanceThetaVaultV2 {
     function completeWithdraw() external;
 }
 
-contract RibbonFinanceBridgeContract is IDefiBridge {
+contract c is IDefiBridge {
   using SafeMath for uint256;
 
   address public immutable rollupProcessor;
