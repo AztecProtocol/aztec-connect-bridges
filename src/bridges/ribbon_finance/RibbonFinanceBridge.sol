@@ -6,7 +6,7 @@ pragma experimental ABIEncoderV2;
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import { IDefiBridge } from "../../interfaces/IDefiBridge.sol";
-import { IERC20, IERC20Detailed } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { AztecTypes } from "../../aztec/AztecTypes.sol";
 import {Vault} from "./libraries/Vault.sol";
@@ -31,7 +31,7 @@ interface IRibbonFinanceThetaVaultV2 {
     function completeWithdraw() external;
 }
 
-contract c is IDefiBridge {
+contract RibbonFinanceBridgeContract is IDefiBridge {
   using SafeMath for uint256;
 
   address public immutable rollupProcessor;
@@ -76,7 +76,7 @@ contract c is IDefiBridge {
     if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && inputAssetA.erc20Address == WETH) {
       // TODO: confirm WETH deposited value matches totalInputValue (i.e. normalize denomination)
       // 1. Approve totalInputValue of WETH to be transferred from bridge to thetaVaultETHCall
-      IERC20Detailed(inputAssetA).approve(address(thetaVaultETHCall), totalInputValue);
+      IERC20(inputAssetA).approve(address(thetaVaultETHCall), totalInputValue);
 
       // 2. Get number of unredeemed shares before deposit
       depositReceipt = thetaVaultETHCall.depositReceipts[address(this)].unredeemedShares;
