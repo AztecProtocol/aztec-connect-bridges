@@ -50,7 +50,7 @@ contract AaveLendingBridge is IDefiBridge {
         );
     }
 
-function convert(
+    function convert(
         AztecTypes.AztecAsset memory inputAssetA,
         AztecTypes.AztecAsset memory inputAssetB,
         AztecTypes.AztecAsset memory outputAssetA,
