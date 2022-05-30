@@ -2,16 +2,16 @@
 // Copyright 2020 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4 <=0.8.10;
 
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {AztecTypes} from '../../aztec/AztecTypes.sol';
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
 
-import {IDefiBridge} from '../../interfaces/IDefiBridge.sol';
-import {ISetToken} from './interfaces/ISetToken.sol';
-import {IController} from './interfaces/IController.sol';
-import {IExchangeIssuance} from './interfaces/IExchangeIssuance.sol';
-import {IRollupProcessor} from '../../interfaces/IRollupProcessor.sol';
+import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
+import {ISetToken} from "./interfaces/ISetToken.sol";
+import {IController} from "./interfaces/IController.sol";
+import {IExchangeIssuance} from "./interfaces/IExchangeIssuance.sol";
+import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
 
 contract IssuanceBridge is IDefiBridge {
     using SafeERC20 for IERC20;

@@ -12,12 +12,9 @@ import {ExampleBridgeContract} from "./../../bridges/example/ExampleBridge.sol";
 
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 
-
 import "../../../lib/ds-test/src/test.sol";
 
-
 contract ExampleTest is DSTest {
-
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     DefiBridgeProxy defiBridgeProxy;
@@ -27,7 +24,6 @@ contract ExampleTest is DSTest {
 
     IERC20 constant dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
 
-
     function _aztecPreSetup() internal {
         defiBridgeProxy = new DefiBridgeProxy();
         rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
@@ -36,20 +32,16 @@ contract ExampleTest is DSTest {
     function setUp() public {
         _aztecPreSetup();
 
-        exampleBridge = new ExampleBridgeContract(
-            address(rollupProcessor)
-        );
+        exampleBridge = new ExampleBridgeContract(address(rollupProcessor));
 
         rollupProcessor.setBridgeGasLimit(address(exampleBridge), 100000);
 
         _setTokenBalance(address(dai), address(0xdead), 42069);
     }
 
-
     function testExampleBridge() public {
-       uint256 depositAmount = 15000;
+        uint256 depositAmount = 15000;
         _setTokenBalance(address(dai), address(rollupProcessor), depositAmount);
-
 
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
@@ -63,31 +55,21 @@ contract ExampleTest is DSTest {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-        (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool isAsync
-        ) = rollupProcessor.convert(
-                address(exampleBridge),
-                inputAsset,
-                empty,
-                outputAsset,
-                empty,
-                depositAmount,
-                1,
-                0
-            );
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
+            address(exampleBridge),
+            inputAsset,
+            empty,
+            outputAsset,
+            empty,
+            depositAmount,
+            1,
+            0
+        );
 
         uint256 rollupDai = dai.balanceOf(address(rollupProcessor));
 
-        assertEq(
-            depositAmount,
-            rollupDai,
-            "Balances must match"
-        );
-
+        assertEq(depositAmount, rollupDai, "Balances must match");
     }
-
 
     function assertNotEq(address a, address b) internal {
         if (a == b) {
@@ -98,7 +80,6 @@ contract ExampleTest is DSTest {
         }
     }
 
-
     function _setTokenBalance(
         address token,
         address user,
@@ -106,15 +87,8 @@ contract ExampleTest is DSTest {
     ) internal {
         uint256 slot = 2; // May vary depending on token
 
-        vm.store(
-            token,
-            keccak256(abi.encode(user, slot)),
-            bytes32(uint256(balance))
-        );
+        vm.store(token, keccak256(abi.encode(user, slot)), bytes32(uint256(balance)));
 
         assertEq(IERC20(token).balanceOf(user), balance, "wrong balance");
     }
-
-
-
 }

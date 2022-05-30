@@ -2,8 +2,8 @@
 //pragma solidity =0.7.6;
 pragma solidity >=0.6.10 <=0.8.10;
 
-import '../interfaces/IUniswapV3Pool.sol';
-import './PoolAddress.sol';
+import "../interfaces/IUniswapV3Pool.sol";
+import "./PoolAddress.sol";
 
 /// @notice Provides validation for callbacks from Uniswap V3 Pools
 library CallbackValidation {

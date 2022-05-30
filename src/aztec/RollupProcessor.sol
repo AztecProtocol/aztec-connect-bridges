@@ -3,11 +3,11 @@
 pragma solidity >=0.8.0 <=0.8.10;
 pragma abicoder v2;
 
-import {IDefiBridge} from '../interfaces/IDefiBridge.sol';
-import {IERC20} from '../interfaces/IERC20Permit.sol';
-import {DefiBridgeProxy} from './DefiBridgeProxy.sol';
-import {AztecTypes} from './AztecTypes.sol';
-import {TokenTransfers} from '../libraries/TokenTransfers.sol';
+import {IDefiBridge} from "../interfaces/IDefiBridge.sol";
+import {IERC20} from "../interfaces/IERC20Permit.sol";
+import {DefiBridgeProxy} from "./DefiBridgeProxy.sol";
+import {AztecTypes} from "./AztecTypes.sol";
+import {TokenTransfers} from "../libraries/TokenTransfers.sol";
 
 /**
  * @notice Mock rollup processor to be used in testing. Will revert on a failing bridge to make debugging easier
@@ -119,7 +119,7 @@ contract RollupProcessor {
         // call canFinalise on the bridge
         // call finalise on the bridge
         DefiInteraction storage interaction = defiInteractions[interactionNonce];
-        require(interaction.bridgeAddress != address(0), 'Rollup Contract: UNKNOWN_NONCE');
+        require(interaction.bridgeAddress != address(0), "Rollup Contract: UNKNOWN_NONCE");
 
         (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = IDefiBridge(interaction.bridgeAddress)
             .finalise(
@@ -133,7 +133,7 @@ contract RollupProcessor {
         completed = interactionComplete;
 
         if (outputValueB > 0 && interaction.outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED) {
-            require(false, 'Non-zero output value on non-existant asset!');
+            require(false, "Non-zero output value on non-existant asset!");
         }
         if (outputValueA == 0 && outputValueB == 0) {
             // issue refund.
@@ -243,7 +243,7 @@ contract RollupProcessor {
             results.outputValueB = outputValueB;
             results.isAsync = isAsync;
         }
-        require(success, 'Interaction Failed');
+        require(success, "Interaction Failed");
     }
 
     function convert(
@@ -263,7 +263,7 @@ contract RollupProcessor {
             bool isAsync
         )
     {
-        require(defiInteractions[interactionNonce].auxInputData == 0, 'Rollup Contract: INTERACTION_ALREADY_EXISTS');
+        require(defiInteractions[interactionNonce].auxInputData == 0, "Rollup Contract: INTERACTION_ALREADY_EXISTS");
 
         uint256 ethPayments_slot;
 

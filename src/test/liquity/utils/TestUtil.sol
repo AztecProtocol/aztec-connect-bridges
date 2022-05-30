@@ -3,11 +3,11 @@
 pragma solidity >=0.8.0 <=0.8.10;
 pragma abicoder v2;
 
-import 'forge-std/Test.sol';
-import './MockPriceFeed.sol';
-import '../../../aztec/DefiBridgeProxy.sol';
-import '../../../aztec/RollupProcessor.sol';
-import '../../../bridges/liquity/interfaces/IPriceFeed.sol';
+import "forge-std/Test.sol";
+import "./MockPriceFeed.sol";
+import "../../../aztec/DefiBridgeProxy.sol";
+import "../../../aztec/RollupProcessor.sol";
+import "../../../bridges/liquity/interfaces/IPriceFeed.sol";
 
 contract TestUtil is Test {
     DefiBridgeProxy internal defiBridgeProxy;
@@ -23,14 +23,14 @@ contract TestUtil is Test {
     mapping(bytes32 => Token) internal tokens;
 
     function setUpTokens() public {
-        tokens['LUSD'].addr = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
-        tokens['LUSD'].erc = IERC20(tokens['LUSD'].addr);
+        tokens["LUSD"].addr = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
+        tokens["LUSD"].erc = IERC20(tokens["LUSD"].addr);
 
-        tokens['WETH'].addr = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-        tokens['WETH'].erc = IERC20(tokens['WETH'].addr);
+        tokens["WETH"].addr = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+        tokens["WETH"].erc = IERC20(tokens["WETH"].addr);
 
-        tokens['LQTY'].addr = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
-        tokens['LQTY'].erc = IERC20(tokens['LQTY'].addr);
+        tokens["LQTY"].addr = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
+        tokens["LQTY"].erc = IERC20(tokens["LQTY"].addr);
     }
 
     function rand(uint256 seed) public pure returns (uint256) {

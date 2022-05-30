@@ -1,5 +1,5 @@
 pragma solidity >=0.6.10 <=0.8.10;
-import {IERC721} from './IERC721.sol';
+import {IERC721} from "./IERC721.sol";
 
 /// @title ERC721 with permit
 /// @notice Extension to ERC721 that includes a permit function for signature based approvals

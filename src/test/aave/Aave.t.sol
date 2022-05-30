@@ -18,7 +18,6 @@ import {WadRayMath} from "./../../bridges/aave/libraries/WadRayMath.sol";
 
 import "../../../lib/ds-test/src/test.sol";
 
-
 contract AaveTest is DSTest {
     using WadRayMath for uint256;
 
@@ -29,9 +28,7 @@ contract AaveTest is DSTest {
 
     AaveLendingBridge aaveLendingBridge;
     ILendingPoolAddressesProvider constant addressesProvider =
-        ILendingPoolAddressesProvider(
-            0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5
-        );
+        ILendingPoolAddressesProvider(0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5);
     IERC20 constant dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     IAToken constant aDai = IAToken(0x028171bCA77440897B824Ca71D1c56caC55b68A3);
 
@@ -45,10 +42,7 @@ contract AaveTest is DSTest {
     function setUp() public {
         _aztecPreSetup();
 
-        aaveLendingBridge = new AaveLendingBridge(
-            address(rollupProcessor),
-            address(addressesProvider)
-        );
+        aaveLendingBridge = new AaveLendingBridge(address(rollupProcessor), address(addressesProvider));
 
         rollupProcessor.setBridgeGasLimit(address(aaveLendingBridge), 100000);
 
@@ -180,11 +174,7 @@ contract AaveTest is DSTest {
     ) internal {
         uint256 slot = 2; // May vary depending on token
 
-        vm.store(
-            token,
-            keccak256(abi.encode(user, slot)),
-            bytes32(uint256(balance))
-        );
+        vm.store(token, keccak256(abi.encode(user, slot)), bytes32(uint256(balance)));
 
         assertEq(IERC20(token).balanceOf(user), balance, "wrong balance");
     }
@@ -197,9 +187,7 @@ contract AaveTest is DSTest {
     }
 
     function _getBalances() internal view returns (Balances memory) {
-        IERC20 zkToken = IERC20(
-            aaveLendingBridge.underlyingToZkAToken(address(dai))
-        );
+        IERC20 zkToken = IERC20(aaveLendingBridge.underlyingToZkAToken(address(dai)));
         address rp = address(rollupProcessor);
         address dbp = address(aaveLendingBridge);
         return
@@ -213,41 +201,23 @@ contract AaveTest is DSTest {
 
     function _accrueInterest(uint256 timeDiff) internal {
         Balances memory balancesBefore = _getBalances();
-        uint256 expectedDaiBefore = balancesBefore.rollupZk.rayMul(
-            pool.getReserveNormalizedIncome(address(dai))
-        );
+        uint256 expectedDaiBefore = balancesBefore.rollupZk.rayMul(pool.getReserveNormalizedIncome(address(dai)));
 
         vm.warp(block.timestamp + timeDiff);
 
         Balances memory balancesAfter = _getBalances();
-        uint256 expectedDaiAfter = balancesAfter.rollupZk.rayMul(
-            pool.getReserveNormalizedIncome(address(dai))
-        );
+        uint256 expectedDaiAfter = balancesAfter.rollupZk.rayMul(pool.getReserveNormalizedIncome(address(dai)));
 
         if (timeDiff > 0) {
-            assertGt(
-                expectedDaiAfter,
-                expectedDaiBefore,
-                "Did not earn any interest"
-            );
+            assertGt(expectedDaiAfter, expectedDaiBefore, "Did not earn any interest");
         }
 
-        assertEq(
-            expectedDaiBefore,
-            balancesBefore.bridgeAdai,
-            "Bridge adai not matching before time"
-        );
-        assertEq(
-            expectedDaiAfter,
-            balancesAfter.bridgeAdai,
-            "Bridge adai not matching after time"
-        );
+        assertEq(expectedDaiBefore, balancesBefore.bridgeAdai, "Bridge adai not matching before time");
+        assertEq(expectedDaiAfter, balancesAfter.bridgeAdai, "Bridge adai not matching after time");
     }
 
     function _enterWithDai(uint256 amount) public {
-        IERC20 zkAToken = IERC20(
-            aaveLendingBridge.underlyingToZkAToken(address(dai))
-        );
+        IERC20 zkAToken = IERC20(aaveLendingBridge.underlyingToZkAToken(address(dai)));
 
         uint256 depositAmount = amount;
         _setTokenBalance(address(dai), address(rollupProcessor), depositAmount);
@@ -266,67 +236,38 @@ contract AaveTest is DSTest {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-        (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool isAsync
-        ) = rollupProcessor.convert(
-                address(aaveLendingBridge),
-                inputAsset,
-                empty,
-                outputAsset,
-                empty,
-                depositAmount,
-                1,
-                0
-            );
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
+            address(aaveLendingBridge),
+            inputAsset,
+            empty,
+            outputAsset,
+            empty,
+            depositAmount,
+            1,
+            0
+        );
 
         Balances memory balanceAfter = _getBalances();
 
         uint256 index = pool.getReserveNormalizedIncome(address(dai));
         uint256 scaledDiff = depositAmount.rayDiv(index);
-        uint256 expectedScaledBalanceAfter = balanceBefore.rollupZk +
-            scaledDiff;
-        uint256 expectedADaiBalanceAfter = expectedScaledBalanceAfter.rayMul(
-            index
-        );
+        uint256 expectedScaledBalanceAfter = balanceBefore.rollupZk + scaledDiff;
+        uint256 expectedADaiBalanceAfter = expectedScaledBalanceAfter.rayMul(index);
 
-        assertEq(
-            balanceBefore.rollupZk,
-            balanceBefore.bridgeScaledADai,
-            "Scaled balances before not matching"
-        );
-        assertEq(
-            balanceAfter.rollupZk,
-            balanceAfter.bridgeScaledADai,
-            "Scaled balances after not matching"
-        );
+        assertEq(balanceBefore.rollupZk, balanceBefore.bridgeScaledADai, "Scaled balances before not matching");
+        assertEq(balanceAfter.rollupZk, balanceAfter.bridgeScaledADai, "Scaled balances after not matching");
         assertEq(
             balanceAfter.rollupZk - balanceBefore.rollupZk,
             outputValueA,
             "Output value and zk balance not matching"
         );
-        assertEq(
-            balanceAfter.rollupZk - balanceBefore.rollupZk,
-            scaledDiff,
-            "Scaled balance change not matching"
-        );
-        assertEq(
-            expectedADaiBalanceAfter,
-            balanceAfter.bridgeAdai,
-            "ADai balance not matching"
-        );
-        assertEq(
-            balanceBefore.rollupDai - balanceAfter.rollupDai,
-            depositAmount,
-            "Bridge dai not matching"
-        );
+        assertEq(balanceAfter.rollupZk - balanceBefore.rollupZk, scaledDiff, "Scaled balance change not matching");
+        assertEq(expectedADaiBalanceAfter, balanceAfter.bridgeAdai, "ADai balance not matching");
+        assertEq(balanceBefore.rollupDai - balanceAfter.rollupDai, depositAmount, "Bridge dai not matching");
     }
 
     function _exitWithDai(uint256 zkAmount) public {
-        IERC20 zkAToken = IERC20(
-            aaveLendingBridge.underlyingToZkAToken(address(dai))
-        );
+        IERC20 zkAToken = IERC20(aaveLendingBridge.underlyingToZkAToken(address(dai)));
 
         uint256 withdrawAmount = zkAmount;
 
@@ -344,20 +285,16 @@ contract AaveTest is DSTest {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-        (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool isAsync
-        ) = rollupProcessor.convert(
-                address(aaveLendingBridge),
-                inputAsset,
-                empty,
-                outputAsset,
-                empty,
-                withdrawAmount,
-                2,
-                0
-            );
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
+            address(aaveLendingBridge),
+            inputAsset,
+            empty,
+            outputAsset,
+            empty,
+            withdrawAmount,
+            2,
+            0
+        );
 
         Balances memory balanceAfter = _getBalances();
 
@@ -368,41 +305,18 @@ contract AaveTest is DSTest {
         // This will fail if the zkAmount > balance of zkATokens
         assertEq(withdrawAmount, innerScaledChange, "Inner not matching");
 
-        uint256 expectedScaledBalanceAfter = balanceBefore.rollupZk -
-            withdrawAmount;
-        uint256 expectedADaiBalanceAfter = expectedScaledBalanceAfter.rayMul(
-            index
-        );
+        uint256 expectedScaledBalanceAfter = balanceBefore.rollupZk - withdrawAmount;
+        uint256 expectedADaiBalanceAfter = expectedScaledBalanceAfter.rayMul(index);
 
-        assertEq(
-            innerADaiWithdraw,
-            outputValueA,
-            "Output token does not match expected output"
-        );
-        assertEq(
-            balanceBefore.rollupZk,
-            balanceBefore.bridgeScaledADai,
-            "Scaled balance before not matching"
-        );
-        assertEq(
-            balanceAfter.rollupZk,
-            balanceAfter.bridgeScaledADai,
-            "Scaled balance after not matching"
-        );
-        assertEq(
-            balanceAfter.rollupZk,
-            expectedScaledBalanceAfter,
-            "Scaled balance after not matching"
-        );
+        assertEq(innerADaiWithdraw, outputValueA, "Output token does not match expected output");
+        assertEq(balanceBefore.rollupZk, balanceBefore.bridgeScaledADai, "Scaled balance before not matching");
+        assertEq(balanceAfter.rollupZk, balanceAfter.bridgeScaledADai, "Scaled balance after not matching");
+        assertEq(balanceAfter.rollupZk, expectedScaledBalanceAfter, "Scaled balance after not matching");
         assertEq(
             balanceBefore.rollupZk - balanceAfter.rollupZk,
             withdrawAmount,
             "Change in zk balance is equal to deposit amount"
         );
-        assertEq(
-            balanceAfter.bridgeAdai,
-            expectedADaiBalanceAfter,
-            "Bridge adai balance don't match expected"
-        );
+        assertEq(balanceAfter.bridgeAdai, expectedADaiBalanceAfter, "Bridge adai balance don't match expected");
     }
 }
