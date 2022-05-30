@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.6.10 <=0.8.10;
-pragma experimental ABIEncoderV2;
+// Copyright 2022 Spilsbury Holdings Ltd
+pragma solidity >=0.8.4;
 
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-
-import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
+import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 
 contract ExampleBridgeContract is IDefiBridge {
-    using SafeMath for uint256;
+    error InvalidCaller();
+    error AsyncModeDisabled();
 
     address public immutable rollupProcessor;
 
@@ -38,8 +35,8 @@ contract ExampleBridgeContract is IDefiBridge {
             bool isAsync
         )
     {
-        // // ### INITIALIZATION AND SANITY CHECKS
-        require(msg.sender == rollupProcessor, "ExampleBridge: INVALID_CALLER");
+        // ### INITIALIZATION AND SANITY CHECKS
+        if (msg.sender != rollupProcessor) revert InvalidCaller();
         outputValueA = totalInputValue;
         IERC20(inputAssetA.erc20Address).approve(rollupProcessor, totalInputValue);
     }
@@ -61,6 +58,6 @@ contract ExampleBridgeContract is IDefiBridge {
             bool
         )
     {
-        require(false);
+        revert AsyncModeDisabled();
     }
 }
