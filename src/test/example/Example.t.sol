@@ -1,28 +1,23 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.10;
-
-import {Vm} from "../../../lib/forge-std/src/Vm.sol";
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright 2022 Spilsbury Holdings Ltd
+pragma solidity >=0.8.4;
 
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
+import {AztecTypes} from "./../../aztec/AztecTypes.sol";
+import {Test} from "forge-std/Test.sol";
 
 // Example-specific imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ExampleBridgeContract} from "./../../bridges/example/ExampleBridge.sol";
 
-import {AztecTypes} from "./../../aztec/AztecTypes.sol";
+contract ExampleTest is Test {
+    DefiBridgeProxy internal defiBridgeProxy;
+    RollupProcessor internal rollupProcessor;
 
-import "../../../lib/ds-test/src/test.sol";
+    ExampleBridgeContract internal exampleBridge;
 
-contract ExampleTest is DSTest {
-    Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
-    DefiBridgeProxy defiBridgeProxy;
-    RollupProcessor rollupProcessor;
-
-    ExampleBridgeContract exampleBridge;
-
-    IERC20 constant dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+    IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
 
     function _aztecPreSetup() internal {
         defiBridgeProxy = new DefiBridgeProxy();
@@ -35,23 +30,33 @@ contract ExampleTest is DSTest {
         exampleBridge = new ExampleBridgeContract(address(rollupProcessor));
 
         rollupProcessor.setBridgeGasLimit(address(exampleBridge), 100000);
+    }
 
-        _setTokenBalance(address(dai), address(0xdead), 42069);
+    function testErrorCodes() public {
+        AztecTypes.AztecAsset memory empty;
+
+        address callerAddress = address(bytes20(uint160(uint256(keccak256("non-rollup-processor-address")))));
+
+        vm.startPrank(callerAddress);
+        vm.expectRevert(ExampleBridgeContract.InvalidCaller.selector);
+        exampleBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
+        vm.stopPrank();
     }
 
     function testExampleBridge() public {
         uint256 depositAmount = 15000;
-        _setTokenBalance(address(dai), address(rollupProcessor), depositAmount);
+        // Mint the depositAmount of Dai to rollupProcessor
+        deal(address(DAI), address(rollupProcessor), depositAmount);
 
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dai),
+            erc20Address: address(DAI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
         AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dai),
+            erc20Address: address(DAI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
@@ -66,29 +71,8 @@ contract ExampleTest is DSTest {
             0
         );
 
-        uint256 rollupDai = dai.balanceOf(address(rollupProcessor));
+        uint256 rollupDai = DAI.balanceOf(address(rollupProcessor));
 
         assertEq(depositAmount, rollupDai, "Balances must match");
-    }
-
-    function assertNotEq(address a, address b) internal {
-        if (a == b) {
-            emit log("Error: a != b not satisfied [address]");
-            emit log_named_address("  Expected", b);
-            emit log_named_address("    Actual", a);
-            fail();
-        }
-    }
-
-    function _setTokenBalance(
-        address token,
-        address user,
-        uint256 balance
-    ) internal {
-        uint256 slot = 2; // May vary depending on token
-
-        vm.store(token, keccak256(abi.encode(user, slot)), bytes32(uint256(balance)));
-
-        assertEq(IERC20(token).balanceOf(user), balance, "wrong balance");
     }
 }
