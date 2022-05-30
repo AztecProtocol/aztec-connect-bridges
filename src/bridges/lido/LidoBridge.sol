@@ -1,56 +1,16 @@
 // SPDX-License-Identifier: GPLv2
 pragma solidity >=0.8.4;
 
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ICurvePool} from "./interfaces/ICurvePool.sol";
+import {ILido} from "./interfaces/ILido.sol";
+import {IWstETH} from "./interfaces/IWstETH.sol";
 import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
+import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 
-interface ICurvePool {
-    function coins(uint256) external view returns (address);
-
-    function get_dy(
-        int128 i,
-        int128 j,
-        uint256 dx
-    ) external view returns (uint256);
-
-    function exchange(
-        int128 i,
-        int128 j,
-        uint256 dx,
-        uint256 min_dy
-    ) external payable returns (uint256);
-}
-
-interface ILido is IERC20 {
-    function submit(address _referral) external payable returns (uint256);
-}
-
-interface ILidoOracle {
-    function getLastCompletedReportDelta()
-        external
-        view
-        returns (
-            uint256 postTotalPooledEther,
-            uint256 preTotalPooledEther,
-            uint256 timeElapsed
-        );
-}
-
-interface IWstETH is IERC20 {
-    function wrap(uint256 _stETHAmount) external returns (uint256);
-
-    function unwrap(uint256 _wstETHAmount) external returns (uint256);
-
-    function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256);
-
-    function getWstETHByStETH(uint256 _stETHAmount) external view returns (uint256);
-}
-
-interface IRollupProcessor {
-    function receiveEthFromBridge(uint256 interactionNonce) external payable;
-}
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract LidoBridge is IDefiBridge {
     using SafeERC20 for ILido;
