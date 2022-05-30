@@ -14,13 +14,13 @@ import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 contract LidoTest is Test {
     IERC20 private wstETH = IERC20(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
 
-    error INVALID_CONFIGURATION();
-    error INVALID_CALLER();
-    error INVALID_INPUT();
-    error INVALID_OUTPUT();
-    error INVALID_WRAP_RETURN_VALUE();
-    error INVALID_UNWRAP_RETURN_VALUE();
-    error ASYNC_DISABLED();
+    error InvalidConfiguration();
+    error InvalidCaller();
+    error InvalidInput();
+    error InvalidOutput();
+    error InvalidWrapReturnValue();
+    error InvalidUnwrapReturnValue();
+    error AsyncDisabled();
 
     event DefiBridgeProcessed(
         uint256 indexed bridgeId,
@@ -54,24 +54,21 @@ contract LidoTest is Test {
     }
 
     function testErrorCodes() public {
-        // TODO: INVALID_CONFIGURATION test
-        // vm.expectRevert(INVALID_CONFIGURATION());
-
-        vm.expectRevert(INVALID_CALLER.selector);
+        vm.expectRevert(InvalidCaller.selector);
         bridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
 
         vm.startPrank(address(rollupProcessor));
 
-        vm.expectRevert(INVALID_INPUT.selector);
+        vm.expectRevert(InvalidInput.selector);
         bridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
 
-        vm.expectRevert(INVALID_OUTPUT.selector);
+        vm.expectRevert(InvalidOutput.selector);
         bridge.convert(ethAsset, empty, empty, empty, 0, 0, 0, address(0));
 
-        vm.expectRevert(INVALID_OUTPUT.selector);
+        vm.expectRevert(InvalidOutput.selector);
         bridge.convert(wstETHAsset, empty, empty, empty, 0, 0, 0, address(0));
 
-        vm.expectRevert(ASYNC_DISABLED.selector);
+        vm.expectRevert(AsyncDisabled.selector);
         bridge.finalise(wstETHAsset, empty, empty, empty, 0, 0);
 
         vm.stopPrank();

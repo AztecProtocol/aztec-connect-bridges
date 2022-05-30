@@ -16,13 +16,13 @@ contract LidoBridge is IDefiBridge {
     using SafeERC20 for ILido;
     using SafeERC20 for IWstETH;
 
-    error INVALID_CONFIGURATION();
-    error INVALID_CALLER();
-    error INVALID_INPUT();
-    error INVALID_OUTPUT();
-    error INVALID_WRAP_RETURN_VALUE();
-    error INVALID_UNWRAP_RETURN_VALUE();
-    error ASYNC_DISABLED();
+    error InvalidConfiguration();
+    error InvalidCaller();
+    error InvalidInput();
+    error InvalidOutput();
+    error InvalidWrapReturnValue();
+    error InvalidUnwrapReturnValue();
+    error AsyncDisabled();
 
     address public immutable ROLLUP_PROCESSOR;
     address public immutable REFERRAL;
@@ -39,7 +39,7 @@ contract LidoBridge is IDefiBridge {
 
     constructor(address _rollupProcessor, address _referral) {
         if (CURVE_POOL.coins(uint256(uint128(CURVE_STETH_INDEX))) != address(LIDO)) {
-            revert INVALID_CONFIGURATION();
+            revert InvalidConfiguration();
         }
 
         ROLLUP_PROCESSOR = _rollupProcessor;
@@ -72,7 +72,7 @@ contract LidoBridge is IDefiBridge {
         )
     {
         if (msg.sender != ROLLUP_PROCESSOR) {
-            revert INVALID_CALLER();
+            revert InvalidCaller();
         }
 
         bool isETHInput = inputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
@@ -80,7 +80,7 @@ contract LidoBridge is IDefiBridge {
             inputAssetA.erc20Address == address(WRAPPED_STETH);
 
         if (!(isETHInput || isWstETHInput)) {
-            revert INVALID_INPUT();
+            revert InvalidInput();
         }
 
         isAsync = false;
@@ -100,7 +100,7 @@ contract LidoBridge is IDefiBridge {
             outputAsset.assetType != AztecTypes.AztecAssetType.ERC20 ||
             outputAsset.erc20Address != address(WRAPPED_STETH)
         ) {
-            revert INVALID_OUTPUT();
+            revert InvalidOutput();
         }
 
         // deposit into lido (return value is shares NOT stETH)
@@ -112,7 +112,7 @@ contract LidoBridge is IDefiBridge {
         // Lido balance can be <=2 wei off, 1 from the submit where our shares is computed rounding down,
         // and then again when the balance is computed from the shares, rounding down again.
         if (outputStETHBalance + 2 + DUST < inputValue) {
-            revert INVALID_WRAP_RETURN_VALUE();
+            revert InvalidWrapReturnValue();
         }
 
         // since stETH is a rebase token, lets wrap it to wstETH before sending it back to the rollupProcessor.
@@ -129,7 +129,7 @@ contract LidoBridge is IDefiBridge {
         uint256 interactionNonce
     ) private returns (uint256 outputValue) {
         if (outputAsset.assetType != AztecTypes.AztecAssetType.ETH) {
-            revert INVALID_OUTPUT();
+            revert InvalidOutput();
         }
 
         // Convert wstETH to stETH so we can exchange it on curve
@@ -140,7 +140,7 @@ contract LidoBridge is IDefiBridge {
 
         outputValue = address(this).balance;
         if (outputValue < dy) {
-            revert INVALID_UNWRAP_RETURN_VALUE();
+            revert InvalidUnwrapReturnValue();
         }
 
         // Send ETH to rollup processor
@@ -163,6 +163,6 @@ contract LidoBridge is IDefiBridge {
             bool
         )
     {
-        revert ASYNC_DISABLED();
+        revert AsyncDisabled();
     }
 }
