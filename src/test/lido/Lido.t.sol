@@ -128,21 +128,23 @@ contract LidoTest is Test {
 
     function testLidoBridge() public {
         validateLidoBridge(100e18, 50e18);
-        validateLidoBridge(500000e18, 400000e18);
+        validateLidoBridge(50000e18, 40000e18);
     }
 
-    function testLidoDepositAll(uint128 depositAmount) public {
-        vm.assume(depositAmount > 1000);
+    function testLidoDepositAll(uint128 _depositAmount) public {
+        uint256 depositAmount = bound(_depositAmount, 1000, 10000 ether);
         validateLidoBridge(depositAmount, depositAmount);
     }
 
-    function testLidoDepositPartial(uint128 balance) public {
-        vm.assume(balance > 1000);
+    function testLidoDepositPartial(uint128 _balance) public {
+        uint256 balance = bound(_balance, 1000, 10000 ether);
         validateLidoBridge(balance, balance / 2);
     }
 
-    function testMultipleDeposits(uint80 a, uint80 b) public {
-        vm.assume(a > 1000 && b > 1000);
+    function testMultipleDeposits(uint80 _a, uint80 _b) public {
+        uint256 a = bound(_a, 1000, 10000 ether);
+        uint256 b = bound(_b, 1000, 10000 ether);
+
         vm.deal(address(rollupProcessor), uint256(a) + b);
 
         // Convert ETH to wstETH
@@ -150,8 +152,8 @@ contract LidoTest is Test {
         validateETHToWstETH(b);
     }
 
-    function testDepositThenPartialWithdraw(uint80 a) public {
-        vm.assume(a > 1000);
+    function testDepositThenPartialWithdraw(uint80 _a) public {
+        uint256 a = bound(_a, 1000, 10000 ether);
         vm.deal(address(rollupProcessor), a);
 
         validateETHToWstETH(a);
