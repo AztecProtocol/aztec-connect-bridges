@@ -19,7 +19,6 @@ interface IUniswapV3SwapCallback {
     ) external;
 }
 
-
 /// @title Router token swapping functionality
 /// @notice Functions for swapping tokens via Uniswap V3
 interface ISwapRouter is IUniswapV3SwapCallback {

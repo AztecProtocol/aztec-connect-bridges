@@ -3,7 +3,7 @@ pragma solidity >=0.6.10 <=0.8.10;
 
 ///note: @dev of Aztec Connect Uniswap V3 Bridge for LP. This library has been modified to conform to version 0.8.x of solidity.
 ///the change is in lines 37-38, which were originally an explicit type conversion from uint256 to address like thus:
-///address( uint256 ( .... )) 
+///address( uint256 ( .... ))
 /// certain kinds of explicit type conversions have been disallowed in solidity versions 0.8.x
 ///the fix for this is to change line 37-38 from address(uint256(...)) to address(uint160(uint256(...))), i.e. add an intermediate type conversion
 ///see https://docs.soliditylang.org/en/v0.8.11/080-breaking-changes.html
@@ -40,11 +40,11 @@ library PoolAddress {
     function computeAddress(address factory, PoolKey memory key) internal pure returns (address pool) {
         require(key.token0 < key.token1);
         pool = address(
-            uint160(                                    //this line has been modified from the original Uniswap V3 library
-                uint256( 
+            uint160( //this line has been modified from the original Uniswap V3 library
+                uint256(
                     keccak256(
                         abi.encodePacked(
-                            hex'ff',
+                            hex"ff",
                             factory,
                             keccak256(abi.encode(key.token0, key.token1, key.fee)),
                             POOL_INIT_CODE_HASH

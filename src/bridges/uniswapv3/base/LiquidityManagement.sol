@@ -2,17 +2,16 @@
 pragma solidity >=0.6.10 <=0.8.10;
 pragma abicoder v2;
 
-import '../interfaces/IUniswapV3Factory.sol';
-import '../interfaces/callback/IUniswapV3MintCallback.sol';
-import '../libraries/TickMath.sol';
+import "../interfaces/IUniswapV3Factory.sol";
+import "../interfaces/callback/IUniswapV3MintCallback.sol";
+import "../libraries/TickMath.sol";
 
-import '../libraries/PoolAddress.sol';
-import '../libraries/CallbackValidation.sol';
-import '../libraries/LiquidityAmounts.sol';
+import "../libraries/PoolAddress.sol";
+import "../libraries/CallbackValidation.sol";
+import "../libraries/LiquidityAmounts.sol";
 
-import './PeripheryPayments.sol';
-import './PeripheryImmutableState.sol';
-
+import "./PeripheryPayments.sol";
+import "./PeripheryImmutableState.sol";
 
 /// @title Liquidity management functions
 /// @notice Internal functions for safely managing liquidity in Uniswap V3
@@ -28,7 +27,6 @@ abstract contract LiquidityManagement is IUniswapV3MintCallback, PeripheryImmuta
         uint256 amount1Owed,
         bytes calldata data
     ) external override {
-
         MintCallbackData memory decoded = abi.decode(data, (MintCallbackData));
         CallbackValidation.verifyCallback(factory, decoded.poolKey);
 
@@ -59,8 +57,11 @@ abstract contract LiquidityManagement is IUniswapV3MintCallback, PeripheryImmuta
             IUniswapV3Pool pool
         )
     {
-        PoolAddress.PoolKey memory poolKey =
-            PoolAddress.PoolKey({token0: params.token0, token1: params.token1, fee: params.fee});
+        PoolAddress.PoolKey memory poolKey = PoolAddress.PoolKey({
+            token0: params.token0,
+            token1: params.token1,
+            fee: params.fee
+        });
 
         pool = IUniswapV3Pool(PoolAddress.computeAddress(factory, poolKey));
 
@@ -77,7 +78,6 @@ abstract contract LiquidityManagement is IUniswapV3MintCallback, PeripheryImmuta
                 params.amount0Desired,
                 params.amount1Desired
             );
-            
         }
 
         (amount0, amount1) = pool.mint(
@@ -88,6 +88,6 @@ abstract contract LiquidityManagement is IUniswapV3MintCallback, PeripheryImmuta
             abi.encode(MintCallbackData({poolKey: poolKey, payer: msg.sender}))
         );
 
-        require(amount0 >= params.amount0Min && amount1 >= params.amount1Min, 'Price slippage check');
+        require(amount0 >= params.amount0Min && amount1 >= params.amount1Min, "Price slippage check");
     }
 }

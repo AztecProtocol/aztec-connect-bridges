@@ -38,18 +38,10 @@ contract AaveLendingBridge is IDefiBridge {
     function setUnderlyingToZkAToken(address underlyingAsset) external {
         IPool pool = IPool(addressesProvider.getLendingPool());
 
-        IERC20Detailed aToken = IERC20Detailed(
-            pool.getReserveData(underlyingAsset).aTokenAddress
-        );
+        IERC20Detailed aToken = IERC20Detailed(pool.getReserveData(underlyingAsset).aTokenAddress);
 
-        require(
-            address(aToken) != address(0),
-            "AaveLendingBridge: NO_LENDING_POOL"
-        );
-        require(
-            underlyingToZkAToken[underlyingAsset] == address(0),
-            "AaveLendingBridge: ZK_TOKEN_SET"
-        );
+        require(address(aToken) != address(0), "AaveLendingBridge: NO_LENDING_POOL");
+        require(underlyingToZkAToken[underlyingAsset] == address(0), "AaveLendingBridge: ZK_TOKEN_SET");
 
         // TODO add AztecAAVEBridge token to name / symbol
         underlyingToZkAToken[underlyingAsset] = address(
@@ -77,22 +69,11 @@ contract AaveLendingBridge is IDefiBridge {
         )
     {
         // ### INITIALIZATION AND SANITY CHECKS
-        require(
-            msg.sender == rollupProcessor,
-            "AaveLendingBridge: INVALID_CALLER"
-        );
-        require(
-            inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20,
-            "AaveLendingBridge: INPUT_ASSET_NOT_ERC20"
-        );
-        require(
-            outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20,
-            "AaveLendingBridge: OUTPUT_ASSET_NOT_ERC20"
-        );
+        require(msg.sender == rollupProcessor, "AaveLendingBridge: INVALID_CALLER");
+        require(inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20, "AaveLendingBridge: INPUT_ASSET_NOT_ERC20");
+        require(outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20, "AaveLendingBridge: OUTPUT_ASSET_NOT_ERC20");
 
-        address zkAtokenAddress = underlyingToZkAToken[
-            inputAssetA.erc20Address
-        ];
+        address zkAtokenAddress = underlyingToZkAToken[inputAssetA.erc20Address];
         if (zkAtokenAddress == address(0)) {
             // we are withdrawing zkATokens for underlying
             outputValueA = _exit(outputAssetA.erc20Address, totalInputValue);
@@ -102,22 +83,11 @@ contract AaveLendingBridge is IDefiBridge {
         }
     }
 
-    function _enter(address inputAsset, uint256 amount)
-        internal
-        returns (uint256)
-    {
+    function _enter(address inputAsset, uint256 amount) internal returns (uint256) {
         IPool pool = IPool(addressesProvider.getLendingPool());
-        IScaledBalanceToken aToken = IScaledBalanceToken(
-            pool.getReserveData(inputAsset).aTokenAddress
-        );
-        require(
-            address(aToken) != address(0),
-            "AaveLendingBridge: NO_LENDING_POOL"
-        );
-        require(
-            underlyingToZkAToken[inputAsset] != address(0),
-            "AaveLendingBridge: NO_ZK_TOKEN_POOL"
-        );
+        IScaledBalanceToken aToken = IScaledBalanceToken(pool.getReserveData(inputAsset).aTokenAddress);
+        require(address(aToken) != address(0), "AaveLendingBridge: NO_LENDING_POOL");
+        require(underlyingToZkAToken[inputAsset] != address(0), "AaveLendingBridge: NO_ZK_TOKEN_POOL");
 
         // 1. Read the scaled balance from the lending pool
         uint256 scaledBalance = aToken.scaledBalanceOf(address(this));
@@ -130,36 +100,21 @@ contract AaveLendingBridge is IDefiBridge {
 
         // 4. Mint the difference between the scaled balance at the start of the interaction and after the deposit as our zkAToken
         uint256 diff = aToken.scaledBalanceOf(address(this)).sub(scaledBalance);
-        IERC20Detailed(underlyingToZkAToken[inputAsset]).mint(
-            address(this),
-            diff
-        );
+        IERC20Detailed(underlyingToZkAToken[inputAsset]).mint(address(this), diff);
 
-        IERC20Detailed(underlyingToZkAToken[inputAsset]).approve(
-            rollupProcessor,
-            diff
-        );
+        IERC20Detailed(underlyingToZkAToken[inputAsset]).approve(rollupProcessor, diff);
         return diff;
     }
 
-    function _exit(address outputAsset, uint256 scaledAmount)
-        internal
-        returns (uint256)
-    {
+    function _exit(address outputAsset, uint256 scaledAmount) internal returns (uint256) {
         IPool pool = IPool(addressesProvider.getLendingPool());
         IERC20 aToken = IERC20(pool.getReserveData(outputAsset).aTokenAddress);
 
         // 1. Compute the amount from the scaledAmount supplied
-        uint256 underlyingAmount = scaledAmount.rayMul(
-            pool.getReserveNormalizedIncome(outputAsset)
-        );
+        uint256 underlyingAmount = scaledAmount.rayMul(pool.getReserveNormalizedIncome(outputAsset));
 
         // 2. Lend totalInputValue of inputAssetA on AAVE lending pool and return the amount of tokens
-        uint256 outputValue = pool.withdraw(
-            outputAsset,
-            underlyingAmount,
-            address(this)
-        );
+        uint256 outputValue = pool.withdraw(outputAsset, underlyingAmount, address(this));
 
         IERC20Detailed(outputAsset).approve(rollupProcessor, outputValue);
 
@@ -169,8 +124,6 @@ contract AaveLendingBridge is IDefiBridge {
         return outputValue;
     }
 
-
-
     function finalise(
         AztecTypes.AztecAsset calldata inputAssetA,
         AztecTypes.AztecAsset calldata inputAssetB,
@@ -178,7 +131,16 @@ contract AaveLendingBridge is IDefiBridge {
         AztecTypes.AztecAsset calldata outputAssetB,
         uint256 interactionNonce,
         uint64 auxData
-    ) external payable override returns (uint256, uint256, bool) {
+    )
+        external
+        payable
+        override
+        returns (
+            uint256,
+            uint256,
+            bool
+        )
+    {
         require(false);
     }
 

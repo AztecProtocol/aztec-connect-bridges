@@ -2,18 +2,25 @@
 pragma solidity <=0.8.10;
 pragma abicoder v2;
 
-import {IERC20} from './IERC20Permit.sol';
+import {IERC20} from "./IERC20Permit.sol";
 
 interface IAsset {
     // solhint-disable-previous-line no-empty-blocks
 }
 
-
-enum PoolSpecialization { GENERAL, MINIMAL_SWAP_INFO, TWO_TOKEN }
+enum PoolSpecialization {
+    GENERAL,
+    MINIMAL_SWAP_INFO,
+    TWO_TOKEN
+}
 
 interface IVault {
-    enum SwapKind { GIVEN_IN, GIVEN_OUT }
-/**
+    enum SwapKind {
+        GIVEN_IN,
+        GIVEN_OUT
+    }
+
+    /**
      * @dev Performs a swap with a single Pool.
      *
      * If the swap is 'given in' (the number of tokens to send to the Pool is known), it returns the amount of tokens
@@ -79,7 +86,6 @@ interface IVault {
     // will revert if poolId is not a registered pool
     function getPool(bytes32 poolId) external view returns (address, PoolSpecialization);
 
-
     /**
      * @dev Simulates a call to `batchSwap`, returning an array of Vault asset deltas. Calls to `swap` cannot be
      * simulated directly, but an equivalent `batchSwap` call can and will yield the exact same result.
@@ -103,13 +109,13 @@ interface IVault {
         uint256 amount;
         bytes userData;
     }
+
     function queryBatchSwap(
         SwapKind kind,
         BatchSwapStep[] memory swaps,
         IAsset[] memory assets,
         FundManagement memory funds
     ) external view returns (int256[] memory assetDeltas);
-
 
     /**
      * @dev Returns a Pool's registered tokens, the total balance for each, and the latest block when *any* of
