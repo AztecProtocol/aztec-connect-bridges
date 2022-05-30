@@ -56,43 +56,33 @@ contract TroveBridgeTest is TestUtil {
     function testIncorrectTroveState() public {
         // Attempt borrowing when trove was not opened - state 0
         vm.prank(address(rollupProcessor));
-        try
-            bridge.convert(
-                AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH),
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
-                AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
-                ROLLUP_PROCESSOR_WEI_BALANCE,
-                0,
-                MAX_FEE,
-                address(0)
-            )
-        {
-            assertTrue(false, "convert(...) has to revert when trove is in an incorrect state.");
-        } catch (bytes memory reason) {
-            assertEq(TroveBridge.IncorrectStatus.selector, bytes4(reason));
-        }
+        vm.expectRevert(TroveBridge.IncorrectStatus.selector);
+        bridge.convert(
+            AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+            ROLLUP_PROCESSOR_WEI_BALANCE,
+            0,
+            MAX_FEE,
+            address(0)
+        );
     }
 
     function testIncorrectInput() public {
         // Call convert with incorrect input
         vm.prank(address(rollupProcessor));
-        try
-            bridge.convert(
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                0,
-                0,
-                0,
-                address(0)
-            )
-        {
-            assertTrue(false, "convert(...) has to revert on incorrect input.");
-        } catch (bytes memory reason) {
-            assertEq(TroveBridge.IncorrectInput.selector, bytes4(reason));
-        }
+        vm.expectRevert(TroveBridge.IncorrectInput.selector);
+        bridge.convert(
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            0,
+            0,
+            0,
+            address(0)
+        );
     }
 
     function testFullFlow() public {
@@ -119,17 +109,11 @@ contract TroveBridgeTest is TestUtil {
         vm.startPrank(OWNER);
 
         // Bridge is now defunct so check that closing and reopening fails with appropriate errors
-        try bridge.closeTrove() {
-            assertTrue(false, "closeTrove() has to revert in case owner's balance != TB total supply.");
-        } catch (bytes memory reason) {
-            assertEq(TroveBridge.OwnerNotLast.selector, bytes4(reason));
-        }
+        vm.expectRevert(TroveBridge.OwnerNotLast.selector);
+        bridge.closeTrove();
 
-        try bridge.openTrove(address(0), address(0), MAX_FEE) {
-            assertTrue(false, "openTrove() has to revert in case TB total supply != 0.");
-        } catch (bytes memory reason) {
-            assertEq(TroveBridge.NonZeroTotalSupply.selector, bytes4(reason));
-        }
+        vm.expectRevert(TroveBridge.NonZeroTotalSupply.selector);
+        bridge.openTrove(address(0), address(0), MAX_FEE);
 
         vm.stopPrank();
     }
