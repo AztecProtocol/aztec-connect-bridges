@@ -3,10 +3,10 @@
 pragma solidity >=0.6.10 <=0.8.10;
 pragma experimental ABIEncoderV2;
 
-import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {IDefiBridge} from '../../interfaces/IDefiBridge.sol';
-import {AztecTypes} from '../../aztec/AztecTypes.sol';
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
 
 interface ICurvePool {
     function coins(uint256) external view returns (address);

@@ -6,15 +6,9 @@ pragma experimental ABIEncoderV2;
 import {DataTypes} from "./../DataTypes.sol";
 
 interface IPool {
-    function getReserveData(address asset)
-        external
-        view
-        returns (DataTypes.ReserveData memory);
+    function getReserveData(address asset) external view returns (DataTypes.ReserveData memory);
 
-    function getReserveNormalizedIncome(address asset)
-        external
-        view
-        returns (uint256);
+    function getReserveNormalizedIncome(address asset) external view returns (uint256);
 
     function deposit(
         address asset,

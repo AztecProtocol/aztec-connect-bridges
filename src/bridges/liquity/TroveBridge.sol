@@ -2,14 +2,14 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import '@openzeppelin/contracts/access/Ownable.sol';
-import '@openzeppelin/contracts/utils/Strings.sol';
-import '../../interfaces/IDefiBridge.sol';
-import '../../interfaces/IRollupProcessor.sol';
-import './interfaces/IBorrowerOperations.sol';
-import './interfaces/ITroveManager.sol';
-import './interfaces/ISortedTroves.sol';
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "../../interfaces/IDefiBridge.sol";
+import "../../interfaces/IRollupProcessor.sol";
+import "./interfaces/IBorrowerOperations.sol";
+import "./interfaces/ITroveManager.sol";
+import "./interfaces/ISortedTroves.sol";
 
 /**
  * @title Aztec Connect Bridge for opening and closing Liquity's troves
@@ -68,7 +68,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
      * @param _initialICRPerc Collateral ratio denominated in percents to be used when opening the Trove
      */
     constructor(address _processor, uint256 _initialICRPerc)
-        ERC20('TroveBridge', string(abi.encodePacked('TB-', _initialICRPerc.toString())))
+        ERC20("TroveBridge", string(abi.encodePacked("TB-", _initialICRPerc.toString())))
     {
         processor = _processor;
         initialICR = _initialICRPerc * 1e16;

@@ -2,17 +2,17 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4 <=0.8.10;
 
-import {DefiBridgeProxy} from './../../aztec/DefiBridgeProxy.sol';
-import {RollupProcessor} from './../../aztec/RollupProcessor.sol';
+import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
+import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {IssuanceBridge} from './../../bridges/set/IssuanceBridge.sol';
-import {IController} from './../../bridges/set/interfaces/IController.sol';
-import {ISetToken} from './../../bridges/set/interfaces/ISetToken.sol';
-import {AztecTypes} from './../../aztec/AztecTypes.sol';
+import {IssuanceBridge} from "./../../bridges/set/IssuanceBridge.sol";
+import {IController} from "./../../bridges/set/interfaces/IController.sol";
+import {ISetToken} from "./../../bridges/set/interfaces/ISetToken.sol";
+import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 
-import 'forge-std/Test.sol';
+import "forge-std/Test.sol";
 
 contract SetTest is Test {
     // Aztec
@@ -47,7 +47,7 @@ contract SetTest is Test {
 
         vm.prank(address(124));
         try issuanceBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0)) {
-            revert('convert(...) has to revert when msg.sender != rollupProcessor.');
+            revert("convert(...) has to revert when msg.sender != rollupProcessor.");
         } catch (bytes memory reason) {
             assertEq(IssuanceBridge.InvalidCaller.selector, bytes4(reason));
         }
@@ -58,7 +58,7 @@ contract SetTest is Test {
 
         vm.prank(address(rollupProcessor));
         try issuanceBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0)) {
-            revert('convert(...) has to revert inputValue == 0.');
+            revert("convert(...) has to revert inputValue == 0.");
         } catch (bytes memory reason) {
             assertEq(IssuanceBridge.ZeroInputValue.selector, bytes4(reason));
         }
@@ -78,11 +78,11 @@ contract SetTest is Test {
         uint256 rollupBalanceDpi = dpi.balanceOf(address(rollupProcessor));
         uint256 rollupBalanceEth = address(rollupProcessor).balance;
 
-        assertEq(depositAmountDai, rollupBalanceDai, 'DAI balance must match');
+        assertEq(depositAmountDai, rollupBalanceDai, "DAI balance must match");
 
-        assertEq(depositAmountDpi, rollupBalanceDpi, 'DPI balance must match');
+        assertEq(depositAmountDpi, rollupBalanceDpi, "DPI balance must match");
 
-        assertEq(depositAmountEth, rollupBalanceEth, 'ETH balance must match');
+        assertEq(depositAmountEth, rollupBalanceEth, "ETH balance must match");
     }
 
     function testIssueSetForExactToken() public {
@@ -125,15 +125,15 @@ contract SetTest is Test {
         uint256 rollupBalanceAfterDai = dai.balanceOf(address(rollupProcessor));
         uint256 rollupBalanceAfterDpi = dpi.balanceOf(address(rollupProcessor));
 
-        assertEq(depositAmountDai, rollupBalanceBeforeDai, 'DAI balance before convert must match');
+        assertEq(depositAmountDai, rollupBalanceBeforeDai, "DAI balance before convert must match");
 
-        assertEq(0, rollupBalanceBeforeDpi, 'DPI balance before convert must match');
+        assertEq(0, rollupBalanceBeforeDpi, "DPI balance before convert must match");
 
-        assertEq(0, rollupBalanceAfterDai, 'DAI balance after convert must match');
+        assertEq(0, rollupBalanceAfterDai, "DAI balance after convert must match");
 
-        assertEq(outputValueA, rollupBalanceAfterDpi, 'DPI balance after convert must match');
+        assertEq(outputValueA, rollupBalanceAfterDpi, "DPI balance after convert must match");
 
-        assertGt(rollupBalanceAfterDpi, 0, 'DPI balance after must be > 0');
+        assertGt(rollupBalanceAfterDpi, 0, "DPI balance after must be > 0");
     }
 
     function testIssueSetForExactEth() public {
@@ -175,15 +175,15 @@ contract SetTest is Test {
         uint256 rollupBalanceAfterEth = address(rollupProcessor).balance;
         uint256 rollupBalanceAfterDpi = dpi.balanceOf(address(rollupProcessor));
 
-        assertEq(depositAmountEth, rollupBalanceBeforeEth, 'ETH balance before convert must match');
+        assertEq(depositAmountEth, rollupBalanceBeforeEth, "ETH balance before convert must match");
 
-        assertEq(0, rollupBalanceBeforeDpi, 'DPI balance before convert must match');
+        assertEq(0, rollupBalanceBeforeDpi, "DPI balance before convert must match");
 
-        assertEq(0, rollupBalanceAfterEth, 'ETH balance after convert must match');
+        assertEq(0, rollupBalanceAfterEth, "ETH balance after convert must match");
 
-        assertEq(outputValueA, rollupBalanceAfterDpi, 'DPI balance after convert must match');
+        assertEq(outputValueA, rollupBalanceAfterDpi, "DPI balance after convert must match");
 
-        assertGt(rollupBalanceAfterDpi, 0, 'DPI balance after must be > 0');
+        assertGt(rollupBalanceAfterDpi, 0, "DPI balance after must be > 0");
     }
 
     function testRedeemExactSetForToken() public {
@@ -227,16 +227,16 @@ contract SetTest is Test {
         uint256 rollupBalanceAfterDpi = dpi.balanceOf(address(rollupProcessor));
 
         // Checks before
-        assertEq(0, rollupBalanceBeforeDai, 'DAI balance before convert must match');
+        assertEq(0, rollupBalanceBeforeDai, "DAI balance before convert must match");
 
-        assertEq(depositAmountDpi, rollupBalanceBeforeDpi, 'DPI balance before convert must match');
+        assertEq(depositAmountDpi, rollupBalanceBeforeDpi, "DPI balance before convert must match");
 
         // Checks after
-        assertEq(outputValueA, rollupBalanceAfterDai, 'DAI balance after convert must match');
+        assertEq(outputValueA, rollupBalanceAfterDai, "DAI balance after convert must match");
 
-        assertEq(0, rollupBalanceAfterDpi, 'DPI balance after convert must match');
+        assertEq(0, rollupBalanceAfterDpi, "DPI balance after convert must match");
 
-        assertGt(rollupBalanceAfterDai, 0, 'DAI balance after must be > 0');
+        assertGt(rollupBalanceAfterDai, 0, "DAI balance after must be > 0");
     }
 
     function testRedeemExactSetForEth() public {
@@ -279,16 +279,16 @@ contract SetTest is Test {
         uint256 rollupBalanceAfterEth = address(rollupProcessor).balance;
 
         // Checks before
-        assertEq(0, rollupBalanceBeforeEth, 'ETH balance before convert must match');
+        assertEq(0, rollupBalanceBeforeEth, "ETH balance before convert must match");
 
-        assertEq(depositAmountDpi, rollupBalanceBeforeDpi, 'DPI balance before convert must match');
+        assertEq(depositAmountDpi, rollupBalanceBeforeDpi, "DPI balance before convert must match");
 
         // Checks after
-        assertEq(outputValueA, rollupBalanceAfterEth, 'ETH balance after convert must match');
+        assertEq(outputValueA, rollupBalanceAfterEth, "ETH balance after convert must match");
 
-        assertEq(0, rollupBalanceAfterDpi, 'DPI balance after convert must match');
+        assertEq(0, rollupBalanceAfterDpi, "DPI balance after convert must match");
 
-        assertGt(rollupBalanceAfterEth, 0, 'ETH balance after must be > 0');
+        assertGt(rollupBalanceAfterEth, 0, "ETH balance after must be > 0");
     }
 
     function _setTokenBalance(
@@ -299,12 +299,12 @@ contract SetTest is Test {
     ) internal {
         vm.store(token, keccak256(abi.encode(user, slot)), bytes32(uint256(balance)));
 
-        assertEq(IERC20(token).balanceOf(user), balance, 'wrong token balance');
+        assertEq(IERC20(token).balanceOf(user), balance, "wrong token balance");
     }
 
     function _setEthBalance(address user, uint256 balance) internal {
         vm.deal(user, balance);
 
-        assertEq(user.balance, balance, 'wrong ETH balance');
+        assertEq(user.balance, balance, "wrong ETH balance");
     }
 }

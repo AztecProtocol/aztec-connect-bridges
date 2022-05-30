@@ -1,9 +1,9 @@
 pragma solidity 0.8.10;
 
-import {HeapTestContract} from './HeapTestContract.sol';
-import '../../../lib/ds-test/src/test.sol';
+import {HeapTestContract} from "./HeapTestContract.sol";
+import "../../../lib/ds-test/src/test.sol";
 
-import { console } from 'forge-std/console.sol';
+import {console} from "forge-std/console.sol";
 
 contract HeapTest is DSTest {
     HeapTestContract heap;
@@ -140,12 +140,12 @@ contract HeapTest is DSTest {
             if (values[i] < minimum) {
                 minimum = values[i];
             }
-            assertEq(heap.min(), minimum, 'insert');
+            assertEq(heap.min(), minimum, "insert");
         }
         assertEq(heap.size(), values.length);
 
         for (uint256 i = 0; i < sortedValues.length; i++) {
-            assertEq(heap.min(), sortedValues[i], 'pop');
+            assertEq(heap.min(), sortedValues[i], "pop");
             assertEq(heap.size(), sortedValues.length - i);
             heap.pop();
         }
@@ -159,7 +159,7 @@ contract HeapTest is DSTest {
             if (values[i] < minimum) {
                 minimum = values[i];
             }
-            assertEq(heap.min(), minimum, 'insert');
+            assertEq(heap.min(), minimum, "insert");
         }
         assertEq(heap.size(), values.length);
 
@@ -180,12 +180,12 @@ contract HeapTest is DSTest {
             if (values[i] < minimum) {
                 minimum = values[i];
             }
-            assertEq(heap.min(), minimum, 'insert');
+            assertEq(heap.min(), minimum, "insert");
         }
         assertEq(heap.size(), values.length);
 
         for (uint256 i = 0; i < sortedValues.length; i++) {
-            assertEq(heap.min(), sortedValues[i], 'pop');
+            assertEq(heap.min(), sortedValues[i], "pop");
             assertEq(heap.size(), sortedValues.length - i);
             uint64 min = heap.min();
             heap.remove(min);
@@ -203,12 +203,12 @@ contract HeapTest is DSTest {
             if (values[i] < minimum) {
                 minimum = values[i];
             }
-            assertEq(newHeap.min(), minimum, 'insert');
+            assertEq(newHeap.min(), minimum, "insert");
         }
         assertEq(newHeap.size(), values.length);
 
         for (uint256 i = 0; i < sortedValues.length; i++) {
-            assertEq(newHeap.min(), sortedValues[i], 'pop');
+            assertEq(newHeap.min(), sortedValues[i], "pop");
             assertEq(newHeap.size(), sortedValues.length - i);
             newHeap.pop();
         }
