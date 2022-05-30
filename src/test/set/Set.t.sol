@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.4 <=0.8.10;
+pragma solidity >=0.8.4;
 
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
@@ -16,15 +16,15 @@ import "forge-std/Test.sol";
 
 contract SetTest is Test {
     // Aztec
-    DefiBridgeProxy defiBridgeProxy;
-    RollupProcessor rollupProcessor;
+    DefiBridgeProxy internal defiBridgeProxy;
+    RollupProcessor internal rollupProcessor;
 
     // Bridges
-    IssuanceBridge issuanceBridge;
+    IssuanceBridge internal issuanceBridge;
 
     // ERC20 tokens
-    IERC20 constant dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-    IERC20 constant dpi = IERC20(0x1494CA1F11D487c2bBe4543E90080AeBa4BA3C2b);
+    IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+    IERC20 public constant DPI = IERC20(0x1494CA1F11D487c2bBe4543E90080AeBa4BA3C2b);
 
     function _aztecPreSetup() internal {
         defiBridgeProxy = new DefiBridgeProxy();
@@ -37,8 +37,8 @@ contract SetTest is Test {
         issuanceBridge = new IssuanceBridge(address(rollupProcessor));
 
         address[] memory tokens = new address[](2);
-        tokens[0] = address(dai);
-        tokens[1] = address(dpi);
+        tokens[0] = address(DAI);
+        tokens[1] = address(DPI);
         issuanceBridge.approveTokens(tokens);
     }
 
@@ -46,22 +46,16 @@ contract SetTest is Test {
         AztecTypes.AztecAsset memory empty;
 
         vm.prank(address(124));
-        try issuanceBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0)) {
-            revert("convert(...) has to revert when msg.sender != rollupProcessor.");
-        } catch (bytes memory reason) {
-            assertEq(IssuanceBridge.InvalidCaller.selector, bytes4(reason));
-        }
+        vm.expectRevert(IssuanceBridge.InvalidCaller.selector);
+        issuanceBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
     }
 
     function test0InputValue() public {
         AztecTypes.AztecAsset memory empty;
 
         vm.prank(address(rollupProcessor));
-        try issuanceBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0)) {
-            revert("convert(...) has to revert inputValue == 0.");
-        } catch (bytes memory reason) {
-            assertEq(IssuanceBridge.ZeroInputValue.selector, bytes4(reason));
-        }
+        vm.expectRevert(IssuanceBridge.ZeroInputValue.selector);
+        issuanceBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
     }
 
     function testSetBridge() public {
@@ -70,12 +64,12 @@ contract SetTest is Test {
         uint256 depositAmountDpi = 2e9;
         uint256 depositAmountEth = 1 ether;
 
-        _setTokenBalance(address(dai), address(rollupProcessor), depositAmountDai, 2);
-        _setTokenBalance(address(dpi), address(rollupProcessor), depositAmountDpi, 0);
+        _setTokenBalance(address(DAI), address(rollupProcessor), depositAmountDai, 2);
+        _setTokenBalance(address(DPI), address(rollupProcessor), depositAmountDpi, 0);
         _setEthBalance(address(rollupProcessor), depositAmountEth);
 
-        uint256 rollupBalanceDai = dai.balanceOf(address(rollupProcessor));
-        uint256 rollupBalanceDpi = dpi.balanceOf(address(rollupProcessor));
+        uint256 rollupBalanceDai = DAI.balanceOf(address(rollupProcessor));
+        uint256 rollupBalanceDpi = DPI.balanceOf(address(rollupProcessor));
         uint256 rollupBalanceEth = address(rollupProcessor).balance;
 
         assertEq(depositAmountDai, rollupBalanceDai, "DAI balance must match");
@@ -88,7 +82,7 @@ contract SetTest is Test {
     function testIssueSetForExactToken() public {
         // Pre-fund contract with DAI
         uint256 depositAmountDai = 1e21; // 1000 DAI
-        _setTokenBalance(address(dai), address(rollupProcessor), depositAmountDai, 2);
+        _setTokenBalance(address(DAI), address(rollupProcessor), depositAmountDai, 2);
 
         // Used for unused input/output assets
         AztecTypes.AztecAsset memory empty;
@@ -96,22 +90,22 @@ contract SetTest is Test {
         // DAI is input
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dai),
+            erc20Address: address(DAI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
         // DPI is output
         AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dpi),
+            erc20Address: address(DPI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-        uint256 rollupBalanceBeforeDai = dai.balanceOf(address(rollupProcessor));
-        uint256 rollupBalanceBeforeDpi = dpi.balanceOf(address(rollupProcessor));
+        uint256 rollupBalanceBeforeDai = DAI.balanceOf(address(rollupProcessor));
+        uint256 rollupBalanceBeforeDpi = DPI.balanceOf(address(rollupProcessor));
 
         // Call rollup's convert function
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
+        (uint256 outputValueA, , ) = rollupProcessor.convert(
             address(issuanceBridge),
             inputAsset,
             empty,
@@ -122,8 +116,8 @@ contract SetTest is Test {
             0
         );
 
-        uint256 rollupBalanceAfterDai = dai.balanceOf(address(rollupProcessor));
-        uint256 rollupBalanceAfterDpi = dpi.balanceOf(address(rollupProcessor));
+        uint256 rollupBalanceAfterDai = DAI.balanceOf(address(rollupProcessor));
+        uint256 rollupBalanceAfterDpi = DPI.balanceOf(address(rollupProcessor));
 
         assertEq(depositAmountDai, rollupBalanceBeforeDai, "DAI balance before convert must match");
 
@@ -154,14 +148,14 @@ contract SetTest is Test {
         // DAI is output
         AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dpi),
+            erc20Address: address(DPI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
         uint256 rollupBalanceBeforeEth = address(rollupProcessor).balance;
-        uint256 rollupBalanceBeforeDpi = dpi.balanceOf(address(rollupProcessor));
+        uint256 rollupBalanceBeforeDpi = DPI.balanceOf(address(rollupProcessor));
 
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
+        (uint256 outputValueA, , ) = rollupProcessor.convert(
             address(issuanceBridge),
             inputAsset,
             empty,
@@ -173,7 +167,7 @@ contract SetTest is Test {
         );
 
         uint256 rollupBalanceAfterEth = address(rollupProcessor).balance;
-        uint256 rollupBalanceAfterDpi = dpi.balanceOf(address(rollupProcessor));
+        uint256 rollupBalanceAfterDpi = DPI.balanceOf(address(rollupProcessor));
 
         assertEq(depositAmountEth, rollupBalanceBeforeEth, "ETH balance before convert must match");
 
@@ -189,7 +183,7 @@ contract SetTest is Test {
     function testRedeemExactSetForToken() public {
         // Pre-fund rollup contract DPI
         uint256 depositAmountDpi = 1e20; // 100 DPI
-        _setTokenBalance(address(dpi), address(rollupProcessor), depositAmountDpi, 0);
+        _setTokenBalance(address(DPI), address(rollupProcessor), depositAmountDpi, 0);
 
         // Used for unused input/output assets
         AztecTypes.AztecAsset memory empty;
@@ -197,22 +191,22 @@ contract SetTest is Test {
         // DPI is input
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dpi),
+            erc20Address: address(DPI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
         // DAI is output
         AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dai),
+            erc20Address: address(DAI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-        uint256 rollupBalanceBeforeDai = dai.balanceOf(address(rollupProcessor));
-        uint256 rollupBalanceBeforeDpi = dpi.balanceOf(address(rollupProcessor));
+        uint256 rollupBalanceBeforeDai = DAI.balanceOf(address(rollupProcessor));
+        uint256 rollupBalanceBeforeDpi = DPI.balanceOf(address(rollupProcessor));
 
         // Call rollup's convert function
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
+        (uint256 outputValueA, , ) = rollupProcessor.convert(
             address(issuanceBridge),
             inputAsset,
             empty,
@@ -223,8 +217,8 @@ contract SetTest is Test {
             0
         );
 
-        uint256 rollupBalanceAfterDai = dai.balanceOf(address(rollupProcessor));
-        uint256 rollupBalanceAfterDpi = dpi.balanceOf(address(rollupProcessor));
+        uint256 rollupBalanceAfterDai = DAI.balanceOf(address(rollupProcessor));
+        uint256 rollupBalanceAfterDpi = DPI.balanceOf(address(rollupProcessor));
 
         // Checks before
         assertEq(0, rollupBalanceBeforeDai, "DAI balance before convert must match");
@@ -242,7 +236,7 @@ contract SetTest is Test {
     function testRedeemExactSetForEth() public {
         // prefund rollup with tokens
         uint256 depositAmountDpi = 1e20; // 100 DPI
-        _setTokenBalance(address(dpi), address(rollupProcessor), depositAmountDpi, 0);
+        _setTokenBalance(address(DPI), address(rollupProcessor), depositAmountDpi, 0);
 
         // Used for unused input/output assets
         AztecTypes.AztecAsset memory empty;
@@ -250,7 +244,7 @@ contract SetTest is Test {
         // DPI is input
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dpi),
+            erc20Address: address(DPI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
@@ -261,10 +255,10 @@ contract SetTest is Test {
             assetType: AztecTypes.AztecAssetType.ETH
         });
 
-        uint256 rollupBalanceBeforeDpi = dpi.balanceOf(address(rollupProcessor));
+        uint256 rollupBalanceBeforeDpi = DPI.balanceOf(address(rollupProcessor));
         uint256 rollupBalanceBeforeEth = address(rollupProcessor).balance;
 
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
+        (uint256 outputValueA, , ) = rollupProcessor.convert(
             address(issuanceBridge),
             inputAsset,
             empty,
@@ -275,7 +269,7 @@ contract SetTest is Test {
             0
         );
 
-        uint256 rollupBalanceAfterDpi = dpi.balanceOf(address(rollupProcessor));
+        uint256 rollupBalanceAfterDpi = DPI.balanceOf(address(rollupProcessor));
         uint256 rollupBalanceAfterEth = address(rollupProcessor).balance;
 
         // Checks before
