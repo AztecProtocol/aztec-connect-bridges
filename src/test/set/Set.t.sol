@@ -64,9 +64,9 @@ contract SetTest is Test {
         uint256 depositAmountDpi = 2e9;
         uint256 depositAmountEth = 1 ether;
 
-        _setTokenBalance(address(DAI), address(rollupProcessor), depositAmountDai, 2);
-        _setTokenBalance(address(DPI), address(rollupProcessor), depositAmountDpi, 0);
-        _setEthBalance(address(rollupProcessor), depositAmountEth);
+        deal(address(DAI), address(rollupProcessor), depositAmountDai);
+        deal(address(DPI), address(rollupProcessor), depositAmountDpi);
+        deal(address(rollupProcessor), depositAmountEth);
 
         uint256 rollupBalanceDai = DAI.balanceOf(address(rollupProcessor));
         uint256 rollupBalanceDpi = DPI.balanceOf(address(rollupProcessor));
@@ -82,7 +82,7 @@ contract SetTest is Test {
     function testIssueSetForExactToken() public {
         // Pre-fund contract with DAI
         uint256 depositAmountDai = 1e21; // 1000 DAI
-        _setTokenBalance(address(DAI), address(rollupProcessor), depositAmountDai, 2);
+        deal(address(DAI), address(rollupProcessor), depositAmountDai);
 
         // Used for unused input/output assets
         AztecTypes.AztecAsset memory empty;
@@ -133,7 +133,7 @@ contract SetTest is Test {
     function testIssueSetForExactEth() public {
         // Pre-fund contract with ETH
         uint256 depositAmountEth = 1e17; // 0.1 ETH
-        _setEthBalance(address(rollupProcessor), depositAmountEth);
+        deal(address(rollupProcessor), depositAmountEth);
 
         // Used for unused input/output assets
         AztecTypes.AztecAsset memory empty;
@@ -183,7 +183,7 @@ contract SetTest is Test {
     function testRedeemExactSetForToken() public {
         // Pre-fund rollup contract DPI
         uint256 depositAmountDpi = 1e20; // 100 DPI
-        _setTokenBalance(address(DPI), address(rollupProcessor), depositAmountDpi, 0);
+        deal(address(DPI), address(rollupProcessor), depositAmountDpi);
 
         // Used for unused input/output assets
         AztecTypes.AztecAsset memory empty;
@@ -236,7 +236,7 @@ contract SetTest is Test {
     function testRedeemExactSetForEth() public {
         // prefund rollup with tokens
         uint256 depositAmountDpi = 1e20; // 100 DPI
-        _setTokenBalance(address(DPI), address(rollupProcessor), depositAmountDpi, 0);
+        deal(address(DPI), address(rollupProcessor), depositAmountDpi);
 
         // Used for unused input/output assets
         AztecTypes.AztecAsset memory empty;
@@ -283,22 +283,5 @@ contract SetTest is Test {
         assertEq(0, rollupBalanceAfterDpi, "DPI balance after convert must match");
 
         assertGt(rollupBalanceAfterEth, 0, "ETH balance after must be > 0");
-    }
-
-    function _setTokenBalance(
-        address token,
-        address user,
-        uint256 balance,
-        uint256 slot // May vary depending on token
-    ) internal {
-        vm.store(token, keccak256(abi.encode(user, slot)), bytes32(uint256(balance)));
-
-        assertEq(IERC20(token).balanceOf(user), balance, "wrong token balance");
-    }
-
-    function _setEthBalance(address user, uint256 balance) internal {
-        vm.deal(user, balance);
-
-        assertEq(user.balance, balance, "wrong ETH balance");
     }
 }
