@@ -71,7 +71,7 @@ A `bridgeId` consists of the below schema. The rollup contract uses this to cons
 
 To test a bridge, we have added a `MockRollupProcessor` that simulates a rollup. You can call this in your tests by simply calling `rollupContract.convert()` with the deconstructed `bridgeId` fields.
 
-In production, the rollup contract will supply `inputValue` of both input assets , and `interactionNonce` as a globally unique ID. For testing you can provide this.
+In production, the rollup contract will supply `inputValue` of both input assets and use the `interactionNonce` as a globally unique ID. For testing you may provide this value.
 
 The rollup contract will send `inputValue` of `inputAssetA` and `inputAssetB` ahead of the call to convert.
 In production, the rollup contract has these tokens as they are the users' funds.
