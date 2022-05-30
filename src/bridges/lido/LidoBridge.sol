@@ -64,8 +64,8 @@ contract LidoBridge is IDefiBridge {
     error INVALID_UNWRAP_RETURN_VALUE();
     error ASYNC_DISABLED();
 
-    address public immutable rollupProcessor;
-    address public immutable referral;
+    address public immutable ROLLUP_PROCESSOR;
+    address public immutable REFERRAL;
 
     ILido public constant LIDO = ILido(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH public constant WRAPPED_STETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
@@ -82,13 +82,13 @@ contract LidoBridge is IDefiBridge {
             revert INVALID_CONFIGURATION();
         }
 
-        rollupProcessor = _rollupProcessor;
-        referral = _referral;
+        ROLLUP_PROCESSOR = _rollupProcessor;
+        REFERRAL = _referral;
 
         // As the contract is not supposed to hold any funds, we can pre-approve
         LIDO.safeIncreaseAllowance(address(WRAPPED_STETH), type(uint256).max);
         LIDO.safeIncreaseAllowance(address(CURVE_POOL), type(uint256).max);
-        WRAPPED_STETH.safeIncreaseAllowance(rollupProcessor, type(uint256).max);
+        WRAPPED_STETH.safeIncreaseAllowance(ROLLUP_PROCESSOR, type(uint256).max);
     }
 
     receive() external payable {}
@@ -111,7 +111,7 @@ contract LidoBridge is IDefiBridge {
             bool isAsync
         )
     {
-        if (msg.sender != rollupProcessor) {
+        if (msg.sender != ROLLUP_PROCESSOR) {
             revert INVALID_CALLER();
         }
 
@@ -144,7 +144,7 @@ contract LidoBridge is IDefiBridge {
         }
 
         // deposit into lido (return value is shares NOT stETH)
-        LIDO.submit{value: inputValue}(referral);
+        LIDO.submit{value: inputValue}(REFERRAL);
 
         // Leave `DUST` in the stEth balance to save gas on future runs
         uint256 outputStETHBalance = LIDO.balanceOf(address(this)) - DUST;
@@ -184,7 +184,7 @@ contract LidoBridge is IDefiBridge {
         }
 
         // Send ETH to rollup processor
-        IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValue}(interactionNonce);
+        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValue}(interactionNonce);
     }
 
     function finalise(
