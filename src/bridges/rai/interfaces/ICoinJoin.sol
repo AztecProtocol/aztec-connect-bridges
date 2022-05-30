@@ -5,5 +5,6 @@ pragma experimental ABIEncoderV2;
 
 interface ICoinJoin {
     function exit(address account, uint256 wad) external;
+
     function join(address account, uint256 wad) external;
 }

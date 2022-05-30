@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.6.10 <=0.8.10;
 
-import '../interfaces/IERC20.sol';
+import "../interfaces/IERC20.sol";
 
-import '../interfaces/IWETH9.sol';
+import "../interfaces/IWETH9.sol";
 
-import '../libraries/TransferHelper.sol';
+import "../libraries/TransferHelper.sol";
 
-import './PeripheryImmutableState.sol';
+import "./PeripheryImmutableState.sol";
 
 /// @title Periphery Payments
 /// @notice Functions to ease deposits and withdrawals of ETH
@@ -17,9 +17,8 @@ interface IPeripheryPayments {
 
 abstract contract PeripheryPayments is IPeripheryPayments, PeripheryImmutableState {
     receive() external payable {
-        require(msg.sender == WETH9, 'Not WETH9');
+        require(msg.sender == WETH9, "Not WETH9");
     }
-
 
     /// @param token The token to pay
     /// @param payer The entity that must pay

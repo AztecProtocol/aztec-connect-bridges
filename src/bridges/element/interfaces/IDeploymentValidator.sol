@@ -8,15 +8,9 @@ interface IDeploymentValidator {
 
     function validateAddresses(address wrappedPosition, address pool) external;
 
-    function checkWPValidation(address wrappedPosition)
-        external
-        view
-        returns (bool);
+    function checkWPValidation(address wrappedPosition) external view returns (bool);
 
     function checkPoolValidation(address pool) external view returns (bool);
 
-    function checkPairValidation(address wrappedPosition, address pool)
-        external
-        view
-        returns (bool);
+    function checkPairValidation(address wrappedPosition, address pool) external view returns (bool);
 }

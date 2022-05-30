@@ -9,7 +9,7 @@ import {
 } from '../../../typechain-types';
 import { AztecAsset, AztecAssetType } from '../bridge-data';
 import { BigNumber } from 'ethers';
-import { EthAddress } from '../aztec/eth_address';
+import { EthAddress } from '@aztec/barretenberg/address';
 
 jest.mock('../aztec/provider', () => ({
   createWeb3Provider: jest.fn(),

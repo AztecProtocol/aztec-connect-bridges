@@ -12,7 +12,7 @@ library BitMath {
     /// @return r the index of the most significant bit
     function mostSignificantBit(uint256 x) internal pure returns (uint8 r) {
         require(x > 0);
-    
+
         if (x >= 0x100000000000000000000000000000000) {
             x >>= 128;
             r += 128;

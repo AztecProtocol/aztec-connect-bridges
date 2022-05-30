@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.0 <=0.8.10;
-pragma abicoder v2;
+pragma solidity >=0.8.4;
 
 import "./utils/TestUtil.sol";
 import "../../bridges/liquity/StakingBridge.sol";
@@ -22,12 +21,33 @@ contract StakingBridgeTest is TestUtil {
         assertEq(uint256(bridge.decimals()), 18);
     }
 
+    function testIncorrectInput() public {
+        // Call convert with incorrect input
+        vm.prank(address(rollupProcessor));
+        try
+            bridge.convert(
+                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+                0,
+                0,
+                0,
+                address(0)
+            )
+        {
+            assertTrue(false, "convert(...) has to revert on incorrect input.");
+        } catch (bytes memory reason) {
+            assertEq(StakingBridge.IncorrectInput.selector, bytes4(reason));
+        }
+    }
+
     function testFullDepositWithdrawalFlow() public {
         // I will deposit and withdraw 1 million LQTY
         uint256 depositAmount = 1e24;
 
         // 1. Mint the deposit amount of LQTY to the bridge
-        mint("LQTY", address(rollupProcessor), depositAmount);
+        deal(tokens["LQTY"].addr, address(rollupProcessor), depositAmount);
 
         // 2. Deposit LQTY to the staking contract through the bridge
         rollupProcessor.convert(
@@ -81,10 +101,10 @@ contract StakingBridgeTest is TestUtil {
         while (i < numIters) {
             depositAmount = rand(depositAmount);
             // 1. Mint deposit amount of LQTY to the rollupProcessor
-            mint("LQTY", address(rollupProcessor), depositAmount);
+            deal(tokens["LQTY"].addr, address(rollupProcessor), depositAmount);
             // 2. Mint rewards to the bridge
-            mint("LUSD", address(bridge), 1e20);
-            mint("WETH", address(bridge), 1e18);
+            deal(tokens["LUSD"].addr, address(bridge), 1e20);
+            deal(tokens["WETH"].addr, address(bridge), 1e18);
 
             // 3. Deposit LQTY to the staking contract through the bridge
             (uint256 outputValueA, , ) = rollupProcessor.convert(

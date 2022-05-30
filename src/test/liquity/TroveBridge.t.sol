@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.0 <=0.8.10;
-pragma abicoder v2;
+pragma solidity >=0.8.4;
 
 import "./utils/TestUtil.sol";
 import "./interfaces/IHintHelpers.sol";
@@ -17,6 +16,8 @@ contract TroveBridgeTest is TestUtil {
 
     uint256 private constant OWNER_WEI_BALANCE = 5e18; // 5 ETH
     uint256 private constant ROLLUP_PROCESSOR_WEI_BALANCE = 1e18; // 1 ETH
+
+    uint64 private constant MAX_FEE = 5e16; // Slippage protection: 5%
 
     // From LiquityMath.sol
     uint256 private constant NICR_PRECISION = 1e20;
@@ -34,10 +35,9 @@ contract TroveBridgeTest is TestUtil {
         setUpTokens();
 
         uint256 initialCollateralRatio = 160;
-        uint256 maxFee = 5e16; // Slippage protection: 5%
 
         vm.prank(OWNER);
-        bridge = new TroveBridge(address(rollupProcessor), initialCollateralRatio, maxFee);
+        bridge = new TroveBridge(address(rollupProcessor), initialCollateralRatio);
 
         // Set OWNER's and ROLLUP_PROCESSOR's balances
         vm.deal(OWNER, OWNER_WEI_BALANCE);
@@ -61,15 +61,13 @@ contract TroveBridgeTest is TestUtil {
                 AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
                 ROLLUP_PROCESSOR_WEI_BALANCE,
                 0,
-                0,
+                MAX_FEE,
                 address(0)
             )
         {
             assertTrue(false, "convert(...) has to revert when trove is in an incorrect state.");
         } catch (bytes memory reason) {
-            bytes4 expectedSelector = bytes4(keccak256(bytes("IncorrectStatus(uint8,uint8)")));
-            bytes4 receivedSelector = bytes4(reason);
-            assertEq(expectedSelector, receivedSelector);
+            assertEq(TroveBridge.IncorrectStatus.selector, bytes4(reason));
         }
     }
 
@@ -90,9 +88,7 @@ contract TroveBridgeTest is TestUtil {
         {
             assertTrue(false, "convert(...) has to revert on incorrect input.");
         } catch (bytes memory reason) {
-            bytes4 expectedSelector = bytes4(keccak256(bytes("IncorrectInput()")));
-            bytes4 receivedSelector = bytes4(reason);
-            assertEq(expectedSelector, receivedSelector);
+            assertEq(TroveBridge.IncorrectInput.selector, bytes4(reason));
         }
     }
 
@@ -123,17 +119,13 @@ contract TroveBridgeTest is TestUtil {
         try bridge.closeTrove() {
             assertTrue(false, "closeTrove() has to revert in case owner's balance != TB total supply.");
         } catch (bytes memory reason) {
-            bytes4 expectedSelector = bytes4(keccak256(bytes("OwnerNotLast()")));
-            bytes4 receivedSelector = bytes4(reason);
-            assertEq(expectedSelector, receivedSelector);
+            assertEq(TroveBridge.OwnerNotLast.selector, bytes4(reason));
         }
 
-        try bridge.openTrove(address(0), address(0)) {
+        try bridge.openTrove(address(0), address(0), MAX_FEE) {
             assertTrue(false, "openTrove() has to revert in case TB total supply != 0.");
         } catch (bytes memory reason) {
-            bytes4 expectedSelector = bytes4(keccak256(bytes("NonZeroTotalSupply()")));
-            bytes4 receivedSelector = bytes4(reason);
-            assertEq(expectedSelector, receivedSelector);
+            assertEq(TroveBridge.NonZeroTotalSupply.selector, bytes4(reason));
         }
 
         vm.stopPrank();
@@ -146,7 +138,7 @@ contract TroveBridgeTest is TestUtil {
         // Keep on redeeming 20 million LUSD until the trove is in the closedByRedemption status
         uint256 amountToRedeem = 2e25;
         do {
-            mint("LUSD", address(this), amountToRedeem);
+            deal(tokens["LUSD"].addr, address(this), amountToRedeem);
             bridge.troveManager().redeemCollateral(amountToRedeem, address(0), address(0), address(0), 0, 0, 1e18);
         } while (Status(bridge.troveManager().getTroveStatus(address(bridge))) != Status.closedByRedemption);
 
@@ -167,7 +159,7 @@ contract TroveBridgeTest is TestUtil {
         (address upperHint, address lowerHint) = sortedTroves.findInsertPosition(nicr, approxHint, approxHint);
 
         // Open the trove
-        bridge.openTrove{value: OWNER_WEI_BALANCE}(upperHint, lowerHint);
+        bridge.openTrove{value: OWNER_WEI_BALANCE}(upperHint, lowerHint, MAX_FEE);
 
         uint256 price = bridge.troveManager().priceFeed().fetchPrice();
         uint256 icr = bridge.troveManager().getCurrentICR(address(bridge), price);
@@ -207,7 +199,7 @@ contract TroveBridgeTest is TestUtil {
             AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
             ROLLUP_PROCESSOR_WEI_BALANCE,
             0,
-            0
+            MAX_FEE
         );
 
         (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = bridge.troveManager().getEntireDebtAndColl(
@@ -234,11 +226,10 @@ contract TroveBridgeTest is TestUtil {
 
     function _repay() private {
         uint256 processorTBBalance = bridge.balanceOf(address(rollupProcessor));
-        uint256 processorLUSDBalance = tokens["LUSD"].erc.balanceOf(address(rollupProcessor));
 
-        uint256 borrowerFee = processorTBBalance - processorLUSDBalance;
         // Mint the borrower fee to ROLLUP_PROCESSOR in order to have a big enough balance for repaying
-        mint("LUSD", address(rollupProcessor), borrowerFee);
+        // borrowerFee = processorTBBalance - processorLUSDBalance;
+        deal(tokens["LUSD"].addr, address(rollupProcessor), processorTBBalance);
 
         rollupProcessor.convert(
             address(bridge),
@@ -248,7 +239,7 @@ contract TroveBridgeTest is TestUtil {
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
             processorTBBalance,
             1,
-            0
+            MAX_FEE
         );
 
         // Check the bridge doesn't hold any ETH or LUSD
@@ -273,7 +264,8 @@ contract TroveBridgeTest is TestUtil {
         uint256 borrowerFee = ownerTBBalance - ownerLUSDBalance - 200e18;
         uint256 amountToRepay = ownerLUSDBalance + borrowerFee;
 
-        mint("LUSD", OWNER, borrowerFee);
+        // Increase OWNER's LUSD balance by borrowerFee
+        deal(tokens["LUSD"].addr, OWNER, amountToRepay);
         tokens["LUSD"].erc.approve(address(bridge), amountToRepay);
 
         bridge.closeTrove();
@@ -308,7 +300,7 @@ contract TroveBridgeTest is TestUtil {
             AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
             processorTBBalance,
-            0,
+            1,
             0
         );
 

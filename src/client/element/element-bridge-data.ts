@@ -1,4 +1,3 @@
-import { BridgeId } from '../aztec/bridge_id';
 import { AddressZero } from '@ethersproject/constants';
 import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
 import {
@@ -10,8 +9,10 @@ import {
   RollupProcessor__factory,
 } from '../../../typechain-types';
 import { AsyncDefiBridgeProcessedEvent } from '../../../typechain-types/RollupProcessor';
-import { createWeb3Provider, EthereumProvider } from '../aztec/provider/';
-import { EthAddress } from '../aztec/eth_address';
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { createWeb3Provider } from '../aztec/provider';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 
 export type BatchSwapStep = {
   poolId: string;
@@ -205,7 +206,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
 
     return [
       {
-        assetId: BigInt(BridgeId.fromBigInt(defiEvent.bridgeId).inputAssetId),
+        assetId: BigInt(BridgeId.fromBigInt(defiEvent.bridgeId).inputAssetIdA),
         amount: defiEvent.totalInputValue + accruedInterst,
       },
     ];
@@ -225,17 +226,16 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
       return [];
     }
 
-    const latestBlock = await this.getCurrentBlock();
+    const YEAR = 60n * 60n * 24n * 365n;
 
-    const now = latestBlock.timestamp;
     const totalInterest = endValue.toBigInt() - defiEvent.totalInputValue;
-    const elapsedTime = BigInt(now - defiEvent.timestamp);
     const totalTime = exitTimestamp.toBigInt() - BigInt(defiEvent.timestamp);
-    const timeRatio = divide(elapsedTime, totalTime, this.scalingFactor);
-    const accruedInterst = (totalInterest * timeRatio) / this.scalingFactor;
+    const interestPerSecondScaled = divide(totalInterest, totalTime, this.scalingFactor);
+    const yearlyInterest = (interestPerSecondScaled * YEAR) / this.scalingFactor;
 
-    const currentYield = (defiEvent.totalInputValue / (defiEvent.totalInputValue + accruedInterst)) * 100n;
-    return [Number(currentYield)];
+    const percentageScaled = divide(yearlyInterest, defiEvent.totalInputValue, this.scalingFactor);
+    const percentage2sf = (percentageScaled * 10000n) / this.scalingFactor;
+    return [Number(percentage2sf) / 100];
   }
 
   async getAuxData(
@@ -317,8 +317,10 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     const interest = -outputAssetAValue.toBigInt() - precision;
     const scaledOutput = divide(interest, timeToExpiration, this.scalingFactor);
     const yearlyOutput = (scaledOutput * YEAR) / this.scalingFactor;
+    const percentageScaled = divide(yearlyOutput, precision, this.scalingFactor);
+    const percentage2sf = (percentageScaled * 10000n) / this.scalingFactor;
 
-    return [Number((precision * this.scalingFactor) / (yearlyOutput + precision) / this.scalingFactor / 10000n) / 100];
+    return [Number(percentage2sf) / 100];
   }
 
   async getMarketSize(

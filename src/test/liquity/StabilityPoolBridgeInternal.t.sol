@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.0 <=0.8.10;
-pragma abicoder v2;
+pragma solidity >=0.8.4;
 
 import "./utils/TestUtil.sol";
 import "../../bridges/liquity/StabilityPoolBridge.sol";
@@ -26,7 +25,7 @@ abstract contract StabilityPoolBridgeTestInternal is TestUtil, StabilityPoolBrid
     }
 
     function testSwapRewardsOnUni() public {
-        mint("LQTY", address(this), 1e21);
+        deal(tokens["LQTY"].addr, address(this), 1e21);
 
         // Note: to make the tests faster I will burn most of the ETH. This contract gets 79 million ETH by default.
         // This makes swapping through Uni v3 slow as it has the loop through the ticks for many seconds

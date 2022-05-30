@@ -17,12 +17,10 @@ import {ISafeEngine} from "./../../bridges/rai/interfaces/ISafeEngine.sol";
 
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 
-
 contract RaiBridgeTest is DSTest {
-
     using SafeMath for uint256;
 
-    uint private interactionNonce = 1;
+    uint256 private interactionNonce = 1;
 
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
@@ -41,79 +39,85 @@ contract RaiBridgeTest is DSTest {
         rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
     }
 
-    uint totalDepositAmount;
+    uint256 totalDepositAmount;
 
     function setUp() public {
         _aztecPreSetup();
 
-        raiBridge = new RaiBridge(
-            address(rollupProcessor),
-            "Rai-Safe-1",
-            "RS1"
-        );
+        raiBridge = new RaiBridge(address(rollupProcessor), "Rai-Safe-1", "RS1");
 
         totalDepositAmount = 0;
 
-        uint initialCollateralRatio = 20000;
+        uint256 initialCollateralRatio = 20000;
 
         _initialize(10e18, initialCollateralRatio);
     }
 
     function testWethCollateralDeposit() public {
-        uint depositAmount = 1e18;
-        uint rollUpRai = _addCollateralWeth(depositAmount);
+        uint256 depositAmount = 1e18;
+        uint256 rollUpRai = _addCollateralWeth(depositAmount);
 
-       _assertCollateralRatio(rollUpRai);
+        _assertCollateralRatio(rollUpRai);
     }
 
     function testWethCollateralWithdraw() public {
-        uint raiAmount = 689e18;
+        uint256 raiAmount = 689e18;
         // test that the wethAmount matches what is supposed to be get by the actual collateral ratio
-        ISafeEngine.SAFE memory safe = ISafeEngine(raiBridge.SAFE_ENGINE()).safes(0x4554482d41000000000000000000000000000000000000000000000000000000, raiBridge.SAFE_HANDLER());
+        ISafeEngine.SAFE memory safe = ISafeEngine(raiBridge.SAFE_ENGINE()).safes(
+            0x4554482d41000000000000000000000000000000000000000000000000000000,
+            raiBridge.SAFE_HANDLER()
+        );
 
-        uint expectedWethAmount = safe.lockedCollateral.mul(raiAmount).div(safe.generatedDebt);
+        uint256 expectedWethAmount = safe.lockedCollateral.mul(raiAmount).div(safe.generatedDebt);
 
-        uint wethAmount = _removeCollateralWeth(raiAmount);
+        uint256 wethAmount = _removeCollateralWeth(raiAmount);
 
         require(expectedWethAmount == wethAmount, "Expected weth withdraw dont match actual");
-
     }
 
     function testWethCollateralWithdrawAll() public {
-        uint totalWeth = totalDepositAmount;
-        uint totalRai = rai.balanceOf(address(rollupProcessor));
+        uint256 totalWeth = totalDepositAmount;
+        uint256 totalRai = rai.balanceOf(address(rollupProcessor));
 
         require(totalRai > 0, "No rai to withdraw");
 
         _removeCollateralWeth(totalRai);
 
-        uint wethBal = weth.balanceOf(address(rollupProcessor));
+        uint256 wethBal = weth.balanceOf(address(rollupProcessor));
         require(totalDepositAmount == 0);
         require(wethBal == totalWeth, "Total withdrawAll failed");
     }
 
     function testEthCollateralDeposit() public {
-        uint depositAmount = 5e18;
-        uint rollupRai = _addCollateralEth(depositAmount);
+        uint256 depositAmount = 5e18;
+        uint256 rollupRai = _addCollateralEth(depositAmount);
 
         _assertCollateralRatio(rollupRai);
     }
 
     function testEthCollateralWithdraw() public {
-       uint raiAmount = 1000e18;
+        uint256 raiAmount = 1000e18;
         // test that the ethAmount matches what is supposed to be get by the actual collateral ratio
-        ISafeEngine.SAFE memory safe = ISafeEngine(raiBridge.SAFE_ENGINE()).safes(0x4554482d41000000000000000000000000000000000000000000000000000000, raiBridge.SAFE_HANDLER());
+        ISafeEngine.SAFE memory safe = ISafeEngine(raiBridge.SAFE_ENGINE()).safes(
+            0x4554482d41000000000000000000000000000000000000000000000000000000,
+            raiBridge.SAFE_HANDLER()
+        );
 
-        uint expectedEthAmount = safe.lockedCollateral.mul(raiAmount).div(safe.generatedDebt);
+        uint256 expectedEthAmount = safe.lockedCollateral.mul(raiAmount).div(safe.generatedDebt);
 
-        uint ethAmount = _removeCollateralEth(raiAmount);
+        uint256 ethAmount = _removeCollateralEth(raiAmount);
 
         require(expectedEthAmount == ethAmount, "Expected eth withdraw dont match actual");
     }
 
     // percentageThreshold is in BPS (divide by 10000)
-    function assertApprox(uint actual, uint expected, uint percentageThreshold, string memory errorMsg) internal {
-        uint diff;
+    function assertApprox(
+        uint256 actual,
+        uint256 expected,
+        uint256 percentageThreshold,
+        string memory errorMsg
+    ) internal {
+        uint256 diff;
         if (actual > expected) {
             diff = actual - expected;
         } else {
@@ -121,9 +125,7 @@ contract RaiBridgeTest is DSTest {
         }
 
         require(diff < (actual.mul(percentageThreshold).div(10000)), errorMsg);
-
     }
-
 
     function assertNotEq(address a, address b) internal {
         if (a == b) {
@@ -134,7 +136,6 @@ contract RaiBridgeTest is DSTest {
         }
     }
 
-
     function _setTokenBalance(
         address token,
         address user,
@@ -142,23 +143,18 @@ contract RaiBridgeTest is DSTest {
     ) internal {
         uint256 slot = 3; // May vary depending on token
 
-        vm.store(
-            token,
-            keccak256(abi.encode(user, slot)),
-            bytes32(uint256(balance))
-        );
+        vm.store(token, keccak256(abi.encode(user, slot)), bytes32(uint256(balance)));
 
         assertEq(IERC20(token).balanceOf(user), balance, "wrong balance");
     }
 
-    function _addCollateralWeth(uint depositAmount) internal returns (uint rollUpRai){
-
+    function _addCollateralWeth(uint256 depositAmount) internal returns (uint256 rollUpRai) {
         _setTokenBalance(address(weth), address(rollupProcessor), depositAmount);
 
         totalDepositAmount += depositAmount;
 
-        uint initialRollUpRai = rai.balanceOf(address(rollupProcessor));
-        uint initialBridgeTokens = raiBridge.balanceOf(address(rollupProcessor));
+        uint256 initialRollUpRai = rai.balanceOf(address(rollupProcessor));
+        uint256 initialBridgeTokens = raiBridge.balanceOf(address(rollupProcessor));
 
         AztecTypes.AztecAsset memory empty;
 
@@ -166,21 +162,21 @@ contract RaiBridgeTest is DSTest {
 
         rollUpRai = rai.balanceOf(address(rollupProcessor));
 
-        require(
-            outputValueA + initialRollUpRai == rollUpRai,
-            "Rai balance dont match"
-        );
+        require(outputValueA + initialRollUpRai == rollUpRai, "Rai balance dont match");
 
         // also assert that the rollupProcessor gets equal number of RaiBridge ERC20 tokens
-        uint bridgeTokens = raiBridge.balanceOf(address(rollupProcessor));
-        require(rollUpRai - initialRollUpRai == bridgeTokens - initialBridgeTokens, "bridgeTokens balance dont equal rai balance");
+        uint256 bridgeTokens = raiBridge.balanceOf(address(rollupProcessor));
+        require(
+            rollUpRai - initialRollUpRai == bridgeTokens - initialBridgeTokens,
+            "bridgeTokens balance dont equal rai balance"
+        );
     }
 
-    function _removeCollateralWeth(uint raiAmount) internal returns (uint outputValue) {
+    function _removeCollateralWeth(uint256 raiAmount) internal returns (uint256 outputValue) {
         AztecTypes.AztecAsset memory empty;
 
-        uint initialBalance = weth.balanceOf(address(rollupProcessor));
-        uint initialSupply = raiBridge.totalSupply();
+        uint256 initialBalance = weth.balanceOf(address(rollupProcessor));
+        uint256 initialSupply = raiBridge.totalSupply();
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
             id: 1,
@@ -200,29 +196,25 @@ contract RaiBridgeTest is DSTest {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-        (
-            outputValue,
-            ,
-
-        ) = rollupProcessor.convert(
-                address(raiBridge),
-                inputAssetA,
-                inputAssetB,
-                outputAsset,
-                empty,
-                raiAmount,
-                interactionNonce,
-                0
+        (outputValue, , ) = rollupProcessor.convert(
+            address(raiBridge),
+            inputAssetA,
+            inputAssetB,
+            outputAsset,
+            empty,
+            raiAmount,
+            interactionNonce,
+            0
         );
 
         interactionNonce += 1;
 
-        uint currSupply = raiBridge.totalSupply();
+        uint256 currSupply = raiBridge.totalSupply();
 
         // assert bridgeTokens are transferred and burnt
         require(currSupply == initialSupply - raiAmount, "bridgeTokens not burnt");
 
-        uint newBalance = weth.balanceOf(address(rollupProcessor));
+        uint256 newBalance = weth.balanceOf(address(rollupProcessor));
 
         require(outputValue > 0, "output wEth is zero");
         require(newBalance - initialBalance == outputValue, "Weth balance dont match");
@@ -230,12 +222,12 @@ contract RaiBridgeTest is DSTest {
         totalDepositAmount -= outputValue;
     }
 
-    function _addCollateralEth(uint depositAmount) internal returns (uint rollUpRai) {
+    function _addCollateralEth(uint256 depositAmount) internal returns (uint256 rollUpRai) {
         rollupProcessor.receiveEthFromBridge{value: depositAmount}(interactionNonce);
 
         totalDepositAmount += depositAmount;
 
-        uint initialRollUpRai = rai.balanceOf(address(rollupProcessor));
+        uint256 initialRollUpRai = rai.balanceOf(address(rollupProcessor));
 
         AztecTypes.AztecAsset memory empty;
 
@@ -257,19 +249,15 @@ contract RaiBridgeTest is DSTest {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-        (
-            uint256 outputValueA,
-            ,
-
-        ) = rollupProcessor.convert(
-                address(raiBridge),
-                inputAsset,
-                empty,
-                outputAssetA,
-                outputAssetB,
-                depositAmount,
-                interactionNonce,
-                0
+        (uint256 outputValueA, , ) = rollupProcessor.convert(
+            address(raiBridge),
+            inputAsset,
+            empty,
+            outputAssetA,
+            outputAssetB,
+            depositAmount,
+            interactionNonce,
+            0
         );
 
         rollUpRai = rai.balanceOf(address(rollupProcessor));
@@ -278,17 +266,14 @@ contract RaiBridgeTest is DSTest {
 
         require(outputValueA > 0);
 
-        require(
-            outputValueA + initialRollUpRai == rollUpRai,
-            "Rai balance dont match"
-        );
+        require(outputValueA + initialRollUpRai == rollUpRai, "Rai balance dont match");
     }
 
-    function _removeCollateralEth(uint raiAmount) internal returns (uint outputValue) {
+    function _removeCollateralEth(uint256 raiAmount) internal returns (uint256 outputValue) {
         AztecTypes.AztecAsset memory empty;
 
-        uint initialEthBalance = address(rollupProcessor).balance;
-        uint initialSupply = raiBridge.totalSupply();
+        uint256 initialEthBalance = address(rollupProcessor).balance;
+        uint256 initialSupply = raiBridge.totalSupply();
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
             id: 1,
@@ -308,27 +293,23 @@ contract RaiBridgeTest is DSTest {
             assetType: AztecTypes.AztecAssetType.ETH
         });
 
-        (
-            outputValue,
-            ,
-
-        ) = rollupProcessor.convert(
-                address(raiBridge),
-                inputAssetA,
-                inputAssetB,
-                outputAsset,
-                empty,
-                raiAmount,
-                interactionNonce,
-                0
+        (outputValue, , ) = rollupProcessor.convert(
+            address(raiBridge),
+            inputAssetA,
+            inputAssetB,
+            outputAsset,
+            empty,
+            raiAmount,
+            interactionNonce,
+            0
         );
 
-        uint currSupply = raiBridge.totalSupply();
+        uint256 currSupply = raiBridge.totalSupply();
 
         // assert bridgeTokens are transferred and burnt
         require(currSupply == initialSupply - raiAmount, "bridgeTokens not burnt");
 
-        uint newEthBalance = address(rollupProcessor).balance;
+        uint256 newEthBalance = address(rollupProcessor).balance;
 
         require(outputValue > 0, "output eth is zero");
         require(newEthBalance - initialEthBalance == outputValue, "eth balance dont match");
@@ -336,7 +317,7 @@ contract RaiBridgeTest is DSTest {
         totalDepositAmount -= outputValue;
     }
 
-    function _initialize(uint depositAmount, uint collateralRatio) internal returns (uint rollUpRai) {
+    function _initialize(uint256 depositAmount, uint256 collateralRatio) internal returns (uint256 rollUpRai) {
         _setTokenBalance(address(weth), address(rollupProcessor), depositAmount);
 
         totalDepositAmount += depositAmount;
@@ -345,26 +326,23 @@ contract RaiBridgeTest is DSTest {
 
         require(rollUpRai == 0, "initial rollup balance not zero");
 
-       (uint outputValueA, uint outputValueB) = _addWethConvert(depositAmount, collateralRatio);
+        (uint256 outputValueA, uint256 outputValueB) = _addWethConvert(depositAmount, collateralRatio);
 
         rollUpRai = rai.balanceOf(address(rollupProcessor));
 
-        uint bridgeTokensBalance = raiBridge.balanceOf(address(rollupProcessor));
+        uint256 bridgeTokensBalance = raiBridge.balanceOf(address(rollupProcessor));
 
         require(outputValueA > 0);
 
-        require(
-            outputValueA == rollUpRai,
-            "Rai balance dont match"
-        );
+        require(outputValueA == rollUpRai, "Rai balance dont match");
 
-        require(
-            bridgeTokensBalance == rollUpRai,
-            "Rai balance dont match bridgeTokens balance"
-        );
+        require(bridgeTokensBalance == rollUpRai, "Rai balance dont match bridgeTokens balance");
     }
 
-    function _addWethConvert(uint depositAmount, uint collateralRatio) internal returns (uint outputValueA, uint outputValueB) {
+    function _addWethConvert(uint256 depositAmount, uint256 collateralRatio)
+        internal
+        returns (uint256 outputValueA, uint256 outputValueB)
+    {
         AztecTypes.AztecAsset memory empty;
 
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
@@ -385,33 +363,26 @@ contract RaiBridgeTest is DSTest {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-        (
-             outputValueA,
-             outputValueB,
-
-        ) = rollupProcessor.convert(
-                address(raiBridge),
-                inputAsset,
-                empty,
-                outputAssetA,
-                outputAssetB,
-                depositAmount,
-                interactionNonce,
-                collateralRatio
+        (outputValueA, outputValueB, ) = rollupProcessor.convert(
+            address(raiBridge),
+            inputAsset,
+            empty,
+            outputAssetA,
+            outputAssetB,
+            depositAmount,
+            interactionNonce,
+            collateralRatio
         );
 
         interactionNonce += 1;
     }
 
-    function _assertCollateralRatio(uint rollUpRai) internal {
+    function _assertCollateralRatio(uint256 rollUpRai) internal {
         // test the collateral ratio
-        (, int x, , ,) = priceFeed.latestRoundData();
-        uint raiToEth = uint(x);
-        uint actualCollateralRatio = totalDepositAmount.mul(1e22).div(raiToEth).div(rollUpRai);
-        (uint expectedCollateralRatio,,) = raiBridge.getSafeData();
-        require(
-            actualCollateralRatio == expectedCollateralRatio,
-            "Collateral ratio not equal expected"
-        );
+        (, int256 x, , , ) = priceFeed.latestRoundData();
+        uint256 raiToEth = uint256(x);
+        uint256 actualCollateralRatio = totalDepositAmount.mul(1e22).div(raiToEth).div(rollUpRai);
+        (uint256 expectedCollateralRatio, , ) = raiBridge.getSafeData();
+        require(actualCollateralRatio == expectedCollateralRatio, "Collateral ratio not equal expected");
     }
 }

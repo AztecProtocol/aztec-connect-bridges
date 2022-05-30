@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.0 <=0.8.10;
-pragma abicoder v2;
+pragma solidity >=0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../../interfaces/IDefiBridge.sol";
@@ -93,31 +92,30 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
         returns (
             uint256 outputValueA,
             uint256,
-            bool isAsync
+            bool
         )
     {
         if (msg.sender != processor) revert InvalidCaller();
 
-        if (inputAssetA.erc20Address == LQTY) {
+        if (inputAssetA.erc20Address == LQTY && outputAssetA.erc20Address == address(this)) {
             // Deposit
-            if (outputAssetA.erc20Address != address(this)) revert IncorrectInput();
             // Stake and claim rewards
             STAKING_CONTRACT.stake(inputValue);
             _swapRewardsToLQTYAndStake();
+            uint256 totalSupply = this.totalSupply();
             // outputValueA = how much SB should be minted
-            if (this.totalSupply() == 0) {
+            if (totalSupply == 0) {
                 // When the totalSupply is 0, I set the SB/LQTY ratio to be 1.
                 outputValueA = inputValue;
             } else {
                 uint256 totalLQTYOwnedBeforeDeposit = STAKING_CONTRACT.stakes(address(this)) - inputValue;
-                // this.totalSupply() / totalLQTYOwnedBeforeDeposit = how much SB one LQTY is worth
+                // totalSupply / totalLQTYOwnedBeforeDeposit = how much SB one LQTY is worth
                 // When I multiply this ^ with the amount of LQTY deposited I get the amount of SB to be minted.
-                outputValueA = (this.totalSupply() * inputValue) / totalLQTYOwnedBeforeDeposit;
+                outputValueA = (totalSupply * inputValue) / totalLQTYOwnedBeforeDeposit;
             }
             _mint(address(this), outputValueA);
-        } else {
+        } else if (inputAssetA.erc20Address == address(this) && outputAssetA.erc20Address == LQTY) {
             // Withdrawal
-            if (inputAssetA.erc20Address != address(this) || outputAssetA.erc20Address != LQTY) revert IncorrectInput();
             // Claim rewards
             STAKING_CONTRACT.unstake(0);
             _swapRewardsToLQTYAndStake();
@@ -127,6 +125,8 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
             outputValueA = (STAKING_CONTRACT.stakes(address(this)) * inputValue) / this.totalSupply();
             STAKING_CONTRACT.unstake(outputValueA);
             _burn(address(this), inputValue);
+        } else {
+            revert IncorrectInput();
         }
     }
 

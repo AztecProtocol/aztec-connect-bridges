@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.0 <=0.8.10;
-pragma abicoder v2;
+pragma solidity >=0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -41,7 +40,6 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
 
     address public immutable processor;
     uint256 public immutable initialICR;
-    uint256 public immutable maxFee;
 
     // Used to check whether collateral has already been claimed during redemptions.
     bool private _collateralClaimed;
@@ -69,14 +67,11 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
      * @param _processor Address of the RollupProcessor.sol
      * @param _initialICRPerc Collateral ratio denominated in percents to be used when opening the Trove
      */
-    constructor(
-        address _processor,
-        uint256 _initialICRPerc,
-        uint256 _maxFee
-    ) ERC20("TroveBridge", string(abi.encodePacked("TB-", _initialICRPerc.toString()))) {
+    constructor(address _processor, uint256 _initialICRPerc)
+        ERC20("TroveBridge", string(abi.encodePacked("TB-", _initialICRPerc.toString())))
+    {
         processor = _processor;
         initialICR = _initialICRPerc * 1e16;
-        maxFee = _maxFee;
     }
 
     /**
@@ -84,10 +79,15 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
      * @param _upperHint Address of a Trove with a position in the sorted list before the correct insert position.
      * @param _lowerHint Address of a Trove with a position in the sorted list after the correct insert position.
      * See https://github.com/liquity/dev#supplying-hints-to-trove-operations for more details about hints.
+     * @param _maxFee Maximum borrower fee.
      * @dev Sufficient amount of ETH has to be send so that at least 2000 LUSD gets borrowed. 2000 LUSD is a minimum
      * amount allowed by Liquity.
      */
-    function openTrove(address _upperHint, address _lowerHint) external payable onlyOwner {
+    function openTrove(
+        address _upperHint,
+        address _lowerHint,
+        uint256 _maxFee
+    ) external payable onlyOwner {
         // Checks whether the trove can be safely opened/reopened
         if (this.totalSupply() != 0) revert NonZeroTotalSupply();
 
@@ -97,7 +97,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         uint256 amtToBorrow = computeAmtToBorrow(msg.value);
 
         (uint256 debtBefore, , , ) = troveManager.getEntireDebtAndColl(address(this));
-        operations.openTrove{value: msg.value}(maxFee, amtToBorrow, _upperHint, _lowerHint);
+        operations.openTrove{value: msg.value}(_maxFee, amtToBorrow, _upperHint, _lowerHint);
         (uint256 debtAfter, , , ) = troveManager.getEntireDebtAndColl(address(this));
 
         IERC20(LUSD).transfer(msg.sender, IERC20(LUSD).balanceOf(address(this)));
@@ -117,6 +117,8 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
      * @param outputAssetA -        TB                      ETH                     ETH
      * @param outputAssetB -        LUSD                    None                    None
      * @param inputValue -          amount of ETH           amount of TB and LUSD   amount of TB
+     * @param interactionNonce -    nonce                   nonce                   nonce
+     * @param auxData -             max borrower fee        0                       0
      * @return outputValueA -       amount of TB            amount of ETH           amount of ETH
      * @return outputValueB -       amount of LUSD          0                       0
      */
@@ -127,7 +129,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         AztecTypes.AztecAsset calldata outputAssetB,
         uint256 inputValue,
         uint256 interactionNonce,
-        uint64,
+        uint64 auxData,
         address
     )
         external
@@ -135,7 +137,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         returns (
             uint256 outputValueA,
             uint256 outputValueB,
-            bool isAsync
+            bool
         )
     {
         if (msg.sender != processor) revert InvalidCaller();
@@ -155,7 +157,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             outputValueB = computeAmtToBorrow(inputValue); // LUSD amount to borrow
 
             (uint256 debtBefore, , , ) = troveManager.getEntireDebtAndColl(address(this));
-            operations.adjustTrove{value: inputValue}(maxFee, 0, outputValueB, true, upperHint, lowerHint);
+            operations.adjustTrove{value: inputValue}(auxData, 0, outputValueB, true, upperHint, lowerHint);
             (uint256 debtAfter, , , ) = troveManager.getEntireDebtAndColl(address(this));
 
             // outputValueA = debt increase = amount of TB to mint
@@ -170,7 +172,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             if (troveStatus != Status.active) revert IncorrectStatus(Status.active, troveStatus);
             (, uint256 coll, , ) = troveManager.getEntireDebtAndColl(address(this));
             outputValueA = (coll * inputValue) / this.totalSupply(); // Amount of collateral to withdraw
-            operations.adjustTrove(maxFee, outputValueA, inputValue, false, upperHint, lowerHint);
+            operations.adjustTrove(0, outputValueA, inputValue, false, upperHint, lowerHint);
             _burn(address(this), inputValue);
             IRollupProcessor(processor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
         } else if (

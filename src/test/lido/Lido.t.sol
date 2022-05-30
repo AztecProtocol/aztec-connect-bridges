@@ -23,16 +23,10 @@ contract LidoTest is DSTest {
     LidoBridge private bridge;
 
     AztecTypes.AztecAsset private empty;
-    AztecTypes.AztecAsset private ethAsset = AztecTypes.AztecAsset({
-        id: 1,
-        erc20Address: address(0),
-        assetType: AztecTypes.AztecAssetType.ETH
-    });
-    AztecTypes.AztecAsset private wstETHAsset = AztecTypes.AztecAsset({
-        id: 2,
-        erc20Address: address(wstETH),
-        assetType: AztecTypes.AztecAssetType.ERC20
-    });
+    AztecTypes.AztecAsset private ethAsset =
+        AztecTypes.AztecAsset({id: 1, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
+    AztecTypes.AztecAsset private wstETHAsset =
+        AztecTypes.AztecAsset({id: 2, erc20Address: address(wstETH), assetType: AztecTypes.AztecAssetType.ERC20});
 
     function _aztecPreSetup() internal {
         defiBridgeProxy = new DefiBridgeProxy();
@@ -63,20 +57,15 @@ contract LidoTest is DSTest {
 
         // Convert ETH to wstETH
         validateETHToWstETH(balance, depositAmount);
-        
+
         // convert wstETH back to ETH using the same bridge
         validateWstETHToETH(wstETH.balanceOf(address(rollupProcessor)));
-
     }
 
     function validateWstETHToETH(uint256 depositAmount) public {
         uint256 beforeETHBalance = address(rollupProcessor).balance;
-        
-        (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool isAsync
-        ) = rollupProcessor.convert(
+
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
             address(bridge),
             wstETHAsset,
             empty,
@@ -108,19 +97,15 @@ contract LidoTest is DSTest {
         emit log_named_uint("Before ETH Balance", beforeETHBalance);
         emit log_named_uint("Before WstETHBalance", beforeWstETHBalance);
 
-        (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool isAsync
-        ) = rollupProcessor.convert(
-                address(bridge),
-                ethAsset,
-                empty,
-                wstETHAsset,
-                empty,
-                depositAmount,
-                1,
-                0
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
+            address(bridge),
+            ethAsset,
+            empty,
+            wstETHAsset,
+            empty,
+            depositAmount,
+            1,
+            0
         );
 
         uint256 afterETHBalance = address(rollupProcessor).balance;
@@ -134,5 +119,4 @@ contract LidoTest is DSTest {
         assertTrue(afterETHBalance == balance - depositAmount);
         assertTrue(outputValueA > 0 && outputValueA <= depositAmount);
     }
-
 }

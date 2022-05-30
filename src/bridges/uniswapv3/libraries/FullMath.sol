@@ -7,7 +7,7 @@ pragma solidity >=0.6.10 <=0.8.10;
 ///the first change is on line 74, which was originally a unary negation of an unsigned integer like thus:
 ///uint256 twos = -denominator & denominator;
 /// unary negation on unsigned integers has been disallowed in solidity versions 0.8.x
-///the fix for this is to change line 74 from uint256 twos = -denominator & denominator; to uint256 twos = (type(uint256).max - denominator + 1 ) & denominator; 
+///the fix for this is to change line 74 from uint256 twos = -denominator & denominator; to uint256 twos = (type(uint256).max - denominator + 1 ) & denominator;
 ///see https://docs.soliditylang.org/en/v0.8.11/080-breaking-changes.html
 ///the second change is the introduction of an unchecked block starting on line 70
 ///the code within this block relies on integer wraparound
@@ -72,7 +72,7 @@ library FullMath {
             // Factor powers of two out of denominator
             // Compute largest power of two divisor of denominator.
             // Always >= 1.
-            uint256 twos = (type(uint256).max - denominator + 1 ) & denominator;  //this line has been modified from the original Uniswap V3 library
+            uint256 twos = (type(uint256).max - denominator + 1) & denominator; //this line has been modified from the original Uniswap V3 library
             // Divide denominator by power of two
             assembly {
                 denominator := div(denominator, twos)

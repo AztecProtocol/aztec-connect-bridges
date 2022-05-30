@@ -1,4 +1,11 @@
-import { AssetValue, AuxDataConfig, AztecAsset, SolidityType, AztecAssetType, BridgeDataFieldGetters } from '../bridge-data';
+import {
+  AssetValue,
+  AuxDataConfig,
+  AztecAsset,
+  SolidityType,
+  AztecAssetType,
+  BridgeDataFieldGetters,
+} from '../bridge-data';
 
 import {
   IWstETH,
@@ -8,8 +15,9 @@ import {
   ILidoOracle__factory,
   ICurvePool__factory,
 } from '../../../typechain-types';
-import { createWeb3Provider, EthereumProvider } from '../aztec/provider';
-import { EthAddress } from '../aztec/eth_address';
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { createWeb3Provider } from '../aztec/provider';
+import { EthAddress } from '@aztec/barretenberg/address';
 
 export class LidoBridgeData implements BridgeDataFieldGetters {
   public scalingFactor: bigint = 1n * 10n ** 18n;
@@ -91,7 +99,7 @@ export class LidoBridgeData implements BridgeDataFieldGetters {
     outputAssetB: AztecAsset,
     auxData: bigint,
     precision: bigint,
-  ): Promise<Number[]> {
+  ): Promise<number[]> {
     const YEAR = 60n * 60n * 24n * 365n;
     if (outputAssetA.assetType === AztecAssetType.ETH) {
       const { postTotalPooledEther, preTotalPooledEther, timeElapsed } =

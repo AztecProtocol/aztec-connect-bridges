@@ -7,13 +7,24 @@ import {IDefiBridge} from "../interfaces/IDefiBridge.sol";
 import {IERC20} from "../interfaces/IERC20Permit.sol";
 import {DefiBridgeProxy} from "./DefiBridgeProxy.sol";
 import {AztecTypes} from "./AztecTypes.sol";
+import {TokenTransfers} from "../libraries/TokenTransfers.sol";
 
-import "../../lib/ds-test/src/test.sol";
+/**
+ * @notice Mock rollup processor to be used in testing. Will revert on a failing bridge to make debugging easier
+ */
+contract RollupProcessor {
+    error INSUFFICIENT_ETH_PAYMENT();
 
-import { console } from '../test/console.sol';
+    event DefiBridgeProcessed(
+        uint256 indexed bridgeId,
+        uint256 indexed nonce,
+        uint256 totalInputValue,
+        uint256 totalOutputValueA,
+        uint256 totalOutputValueB,
+        bool result
+    );
 
-contract RollupProcessor is DSTest {
-    DefiBridgeProxy private bridgeProxy;
+    event AsyncDefiBridgeProcessed(uint256 indexed bridgeId, uint256 indexed nonce, uint256 totalInputValue);
 
     struct DefiInteraction {
         address bridgeAddress;
@@ -24,12 +35,10 @@ contract RollupProcessor is DSTest {
         uint256 totalInputValue;
         uint256 interactionNonce;
         uint256 auxInputData; // (auxData)
+        uint256 outputValueA;
+        uint256 outputValueB;
+        bool finalised;
     }
-
-    uint256 private constant NUMBER_OF_BRIDGE_CALLS = 32;
-    bytes4 private constant TRANSFER_FROM_SELECTOR = 0x23b872dd; // bytes4(keccak256('transferFrom(address,address,uint256)'));
-    mapping(uint256 => uint256) ethPayments;
-    mapping(address => uint256) bridgeGasLimits;
 
     // DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = function signature of:
     //   function convert(
@@ -41,24 +50,17 @@ contract RollupProcessor is DSTest {
     //       uint256 totalInputValue,
     //       uint256 interactionNonce,
     //       uint256 auxData,
-    //       uint256 ethPaymentsSlot)
+    //       uint256 ethPaymentsSlot
+    //       address rollupBeneficary)
     // N.B. this is the selector of the 'convert' function of the DefiBridgeProxy contract.
     //      This has a different interface to the IDefiBridge.convert function
-    bytes4 private constant DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = 0xffd8e7b7;
-    event DefiBridgeProcessed(
-            uint256 indexed bridgeId,
-            uint256 indexed nonce,
-            uint256 totalInputValue,
-            uint256 totalOutputValueA,
-            uint256 totalOutputValueB,
-            bool result
-        );
+    bytes4 private constant DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = 0x4bd947a8;
 
-        event AsyncDefiBridgeProcessed(
-            uint256 indexed bridgeId,
-            uint256 indexed nonce,
-            uint256 totalInputValue
-        );
+    DefiBridgeProxy private bridgeProxy;
+
+    uint256 private constant NUMBER_OF_BRIDGE_CALLS = 32;
+    mapping(uint256 => uint256) ethPayments;
+    mapping(address => uint256) bridgeGasLimits;
 
     function receiveEthFromBridge(uint256 interactionNonce) external payable {
         ethPayments[interactionNonce] += msg.value;
@@ -73,63 +75,54 @@ contract RollupProcessor is DSTest {
         limit = limit == 0 ? 200000 : limit;
     }
 
-    mapping(uint256 => DefiInteraction) private defiInteractions;
+    function getDefiResult(uint256 nonce) public returns (bool finalised, uint256 outputValueA) {
+        finalised = defiInteractions[nonce].finalised;
+        outputValueA = defiInteractions[nonce].outputValueA;
+    }
+
+    mapping(uint256 => DefiInteraction) public defiInteractions;
 
     constructor(address _bridgeProxyAddress) {
         bridgeProxy = DefiBridgeProxy(_bridgeProxyAddress);
     }
 
+    /**
+     * @dev Token transfer method used by processAsyncDefiInteraction
+     * Calls `transferFrom` on the target erc20 token, if asset is of type ERC
+     * If asset is ETH, we validate a payment has been made against the provided interaction nonce
+     * @param bridgeContract address of bridge contract we're taking tokens from
+     * @param asset the AztecAsset being transferred
+     * @param outputValue the expected value transferred
+     * @param interactionNonce the defi interaction nonce of the interaction
+     */
     function transferTokensAsync(
         address bridgeContract,
         AztecTypes.AztecAsset memory asset,
         uint256 outputValue,
         uint256 interactionNonce
     ) internal {
-        if (asset.assetType == AztecTypes.AztecAssetType.ETH) {
-            require(
-                outputValue == ethPayments[interactionNonce],
-                "Rollup Processor: INSUFFICEINT_ETH_PAYMENT"
-            );
-            ethPayments[interactionNonce] = 0;
-        } else if (
-            asset.assetType == AztecTypes.AztecAssetType.ERC20 &&
-            outputValue > 0
-        ) {
-            address tokenAddress = asset.erc20Address;
-            bool success;
-
-            assembly {
-                // call token.transferFrom(bridgeAddressId, this, outputValue)
-                let mPtr := mload(0x40)
-                mstore(mPtr, TRANSFER_FROM_SELECTOR)
-                mstore(add(mPtr, 0x04), bridgeContract)
-                mstore(add(mPtr, 0x24), address())
-                mstore(add(mPtr, 0x44), outputValue)
-                success := call(gas(), tokenAddress, 0, mPtr, 0x64, 0x00, 0x20)
-                if iszero(success) {
-                    returndatacopy(0, 0, returndatasize())
-                    revert(0x00, returndatasize())
-                }
-            }
+        if (outputValue == 0) {
+            return;
         }
-
-        // VIRTUAL Assets are not transfered.
+        if (asset.assetType == AztecTypes.AztecAssetType.ETH) {
+            if (outputValue > ethPayments[interactionNonce]) {
+                revert INSUFFICIENT_ETH_PAYMENT();
+            }
+            ethPayments[interactionNonce] = 0;
+        } else if (asset.assetType == AztecTypes.AztecAssetType.ERC20) {
+            address tokenAddress = asset.erc20Address;
+            TokenTransfers.safeTransferFrom(tokenAddress, bridgeContract, address(this), outputValue);
+        }
     }
 
     function processAsyncDefiInteraction(uint256 interactionNonce) external returns (bool completed) {
         // call canFinalise on the bridge
         // call finalise on the bridge
-        DefiInteraction storage interaction = defiInteractions[
-            interactionNonce
-        ];
-        require(
-            interaction.bridgeAddress != address(0),
-            "Rollup Contract: UNKNOWN_NONCE"
-        );
+        DefiInteraction storage interaction = defiInteractions[interactionNonce];
+        require(interaction.bridgeAddress != address(0), "Rollup Contract: UNKNOWN_NONCE");
 
-        (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = IDefiBridge(
-            interaction.bridgeAddress
-        ).finalise(
+        (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = IDefiBridge(interaction.bridgeAddress)
+            .finalise(
                 interaction.inputAssetA,
                 interaction.inputAssetB,
                 interaction.outputAssetA,
@@ -139,11 +132,7 @@ contract RollupProcessor is DSTest {
             );
         completed = interactionComplete;
 
-        if (
-            outputValueB > 0 &&
-            interaction.outputAssetB.assetType ==
-            AztecTypes.AztecAssetType.NOT_USED
-        ) {
+        if (outputValueB > 0 && interaction.outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED) {
             require(false, "Non-zero output value on non-existant asset!");
         }
         if (outputValueA == 0 && outputValueB == 0) {
@@ -178,6 +167,9 @@ contract RollupProcessor is DSTest {
             outputValueB,
             true
         );
+        interaction.finalised = true;
+        interaction.outputValueA = outputValueA;
+        interaction.outputValueB = outputValueB;
     }
 
     struct ConvertArgs {
@@ -198,9 +190,7 @@ contract RollupProcessor is DSTest {
         bool isAsync;
     }
 
-    function _convert(ConvertArgs memory convertArgs) private returns (
-            ConvertReturnValues memory results
-        ) {
+    function _convert(ConvertArgs memory convertArgs) private returns (ConvertReturnValues memory results) {
         defiInteractions[convertArgs.interactionNonce] = DefiInteraction(
             convertArgs.bridgeAddress,
             convertArgs.inputAssetA,
@@ -209,9 +199,14 @@ contract RollupProcessor is DSTest {
             convertArgs.outputAssetB,
             convertArgs.totalInputValue,
             convertArgs.interactionNonce,
-            convertArgs.auxInputData
+            convertArgs.auxInputData,
+            0,
+            0,
+            false
         );
-        uint256 gas = bridgeGasLimits[convertArgs.bridgeAddress]  > 0 ? bridgeGasLimits[convertArgs.bridgeAddress]: uint256(150000000);
+        uint256 gas = bridgeGasLimits[convertArgs.bridgeAddress] > 0
+            ? bridgeGasLimits[convertArgs.bridgeAddress]
+            : uint256(150000000);
 
         (bool success, bytes memory result) = address(bridgeProxy).delegatecall{gas: gas}(
             abi.encodeWithSelector(
@@ -224,18 +219,16 @@ contract RollupProcessor is DSTest {
                 convertArgs.totalInputValue,
                 convertArgs.interactionNonce,
                 convertArgs.auxInputData,
-                convertArgs.ethPaymentsSlot
+                convertArgs.ethPaymentsSlot,
+                address(0)
             )
         );
         results = ConvertReturnValues(0, 0, false);
 
         if (success) {
-            (uint256 outputValueA, uint256 outputValueB, bool isAsync) = abi.decode(
-                result,
-                (uint256, uint256, bool)
-            );
+            (uint256 outputValueA, uint256 outputValueB, bool isAsync) = abi.decode(result, (uint256, uint256, bool));
             if (!isAsync) {
-                emit DefiBridgeProcessed (
+                emit DefiBridgeProcessed(
                     0,
                     convertArgs.interactionNonce,
                     convertArgs.totalInputValue,
@@ -244,31 +237,13 @@ contract RollupProcessor is DSTest {
                     true
                 );
             } else {
-                emit AsyncDefiBridgeProcessed (
-                    0,
-                    convertArgs.interactionNonce,
-                    convertArgs.totalInputValue
-                );
+                emit AsyncDefiBridgeProcessed(0, convertArgs.interactionNonce, convertArgs.totalInputValue);
             }
             results.outputValueA = outputValueA;
             results.outputValueB = outputValueB;
             results.isAsync = isAsync;
         }
-        require(success, 'Interaction Failed');
-
-        // else {
-
-
-        //     emit DefiBridgeProcessed(
-        //     0,
-        //     interactionNonce,
-        //     totalInputValue,
-        //     totalInputValue,
-        //     inputAssetB.NOT_USED || inputAssetB.,
-        //     success
-        // );
-        // }
-        // TODO: Should probaby emit an event for failed?
+        require(success, "Interaction Failed");
     }
 
     function convert(
@@ -288,10 +263,7 @@ contract RollupProcessor is DSTest {
             bool isAsync
         )
     {
-        require(
-            defiInteractions[interactionNonce].auxInputData == 0,
-            "Rollup Contract: INTERACTION_ALREADY_EXISTS"
-        );
+        require(defiInteractions[interactionNonce].auxInputData == 0, "Rollup Contract: INTERACTION_ALREADY_EXISTS");
 
         uint256 ethPayments_slot;
 
@@ -299,8 +271,18 @@ contract RollupProcessor is DSTest {
             ethPayments_slot := ethPayments.slot
         }
 
-        ConvertArgs memory convertArgs = ConvertArgs(bridgeAddress, inputAssetA, inputAssetB, outputAssetA, outputAssetB, totalInputValue, interactionNonce, auxInputData, ethPayments_slot);
-        (ConvertReturnValues memory results) = _convert(convertArgs);
+        ConvertArgs memory convertArgs = ConvertArgs(
+            bridgeAddress,
+            inputAssetA,
+            inputAssetB,
+            outputAssetA,
+            outputAssetB,
+            totalInputValue,
+            interactionNonce,
+            auxInputData,
+            ethPayments_slot
+        );
+        ConvertReturnValues memory results = _convert(convertArgs);
         outputValueA = results.outputValueA;
         outputValueB = results.outputValueB;
         isAsync = results.isAsync;
