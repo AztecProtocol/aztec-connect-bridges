@@ -1,45 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import {Vm} from '../../../../lib/forge-std/src/Vm.sol';
-import '../../../../lib/forge-std/src/stdlib.sol';
-import '../../../../lib/ds-test/src/test.sol';
-
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 /**
  * @notice Helper contract extending the DSTest contract with functions from Solmate and a few extra helper
  */
 
-contract TestHelper is DSTest {
-    Vm internal constant VM = Vm(HEVM_ADDRESS);
+ import "forge-std/Test.sol";
 
-    function max(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a > b ? a : b;
-    }
 
-    function min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
-    }
-
-    function _setTokenBalance(
-        address token,
-        address user,
-        uint256 balance
-    ) internal {
-        uint256 slot = 2;
-        if (token == address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)) {
-            slot = 9;
-        } else if (token == address(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599)) {
-            slot = 0;
-        } else if (token == address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2)) {
-            slot = 3;
-        }
-
-        VM.store(token, keccak256(abi.encode(user, slot)), bytes32(uint256(balance)));
-
-        assertEq(IERC20(token).balanceOf(user), balance, 'wrong balance');
-    }
+contract TestHelper is Test{
 
     function assertNotEq(address a, address b) internal {
         if (a == b) {
@@ -50,7 +21,7 @@ contract TestHelper is DSTest {
         }
     }
 
-    function assertFalse(bool condition, string memory err) internal {
+/*    function assertFalse(bool condition, string memory err) internal {
         if (condition) {
             emit log_named_string('Error', err);
             fail();
@@ -95,5 +66,5 @@ contract TestHelper is DSTest {
         if (max == type(uint256).max && x != 0) result++;
 
         emit log_named_uint('Bound Result', result);
-    }
+    }*/
 }
