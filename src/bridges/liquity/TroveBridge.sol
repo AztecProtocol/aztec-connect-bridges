@@ -34,9 +34,10 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
 
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
 
-    IBorrowerOperations public constant operations = IBorrowerOperations(0x24179CD81c9e782A4096035f7eC97fB8B783e007);
-    ITroveManager public constant troveManager = ITroveManager(0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2);
-    ISortedTroves public constant sortedTroves = ISortedTroves(0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6);
+    IBorrowerOperations public constant BORROWER_OPERATIONS =
+        IBorrowerOperations(0x24179CD81c9e782A4096035f7eC97fB8B783e007);
+    ITroveManager public constant TROVE_MANAGER = ITroveManager(0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2);
+    ISortedTroves public constant SORTED_TROVES = ISortedTroves(0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6);
 
     address public immutable processor;
     uint256 public immutable initialICR;
@@ -96,9 +97,9 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
 
         uint256 amtToBorrow = computeAmtToBorrow(msg.value);
 
-        (uint256 debtBefore, , , ) = troveManager.getEntireDebtAndColl(address(this));
-        operations.openTrove{value: msg.value}(_maxFee, amtToBorrow, _upperHint, _lowerHint);
-        (uint256 debtAfter, , , ) = troveManager.getEntireDebtAndColl(address(this));
+        (uint256 debtBefore, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
+        BORROWER_OPERATIONS.openTrove{value: msg.value}(_maxFee, amtToBorrow, _upperHint, _lowerHint);
+        (uint256 debtAfter, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
 
         IERC20(LUSD).transfer(msg.sender, IERC20(LUSD).balanceOf(address(this)));
         // I mint TB token to msg.sender to be able to track collateral ownership. Minted amount equals debt increase.
@@ -141,10 +142,10 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         )
     {
         if (msg.sender != processor) revert InvalidCaller();
-        Status troveStatus = Status(troveManager.getTroveStatus(address(this)));
+        Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(this)));
 
-        address upperHint = sortedTroves.getPrev(address(this));
-        address lowerHint = sortedTroves.getNext(address(this));
+        address upperHint = SORTED_TROVES.getPrev(address(this));
+        address lowerHint = SORTED_TROVES.getNext(address(this));
 
         if (
             inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
@@ -156,9 +157,9 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             // outputValueA = by how much debt will increase and how much TB to mint
             outputValueB = computeAmtToBorrow(inputValue); // LUSD amount to borrow
 
-            (uint256 debtBefore, , , ) = troveManager.getEntireDebtAndColl(address(this));
-            operations.adjustTrove{value: inputValue}(auxData, 0, outputValueB, true, upperHint, lowerHint);
-            (uint256 debtAfter, , , ) = troveManager.getEntireDebtAndColl(address(this));
+            (uint256 debtBefore, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
+            BORROWER_OPERATIONS.adjustTrove{value: inputValue}(auxData, 0, outputValueB, true, upperHint, lowerHint);
+            (uint256 debtAfter, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
 
             // outputValueA = debt increase = amount of TB to mint
             outputValueA = debtAfter - debtBefore;
@@ -170,9 +171,9 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         ) {
             // Repaying
             if (troveStatus != Status.active) revert IncorrectStatus(Status.active, troveStatus);
-            (, uint256 coll, , ) = troveManager.getEntireDebtAndColl(address(this));
+            (, uint256 coll, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
             outputValueA = (coll * inputValue) / this.totalSupply(); // Amount of collateral to withdraw
-            operations.adjustTrove(0, outputValueA, inputValue, false, upperHint, lowerHint);
+            BORROWER_OPERATIONS.adjustTrove(0, outputValueA, inputValue, false, upperHint, lowerHint);
             _burn(address(this), inputValue);
             IRollupProcessor(processor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
         } else if (
@@ -182,7 +183,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             if (troveStatus != Status.closedByRedemption)
                 revert IncorrectStatus(Status.closedByRedemption, troveStatus);
             if (!_collateralClaimed) {
-                operations.claimCollateral();
+                BORROWER_OPERATIONS.claimCollateral();
                 _collateralClaimed = true;
             }
             outputValueA = (address(this).balance * inputValue) / this.totalSupply();
@@ -204,15 +205,15 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
 
         _burn(owner, ownerTBBalance);
 
-        Status troveStatus = Status(troveManager.getTroveStatus(address(this)));
+        Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(this)));
         if (troveStatus == Status.active) {
-            (uint256 remainingDebt, , , ) = troveManager.getEntireDebtAndColl(address(this));
+            (uint256 remainingDebt, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
             // 200e18 is a part of debt which gets repaid from LUSD_GAS_COMPENSATION.
             if (!IERC20(LUSD).transferFrom(owner, address(this), remainingDebt - 200e18)) revert TransferFailed();
-            operations.closeTrove();
+            BORROWER_OPERATIONS.closeTrove();
         } else if (troveStatus == Status.closedByRedemption) {
             if (!_collateralClaimed) {
-                operations.claimCollateral();
+                BORROWER_OPERATIONS.claimCollateral();
             } else {
                 _collateralClaimed = false;
             }
@@ -241,15 +242,15 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
      * Note3: The borrowing fee computation is on this line in Liquity code: https://github.com/liquity/dev/blob/cb583ddf5e7de6010e196cfe706bd0ca816ea40e/packages/contracts/contracts/TroveManager.sol#L1433
      */
     function computeAmtToBorrow(uint256 _coll) public returns (uint256 amtToBorrow) {
-        uint256 price = troveManager.priceFeed().fetchPrice();
-        bool isRecoveryMode = troveManager.checkRecoveryMode(price);
-        if (troveManager.getTroveStatus(address(this)) == 1) {
+        uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
+        bool isRecoveryMode = TROVE_MANAGER.checkRecoveryMode(price);
+        if (TROVE_MANAGER.getTroveStatus(address(this)) == 1) {
             // Trove is active - use current ICR and not the initial one
-            uint256 icr = troveManager.getCurrentICR(address(this), price);
+            uint256 icr = TROVE_MANAGER.getCurrentICR(address(this), price);
             amtToBorrow = (_coll * price) / icr;
             if (!isRecoveryMode) {
                 // Liquity is not in recovery mode so borrowing fee applies
-                uint256 borrowingRate = troveManager.getBorrowingRateWithDecay();
+                uint256 borrowingRate = TROVE_MANAGER.getBorrowingRateWithDecay();
                 amtToBorrow = (amtToBorrow * 1e18) / (borrowingRate + 1e18);
             }
         } else {
@@ -258,7 +259,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             amtToBorrow = (_coll * price) / initialICR - 200e18;
             if (!isRecoveryMode) {
                 // Liquity is not in recovery mode so borrowing fee applies
-                uint256 borrowingRate = troveManager.getBorrowingRateWithDecay();
+                uint256 borrowingRate = TROVE_MANAGER.getBorrowingRateWithDecay();
                 amtToBorrow = (amtToBorrow * 1e18) / (borrowingRate + 1e18);
             }
         }

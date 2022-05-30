@@ -10,18 +10,9 @@ abstract contract StabilityPoolBridgeTestInternal is TestUtil, StabilityPoolBrid
         _aztecPreSetup();
         setUpTokens();
 
-        require(
-            IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max),
-            "StabilityPoolBridge: WETH_APPROVE_FAILED"
-        );
-        require(
-            IERC20(LQTY).approve(address(UNI_ROUTER), type(uint256).max),
-            "StabilityPoolBridge: LQTY_APPROVE_FAILED"
-        );
-        require(
-            IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max),
-            "StabilityPoolBridge: USDC_APPROVE_FAILED"
-        );
+        require(IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max), "WETH_APPROVE_FAILED");
+        require(IERC20(LQTY).approve(address(UNI_ROUTER), type(uint256).max), "LQTY_APPROVE_FAILED");
+        require(IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max), "USDC_APPROVE_FAILED");
     }
 
     function testSwapRewardsOnUni() public {
