@@ -35,6 +35,15 @@ import {ISortedTroves} from "./interfaces/ISortedTroves.sol";
 contract TroveBridge is ERC20, Ownable, IDefiBridge {
     using Strings for uint256;
 
+    error NonZeroTotalSupply();
+    error ApproveFailed(address token);
+    error InvalidCaller();
+    error IncorrectStatus(Status expected, Status received);
+    error IncorrectInput();
+    error OwnerNotLast();
+    error TransferFailed();
+    error AsyncModeDisabled();
+
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
 
     IBorrowerOperations public constant BORROWER_OPERATIONS =
@@ -42,11 +51,11 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
     ITroveManager public constant TROVE_MANAGER = ITroveManager(0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2);
     ISortedTroves public constant SORTED_TROVES = ISortedTroves(0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6);
 
-    address public immutable rollupProcessor;
-    uint256 public immutable initialICR;
+    address public immutable ROLLUP_PROCESSOR;
+    uint256 public immutable INITIAL_ICR;
 
     // Used to check whether collateral has already been claimed during redemptions.
-    bool private _collateralClaimed;
+    bool private collateralClaimed;
 
     // Trove status taken from TroveManager.sol
     enum Status {
@@ -57,15 +66,6 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         closedByRedemption
     }
 
-    error NonZeroTotalSupply();
-    error ApproveFailed(address token);
-    error InvalidCaller();
-    error IncorrectStatus(Status expected, Status received);
-    error IncorrectInput();
-    error OwnerNotLast();
-    error TransferFailed();
-    error AsyncModeDisabled();
-
     /**
      * @notice Set the address of RollupProcessor.sol and initial ICR
      * @param _rollupProcessor Address of the RollupProcessor.sol
@@ -74,8 +74,8 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
     constructor(address _rollupProcessor, uint256 _initialICRPerc)
         ERC20("TroveBridge", string(abi.encodePacked("TB-", _initialICRPerc.toString())))
     {
-        rollupProcessor = _rollupProcessor;
-        initialICR = _initialICRPerc * 1e16;
+        ROLLUP_PROCESSOR = _rollupProcessor;
+        INITIAL_ICR = _initialICRPerc * 1e16;
     }
 
     receive() external payable {}
@@ -99,8 +99,8 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         // Checks whether the trove can be safely opened/reopened
         if (this.totalSupply() != 0) revert NonZeroTotalSupply();
 
-        if (!IERC20(LUSD).approve(rollupProcessor, type(uint256).max)) revert ApproveFailed(LUSD);
-        if (!this.approve(rollupProcessor, type(uint256).max)) revert ApproveFailed(address(this));
+        if (!IERC20(LUSD).approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(LUSD);
+        if (!this.approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(address(this));
 
         uint256 amtToBorrow = computeAmtToBorrow(msg.value);
 
@@ -148,7 +148,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             bool
         )
     {
-        if (msg.sender != rollupProcessor) revert InvalidCaller();
+        if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
         Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(this)));
 
         address upperHint = SORTED_TROVES.getPrev(address(this));
@@ -182,20 +182,20 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             outputValueA = (coll * inputValue) / this.totalSupply(); // Amount of collateral to withdraw
             BORROWER_OPERATIONS.adjustTrove(0, outputValueA, inputValue, false, upperHint, lowerHint);
             _burn(address(this), inputValue);
-            IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
+            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(interactionNonce);
         } else if (
             inputAssetA.erc20Address == address(this) && outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
             // Redeeming
             if (troveStatus != Status.closedByRedemption)
                 revert IncorrectStatus(Status.closedByRedemption, troveStatus);
-            if (!_collateralClaimed) {
+            if (!collateralClaimed) {
                 BORROWER_OPERATIONS.claimCollateral();
-                _collateralClaimed = true;
+                collateralClaimed = true;
             }
             outputValueA = (address(this).balance * inputValue) / this.totalSupply();
             _burn(address(this), inputValue);
-            IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
+            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(interactionNonce);
         } else {
             revert IncorrectInput();
         }
@@ -219,10 +219,10 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             if (!IERC20(LUSD).transferFrom(owner, address(this), remainingDebt - 200e18)) revert TransferFailed();
             BORROWER_OPERATIONS.closeTrove();
         } else if (troveStatus == Status.closedByRedemption) {
-            if (!_collateralClaimed) {
+            if (!collateralClaimed) {
                 BORROWER_OPERATIONS.claimCollateral();
             } else {
-                _collateralClaimed = false;
+                collateralClaimed = false;
             }
         }
 
@@ -252,7 +252,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
     /**
      * @notice Compute how much LUSD to borrow against collateral in order to keep ICR constant and by how much total
      * trove debt will increase.
-     * @param _coll Amount of ETH denominated in Wei
+     * @param collateral Amount of ETH denominated in Wei
      * @return amtToBorrow Amount of LUSD to borrow to keep ICR constant.
      * + borrowing fee)
      * @dev I don't use view modifier here because the function updates PriceFeed state.
@@ -268,13 +268,13 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
      * Note2: Step 4 is necessary to avoid loss of precision. BORROWING_RATE / DECIMAL_PRECISION was rounded to 0.
      * Note3: The borrowing fee computation is on this line in Liquity code: https://github.com/liquity/dev/blob/cb583ddf5e7de6010e196cfe706bd0ca816ea40e/packages/contracts/contracts/TroveManager.sol#L1433
      */
-    function computeAmtToBorrow(uint256 _coll) public returns (uint256 amtToBorrow) {
+    function computeAmtToBorrow(uint256 collateral) public returns (uint256 amtToBorrow) {
         uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
         bool isRecoveryMode = TROVE_MANAGER.checkRecoveryMode(price);
         if (TROVE_MANAGER.getTroveStatus(address(this)) == 1) {
             // Trove is active - use current ICR and not the initial one
             uint256 icr = TROVE_MANAGER.getCurrentICR(address(this), price);
-            amtToBorrow = (_coll * price) / icr;
+            amtToBorrow = (collateral * price) / icr;
             if (!isRecoveryMode) {
                 // Liquity is not in recovery mode so borrowing fee applies
                 uint256 borrowingRate = TROVE_MANAGER.getBorrowingRateWithDecay();
@@ -283,7 +283,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         } else {
             // Trove is inactive - I will use initial ICR to compute debt
             // 200e18 - 200 LUSD gas compensation to liquidators
-            amtToBorrow = (_coll * price) / initialICR - 200e18;
+            amtToBorrow = (collateral * price) / INITIAL_ICR - 200e18;
             if (!isRecoveryMode) {
                 // Liquity is not in recovery mode so borrowing fee applies
                 uint256 borrowingRate = TROVE_MANAGER.getBorrowingRateWithDecay();

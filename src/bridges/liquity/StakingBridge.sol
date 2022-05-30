@@ -30,6 +30,11 @@ import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
  * Note: StakingBridge.sol is very similar to StabilityPoolBridge.sol.
  */
 contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
+    error ApproveFailed(address token);
+    error InvalidCaller();
+    error IncorrectInput();
+    error AsyncModeDisabled();
+
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant LQTY = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
@@ -38,19 +43,14 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
     ILQTYStaking public constant STAKING_CONTRACT = ILQTYStaking(0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d);
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
-    address public immutable processor;
-
-    error ApproveFailed(address token);
-    error InvalidCaller();
-    error IncorrectInput();
-    error AsyncModeDisabled();
+    address public immutable ROLLUP_PROCESSOR;
 
     /**
-     * @notice Set the addresses of RollupProcessor.sol and token approvals.
-     * @param _processor Address of the RollupProcessor.sol
+     * @notice Set the addresses of RollupProcessor.sol.
+     * @param _rollupProcessor Address of the RollupProcessor.sol
      */
-    constructor(address _processor) {
-        processor = _processor;
+    constructor(address _rollupProcessor) {
+        ROLLUP_PROCESSOR = _rollupProcessor;
     }
 
     receive() external payable {}
@@ -63,8 +63,8 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
      * For this reason the following is not a security risk and makes the convert() function more gas efficient.
      */
     function setApprovals() external {
-        if (!this.approve(processor, type(uint256).max)) revert ApproveFailed(address(this));
-        if (!IERC20(LQTY).approve(processor, type(uint256).max)) revert ApproveFailed(LQTY);
+        if (!this.approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(address(this));
+        if (!IERC20(LQTY).approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(LQTY);
         if (!IERC20(LQTY).approve(address(STAKING_CONTRACT), type(uint256).max)) revert ApproveFailed(LQTY);
         if (!IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(WETH);
         if (!IERC20(LUSD).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(LUSD);
@@ -102,7 +102,7 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
             bool
         )
     {
-        if (msg.sender != processor) revert InvalidCaller();
+        if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
 
         if (inputAssetA.erc20Address == LQTY && outputAssetA.erc20Address == address(this)) {
             // Deposit
