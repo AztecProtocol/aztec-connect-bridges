@@ -42,7 +42,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
     ITroveManager public constant TROVE_MANAGER = ITroveManager(0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2);
     ISortedTroves public constant SORTED_TROVES = ISortedTroves(0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6);
 
-    address public immutable processor;
+    address public immutable rollupProcessor;
     uint256 public immutable initialICR;
 
     // Used to check whether collateral has already been claimed during redemptions.
@@ -68,15 +68,19 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
 
     /**
      * @notice Set the address of RollupProcessor.sol and initial ICR
-     * @param _processor Address of the RollupProcessor.sol
+     * @param _rollupProcessor Address of the RollupProcessor.sol
      * @param _initialICRPerc Collateral ratio denominated in percents to be used when opening the Trove
      */
-    constructor(address _processor, uint256 _initialICRPerc)
+    constructor(address _rollupProcessor, uint256 _initialICRPerc)
         ERC20("TroveBridge", string(abi.encodePacked("TB-", _initialICRPerc.toString())))
     {
-        processor = _processor;
+        rollupProcessor = _rollupProcessor;
         initialICR = _initialICRPerc * 1e16;
     }
+
+    receive() external payable {}
+
+    fallback() external payable {}
 
     /**
      * @notice A function which opens the trove.
@@ -95,8 +99,8 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         // Checks whether the trove can be safely opened/reopened
         if (this.totalSupply() != 0) revert NonZeroTotalSupply();
 
-        if (!IERC20(LUSD).approve(processor, type(uint256).max)) revert ApproveFailed(LUSD);
-        if (!this.approve(processor, type(uint256).max)) revert ApproveFailed(address(this));
+        if (!IERC20(LUSD).approve(rollupProcessor, type(uint256).max)) revert ApproveFailed(LUSD);
+        if (!this.approve(rollupProcessor, type(uint256).max)) revert ApproveFailed(address(this));
 
         uint256 amtToBorrow = computeAmtToBorrow(msg.value);
 
@@ -144,7 +148,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             bool
         )
     {
-        if (msg.sender != processor) revert InvalidCaller();
+        if (msg.sender != rollupProcessor) revert InvalidCaller();
         Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(this)));
 
         address upperHint = SORTED_TROVES.getPrev(address(this));
@@ -178,7 +182,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             outputValueA = (coll * inputValue) / this.totalSupply(); // Amount of collateral to withdraw
             BORROWER_OPERATIONS.adjustTrove(0, outputValueA, inputValue, false, upperHint, lowerHint);
             _burn(address(this), inputValue);
-            IRollupProcessor(processor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
+            IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
         } else if (
             inputAssetA.erc20Address == address(this) && outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
@@ -191,7 +195,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             }
             outputValueA = (address(this).balance * inputValue) / this.totalSupply();
             _burn(address(this), inputValue);
-            IRollupProcessor(processor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
+            IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
         } else {
             revert IncorrectInput();
         }
@@ -201,7 +205,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
      * @notice A function which closes the trove.
      * @dev LUSD allowance has to be at least (remaining debt - 200).
      */
-    function closeTrove() public onlyOwner {
+    function closeTrove() external onlyOwner {
         address payable owner = payable(owner());
         uint256 ownerTBBalance = balanceOf(owner);
         if (ownerTBBalance != totalSupply()) revert OwnerNotLast();
@@ -223,6 +227,26 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         }
 
         owner.transfer(address(this).balance);
+    }
+
+    // @notice This function always reverts because this contract does not implement async flow.
+    function finalise(
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        uint256,
+        uint64
+    )
+        external
+        payable
+        returns (
+            uint256,
+            uint256,
+            bool
+        )
+    {
+        revert AsyncModeDisabled();
     }
 
     /**
@@ -267,28 +291,4 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
             }
         }
     }
-
-    // @notice This function always reverts because this contract does not implement async flow.
-    function finalise(
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        uint256,
-        uint64
-    )
-        external
-        payable
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        revert AsyncModeDisabled();
-    }
-
-    receive() external payable {}
-
-    fallback() external payable {}
 }

@@ -66,7 +66,7 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
      * functions. For this reason the following is not a security risk and makes the convert() function more gas
      * efficient.
      */
-    function setApprovals() public {
+    function setApprovals() external {
         if (!this.approve(processor, type(uint256).max)) revert ApproveFailed(address(this));
         if (!IERC20(LUSD).approve(processor, type(uint256).max)) revert ApproveFailed(LUSD);
         if (!IERC20(LUSD).approve(address(STABILITY_POOL), type(uint256).max)) revert ApproveFailed(LUSD);
@@ -117,7 +117,7 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
             // Deposit
             // Provides LUSD to the pool and claim rewards.
             STABILITY_POOL.provideToSP(inputValue, frontEndTag);
-            _swapRewardsToLUSDAndDeposit();
+            swapRewardsToLUSDAndDeposit();
             uint256 totalLUSDOwnedBeforeDeposit = STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) - inputValue;
             uint256 totalSupply = this.totalSupply();
             // outputValueA = how much SPB should be minted
@@ -134,7 +134,7 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
             // Withdrawal
             // Claim rewards and swap them to LUSD.
             STABILITY_POOL.withdrawFromSP(0);
-            _swapRewardsToLUSDAndDeposit();
+            swapRewardsToLUSDAndDeposit();
 
             // stabilityPool.getCompoundedLUSDDeposit(address(this)) / this.totalSupply() = how much LUSD is one SPB
             // outputValueA = amount of LUSD to be withdrawn and sent to RollupProcessor.sol
@@ -146,6 +146,27 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
         }
     }
 
+    // @notice This function always reverts because this contract does not implement async flow.
+    function finalise(
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        uint256,
+        uint64
+    )
+        external
+        payable
+        override
+        returns (
+            uint256,
+            uint256,
+            bool
+        )
+    {
+        revert AsyncModeDisabled();
+    }
+
     /*
      * @notice Swaps any ETH and LQTY currently held by the contract to LUSD and deposits LUSD to the StabilityPool.sol.
      *
@@ -153,7 +174,7 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
      * liquidations rewards (ETH) to LUSD as well, I will first swap LQTY to WETH and then swap it all through USDC to
      * LUSD.
      */
-    function _swapRewardsToLUSDAndDeposit() internal {
+    function swapRewardsToLUSDAndDeposit() internal {
         uint256 lqtyBalance = IERC20(LQTY).balanceOf(address(this));
         if (lqtyBalance != 0) {
             UNI_ROUTER.exactInputSingle(
@@ -183,26 +204,5 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
                 STABILITY_POOL.provideToSP(lusdBalance, frontEndTag);
             }
         }
-    }
-
-    // @notice This function always reverts because this contract does not implement async flow.
-    function finalise(
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        uint256,
-        uint64
-    )
-        external
-        payable
-        override
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        revert AsyncModeDisabled();
     }
 }
