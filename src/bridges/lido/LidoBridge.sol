@@ -76,6 +76,9 @@ contract LidoBridge is IDefiBridge {
     int128 private constant curveETHIndex = 0;
     int128 private constant curveStETHIndex = 1;
 
+    // The amount of dust to leave in the contract
+    uint256 private constant DUST = 1;
+
     constructor(address _rollupProcessor, address _referral) {
         if (curvePool.coins(uint256(uint128(curveStETHIndex))) != address(lido)) {
             revert INVALID_CONFIGURATION();
@@ -145,16 +148,18 @@ contract LidoBridge is IDefiBridge {
         // deposit into lido (return value is shares NOT stETH)
         lido.submit{value: inputValue}(referral);
 
-        uint256 outputStETHBalance = lido.balanceOf(address(this));
+        // Leave `DUST` in the stEth balance to save gas on future runs
+        uint256 outputStETHBalance = lido.balanceOf(address(this)) - DUST;
 
         // Lido balance can be <=2 wei off, 1 from the submit where our shares is computed rounding down,
         // and then again when the balance is computed from the shares, rounding down again.
-        if (outputStETHBalance + 2 < inputValue) {
+        if (outputStETHBalance + 2 + DUST < inputValue) {
             revert INVALID_WRAP_RETURN_VALUE();
         }
 
-        // since stETH is a rebase token, lets wrap it to wstETH before sending it back to the rollupProcessor
-        outputValue = wrappedStETH.wrap(outputStETHBalance);
+        // since stETH is a rebase token, lets wrap it to wstETH before sending it back to the rollupProcessor.
+        // Again, leave `DUST` in the wstEth balance to save gas on future runs
+        outputValue = wrappedStETH.wrap(outputStETHBalance) - DUST;
     }
 
     /**
