@@ -67,18 +67,18 @@ contract LidoBridge is IDefiBridge {
     address public immutable rollupProcessor;
     address public immutable referral;
 
-    ILido public constant lido = ILido(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
-    IWstETH public constant wrappedStETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
-    ICurvePool public constant curvePool = ICurvePool(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022);
+    ILido public constant LIDO = ILido(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
+    IWstETH public constant WRAPPED_STETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+    ICurvePool public constant CURVE_POOL = ICurvePool(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022);
 
-    int128 private constant curveETHIndex = 0;
-    int128 private constant curveStETHIndex = 1;
+    int128 private constant CURVE_ETH_INDEX = 0;
+    int128 private constant CURVE_STETH_INDEX = 1;
 
     // The amount of dust to leave in the contract
     uint256 private constant DUST = 1;
 
     constructor(address _rollupProcessor, address _referral) {
-        if (curvePool.coins(uint256(uint128(curveStETHIndex))) != address(lido)) {
+        if (CURVE_POOL.coins(uint256(uint128(CURVE_STETH_INDEX))) != address(LIDO)) {
             revert INVALID_CONFIGURATION();
         }
 
@@ -86,9 +86,9 @@ contract LidoBridge is IDefiBridge {
         referral = _referral;
 
         // As the contract is not supposed to hold any funds, we can pre-approve
-        lido.safeIncreaseAllowance(address(wrappedStETH), type(uint256).max);
-        lido.safeIncreaseAllowance(address(curvePool), type(uint256).max);
-        wrappedStETH.safeIncreaseAllowance(rollupProcessor, type(uint256).max);
+        LIDO.safeIncreaseAllowance(address(WRAPPED_STETH), type(uint256).max);
+        LIDO.safeIncreaseAllowance(address(CURVE_POOL), type(uint256).max);
+        WRAPPED_STETH.safeIncreaseAllowance(rollupProcessor, type(uint256).max);
     }
 
     receive() external payable {}
@@ -117,7 +117,7 @@ contract LidoBridge is IDefiBridge {
 
         bool isETHInput = inputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
         bool isWstETHInput = inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 &&
-            inputAssetA.erc20Address == address(wrappedStETH);
+            inputAssetA.erc20Address == address(WRAPPED_STETH);
 
         if (!(isETHInput || isWstETHInput)) {
             revert INVALID_INPUT();
@@ -138,16 +138,16 @@ contract LidoBridge is IDefiBridge {
     {
         if (
             outputAsset.assetType != AztecTypes.AztecAssetType.ERC20 ||
-            outputAsset.erc20Address != address(wrappedStETH)
+            outputAsset.erc20Address != address(WRAPPED_STETH)
         ) {
             revert INVALID_OUTPUT();
         }
 
         // deposit into lido (return value is shares NOT stETH)
-        lido.submit{value: inputValue}(referral);
+        LIDO.submit{value: inputValue}(referral);
 
         // Leave `DUST` in the stEth balance to save gas on future runs
-        uint256 outputStETHBalance = lido.balanceOf(address(this)) - DUST;
+        uint256 outputStETHBalance = LIDO.balanceOf(address(this)) - DUST;
 
         // Lido balance can be <=2 wei off, 1 from the submit where our shares is computed rounding down,
         // and then again when the balance is computed from the shares, rounding down again.
@@ -157,7 +157,7 @@ contract LidoBridge is IDefiBridge {
 
         // since stETH is a rebase token, lets wrap it to wstETH before sending it back to the rollupProcessor.
         // Again, leave `DUST` in the wstEth balance to save gas on future runs
-        outputValue = wrappedStETH.wrap(outputStETHBalance) - DUST;
+        outputValue = WRAPPED_STETH.wrap(outputStETHBalance) - DUST;
     }
 
     /**
@@ -173,10 +173,10 @@ contract LidoBridge is IDefiBridge {
         }
 
         // Convert wstETH to stETH so we can exchange it on curve
-        uint256 stETH = wrappedStETH.unwrap(inputValue);
+        uint256 stETH = WRAPPED_STETH.unwrap(inputValue);
 
         // Exchange stETH to ETH via curve
-        uint256 dy = curvePool.exchange(curveStETHIndex, curveETHIndex, stETH, 0);
+        uint256 dy = CURVE_POOL.exchange(CURVE_STETH_INDEX, CURVE_ETH_INDEX, stETH, 0);
 
         outputValue = address(this).balance;
         if (outputValue < dy) {

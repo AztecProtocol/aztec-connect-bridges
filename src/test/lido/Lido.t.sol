@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.4;
 
-import 'forge-std/Test.sol';
+import "forge-std/Test.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -58,64 +58,21 @@ contract LidoTest is Test {
         // vm.expectRevert(INVALID_CONFIGURATION());
 
         vm.expectRevert(INVALID_CALLER.selector);
-        bridge.convert(
-            empty,
-            empty,
-            empty,
-            empty,
-            0,
-            0,
-            0,
-            address(0)
-        );
+        bridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
 
         vm.startPrank(address(rollupProcessor));
-        
+
         vm.expectRevert(INVALID_INPUT.selector);
-        bridge.convert(
-            empty,
-            empty,
-            empty,
-            empty,
-            0,
-            0,
-            0,
-            address(0)
-        );
+        bridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
 
         vm.expectRevert(INVALID_OUTPUT.selector);
-        bridge.convert(
-            ethAsset,
-            empty,
-            empty,
-            empty,
-            0,
-            0,
-            0,
-            address(0)
-        );
+        bridge.convert(ethAsset, empty, empty, empty, 0, 0, 0, address(0));
 
         vm.expectRevert(INVALID_OUTPUT.selector);
-        bridge.convert(
-            wstETHAsset,
-            empty,
-            empty,
-            empty,
-            0,
-            0,
-            0,
-            address(0)
-        );
-        
+        bridge.convert(wstETHAsset, empty, empty, empty, 0, 0, 0, address(0));
+
         vm.expectRevert(ASYNC_DISABLED.selector);
-        bridge.finalise(
-            wstETHAsset,
-            empty,
-            empty,
-            empty,
-            0,
-            0
-        );
+        bridge.finalise(wstETHAsset, empty, empty, empty, 0, 0);
 
         vm.stopPrank();
     }
@@ -169,7 +126,7 @@ contract LidoTest is Test {
 
         // Convert ETH to wstETH
         validateETHToWstETH(depositAmount);
-        
+
         // convert wstETH back to ETH using the same bridge
         validateWstETHToETH(wstETH.balanceOf(address(rollupProcessor)));
     }
@@ -178,11 +135,7 @@ contract LidoTest is Test {
         uint256 beforeETHBalance = address(rollupProcessor).balance;
         uint256 beforeWstEthBalance = wstETH.balanceOf(address(rollupProcessor));
 
-        (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool isAsync
-        ) = rollupProcessor.convert(
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
             address(bridge),
             wstETHAsset,
             empty,
@@ -199,11 +152,11 @@ contract LidoTest is Test {
         emit log_named_uint("After Exit ETH Balance ", afterETHBalance);
         emit log_named_uint("After Exit WstETH Balance", afterWstETHBalance);
 
-        assertFalse(isAsync, 'Async interaction');
-        assertEq(outputValueB, 0, 'OutputValueB not 0');
-        assertGt(outputValueA, 0, 'No Eth received');
-        assertEq(afterETHBalance, beforeETHBalance + outputValueA, 'ETH balance not maching');
-        assertEq(afterWstETHBalance, beforeWstEthBalance - depositAmount, 'WST ETH balance not matching');
+        assertFalse(isAsync, "Async interaction");
+        assertEq(outputValueB, 0, "OutputValueB not 0");
+        assertGt(outputValueA, 0, "No Eth received");
+        assertEq(afterETHBalance, beforeETHBalance + outputValueA, "ETH balance not maching");
+        assertEq(afterWstETHBalance, beforeWstEthBalance - depositAmount, "WST ETH balance not matching");
     }
 
     function validateETHToWstETH(uint256 depositAmount) public {
@@ -230,10 +183,10 @@ contract LidoTest is Test {
         emit log_named_uint("After ETH Balance", afterETHBalance);
         emit log_named_uint("After WstETHBalance", afterWstETHBalance);
 
-        assertFalse(isAsync, 'Async interaction');
-        assertEq(outputValueB, 0, 'OutputValueB not 0');
-        assertEq(afterETHBalance, beforeETHBalance - depositAmount, 'ETH balance not matching');
-        assertGt(outputValueA, 0, 'No WST ETH received');
-        assertEq(afterWstETHBalance, beforeWstETHBalance + outputValueA, 'WST ETH balance not matching');
+        assertFalse(isAsync, "Async interaction");
+        assertEq(outputValueB, 0, "OutputValueB not 0");
+        assertEq(afterETHBalance, beforeETHBalance - depositAmount, "ETH balance not matching");
+        assertGt(outputValueA, 0, "No WST ETH received");
+        assertEq(afterWstETHBalance, beforeWstETHBalance + outputValueA, "WST ETH balance not matching");
     }
 }
