@@ -2,8 +2,10 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import "./utils/TestUtil.sol";
-import "../../bridges/liquity/StabilityPoolBridge.sol";
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
+
+import {TestUtil} from "./utils/TestUtil.sol";
+import {StabilityPoolBridge} from "../../bridges/liquity/StabilityPoolBridge.sol";
 
 contract StabilityPoolBridgeTest is TestUtil {
     StabilityPoolBridge private bridge;

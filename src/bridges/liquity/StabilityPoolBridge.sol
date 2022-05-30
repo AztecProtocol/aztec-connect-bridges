@@ -2,11 +2,14 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../../interfaces/IDefiBridge.sol";
-import "../../interfaces/IWETH.sol";
-import "./interfaces/IStabilityPool.sol";
-import "./interfaces/ISwapRouter.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {IWETH} from "../../interfaces/IWETH.sol";
+
+import {IStabilityPool} from "./interfaces/IStabilityPool.sol";
+import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 
 /**
  * @title Aztec Connect Bridge for Liquity's StabilityPool.sol

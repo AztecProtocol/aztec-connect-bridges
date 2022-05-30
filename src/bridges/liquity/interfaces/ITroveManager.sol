@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.4;
 
-import "./ILiquityBase.sol";
-import "./IStabilityPool.sol";
-import "./ILQTYStaking.sol";
+import {ILiquityBase} from "./ILiquityBase.sol";
 
 // Common interface for the Trove Manager.
 interface ITroveManager is ILiquityBase {

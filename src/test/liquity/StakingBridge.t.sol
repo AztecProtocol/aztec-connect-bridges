@@ -2,8 +2,10 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import "./utils/TestUtil.sol";
-import "../../bridges/liquity/StakingBridge.sol";
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
+
+import {TestUtil} from "./utils/TestUtil.sol";
+import {StakingBridge} from "../../bridges/liquity/StakingBridge.sol";
 
 contract StakingBridgeTest is TestUtil {
     StakingBridge private bridge;

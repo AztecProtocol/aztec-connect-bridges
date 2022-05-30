@@ -2,11 +2,11 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import "forge-std/Test.sol";
-import "./MockPriceFeed.sol";
-import "../../../aztec/DefiBridgeProxy.sol";
-import "../../../aztec/RollupProcessor.sol";
-import "../../../bridges/liquity/interfaces/IPriceFeed.sol";
+import {Test} from "forge-std/Test.sol";
+import {MockPriceFeed} from "./MockPriceFeed.sol";
+import {DefiBridgeProxy} from "../../../aztec/DefiBridgeProxy.sol";
+import {RollupProcessor} from "../../../aztec/RollupProcessor.sol";
+import {IPriceFeed} from "../../../bridges/liquity/interfaces/IPriceFeed.sol";
 
 contract TestUtil is Test {
     DefiBridgeProxy internal defiBridgeProxy;

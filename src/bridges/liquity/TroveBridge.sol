@@ -2,14 +2,17 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
-import "../../interfaces/IDefiBridge.sol";
-import "../../interfaces/IRollupProcessor.sol";
-import "./interfaces/IBorrowerOperations.sol";
-import "./interfaces/ITroveManager.sol";
-import "./interfaces/ISortedTroves.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+
+import {IBorrowerOperations} from "./interfaces/IBorrowerOperations.sol";
+import {ITroveManager} from "./interfaces/ITroveManager.sol";
+import {ISortedTroves} from "./interfaces/ISortedTroves.sol";
 
 /**
  * @title Aztec Connect Bridge for opening and closing Liquity's troves

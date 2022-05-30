@@ -2,8 +2,10 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import "./utils/TestUtil.sol";
-import "../../bridges/liquity/StabilityPoolBridge.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import {TestUtil} from "./utils/TestUtil.sol";
+import {StabilityPoolBridge} from "../../bridges/liquity/StabilityPoolBridge.sol";
 
 abstract contract StabilityPoolBridgeTestInternal is TestUtil, StabilityPoolBridge(address(0), address(0)) {
     function setUp() public {

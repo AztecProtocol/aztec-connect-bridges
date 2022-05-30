@@ -2,9 +2,12 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import "./utils/TestUtil.sol";
-import "./interfaces/IHintHelpers.sol";
-import "../../bridges/liquity/TroveBridge.sol";
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
+
+import {TestUtil} from "./utils/TestUtil.sol";
+import {IHintHelpers} from "./interfaces/IHintHelpers.sol";
+import {TroveBridge} from "../../bridges/liquity/TroveBridge.sol";
+import {ISortedTroves} from "../../bridges/liquity/interfaces/ISortedTroves.sol";
 
 contract TroveBridgeTest is TestUtil {
     TroveBridge private bridge;

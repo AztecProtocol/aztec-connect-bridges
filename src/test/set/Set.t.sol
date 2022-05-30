@@ -12,7 +12,7 @@ import {IController} from "./../../bridges/set/interfaces/IController.sol";
 import {ISetToken} from "./../../bridges/set/interfaces/ISetToken.sol";
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 
 contract SetTest is Test {
     // Aztec

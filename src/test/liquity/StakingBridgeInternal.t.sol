@@ -2,8 +2,10 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import "./utils/TestUtil.sol";
-import "../../bridges/liquity/StakingBridge.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import {TestUtil} from "./utils/TestUtil.sol";
+import {StakingBridge} from "../../bridges/liquity/StakingBridge.sol";
 
 abstract contract StakingBridgeTestInternal is TestUtil, StakingBridge(address(0)) {
     function setUp() public {
