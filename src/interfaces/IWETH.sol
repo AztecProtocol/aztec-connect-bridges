@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity >=0.7.5;
-pragma abicoder v2;
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright 2022 Spilsbury Holdings Ltd
+pragma solidity >=0.8.4;
 
 interface IWETH {
     function deposit() external payable;
