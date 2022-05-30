@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.4 <=0.8.10;
+pragma solidity >=0.8.4;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -18,16 +18,20 @@ import {ICETH} from "./interfaces/ICETH.sol";
 contract CompoundBridge is IDefiBridge {
     using SafeERC20 for IERC20;
 
-    address public immutable rollupProcessor;
-
     error InvalidCaller();
     error IncorrectInputAsset();
     error IncorrectOutputAsset();
     error IncorrectAuxData();
     error AsyncModeDisabled();
 
+    address public immutable ROLLUP_PROCESSOR;
+
+    /**
+     * @notice Set the address of RollupProcessor.sol
+     * @param _rollupProcessor Address of RollupProcessor.sol
+     */
     constructor(address _rollupProcessor) {
-        rollupProcessor = _rollupProcessor;
+        ROLLUP_PROCESSOR = _rollupProcessor;
     }
 
     receive() external payable {}
@@ -63,7 +67,7 @@ contract CompoundBridge is IDefiBridge {
             bool
         )
     {
-        if (msg.sender != rollupProcessor) revert InvalidCaller();
+        if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
 
         if (auxData == 0) {
             // Mint
@@ -73,7 +77,7 @@ contract CompoundBridge is IDefiBridge {
                 ICETH cToken = ICETH(outputAssetA.erc20Address);
                 cToken.mint{value: msg.value}();
                 outputValueA = cToken.balanceOf(address(this));
-                cToken.approve(rollupProcessor, outputValueA);
+                cToken.approve(ROLLUP_PROCESSOR, outputValueA);
             } else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
                 IERC20 tokenIn = IERC20(inputAssetA.erc20Address);
                 ICERC20 tokenOut = ICERC20(outputAssetA.erc20Address);
@@ -81,7 +85,7 @@ contract CompoundBridge is IDefiBridge {
                 tokenIn.safeIncreaseAllowance(address(tokenOut), totalInputValue);
                 tokenOut.mint(totalInputValue);
                 outputValueA = tokenOut.balanceOf(address(this));
-                tokenOut.approve(rollupProcessor, outputValueA);
+                tokenOut.approve(ROLLUP_PROCESSOR, outputValueA);
             } else {
                 revert IncorrectInputAsset();
             }
@@ -94,14 +98,14 @@ contract CompoundBridge is IDefiBridge {
                 ICETH cToken = ICETH(inputAssetA.erc20Address);
                 cToken.redeem(totalInputValue);
                 outputValueA = address(this).balance;
-                IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
+                IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(interactionNonce);
             } else if (outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
                 ICERC20 tokenIn = ICERC20(inputAssetA.erc20Address);
                 IERC20 tokenOut = IERC20(outputAssetA.erc20Address);
                 tokenIn.redeem(totalInputValue);
                 outputValueA = tokenOut.balanceOf(address(this));
                 // Using safeIncreaseAllowance(...) instead of approve(...) here because tokenOut can be Tether
-                tokenOut.safeIncreaseAllowance(rollupProcessor, outputValueA);
+                tokenOut.safeIncreaseAllowance(ROLLUP_PROCESSOR, outputValueA);
             } else {
                 revert IncorrectOutputAsset();
             }

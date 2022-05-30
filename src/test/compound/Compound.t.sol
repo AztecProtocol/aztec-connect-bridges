@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.4 <=0.8.10;
+pragma solidity >=0.8.4;
 
 import {Test} from "forge-std/Test.sol";
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
@@ -11,14 +11,10 @@ import {ICERC20} from "./../../bridges/compound/interfaces/ICERC20.sol";
 import {CompoundBridge} from "./../../bridges/compound/CompoundBridge.sol";
 
 contract CompoundTest is Test {
-    DefiBridgeProxy defiBridgeProxy;
-    RollupProcessor rollupProcessor;
+    // solhint-disable-next-line
+    address public constant cETH = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
 
-    CompoundBridge compoundBridge;
-
-    address constant cETH = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
-
-    address[] cTokens = [
+    address[] public cTokens = [
         0xe65cdB6479BaC1e22340E4E755fAE7E509EcD06c, // cAAve
         0x6C8c6b02E7b2BE14d4fA6022Dfd6d75921D90E4E, // cBAT
         0x70e36f6BF80a52b3B46b3aF8e106CC0ed743E8e4, // cCOMP
@@ -35,6 +31,11 @@ contract CompoundTest is Test {
         0x80a2AE356fc9ef4305676f7a3E2Ed04e12C33946, // cYFI
         0xB3319f5D18Bc0D84dD1b4825Dcde5d5f7266d407 // cZRX
     ];
+
+    DefiBridgeProxy internal defiBridgeProxy;
+    RollupProcessor internal rollupProcessor;
+
+    CompoundBridge internal compoundBridge;
 
     function setUp() public {
         defiBridgeProxy = new DefiBridgeProxy();
@@ -171,12 +172,8 @@ contract CompoundTest is Test {
     function testInvalidCaller() public {
         AztecTypes.AztecAsset memory empty;
 
-        try compoundBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0)) {
-            revert("convert(..) has to revert when caller is not rollupProcessor.");
-        } catch (bytes memory reason) {
-            // Verify that the selector encoded in reason corresponds to InvalidCaller error
-            assertEq(CompoundBridge.InvalidCaller.selector, bytes4(reason));
-        }
+        vm.expectRevert(CompoundBridge.InvalidCaller.selector);
+        compoundBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
     }
 
     function testIncorrectInputAsset() public {
@@ -189,35 +186,23 @@ contract CompoundTest is Test {
         });
 
         vm.prank(address(rollupProcessor));
-        try compoundBridge.convert(ethAsset, empty, empty, empty, 0, 0, 1, address(0)) {
-            revert("convert(..) has to revert when ETH is an input asset during redemption.");
-        } catch (bytes memory reason) {
-            // Verify that the selector encoded in reason corresponds to InvalidCaller error
-            assertEq(CompoundBridge.IncorrectInputAsset.selector, bytes4(reason));
-        }
+        vm.expectRevert(CompoundBridge.IncorrectInputAsset.selector);
+        compoundBridge.convert(ethAsset, empty, empty, empty, 0, 0, 1, address(0));
     }
 
     function testIncorrectOutputAsset() public {
         AztecTypes.AztecAsset memory empty;
 
         vm.prank(address(rollupProcessor));
-        try compoundBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0)) {
-            revert("convert(..) has to revert when output asset is not ERC20.");
-        } catch (bytes memory reason) {
-            // Verify that the selector encoded in reason corresponds to InvalidCaller error
-            assertEq(CompoundBridge.IncorrectOutputAsset.selector, bytes4(reason));
-        }
+        vm.expectRevert(CompoundBridge.IncorrectOutputAsset.selector);
+        compoundBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
     }
 
     function testIncorrectAuxData() public {
         AztecTypes.AztecAsset memory empty;
 
         vm.prank(address(rollupProcessor));
-        try compoundBridge.convert(empty, empty, empty, empty, 0, 0, 2, address(0)) {
-            revert("convert(..) has to revert when for auxdata not in {0, 1}.");
-        } catch (bytes memory reason) {
-            // Verify that the selector encoded in reason corresponds to InvalidCaller error
-            assertEq(CompoundBridge.IncorrectAuxData.selector, bytes4(reason));
-        }
+        vm.expectRevert(CompoundBridge.IncorrectAuxData.selector);
+        compoundBridge.convert(empty, empty, empty, empty, 0, 0, 2, address(0));
     }
 }

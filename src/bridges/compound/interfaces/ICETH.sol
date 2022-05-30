@@ -1,13 +1,9 @@
-pragma solidity >=0.8.0 <=0.8.10;
+pragma solidity >=0.8.4;
 
-interface ICETH {
-    function approve(address, uint256) external returns (uint256);
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-    function balanceOf(address) external view returns (uint256);
-
+interface ICETH is IERC20 {
     function exchangeRateStored() external view returns (uint256);
-
-    function transfer(address, uint256) external returns (uint256);
 
     function mint() external payable;
 
