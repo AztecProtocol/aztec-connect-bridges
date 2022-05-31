@@ -43,6 +43,10 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
     ILQTYStaking public constant STAKING_CONTRACT = ILQTYStaking(0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d);
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
+    // The amount of dust to leave in the contract
+    // Optimization based on EIP-1087
+    uint256 private constant DUST = 1;
+
     address public immutable ROLLUP_PROCESSOR;
 
     /**
@@ -51,6 +55,7 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
      */
     constructor(address _rollupProcessor) {
         ROLLUP_PROCESSOR = _rollupProcessor;
+        _mint(address(this), DUST);
     }
 
     receive() external payable {}
@@ -157,6 +162,13 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
         revert AsyncModeDisabled();
     }
 
+    /**
+     * @dev See {IERC20-totalSupply}.
+     */
+    function totalSupply() public view override returns (uint256) {
+        return super.totalSupply() - DUST;
+    }
+
     /*
      * @notice Swaps any ETH and LUSD currently held by the contract to LQTY and stakes LQTY in LQTYStaking.sol.
      *
@@ -166,13 +178,13 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
      */
     function swapRewardsToLQTYAndStake() internal {
         uint256 lusdBalance = IERC20(LUSD).balanceOf(address(this));
-        if (lusdBalance != 0) {
+        if (lusdBalance > DUST) {
             UNI_ROUTER.exactInput(
                 ISwapRouter.ExactInputParams({
                     path: abi.encodePacked(LUSD, uint24(500), USDC, uint24(500), WETH),
                     recipient: address(this),
                     deadline: block.timestamp,
-                    amountIn: lusdBalance,
+                    amountIn: lusdBalance - DUST,
                     amountOutMinimum: 0
                 })
             );
@@ -185,9 +197,9 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
         }
 
         uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
-        if (wethBalance != 0) {
+        if (wethBalance > DUST) {
             uint256 amountLQTYOut = UNI_ROUTER.exactInputSingle(
-                ISwapRouter.ExactInputSingleParams(WETH, LQTY, 3000, address(this), block.timestamp, wethBalance, 0, 0)
+                ISwapRouter.ExactInputSingleParams(WETH, LQTY, 3000, address(this), block.timestamp, wethBalance - DUST, 0, 0)
             );
             if (amountLQTYOut != 0) {
                 STAKING_CONTRACT.stake(amountLQTYOut);
