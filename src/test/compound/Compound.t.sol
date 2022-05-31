@@ -43,8 +43,8 @@ contract CompoundTest is Test {
         compoundBridge = new CompoundBridge(address(rollupProcessor));
     }
 
-    function testETHDepositAndWithdrawal(uint256 depositAmount) public {
-        vm.assume(depositAmount > 1e9 && depositAmount < 2**96);
+    function testETHDepositAndWithdrawal(uint88 depositAmount) public {
+        vm.assume(depositAmount > 1e9);
         vm.deal(address(rollupProcessor), depositAmount);
 
         AztecTypes.AztecAsset memory empty;
@@ -98,7 +98,7 @@ contract CompoundTest is Test {
         );
     }
 
-    function testERC20DepositAndWithdrawal(uint256 depositAmount) public {
+    function testERC20DepositAndWithdrawal(uint88 depositAmount) public {
         // Note: if Foundry implements parametrized tests remove this for loop,
         // stop calling setup() from _depositAndWithdrawERC20 and use the native
         // functionality
@@ -106,7 +106,7 @@ contract CompoundTest is Test {
         // For the tests to pass a return value of cTokens has to be >0.
         // Since the ratio of token/cToken is very skewed plenty of the times
         // I set relatively high minimum value.
-        vm.assume(depositAmount > 1e14 && depositAmount < 2**96);
+        vm.assume(depositAmount > 1e14);
         for (uint256 i; i < cTokens.length; ++i) {
             _depositAndWithdrawERC20(cTokens[i], depositAmount);
         }
