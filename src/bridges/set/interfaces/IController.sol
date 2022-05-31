@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-pragma solidity >=0.8.4 <=0.8.10;
+pragma solidity >=0.8.4;
 
 interface IController {
     function addSet(address _setToken) external;

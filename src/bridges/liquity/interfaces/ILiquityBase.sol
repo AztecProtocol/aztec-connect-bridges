@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0;
+pragma solidity >=0.8.4;
 
-import "./IPriceFeed.sol";
+import {IPriceFeed} from "./IPriceFeed.sol";
 
 interface ILiquityBase {
     function priceFeed() external view returns (IPriceFeed);

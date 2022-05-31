@@ -37,10 +37,9 @@ contract ExampleTest is Test {
 
         address callerAddress = address(bytes20(uint160(uint256(keccak256("non-rollup-processor-address")))));
 
-        vm.startPrank(callerAddress);
+        vm.prank(callerAddress);
         vm.expectRevert(ExampleBridgeContract.InvalidCaller.selector);
         exampleBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
-        vm.stopPrank();
     }
 
     function testExampleBridge() public {

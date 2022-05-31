@@ -2,8 +2,10 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import "./utils/TestUtil.sol";
-import "../../bridges/liquity/StabilityPoolBridge.sol";
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
+
+import {TestUtil} from "./utils/TestUtil.sol";
+import {StabilityPoolBridge} from "../../bridges/liquity/StabilityPoolBridge.sol";
 
 contract StabilityPoolBridgeTest is TestUtil {
     StabilityPoolBridge private bridge;
@@ -25,22 +27,17 @@ contract StabilityPoolBridgeTest is TestUtil {
     function testIncorrectInput() public {
         // Call convert with incorrect input
         vm.prank(address(rollupProcessor));
-        try
-            bridge.convert(
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                0,
-                0,
-                0,
-                address(0)
-            )
-        {
-            assertTrue(false, "convert(...) has to revert on incorrect input.");
-        } catch (bytes memory reason) {
-            assertEq(StabilityPoolBridge.IncorrectInput.selector, bytes4(reason));
-        }
+        vm.expectRevert(StabilityPoolBridge.IncorrectInput.selector);
+        bridge.convert(
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            0,
+            0,
+            0,
+            address(0)
+        );
     }
 
     function testFullDepositWithdrawalFlow() public {
