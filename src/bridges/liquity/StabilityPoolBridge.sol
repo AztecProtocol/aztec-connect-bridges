@@ -45,6 +45,10 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
     IStabilityPool public constant STABILITY_POOL = IStabilityPool(0x66017D22b0f8556afDd19FC67041899Eb65a21bb);
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
+    // The amount of dust to leave in the contract
+    // Optimization based on EIP-1087
+    uint256 private constant DUST = 1;
+
     address public immutable ROLLUP_PROCESSOR;
     address public immutable FRONTEND_TAG; // see StabilityPool.sol for details
 
@@ -58,6 +62,7 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
     constructor(address _rollupProcessor, address _frontEndTag) {
         ROLLUP_PROCESSOR = _rollupProcessor;
         FRONTEND_TAG = _frontEndTag;
+        _mint(address(this), DUST);
     }
 
     /**
@@ -167,6 +172,13 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
         revert AsyncModeDisabled();
     }
 
+    /**
+     * @dev See {IERC20-totalSupply}.
+     */
+    function totalSupply() public view override returns (uint256) {
+        return super.totalSupply() - DUST;
+    }
+
     /*
      * @notice Swaps any ETH and LQTY currently held by the contract to LUSD and deposits LUSD to the StabilityPool.sol.
      *
@@ -176,9 +188,18 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
      */
     function swapRewardsToLUSDAndDeposit() internal {
         uint256 lqtyBalance = IERC20(LQTY).balanceOf(address(this));
-        if (lqtyBalance != 0) {
+        if (lqtyBalance > DUST) {
             UNI_ROUTER.exactInputSingle(
-                ISwapRouter.ExactInputSingleParams(LQTY, WETH, 3000, address(this), block.timestamp, lqtyBalance, 0, 0)
+                ISwapRouter.ExactInputSingleParams(
+                    LQTY,
+                    WETH,
+                    3000,
+                    address(this),
+                    block.timestamp,
+                    lqtyBalance - DUST,
+                    0,
+                    0
+                )
             );
         }
 
@@ -189,19 +210,19 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
         }
 
         uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
-        if (wethBalance != 0) {
+        if (wethBalance > DUST) {
             uint256 lusdBalance = UNI_ROUTER.exactInput(
                 ISwapRouter.ExactInputParams({
                     path: abi.encodePacked(WETH, uint24(500), USDC, uint24(500), LUSD),
                     recipient: address(this),
                     deadline: block.timestamp,
-                    amountIn: wethBalance,
+                    amountIn: wethBalance - DUST,
                     amountOutMinimum: 0
                 })
             );
 
-            if (lusdBalance != 0) {
-                STABILITY_POOL.provideToSP(lusdBalance, FRONTEND_TAG);
+            if (lusdBalance > DUST) {
+                STABILITY_POOL.provideToSP(lusdBalance - DUST, FRONTEND_TAG);
             }
         }
     }

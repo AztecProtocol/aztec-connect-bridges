@@ -16,6 +16,16 @@ contract StabilityPoolBridgeTest is TestUtil {
 
         bridge = new StabilityPoolBridge(address(rollupProcessor), address(0));
         bridge.setApprovals();
+
+        // Set LUSD bridge balance to 1 WEI
+        // Necessary for the optimization based on EIP-1087 to work!
+        deal(tokens["LUSD"].addr, address(bridge), 1);
+
+        // Set LQTY and WETH bridge balances to 1 WEI
+        // This is not necessary but it makes the first claim cost
+        // the same as the following ones
+        deal(tokens["LQTY"].addr, address(bridge), 1);
+        deal(tokens["WETH"].addr, address(bridge), 1);
     }
 
     function testInitialERC20Params() public {
