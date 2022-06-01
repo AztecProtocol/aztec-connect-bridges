@@ -19,6 +19,11 @@ contract StakingBridgeTest is TestUtil {
         // Set LQTY bridge balance to 1 WEI
         // Necessary for the optimization based on EIP-1087 to work!
         deal(tokens["LQTY"].addr, address(bridge), 1);
+
+        // Set WETH bridge balance to 1 WEI
+        // This is not necessary but it makes the first claim cost
+        // the same as the following ones
+        deal(tokens["WETH"].addr, address(bridge), 1);
     }
 
     function testInitialERC20Params() public {
