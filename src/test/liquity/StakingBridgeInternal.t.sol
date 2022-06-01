@@ -2,16 +2,18 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import "./utils/TestUtil.sol";
-import "../../bridges/liquity/StakingBridge.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import {TestUtil} from "./utils/TestUtil.sol";
+import {StakingBridge} from "../../bridges/liquity/StakingBridge.sol";
 
 abstract contract StakingBridgeTestInternal is TestUtil, StakingBridge(address(0)) {
     function setUp() public {
         _aztecPreSetup();
         setUpTokens();
-        require(IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max), "StakingBridge: WETH_APPROVE_FAILED");
-        require(IERC20(LUSD).approve(address(UNI_ROUTER), type(uint256).max), "StakingBridge: LUSD_APPROVE_FAILED");
-        require(IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max), "StakingBridge: USDC_APPROVE_FAILED");
+        require(IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max), "WETH_APPROVE_FAILED");
+        require(IERC20(LUSD).approve(address(UNI_ROUTER), type(uint256).max), "LUSD_APPROVE_FAILED");
+        require(IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max), "USDC_APPROVE_FAILED");
     }
 
     function testSwapRewardsToLQTY() public {
@@ -22,7 +24,7 @@ abstract contract StakingBridgeTestInternal is TestUtil, StakingBridge(address(0
         payable(address(0)).transfer(address(this).balance - 1 ether);
 
         uint256 stakedLQTYBeforeSwap = STAKING_CONTRACT.stakes(address(this));
-        _swapRewardsToLQTYAndStake();
+        swapRewardsToLQTYAndStake();
         uint256 stakedLQTYAfterSwap = STAKING_CONTRACT.stakes(address(this));
 
         // Verify that rewards were swapped for non-zero amount and correctly staked

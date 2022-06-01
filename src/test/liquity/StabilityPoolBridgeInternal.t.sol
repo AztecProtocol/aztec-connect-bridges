@@ -2,26 +2,19 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import "./utils/TestUtil.sol";
-import "../../bridges/liquity/StabilityPoolBridge.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import {TestUtil} from "./utils/TestUtil.sol";
+import {StabilityPoolBridge} from "../../bridges/liquity/StabilityPoolBridge.sol";
 
 abstract contract StabilityPoolBridgeTestInternal is TestUtil, StabilityPoolBridge(address(0), address(0)) {
     function setUp() public {
         _aztecPreSetup();
         setUpTokens();
 
-        require(
-            IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max),
-            "StabilityPoolBridge: WETH_APPROVE_FAILED"
-        );
-        require(
-            IERC20(LQTY).approve(address(UNI_ROUTER), type(uint256).max),
-            "StabilityPoolBridge: LQTY_APPROVE_FAILED"
-        );
-        require(
-            IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max),
-            "StabilityPoolBridge: USDC_APPROVE_FAILED"
-        );
+        require(IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max), "WETH_APPROVE_FAILED");
+        require(IERC20(LQTY).approve(address(UNI_ROUTER), type(uint256).max), "LQTY_APPROVE_FAILED");
+        require(IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max), "USDC_APPROVE_FAILED");
     }
 
     function testSwapRewardsOnUni() public {
@@ -32,7 +25,7 @@ abstract contract StabilityPoolBridgeTestInternal is TestUtil, StabilityPoolBrid
         payable(address(0)).transfer(address(this).balance - 1 ether);
 
         uint256 depositedLUSDBeforeSwap = STABILITY_POOL.getCompoundedLUSDDeposit(address(this));
-        _swapRewardsToLUSDAndDeposit();
+        swapRewardsToLUSDAndDeposit();
         uint256 depositedLUSDAfterSwap = STABILITY_POOL.getCompoundedLUSDDeposit(address(this));
 
         // Verify that rewards were swapped for non-zero amount and correctly staked

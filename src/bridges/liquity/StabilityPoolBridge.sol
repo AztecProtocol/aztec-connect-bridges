@@ -2,11 +2,14 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../../interfaces/IDefiBridge.sol";
-import "../../interfaces/IWETH.sol";
-import "./interfaces/IStabilityPool.sol";
-import "./interfaces/ISwapRouter.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {IWETH} from "../../interfaces/IWETH.sol";
+
+import {IStabilityPool} from "./interfaces/IStabilityPool.sol";
+import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 
 /**
  * @title Aztec Connect Bridge for Liquity's StabilityPool.sol
@@ -29,6 +32,11 @@ import "./interfaces/ISwapRouter.sol";
  * Note: StabilityPoolBridge.sol is very similar to StakingBridge.sol.
  */
 contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB") {
+    error ApproveFailed(address token);
+    error InvalidCaller();
+    error IncorrectInput();
+    error AsyncModeDisabled();
+
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant LQTY = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
@@ -37,24 +45,19 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
     IStabilityPool public constant STABILITY_POOL = IStabilityPool(0x66017D22b0f8556afDd19FC67041899Eb65a21bb);
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
-    address public immutable processor;
-    address public immutable frontEndTag; // see StabilityPool.sol for details
-
-    error ApproveFailed(address token);
-    error InvalidCaller();
-    error IncorrectInput();
-    error AsyncModeDisabled();
+    address public immutable ROLLUP_PROCESSOR;
+    address public immutable FRONTEND_TAG; // see StabilityPool.sol for details
 
     /**
-     * @notice Set addresses and token approvals.
-     * @param _processor Address of the RollupProcessor.sol
+     * @notice Set the addresses of RollupProcessor.sol and front-end tag.
+     * @param _rollupProcessor Address of the RollupProcessor.sol
      * @param _frontEndTag An address/tag identifying to which frontend LQTY frontend rewards should go. Can be zero.
      * @dev Frontend tag is set here because there can be only 1 frontend tag per msg.sender in the StabilityPool.sol.
      * See https://docs.liquity.org/faq/frontend-operators#how-do-frontend-tags-work[Liquity docs] for more details.
      */
-    constructor(address _processor, address _frontEndTag) {
-        processor = _processor;
-        frontEndTag = _frontEndTag;
+    constructor(address _rollupProcessor, address _frontEndTag) {
+        ROLLUP_PROCESSOR = _rollupProcessor;
+        FRONTEND_TAG = _frontEndTag;
     }
 
     /**
@@ -63,9 +66,9 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
      * functions. For this reason the following is not a security risk and makes the convert() function more gas
      * efficient.
      */
-    function setApprovals() public {
-        if (!this.approve(processor, type(uint256).max)) revert ApproveFailed(address(this));
-        if (!IERC20(LUSD).approve(processor, type(uint256).max)) revert ApproveFailed(LUSD);
+    function setApprovals() external {
+        if (!this.approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(address(this));
+        if (!IERC20(LUSD).approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(LUSD);
         if (!IERC20(LUSD).approve(address(STABILITY_POOL), type(uint256).max)) revert ApproveFailed(LUSD);
         if (!IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(WETH);
         if (!IERC20(LQTY).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(LQTY);
@@ -108,13 +111,13 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
             bool
         )
     {
-        if (msg.sender != processor) revert InvalidCaller();
+        if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
 
         if (inputAssetA.erc20Address == LUSD && outputAssetA.erc20Address == address(this)) {
             // Deposit
             // Provides LUSD to the pool and claim rewards.
-            STABILITY_POOL.provideToSP(inputValue, frontEndTag);
-            _swapRewardsToLUSDAndDeposit();
+            STABILITY_POOL.provideToSP(inputValue, FRONTEND_TAG);
+            swapRewardsToLUSDAndDeposit();
             uint256 totalLUSDOwnedBeforeDeposit = STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) - inputValue;
             uint256 totalSupply = this.totalSupply();
             // outputValueA = how much SPB should be minted
@@ -131,7 +134,7 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
             // Withdrawal
             // Claim rewards and swap them to LUSD.
             STABILITY_POOL.withdrawFromSP(0);
-            _swapRewardsToLUSDAndDeposit();
+            swapRewardsToLUSDAndDeposit();
 
             // stabilityPool.getCompoundedLUSDDeposit(address(this)) / this.totalSupply() = how much LUSD is one SPB
             // outputValueA = amount of LUSD to be withdrawn and sent to RollupProcessor.sol
@@ -143,6 +146,27 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
         }
     }
 
+    // @notice This function always reverts because this contract does not implement async flow.
+    function finalise(
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        uint256,
+        uint64
+    )
+        external
+        payable
+        override
+        returns (
+            uint256,
+            uint256,
+            bool
+        )
+    {
+        revert AsyncModeDisabled();
+    }
+
     /*
      * @notice Swaps any ETH and LQTY currently held by the contract to LUSD and deposits LUSD to the StabilityPool.sol.
      *
@@ -150,7 +174,7 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
      * liquidations rewards (ETH) to LUSD as well, I will first swap LQTY to WETH and then swap it all through USDC to
      * LUSD.
      */
-    function _swapRewardsToLUSDAndDeposit() internal {
+    function swapRewardsToLUSDAndDeposit() internal {
         uint256 lqtyBalance = IERC20(LQTY).balanceOf(address(this));
         if (lqtyBalance != 0) {
             UNI_ROUTER.exactInputSingle(
@@ -177,29 +201,8 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
             );
 
             if (lusdBalance != 0) {
-                STABILITY_POOL.provideToSP(lusdBalance, frontEndTag);
+                STABILITY_POOL.provideToSP(lusdBalance, FRONTEND_TAG);
             }
         }
-    }
-
-    // @notice This function always reverts because this contract does not implement async flow.
-    function finalise(
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        uint256,
-        uint64
-    )
-        external
-        payable
-        override
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        revert AsyncModeDisabled();
     }
 }

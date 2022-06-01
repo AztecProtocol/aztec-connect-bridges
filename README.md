@@ -65,20 +65,23 @@ yarn test --match-contract YourBridge -vvvv
 
 This repo includes an Infura key that allows forking from mainnet. We have included some helpers to make testing easier.
 
-In production a bridge is called by a user creating a client side proof via the Aztec SDK. These transaction proofs are sent to a rollup provider for aggregation. The rollup provider then sends the aggregate rollup proof with the sum of all users proofs for a given `bridgeId` to your bridge contract.
+In production a bridge is called by a user creating a client side proof via the Aztec SDK. These transaction proofs are sent to a rollup provider for aggregation. The rollup provider then sends the aggregate rollup proof with the sum of all users' proofs for a given `bridgeId` to your bridge contract.
 
 A `bridgeId` consists of the below schema. The rollup contract uses this to construct the function parameters to pass into your bridge contract. It calls your bridge with a fixed amount of gas via a `delegateCall` via the `DefiBridgeProxy.sol` contract.
 
 To test a bridge, we have added a `MockRollupProcessor` that simulates a rollup. You can call this in your tests by simply calling `rollupContract.convert()` with the deconstructed `bridgeId` fields.
 
-In production, the rollup contract will supply `totalInputValue` as the aggregate sum of the input assets, and `interactionNonce` as a globally unique ID. For testing you can provide this.
+In production, the rollup contract will supply `inputValue` of both input assets and use the `interactionNonce` as a globally unique ID. For testing you may provide this value.
 
-The rollup contract will send `totalInputValue` of `inputAssetA` and `inputAssetB` ahead of the call to convert. In production, the rollup contract has these tokens as they are the users funds. For testing there is a helper to prefund the rollup with sufficient tokens to enable the transfer.
+The rollup contract will send `inputValue` of `inputAssetA` and `inputAssetB` ahead of the call to convert.
+In production, the rollup contract has these tokens as they are the users' funds.
+For testing use the `deal` method from the [forge-std](https://github.com/foundry-rs/forge-std)'s `Test` class (see [Example.t.sol](https://github.com/AztecProtocol/aztec-connect-bridges/blob/master/src/test/example/Example.t.sol) for details).
+This method prefunds the rollup with sufficient tokens to enable the transfer.
 
-Simply call:
+After extending the `Test` class simply call:
 
 ```solidity
-  _setTokenBalance(address(dai), address(rollupProcessor), depositAmount);
+  deal(address(dai), address(rollupProcessor), amount);
 ```
 
 This will set the balance of the rollup to the amount required.

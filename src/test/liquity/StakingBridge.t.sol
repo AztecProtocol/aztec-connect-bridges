@@ -2,8 +2,10 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import "./utils/TestUtil.sol";
-import "../../bridges/liquity/StakingBridge.sol";
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
+
+import {TestUtil} from "./utils/TestUtil.sol";
+import {StakingBridge} from "../../bridges/liquity/StakingBridge.sol";
 
 contract StakingBridgeTest is TestUtil {
     StakingBridge private bridge;
@@ -24,22 +26,17 @@ contract StakingBridgeTest is TestUtil {
     function testIncorrectInput() public {
         // Call convert with incorrect input
         vm.prank(address(rollupProcessor));
-        try
-            bridge.convert(
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                0,
-                0,
-                0,
-                address(0)
-            )
-        {
-            assertTrue(false, "convert(...) has to revert on incorrect input.");
-        } catch (bytes memory reason) {
-            assertEq(StakingBridge.IncorrectInput.selector, bytes4(reason));
-        }
+        vm.expectRevert(StakingBridge.IncorrectInput.selector);
+        bridge.convert(
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            0,
+            0,
+            0,
+            address(0)
+        );
     }
 
     function testFullDepositWithdrawalFlow() public {
@@ -80,7 +77,7 @@ contract StakingBridgeTest is TestUtil {
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
             AztecTypes.AztecAsset(1, tokens["LQTY"].addr, AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-            depositAmount,
+            withdrawAmount,
             1,
             0
         );

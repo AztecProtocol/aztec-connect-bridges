@@ -2,11 +2,14 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../../interfaces/IDefiBridge.sol";
-import "../../interfaces/IWETH.sol";
-import "./interfaces/ILQTYStaking.sol";
-import "./interfaces/ISwapRouter.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {IWETH} from "../../interfaces/IWETH.sol";
+
+import {ILQTYStaking} from "./interfaces/ILQTYStaking.sol";
+import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 
 /**
  * @title Aztec Connect Bridge for Liquity's LQTYStaking.sol
@@ -27,6 +30,11 @@ import "./interfaces/ISwapRouter.sol";
  * Note: StakingBridge.sol is very similar to StabilityPoolBridge.sol.
  */
 contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
+    error ApproveFailed(address token);
+    error InvalidCaller();
+    error IncorrectInput();
+    error AsyncModeDisabled();
+
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant LQTY = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
@@ -35,29 +43,28 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
     ILQTYStaking public constant STAKING_CONTRACT = ILQTYStaking(0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d);
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
-    address public immutable processor;
-
-    error ApproveFailed(address token);
-    error InvalidCaller();
-    error IncorrectInput();
-    error AsyncModeDisabled();
+    address public immutable ROLLUP_PROCESSOR;
 
     /**
-     * @notice Set the addresses of RollupProcessor.sol and token approvals.
-     * @param _processor Address of the RollupProcessor.sol
+     * @notice Set the addresses of RollupProcessor.sol.
+     * @param _rollupProcessor Address of the RollupProcessor.sol
      */
-    constructor(address _processor) {
-        processor = _processor;
+    constructor(address _rollupProcessor) {
+        ROLLUP_PROCESSOR = _rollupProcessor;
     }
+
+    receive() external payable {}
+
+    fallback() external payable {}
 
     /**
      * @notice Sets all the important approvals.
      * @dev StakingBridge never holds LUSD, LQTY, USDC or WETH after or before an invocation of any of its functions.
      * For this reason the following is not a security risk and makes the convert() function more gas efficient.
      */
-    function setApprovals() public {
-        if (!this.approve(processor, type(uint256).max)) revert ApproveFailed(address(this));
-        if (!IERC20(LQTY).approve(processor, type(uint256).max)) revert ApproveFailed(LQTY);
+    function setApprovals() external {
+        if (!this.approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(address(this));
+        if (!IERC20(LQTY).approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(LQTY);
         if (!IERC20(LQTY).approve(address(STAKING_CONTRACT), type(uint256).max)) revert ApproveFailed(LQTY);
         if (!IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(WETH);
         if (!IERC20(LUSD).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(LUSD);
@@ -95,13 +102,13 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
             bool
         )
     {
-        if (msg.sender != processor) revert InvalidCaller();
+        if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
 
         if (inputAssetA.erc20Address == LQTY && outputAssetA.erc20Address == address(this)) {
             // Deposit
             // Stake and claim rewards
             STAKING_CONTRACT.stake(inputValue);
-            _swapRewardsToLQTYAndStake();
+            swapRewardsToLQTYAndStake();
             uint256 totalSupply = this.totalSupply();
             // outputValueA = how much SB should be minted
             if (totalSupply == 0) {
@@ -118,7 +125,7 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
             // Withdrawal
             // Claim rewards
             STAKING_CONTRACT.unstake(0);
-            _swapRewardsToLQTYAndStake();
+            swapRewardsToLQTYAndStake();
 
             // STAKING_CONTRACT.stakes(address(this)) / this.totalSupply() = how much LQTY is one SB
             // outputValueA = amount of LQTY to be withdrawn and sent to rollupProcessor
@@ -130,6 +137,26 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
         }
     }
 
+    // @notice This function always reverts because this contract does not implement async flow.
+    function finalise(
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        uint256,
+        uint64
+    )
+        external
+        payable
+        returns (
+            uint256,
+            uint256,
+            bool
+        )
+    {
+        revert AsyncModeDisabled();
+    }
+
     /*
      * @notice Swaps any ETH and LUSD currently held by the contract to LQTY and stakes LQTY in LQTYStaking.sol.
      *
@@ -137,7 +164,7 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
      * liquidation rewards (ETH) to LQTY as well, I will first swap LUSD to WETH through USDC and then swap it all
      * to LQTY
      */
-    function _swapRewardsToLQTYAndStake() internal {
+    function swapRewardsToLQTYAndStake() internal {
         uint256 lusdBalance = IERC20(LUSD).balanceOf(address(this));
         if (lusdBalance != 0) {
             UNI_ROUTER.exactInput(
@@ -167,28 +194,4 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
             }
         }
     }
-
-    // @notice This function always reverts because this contract does not implement async flow.
-    function finalise(
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        uint256,
-        uint64
-    )
-        external
-        payable
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        revert AsyncModeDisabled();
-    }
-
-    receive() external payable {}
-
-    fallback() external payable {}
 }

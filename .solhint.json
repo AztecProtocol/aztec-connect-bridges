@@ -3,6 +3,14 @@
   "rules": {
     "compiler-version": ["error", ">=0.8.4"],
     "func-visibility": ["warn", { "ignoreConstructors": true }],
-    "no-empty-blocks": "off"
+    "no-empty-blocks": "off",
+    "not-rely-on-time": "off",
+    "const-name-snakecase": ["warn", { "treatImmutableVarAsConstant": true}],
+    "var-name-mixedcase": ["warn", { "treatImmutableVarAsConstant": true}],
+    "error-name-mixedcase": ["warn"],
+    "private-func-leading-underscore": ["warn"],
+    "private-vars-no-leading-underscore": ["warn"],
+    "func-param-name-leading-underscore": ["warn"],
+    "custom-error-over-require": ["warn"]
   }
 }
