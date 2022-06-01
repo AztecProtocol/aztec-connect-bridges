@@ -47,7 +47,7 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
 
     // The amount of dust to leave in the contract
     // Optimization based on EIP-1087
-    uint256 private constant DUST = 1;
+    uint256 internal constant DUST = 1;
 
     address public immutable ROLLUP_PROCESSOR;
     address public immutable FRONTEND_TAG; // see StabilityPool.sol for details

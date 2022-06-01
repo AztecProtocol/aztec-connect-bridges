@@ -45,7 +45,7 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
 
     // The amount of dust to leave in the contract
     // Optimization based on EIP-1087
-    uint256 private constant DUST = 1;
+    uint256 internal constant DUST = 1;
 
     address public immutable ROLLUP_PROCESSOR;
 
