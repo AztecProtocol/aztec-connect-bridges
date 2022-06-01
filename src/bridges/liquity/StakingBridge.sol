@@ -50,7 +50,7 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
     address public immutable ROLLUP_PROCESSOR;
 
     /**
-     * @notice Set the addresses of RollupProcessor.sol.
+     * @notice Set the address of RollupProcessor.sol.
      * @param _rollupProcessor Address of the RollupProcessor.sol
      */
     constructor(address _rollupProcessor) {
@@ -199,7 +199,16 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
         uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
         if (wethBalance > DUST) {
             uint256 amountLQTYOut = UNI_ROUTER.exactInputSingle(
-                ISwapRouter.ExactInputSingleParams(WETH, LQTY, 3000, address(this), block.timestamp, wethBalance - DUST, 0, 0)
+                ISwapRouter.ExactInputSingleParams(
+                    WETH,
+                    LQTY,
+                    3000,
+                    address(this),
+                    block.timestamp,
+                    wethBalance - DUST,
+                    0,
+                    0
+                )
             );
             if (amountLQTYOut != 0) {
                 STAKING_CONTRACT.stake(amountLQTYOut);
