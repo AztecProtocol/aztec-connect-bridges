@@ -113,7 +113,7 @@ contract IssuanceBridge is IDefiBridge {
             // User wants to issue SetToken
             if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 // User supplies ETH
-                outputValueA = EXCHANGE_ISSUANCE.issueSetForExactETH{value: inputValue}(
+                outputValueA = EXCHANGE_ISSUANCE.issueSetForExactETH{value: _inputValue}(
                     ISetToken(address(_outputAssetA.erc20Address)),
                     _auxData // _minSetReceive
                 );
