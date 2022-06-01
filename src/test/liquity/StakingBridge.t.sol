@@ -16,13 +16,11 @@ contract StakingBridgeTest is TestUtil {
         bridge = new StakingBridge(address(rollupProcessor));
         bridge.setApprovals();
 
-        // Set LQTY bridge balance to 1 WEI
-        // Necessary for the optimization based on EIP-1087 to work!
+        // EIP-1087 optimization related mints
+        // Note: For LUSD and WETH the optimization would work even without
+        // this mint after the first rewards are claimed. This is not the case
+        // for LQTY.
         deal(tokens["LQTY"].addr, address(bridge), 1);
-
-        // Set LUSD and WETH bridge balances to 1 WEI
-        // This is not necessary but it makes the first claim cost
-        // the same as the following ones
         deal(tokens["LUSD"].addr, address(bridge), 1);
         deal(tokens["WETH"].addr, address(bridge), 1);
     }
