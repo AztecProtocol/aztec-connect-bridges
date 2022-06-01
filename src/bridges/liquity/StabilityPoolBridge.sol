@@ -221,8 +221,8 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
                 })
             );
 
-            if (lusdBalance > DUST) {
-                STABILITY_POOL.provideToSP(lusdBalance - DUST, FRONTEND_TAG);
+            if (lusdBalance != 0) {
+                STABILITY_POOL.provideToSP(lusdBalance, FRONTEND_TAG);
             }
         }
     }
