@@ -45,6 +45,10 @@ contract TroveBridgeTest is TestUtil {
         // Set OWNER's and ROLLUP_PROCESSOR's balances
         vm.deal(OWNER, OWNER_WEI_BALANCE);
         vm.deal(address(rollupProcessor), ROLLUP_PROCESSOR_WEI_BALANCE);
+
+        // Set LUSD bridge balance to 1 WEI
+        // Necessary for the optimization based on EIP-1087 to work!
+        deal(tokens["LUSD"].addr, address(bridge), 1);
     }
 
     function testInitialERC20Params() public {
@@ -166,7 +170,7 @@ contract TroveBridgeTest is TestUtil {
 
         // Check the bridge doesn't hold any ETH or LUSD
         assertEq(address(bridge).balance, 0);
-        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), 0);
+        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST());
 
         vm.stopPrank();
     }
@@ -204,7 +208,7 @@ contract TroveBridgeTest is TestUtil {
 
         // Check the bridge doesn't hold any ETH or LUSD
         assertEq(address(bridge).balance, 0);
-        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), 0);
+        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST());
 
         // Check the tokens were successfully sent to the rollupProcessor
         assertGt(bridge.balanceOf(address(rollupProcessor)), 0);
@@ -231,7 +235,7 @@ contract TroveBridgeTest is TestUtil {
 
         // Check the bridge doesn't hold any ETH or LUSD
         assertEq(address(bridge).balance, 0);
-        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), 0);
+        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST());
 
         // I want to check whether withdrawn amount of ETH is the same as the ROLLUP_PROCESSOR_WEI_BALANCE.
         // There is some imprecision so the amount is allowed to be different by 1 wei.
@@ -262,7 +266,7 @@ contract TroveBridgeTest is TestUtil {
 
         // Check the bridge doesn't hold any ETH or LUSD
         assertEq(address(bridge).balance, 0);
-        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), 0);
+        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST());
 
         // I want to check whether withdrawn amount of ETH is the same as the ROLLUP_PROCESSOR_WEI_BALANCE.
         // There is some imprecision so the amount is allowed to be different by 1 wei.

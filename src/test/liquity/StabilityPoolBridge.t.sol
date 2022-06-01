@@ -16,6 +16,14 @@ contract StabilityPoolBridgeTest is TestUtil {
 
         bridge = new StabilityPoolBridge(address(rollupProcessor), address(0));
         bridge.setApprovals();
+
+        // EIP-1087 optimization related mints
+        // Note: For LQTY and LUSD the optimization would work even without
+        // this mint after the first rewards are claimed. This is not the case
+        // for LUSD.
+        deal(tokens["LUSD"].addr, address(bridge), 1);
+        deal(tokens["LQTY"].addr, address(bridge), 1);
+        deal(tokens["WETH"].addr, address(bridge), 1);
     }
 
     function testInitialERC20Params() public {
