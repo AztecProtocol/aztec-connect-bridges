@@ -11,6 +11,14 @@ import '@openzeppelin/contracts/access/Ownable.sol';
 import {AztecTypes} from '../../aztec/AztecTypes.sol';
 import {IERC4626} from './Interfaces/IERC4626.sol';
 
+/**
+ * @title Aztec Connect Bridge for ERC4626 compatible vaults
+ * @author (@johhonn on Github)
+ * @notice You can use this contract to stake asset tokens and bridge share tokens for any ERC2626 compatible bride.
+ * @dev Implementation of the IDefiBridge interface for IERC4626
+ *
+ 
+ */
 contract VaultBridge is IDefiBridge, Ownable {
     using SafeMath for uint256;
 
@@ -20,6 +28,19 @@ contract VaultBridge is IDefiBridge, Ownable {
         rollupProcessor = _rollupProcessor;
     }
 
+    /**
+     * @notice Function which stakes or unstakes
+     * @dev This method can only be called from the RollupProcessor.sol. If the input asset is the ERC4626 vault asset, staking flow is
+     * executed. If input is the vault share token, unstaking. RollupProcessor.sol has to transfer the tokens to the bridge before calling
+     * the method. If this is not the case, the function will revert (either in STAKING_CONTRACT.stake(...) or during
+     * SB burn).
+     *
+     * @param inputAssetA - Vault asset (Staking) or Vault Address (Unstaking)
+     * @param outputAssetA - Vault Address (Staking) or Vault asset (UnStaking)
+     * @param totalInputValue - the amount of assets to stake or shares to unstake
+     * @return outputValueA - the amount of shares (Staking) or assets (Unstaking) minted/transferred to
+     * the RollupProcessor.sol
+     */
     function convert(
         AztecTypes.AztecAsset memory inputAssetA,
         AztecTypes.AztecAsset memory inputAssetB,
@@ -51,6 +72,14 @@ contract VaultBridge is IDefiBridge, Ownable {
         }
     }
 
+    /**
+     * @notice Function which test whether a token is a vaild asset for a given vault
+     * @dev This method is used to check whether input and output assets are matching vault share/asset pairs
+     *
+     * @param a address of erc4626 vault
+     * @param b address of the vault asset token
+     *
+     */
     function testPair(address a, address b) public returns (bool) {
         try IERC4626(a).asset() returns (IERC20 token) {
             return address(token) == b;
@@ -59,6 +88,15 @@ contract VaultBridge is IDefiBridge, Ownable {
         }
     }
 
+    /**
+     * @notice Internal Function used to stake
+     * @dev This method deposits an exact amount of asset into an erc4626 vault then approves the rollup processor
+     *
+     * @param vault address of erc4626 vault
+     * @param token address of the vault asset token
+     * @param amount amount of an asset to be burned
+   
+     */
     // enter by deposit exact assets
     function enter(
         address vault,
@@ -74,7 +112,15 @@ contract VaultBridge is IDefiBridge, Ownable {
         return _after.sub(prev);
     }
 
-    // exit by burning exact shares
+    /**
+     * @notice Internal Function used to unstake
+     * @dev This method redeems an exact number of shares into an erc4626 vault then approves the rollup processor
+     *
+     * @param vault address of erc4626 vault
+     * @param token address of the vault
+     * @param amount amount of an shares to be redeemed
+     *
+     */
     function exit(
         address vault,
         address token,
@@ -88,6 +134,7 @@ contract VaultBridge is IDefiBridge, Ownable {
         return _after.sub(prev);
     }
 
+    // @notice This function always reverts because this contract does not implement async flow.
     function finalise(
         AztecTypes.AztecAsset calldata inputAssetA,
         AztecTypes.AztecAsset calldata inputAssetB,
