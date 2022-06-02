@@ -11,7 +11,7 @@ import '@openzeppelin/contracts/access/Ownable.sol';
 import {AztecTypes} from '../../aztec/AztecTypes.sol';
 import {IERC4626} from './Interfaces/IERC4626.sol';
 
-contract vaultBridge is IDefiBridge, Ownable {
+contract VaultBridge is IDefiBridge, Ownable {
     using SafeMath for uint256;
 
     address public immutable rollupProcessor;
