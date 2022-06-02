@@ -73,31 +73,11 @@ contract RibbonFinanceBridgeTest is DSTest {
         );       
     }
 
-    // function testWithdrawalEthThetaV2() public {
-    // }
-
-    // function testDepositWBTCThetaV2() {
-    // }
-
-    // function testDepositEthCallThetaV1() {
-    // }
-
-    // function testDepositWBTCCallThetaV1() {
-    // }
-
-    // function testDepositEthPutThetaV1() {
-    // }
-
-    // function testDepositEthPutyvUSDCV1() {
-    // }
-
     function _setEthBalance(
         address user,
         uint256 balance
     ) internal {
-
         vm.deal(user, balance);
-
         assertEq(user.balance, balance, "wrong ETH balance");
     }    
 }
