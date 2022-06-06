@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.4;
 
-import '../../../lib/ds-test/src/test.sol';
+import {Test} from "forge-std/Test.sol";
 
-import {WadRayMath} from './../../bridges/aave/imports/libraries/WadRayMath.sol';
+import {WadRayMath} from "./../../bridges/aave/imports/libraries/WadRayMath.sol";
 
-contract AaveRoundingTest is DSTest {
+contract AaveRoundingTest is Test {
     using WadRayMath for uint256;
 
     function testRoundingMulDiv(uint128 amountIn, uint104 indexAdd) public {
@@ -25,6 +25,6 @@ contract AaveRoundingTest is DSTest {
         uint256 intermediateVal = amount.rayDiv(index);
         uint256 output = intermediateVal.rayMul(index);
 
-        assertGe(output, amount, 'Same tx deposit and withdraw will lose funds');
+        assertGe(output, amount, "Same tx deposit and withdraw will lose funds");
     }
 }

@@ -156,7 +156,6 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
      * @param outputAssetB Unused output asset, reverts if different from NOT_USED
      * @param totalInputValue The input amount of inputAssetA
      * @param interactionNonce The interaction nonce of the call
-     * @param auxData Unused auxiliary information
      * @return outputValueA The output amount of outputAssetA
      * @return outputValueB The ouput amount of outputAssetB
      * @return isAsync Always false for this bridge
@@ -168,8 +167,8 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         AztecTypes.AztecAsset calldata outputAssetB,
         uint256 totalInputValue,
         uint256 interactionNonce,
-        uint64 auxData,
-        address rollupBeneficiary
+        uint64,
+        address
     )
         external
         payable
