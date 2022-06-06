@@ -3,19 +3,19 @@ pragma solidity >=0.8.4;
 
 interface IAaveLendingBridgeConfigurator {
     function addNewPool(
-        address lendingBridge,
-        address underlyingAsset,
-        address aTokenAddress
+        address _lendingBridge,
+        address _underlyingAsset,
+        address _aTokenAddress
     ) external;
 
-    function addPoolFromV2(address lendingBridge, address underlyingAsset) external;
+    function addPoolFromV2(address _lendingBridge, address _underlyingAsset) external;
 
-    function addPoolFromV3(address lendingBridge, address underlyingAsset) external;
+    function addPoolFromV3(address _lendingBridge, address _underlyingAsset) external;
 
     function claimLiquidityRewards(
-        address lendingBridge,
-        address incentivesController,
-        address[] calldata assets,
-        address beneficiary
+        address _lendingBridge,
+        address _incentivesController,
+        address[] calldata _assets,
+        address _beneficiary
     ) external returns (uint256);
 }

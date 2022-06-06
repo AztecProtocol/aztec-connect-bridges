@@ -13,44 +13,44 @@ import {IPool} from "./../imports/interfaces/IPool.sol";
  * @author Lasse Herskind
  */
 contract AaveLendingBridgeConfigurator is IAaveLendingBridgeConfigurator, Ownable {
-    function addPoolFromV2(address lendingBridge, address underlyingAsset)
+    function addPoolFromV2(address _lendingBridge, address _underlyingAsset)
         external
         override(IAaveLendingBridgeConfigurator)
     {
-        IAaveLendingBridge bridge = IAaveLendingBridge(lendingBridge);
+        IAaveLendingBridge bridge = IAaveLendingBridge(_lendingBridge);
         ILendingPool pool = ILendingPool(bridge.ADDRESSES_PROVIDER().getLendingPool());
 
-        address aTokenAddress = pool.getReserveData(underlyingAsset).aTokenAddress;
+        address aTokenAddress = pool.getReserveData(_underlyingAsset).aTokenAddress;
 
-        addNewPool(lendingBridge, underlyingAsset, aTokenAddress);
+        addNewPool(_lendingBridge, _underlyingAsset, aTokenAddress);
     }
 
-    function addPoolFromV3(address lendingBridge, address underlyingAsset)
+    function addPoolFromV3(address _lendingBridge, address _underlyingAsset)
         external
         override(IAaveLendingBridgeConfigurator)
     {
-        IAaveLendingBridge bridge = IAaveLendingBridge(lendingBridge);
+        IAaveLendingBridge bridge = IAaveLendingBridge(_lendingBridge);
         IPool pool = IPool(bridge.ADDRESSES_PROVIDER().getLendingPool());
 
-        address aTokenAddress = pool.getReserveData(underlyingAsset).aTokenAddress;
+        address aTokenAddress = pool.getReserveData(_underlyingAsset).aTokenAddress;
 
-        addNewPool(lendingBridge, underlyingAsset, aTokenAddress);
+        addNewPool(_lendingBridge, _underlyingAsset, aTokenAddress);
     }
 
     function claimLiquidityRewards(
-        address lendingBridge,
-        address incentivesController,
-        address[] calldata assets,
-        address beneficiary
+        address _lendingBridge,
+        address _incentivesController,
+        address[] calldata _assets,
+        address _beneficiary
     ) external override(IAaveLendingBridgeConfigurator) onlyOwner returns (uint256) {
-        return IAaveLendingBridge(lendingBridge).claimLiquidityRewards(incentivesController, assets, beneficiary);
+        return IAaveLendingBridge(_lendingBridge).claimLiquidityRewards(_incentivesController, _assets, _beneficiary);
     }
 
     function addNewPool(
-        address lendingBridge,
-        address underlyingAsset,
-        address aTokenAddress
+        address _lendingBridge,
+        address _underlyingAsset,
+        address _aTokenAddress
     ) public override(IAaveLendingBridgeConfigurator) onlyOwner {
-        IAaveLendingBridge(lendingBridge).setUnderlyingToZkAToken(underlyingAsset, aTokenAddress);
+        IAaveLendingBridge(_lendingBridge).setUnderlyingToZkAToken(_underlyingAsset, _aTokenAddress);
     }
 }
