@@ -1,28 +1,28 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {IERC20Metadata} from '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol';
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import {ILendingPoolAddressesProvider} from './../imports/interfaces/ILendingPoolAddressesProvider.sol';
-import {ILendingPool} from './../imports/interfaces/ILendingPool.sol';
-import {IPool} from './../imports/interfaces/IPool.sol';
-import {IScaledBalanceToken} from './../imports/interfaces/IScaledBalanceToken.sol';
-import {IAaveIncentivesController} from './../imports/interfaces/IAaveIncentivesController.sol';
-import {IAccountingToken} from './../imports/interfaces/IAccountingToken.sol';
-import {IWETH9} from './../imports/interfaces/IWETH9.sol';
+import {ILendingPoolAddressesProvider} from "./../imports/interfaces/ILendingPoolAddressesProvider.sol";
+import {ILendingPool} from "./../imports/interfaces/ILendingPool.sol";
+import {IPool} from "./../imports/interfaces/IPool.sol";
+import {IScaledBalanceToken} from "./../imports/interfaces/IScaledBalanceToken.sol";
+import {IAaveIncentivesController} from "./../imports/interfaces/IAaveIncentivesController.sol";
+import {IAccountingToken} from "./../imports/interfaces/IAccountingToken.sol";
+import {IWETH9} from "./../imports/interfaces/IWETH9.sol";
 
-import {DataTypes} from './../imports/libraries/DataTypes.sol';
+import {DataTypes} from "./../imports/libraries/DataTypes.sol";
 
-import {IRollupProcessor} from '../../../interfaces/IRollupProcessor.sol';
-import {IDefiBridge} from '../../../interfaces/IDefiBridge.sol';
-import {AztecTypes} from '../../../aztec/AztecTypes.sol';
+import {IRollupProcessor} from "../../../interfaces/IRollupProcessor.sol";
+import {IDefiBridge} from "../../../interfaces/IDefiBridge.sol";
+import {AztecTypes} from "../../../aztec/AztecTypes.sol";
 
-import {IAaveLendingBridge} from './interfaces/IAaveLendingBridge.sol';
+import {IAaveLendingBridge} from "./interfaces/IAaveLendingBridge.sol";
 
-import {Errors} from './libraries/Errors.sol';
-import {AccountingToken} from './../AccountingToken.sol';
+import {Errors} from "./libraries/Errors.sol";
+import {AccountingToken} from "./../AccountingToken.sol";
 
 /**
  * @notice AaveLendingBridge implementation that allow a configurator to "list" a reserve and then anyone can
@@ -79,8 +79,8 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
 
         IERC20Metadata aToken = IERC20Metadata(aTokenAddress);
 
-        string memory name = string(abi.encodePacked('ZK-', aToken.name()));
-        string memory symbol = string(abi.encodePacked('ZK-', aToken.symbol()));
+        string memory name = string(abi.encodePacked("ZK-", aToken.name()));
+        string memory symbol = string(abi.encodePacked("ZK-", aToken.symbol()));
 
         address zkAToken = address(new AccountingToken(name, symbol, aToken.decimals()));
 
@@ -143,7 +143,9 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
     /**
      * @notice Deposit into Aave with `amount` of `underlyingAsset` and return the corresponding amount of zkATokens
      * @param underlyingAsset The address of the underlying asset
+     * @param zkATokenAddress The address of the representative zkAToken
      * @param amount The amount of underlying asset to deposit
+     * @param isEth A flag that is true eth is deposited and false otherwise
      * @return The amount of zkAToken that was minted by the deposit
      */
     function _enter(
@@ -185,7 +187,9 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
     /**
      * @notice Withdraw `underlyingAsset` from Aave
      * @param underlyingAsset The address of the underlying asset
+     * @param zkATokenAddress The address of the representative zkAToken
      * @param scaledAmount The amount of zkAToken to burn, used to derive underlying amount
+     * @param isEth A flag that is true eth is to be withdrawn and false otherwise
      * @return The underlying amount of tokens withdrawn
      */
     function _exit(
@@ -259,7 +263,7 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
             bool
         )
     {
-        require(false, 'Not implemented');
+        require(false, "Not implemented");
         return (0, 0, false);
     }
 
