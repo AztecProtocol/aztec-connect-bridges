@@ -20,11 +20,11 @@ import {IAToken} from "../../bridges/aave/imports/interfaces/IAToken.sol";
 import {DataTypes} from "../../bridges/aave/imports/libraries/DataTypes.sol";
 import {WadRayMath} from "../../bridges/aave/imports/libraries/WadRayMath.sol";
 
+import {IAccountingToken} from "../../bridges/aave/interfaces/IAccountingToken.sol";
 import {IAaveLendingBridge} from "../../bridges/aave/lending/interfaces/IAaveLendingBridge.sol";
 import {IAaveLendingBridgeConfigurator} from "../../bridges/aave/lending/interfaces/IAaveLendingBridgeConfigurator.sol";
 import {AaveLendingBridge} from "../../bridges/aave/lending/AaveLendingBridge.sol";
 import {AaveLendingBridgeConfigurator} from "../../bridges/aave/lending/AaveLendingBridgeConfigurator.sol";
-import {Errors} from "../../bridges/aave/lending/libraries/Errors.sol";
 
 // Test specific imports
 import {AaveV3StorageEmulator} from "./helpers/AaveV3StorageEmulator.sol";
@@ -49,6 +49,21 @@ library RoundingMath {
 contract AaveLendingTest is TestHelper {
     using RoundingMath for uint256;
     using WadRayMath for uint256;
+
+    error InvalidCaller();
+    error InputAssetAAndOutputAssetAIsEth();
+    error InputAssetANotERC20OrEth();
+    error OutputAssetANotERC20OrEth();
+    error InputAssetBNotEmpty();
+    error OutputAssetBNotEmpty();
+    error InputAssetInvalid();
+    error OutputAssetInvalid();
+    error InputAssetNotEqZkAToken();
+    error InvalidAToken();
+    error ZkTokenAlreadyExists();
+    error ZkTokenDontExist();
+    error ZeroValue();
+    error AsyncDisabled();
 
     // Aztec defi bridge specific storage
     DefiBridgeProxy internal defiBridgeProxy;
@@ -104,6 +119,8 @@ contract AaveLendingTest is TestHelper {
         minValue = 10**aToken.decimals();
         maxValue = 1e12 * 10**aToken.decimals();
         divisor = 10**(18 - aToken.decimals());
+
+        vm.label(address(aToken), aToken.symbol());
     }
 
     function setUp() public {
@@ -123,8 +140,16 @@ contract AaveLendingTest is TestHelper {
             _addTokenToMapping();
             aaveLendingBridge.performApprovals(address(tokens[i]));
         }
-        vm.expectRevert(bytes(Errors.ZK_TOKEN_DONT_EXISTS));
+        vm.expectRevert(ZkTokenDontExist.selector);
         aaveLendingBridge.performApprovals(address(0));
+    }
+
+    function testMintUnderlying() public {
+        _tokenSetup(tokens[0]);
+        _addTokenToMapping();
+        address zkAToken = aaveLendingBridge.underlyingToZkAToken(address(tokens[0]));
+        vm.expectRevert(InvalidCaller.selector);
+        IAccountingToken(zkAToken).mint(address(this), 1);
     }
 
     function testAddTokensToMappingFromV2() public {
@@ -174,7 +199,7 @@ contract AaveLendingTest is TestHelper {
         });
 
         // Invalid caller //
-        vm.expectRevert(bytes(Errors.INVALID_CALLER));
+        vm.expectRevert(InvalidCaller.selector);
         IDefiBridge(address(aaveLendingBridge)).convert(
             emptyAsset,
             emptyAsset,
@@ -189,7 +214,7 @@ contract AaveLendingTest is TestHelper {
         vm.startPrank(address(rollupProcessor));
 
         // Eth as input and output //
-        vm.expectRevert(bytes(Errors.INPUT_ASSET_A_AND_OUTPUT_ASSET_A_IS_ETH));
+        vm.expectRevert(InputAssetAAndOutputAssetAIsEth.selector);
         IDefiBridge(address(aaveLendingBridge)).convert(
             ethAsset,
             emptyAsset,
@@ -202,7 +227,7 @@ contract AaveLendingTest is TestHelper {
         );
 
         // Input asset empty
-        vm.expectRevert(bytes(Errors.INPUT_ASSET_A_NOT_ERC20_OR_ETH));
+        vm.expectRevert(InputAssetANotERC20OrEth.selector);
         IDefiBridge(address(aaveLendingBridge)).convert(
             emptyAsset,
             emptyAsset,
@@ -215,7 +240,7 @@ contract AaveLendingTest is TestHelper {
         );
 
         // Input asset virtual
-        vm.expectRevert(bytes(Errors.INPUT_ASSET_A_NOT_ERC20_OR_ETH));
+        vm.expectRevert(InputAssetANotERC20OrEth.selector);
         IDefiBridge(address(aaveLendingBridge)).convert(
             virtualAsset,
             emptyAsset,
@@ -228,7 +253,7 @@ contract AaveLendingTest is TestHelper {
         );
 
         // Output asset empty
-        vm.expectRevert(bytes(Errors.OUTPUT_ASSET_A_NOT_ERC20_OR_ETH));
+        vm.expectRevert(OutputAssetANotERC20OrEth.selector);
         IDefiBridge(address(aaveLendingBridge)).convert(
             daiAsset,
             emptyAsset,
@@ -241,7 +266,7 @@ contract AaveLendingTest is TestHelper {
         );
 
         // Output asset virtual
-        vm.expectRevert(bytes(Errors.OUTPUT_ASSET_A_NOT_ERC20_OR_ETH));
+        vm.expectRevert(OutputAssetANotERC20OrEth.selector);
         IDefiBridge(address(aaveLendingBridge)).convert(
             daiAsset,
             emptyAsset,
@@ -254,9 +279,9 @@ contract AaveLendingTest is TestHelper {
         );
 
         // Non empty input asset B
-        vm.expectRevert(bytes(Errors.INPUT_ASSET_B_NOT_EMPTY));
+        vm.expectRevert(InputAssetBNotEmpty.selector);
         IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, daiAsset, ethAsset, emptyAsset, 0, 0, 0, BENEFICIARY);
-        vm.expectRevert(bytes(Errors.INPUT_ASSET_B_NOT_EMPTY));
+        vm.expectRevert(InputAssetBNotEmpty.selector);
         IDefiBridge(address(aaveLendingBridge)).convert(
             daiAsset,
             virtualAsset,
@@ -267,13 +292,13 @@ contract AaveLendingTest is TestHelper {
             0,
             BENEFICIARY
         );
-        vm.expectRevert(bytes(Errors.INPUT_ASSET_B_NOT_EMPTY));
+        vm.expectRevert(InputAssetBNotEmpty.selector);
         IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, ethAsset, ethAsset, emptyAsset, 0, 0, 0, BENEFICIARY);
 
         // Non empty output asset B
-        vm.expectRevert(bytes(Errors.OUTPUT_ASSET_B_NOT_EMPTY));
+        vm.expectRevert(OutputAssetBNotEmpty.selector);
         IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, emptyAsset, ethAsset, daiAsset, 0, 0, 0, BENEFICIARY);
-        vm.expectRevert(bytes(Errors.OUTPUT_ASSET_B_NOT_EMPTY));
+        vm.expectRevert(OutputAssetBNotEmpty.selector);
         IDefiBridge(address(aaveLendingBridge)).convert(
             daiAsset,
             emptyAsset,
@@ -284,11 +309,11 @@ contract AaveLendingTest is TestHelper {
             0,
             BENEFICIARY
         );
-        vm.expectRevert(bytes(Errors.OUTPUT_ASSET_B_NOT_EMPTY));
+        vm.expectRevert(OutputAssetBNotEmpty.selector);
         IDefiBridge(address(aaveLendingBridge)).convert(daiAsset, emptyAsset, ethAsset, ethAsset, 0, 0, 0, BENEFICIARY);
 
         // address(0) as input asset
-        vm.expectRevert(bytes(Errors.INPUT_ASSET_INVALID));
+        vm.expectRevert(InputAssetInvalid.selector);
         IDefiBridge(address(aaveLendingBridge)).convert(
             AztecTypes.AztecAsset({id: 2, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ERC20}),
             emptyAsset,
@@ -301,7 +326,7 @@ contract AaveLendingTest is TestHelper {
         );
 
         // address(0) as output asset
-        vm.expectRevert(bytes(Errors.OUTPUT_ASSET_INVALID));
+        vm.expectRevert(OutputAssetInvalid.selector);
         IDefiBridge(address(aaveLendingBridge)).convert(
             ethAsset,
             emptyAsset,
@@ -315,7 +340,7 @@ contract AaveLendingTest is TestHelper {
 
         // Trying to enter with non-supported asset. Is assumed to be zkAtoken for exit,
         // Will revert because zkAToken for other tokens is address 0
-        vm.expectRevert(bytes(Errors.INPUT_ASSET_NOT_EQ_ZK_ATOKEN));
+        vm.expectRevert(InputAssetNotEqZkAToken.selector);
         IDefiBridge(address(aaveLendingBridge)).convert(
             daiAsset,
             emptyAsset,
@@ -571,7 +596,7 @@ contract AaveLendingTest is TestHelper {
         address[] memory assets = new address[](1);
         assets[0] = address(aToken);
 
-        vm.expectRevert(bytes(Errors.INVALID_CALLER));
+        vm.expectRevert(InvalidCaller.selector);
         aaveLendingBridge.claimLiquidityRewards(address(INCENTIVES), assets, BENEFICIARY);
         assertEq(STK_AAVE.balanceOf(address(aaveLendingBridge)), 0, "The bridge received the rewards");
         assertEq(STK_AAVE.balanceOf(address(BENEFICIARY)), 0, "The BENEFICIARY received the rewards");
@@ -1007,7 +1032,7 @@ contract AaveLendingTest is TestHelper {
         assertEq(aaveLendingBridge.underlyingToZkAToken(address(token)), address(0));
 
         // Add as not configurator (revert);
-        vm.expectRevert(bytes(Errors.INVALID_CALLER));
+        vm.expectRevert(InvalidCaller.selector);
         aaveLendingBridge.setUnderlyingToZkAToken(address(token), address(token));
 
         // Add as invalid caller (revert)
@@ -1016,11 +1041,11 @@ contract AaveLendingTest is TestHelper {
         configurator.addPoolFromV2(address(aaveLendingBridge), address(token));
 
         /// Add invalid (revert)
-        vm.expectRevert(bytes(Errors.INVALID_ATOKEN));
+        vm.expectRevert(InvalidAToken.selector);
         configurator.addPoolFromV2(address(aaveLendingBridge), address(0xdead));
 
         /// Add invalid (revert)
-        vm.expectRevert(bytes(Errors.INVALID_ATOKEN));
+        vm.expectRevert(InvalidAToken.selector);
         configurator.addNewPool(address(aaveLendingBridge), address(token), address(token));
 
         /// Add token as configurator
@@ -1028,7 +1053,7 @@ contract AaveLendingTest is TestHelper {
         assertNotEq(aaveLendingBridge.underlyingToZkAToken(address(token)), address(0));
 
         /// Add token again (revert)
-        vm.expectRevert(bytes(Errors.ZK_TOKEN_ALREADY_SET));
+        vm.expectRevert(ZkTokenAlreadyExists.selector);
         configurator.addPoolFromV2(address(aaveLendingBridge), address(token));
     }
 
@@ -1051,12 +1076,12 @@ contract AaveLendingTest is TestHelper {
         assertEq(aaveLendingBridge.underlyingToZkAToken(address(token)), address(0));
 
         // Add as not configurator (revert);
-        vm.expectRevert(bytes(Errors.INVALID_CALLER));
+        vm.expectRevert(InvalidCaller.selector);
         aaveLendingBridge.setUnderlyingToZkAToken(address(token), address(token));
 
         /// Add invalid (revert)
         vm.mockCall(lendingPool, inputData, mockData);
-        vm.expectRevert(bytes(Errors.INVALID_ATOKEN));
+        vm.expectRevert(InvalidAToken.selector);
         configurator.addPoolFromV3(address(aaveLendingBridge), address(0xdead));
 
         // Add as invalid caller (revert);
@@ -1071,7 +1096,7 @@ contract AaveLendingTest is TestHelper {
         assertNotEq(aaveLendingBridge.underlyingToZkAToken(address(token)), address(0));
 
         /// Add token again (revert)
-        vm.expectRevert(bytes(Errors.ZK_TOKEN_ALREADY_SET));
+        vm.expectRevert(ZkTokenAlreadyExists.selector);
         configurator.addPoolFromV3(address(aaveLendingBridge), address(token));
 
         vm.prank(ADDRESSES_PROVIDER.owner());
