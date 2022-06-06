@@ -91,25 +91,25 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
      * this scenario because I expect the liquidation bots to be so fast that the scenario will never occur. Checking
      * for it would only waste gas.
      *
-     * @param inputAssetA - LUSD (Deposit) or SPB (Withdrawal)
-     * @param outputAssetA - SPB (Deposit) or LUSD (Withdrawal)
-     * @param inputValue - the amount of LUSD to deposit or the amount of SPB to burn and exchange for LUSD
+     * @param _inputAssetA - LUSD (Deposit) or SPB (Withdrawal)
+     * @param _outputAssetA - SPB (Deposit) or LUSD (Withdrawal)
+     * @param _inputValue - the amount of LUSD to deposit or the amount of SPB to burn and exchange for LUSD
      * @return outputValueA - the amount of SPB (Deposit) or LUSD (Withdrawal) minted/transferred to
      * the RollupProcessor.sol
      */
     function convert(
-        AztecTypes.AztecAsset calldata inputAssetA,
+        AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata outputAssetA,
+        AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
-        uint256 inputValue,
+        uint256 _inputValue,
         uint256,
         uint64,
         address
     )
         external
         payable
-        override
+        override(IDefiBridge)
         returns (
             uint256 outputValueA,
             uint256,
@@ -118,34 +118,34 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
     {
         if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
 
-        if (inputAssetA.erc20Address == LUSD && outputAssetA.erc20Address == address(this)) {
+        if (_inputAssetA.erc20Address == LUSD && _outputAssetA.erc20Address == address(this)) {
             // Deposit
             // Provides LUSD to the pool and claim rewards.
-            STABILITY_POOL.provideToSP(inputValue, FRONTEND_TAG);
-            swapRewardsToLUSDAndDeposit();
-            uint256 totalLUSDOwnedBeforeDeposit = STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) - inputValue;
+            STABILITY_POOL.provideToSP(_inputValue, FRONTEND_TAG);
+            _swapRewardsToLUSDAndDeposit();
+            uint256 totalLUSDOwnedBeforeDeposit = STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) - _inputValue;
             uint256 totalSupply = this.totalSupply();
             // outputValueA = how much SPB should be minted
             if (totalSupply == 0) {
                 // When the totalSupply is 0, I set the SPB/LUSD ratio to be 1.
-                outputValueA = inputValue;
+                outputValueA = _inputValue;
             } else {
                 // totalSupply / totalLUSDOwnedBeforeDeposit = how much SPB one LUSD is worth
                 // When I multiply this ^ with the amount of LUSD deposited I get the amount of SPB to be minted.
-                outputValueA = (totalSupply * inputValue) / totalLUSDOwnedBeforeDeposit;
+                outputValueA = (totalSupply * _inputValue) / totalLUSDOwnedBeforeDeposit;
             }
             _mint(address(this), outputValueA);
-        } else if (inputAssetA.erc20Address == address(this) && outputAssetA.erc20Address == LUSD) {
+        } else if (_inputAssetA.erc20Address == address(this) && _outputAssetA.erc20Address == LUSD) {
             // Withdrawal
             // Claim rewards and swap them to LUSD.
             STABILITY_POOL.withdrawFromSP(0);
-            swapRewardsToLUSDAndDeposit();
+            _swapRewardsToLUSDAndDeposit();
 
             // stabilityPool.getCompoundedLUSDDeposit(address(this)) / this.totalSupply() = how much LUSD is one SPB
             // outputValueA = amount of LUSD to be withdrawn and sent to RollupProcessor.sol
-            outputValueA = (STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) * inputValue) / this.totalSupply();
+            outputValueA = (STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) * _inputValue) / this.totalSupply();
             STABILITY_POOL.withdrawFromSP(outputValueA);
-            _burn(address(this), inputValue);
+            _burn(address(this), _inputValue);
         } else {
             revert IncorrectInput();
         }
@@ -162,7 +162,7 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
     )
         external
         payable
-        override
+        override(IDefiBridge)
         returns (
             uint256,
             uint256,
@@ -175,7 +175,7 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
     /**
      * @dev See {IERC20-totalSupply}.
      */
-    function totalSupply() public view override returns (uint256) {
+    function totalSupply() public view override(ERC20) returns (uint256) {
         return super.totalSupply() - DUST;
     }
 
@@ -186,7 +186,7 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
      * liquidations rewards (ETH) to LUSD as well, I will first swap LQTY to WETH and then swap it all through USDC to
      * LUSD.
      */
-    function swapRewardsToLUSDAndDeposit() internal {
+    function _swapRewardsToLUSDAndDeposit() internal {
         uint256 lqtyBalance = IERC20(LQTY).balanceOf(address(this));
         if (lqtyBalance > DUST) {
             UNI_ROUTER.exactInputSingle(

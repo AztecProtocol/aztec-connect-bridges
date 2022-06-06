@@ -83,24 +83,25 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
      * the method. If this is not the case, the function will revert (either in STAKING_CONTRACT.stake(...) or during
      * SB burn).
      *
-     * @param inputAssetA - LQTY (Staking) or SB (Unstaking)
-     * @param outputAssetA - SB (Staking) or LQTY (Unstaking)
-     * @param inputValue - the amount of LQTY to stake or the amount of SB to burn and exchange for LQTY
+     * @param _inputAssetA - LQTY (Staking) or SB (Unstaking)
+     * @param _outputAssetA - SB (Staking) or LQTY (Unstaking)
+     * @param _inputValue - the amount of LQTY to stake or the amount of SB to burn and exchange for LQTY
      * @return outputValueA - the amount of SB (Staking) or LQTY (Unstaking) minted/transferred to
      * the RollupProcessor.sol
      */
     function convert(
-        AztecTypes.AztecAsset calldata inputAssetA,
+        AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata outputAssetA,
+        AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
-        uint256 inputValue,
+        uint256 _inputValue,
         uint256,
         uint64,
         address
     )
         external
         payable
+        override(IDefiBridge)
         returns (
             uint256 outputValueA,
             uint256,
@@ -109,34 +110,34 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
     {
         if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
 
-        if (inputAssetA.erc20Address == LQTY && outputAssetA.erc20Address == address(this)) {
+        if (_inputAssetA.erc20Address == LQTY && _outputAssetA.erc20Address == address(this)) {
             // Deposit
             // Stake and claim rewards
-            STAKING_CONTRACT.stake(inputValue);
-            swapRewardsToLQTYAndStake();
+            STAKING_CONTRACT.stake(_inputValue);
+            _swapRewardsToLQTYAndStake();
             uint256 totalSupply = this.totalSupply();
             // outputValueA = how much SB should be minted
             if (totalSupply == 0) {
                 // When the totalSupply is 0, I set the SB/LQTY ratio to be 1.
-                outputValueA = inputValue;
+                outputValueA = _inputValue;
             } else {
-                uint256 totalLQTYOwnedBeforeDeposit = STAKING_CONTRACT.stakes(address(this)) - inputValue;
+                uint256 totalLQTYOwnedBeforeDeposit = STAKING_CONTRACT.stakes(address(this)) - _inputValue;
                 // totalSupply / totalLQTYOwnedBeforeDeposit = how much SB one LQTY is worth
                 // When I multiply this ^ with the amount of LQTY deposited I get the amount of SB to be minted.
-                outputValueA = (totalSupply * inputValue) / totalLQTYOwnedBeforeDeposit;
+                outputValueA = (totalSupply * _inputValue) / totalLQTYOwnedBeforeDeposit;
             }
             _mint(address(this), outputValueA);
-        } else if (inputAssetA.erc20Address == address(this) && outputAssetA.erc20Address == LQTY) {
+        } else if (_inputAssetA.erc20Address == address(this) && _outputAssetA.erc20Address == LQTY) {
             // Withdrawal
             // Claim rewards
             STAKING_CONTRACT.unstake(0);
-            swapRewardsToLQTYAndStake();
+            _swapRewardsToLQTYAndStake();
 
             // STAKING_CONTRACT.stakes(address(this)) / this.totalSupply() = how much LQTY is one SB
             // outputValueA = amount of LQTY to be withdrawn and sent to rollupProcessor
-            outputValueA = (STAKING_CONTRACT.stakes(address(this)) * inputValue) / this.totalSupply();
+            outputValueA = (STAKING_CONTRACT.stakes(address(this)) * _inputValue) / this.totalSupply();
             STAKING_CONTRACT.unstake(outputValueA);
-            _burn(address(this), inputValue);
+            _burn(address(this), _inputValue);
         } else {
             revert IncorrectInput();
         }
@@ -153,6 +154,7 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
     )
         external
         payable
+        override(IDefiBridge)
         returns (
             uint256,
             uint256,
@@ -165,7 +167,7 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
     /**
      * @dev See {IERC20-totalSupply}.
      */
-    function totalSupply() public view override returns (uint256) {
+    function totalSupply() public view override(ERC20) returns (uint256) {
         return super.totalSupply() - DUST;
     }
 
@@ -176,7 +178,7 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
      * liquidation rewards (ETH) to LQTY as well, I will first swap LUSD to WETH through USDC and then swap it all
      * to LQTY
      */
-    function swapRewardsToLQTYAndStake() internal {
+    function _swapRewardsToLQTYAndStake() internal {
         uint256 lusdBalance = IERC20(LUSD).balanceOf(address(this));
         if (lusdBalance > DUST) {
             UNI_ROUTER.exactInput(
