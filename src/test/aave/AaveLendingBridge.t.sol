@@ -123,6 +123,8 @@ contract AaveLendingTest is TestHelper {
             _addTokenToMapping();
             aaveLendingBridge.performApprovals(address(tokens[i]));
         }
+        vm.expectRevert(bytes(Errors.ZK_TOKEN_DONT_EXISTS));
+        aaveLendingBridge.performApprovals(address(0));
     }
 
     function testAddTokensToMappingFromV2() public {
