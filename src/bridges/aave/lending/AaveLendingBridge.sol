@@ -96,15 +96,20 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         emit UnderlyingAssetListed(underlyingAsset, zkAToken);
     }
 
+    /**
+     * @notice Approve Aave and RollupProcessor to pull underlying assets
+     * And RollupProcessor to pull zkAToken accounting token
+     * @dev The contract is not expected to hold any underlying assets while not inside convert.
+     * Therefore we can infinite approve the used parties to save gas of future calls.
+     * @dev Will revert if the underlying asset do not have a matching zkAToken
+     * @param underlyingAsset The address of the underlying asset
+     */
     function performApprovals(address underlyingAsset) public override(IAaveLendingBridge) {
         address zkAToken = underlyingToZkAToken[underlyingAsset];
         require(zkAToken != address(0), Errors.ZK_TOKEN_DONT_EXISTS);
 
         // SafeApprove not needed because we know the zkAToken follows IERC20;
         IERC20(zkAToken).approve(ROLLUP_PROCESSOR, type(uint256).max);
-
-        // Contract is not expected to hold any underlying assets while not inside convert.
-        // Can infinite approve the used parties to save gas of future calls.
 
         // Approve the Aave Pool Proxy to pull underlying asset, using safeApproval to handle non ERC20 compliant tokens
         address pool = ADDRESSES_PROVIDER.getLendingPool();
