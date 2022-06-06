@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import {ILendingPoolAddressesProvider} from './../../imports/interfaces/ILendingPoolAddressesProvider.sol';
+import {ILendingPoolAddressesProvider} from "./../../imports/interfaces/ILendingPoolAddressesProvider.sol";
 
 interface IAaveLendingBridge {
     function setUnderlyingToZkAToken(address underlyingAsset, address aTokenAddress) external;
+
+    function performApprovals(address underlyingAsset) external;
 
     function ROLLUP_PROCESSOR() external view returns (address);
 
