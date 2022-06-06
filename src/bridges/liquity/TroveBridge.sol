@@ -51,6 +51,10 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
     ITroveManager public constant TROVE_MANAGER = ITroveManager(0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2);
     ISortedTroves public constant SORTED_TROVES = ISortedTroves(0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6);
 
+    // The amount of dust to leave in the contract
+    // Optimization based on EIP-1087
+    uint256 public constant DUST = 1;
+
     address public immutable ROLLUP_PROCESSOR;
     uint256 public immutable INITIAL_ICR;
 
@@ -76,6 +80,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
     {
         ROLLUP_PROCESSOR = _rollupProcessor;
         INITIAL_ICR = _initialICRPerc * 1e16;
+        _mint(address(this), DUST);
     }
 
     receive() external payable {}
@@ -108,7 +113,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         BORROWER_OPERATIONS.openTrove{value: msg.value}(_maxFee, amtToBorrow, _upperHint, _lowerHint);
         (uint256 debtAfter, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
 
-        IERC20(LUSD).transfer(msg.sender, IERC20(LUSD).balanceOf(address(this)));
+        IERC20(LUSD).transfer(msg.sender, IERC20(LUSD).balanceOf(address(this)) - DUST);
         // I mint TB token to msg.sender to be able to track collateral ownership. Minted amount equals debt increase.
         _mint(msg.sender, debtAfter - debtBefore);
     }
@@ -290,5 +295,12 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
                 amtToBorrow = (amtToBorrow * 1e18) / (borrowingRate + 1e18);
             }
         }
+    }
+
+    /**
+     * @dev See {IERC20-totalSupply}.
+     */
+    function totalSupply() public view override returns (uint256) {
+        return super.totalSupply() - DUST;
     }
 }

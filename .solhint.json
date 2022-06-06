@@ -11,6 +11,10 @@
     "private-func-leading-underscore": ["warn"],
     "private-vars-no-leading-underscore": ["warn"],
     "func-param-name-leading-underscore": ["warn"],
-    "custom-error-over-require": ["warn"]
+    "func-param-name-mixedcase": ["warn"],
+    "custom-error-over-require": ["warn"],
+    "strict-override": ["warn"],
+    "strict-import": ["warn"],
+    "ordering": ["warn"]
   }
 }
