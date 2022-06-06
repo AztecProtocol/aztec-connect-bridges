@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.4;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -21,7 +21,6 @@ import {AztecTypes} from "../../../aztec/AztecTypes.sol";
 
 import {IAaveLendingBridge} from "./interfaces/IAaveLendingBridge.sol";
 
-import {Errors} from "./libraries/Errors.sol";
 import {AccountingToken} from "./../AccountingToken.sol";
 
 /**
@@ -32,6 +31,21 @@ import {AccountingToken} from "./../AccountingToken.sol";
  */
 contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
     using SafeERC20 for IERC20;
+
+    error InvalidCaller();
+    error InputAssetAAndOutputAssetAIsEth();
+    error InputAssetANotERC20OrEth();
+    error OutputAssetANotERC20OrEth();
+    error InputAssetBNotEmpty();
+    error OutputAssetBNotEmpty();
+    error InputAssetInvalid();
+    error OutputAssetInvalid();
+    error InputAssetNotEqZkAToken();
+    error InvalidAToken();
+    error ZkTokenAlreadyExists();
+    error ZkTokenDontExist();
+    error ZeroValue();
+    error AsyncDisabled();
 
     event UnderlyingAssetListed(address underlyingAsset, address zkAToken);
 
@@ -45,7 +59,9 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
     mapping(address => address) public underlyingToZkAToken;
 
     modifier onlyConfigurator() {
-        require(msg.sender == CONFIGURATOR, Errors.INVALID_CALLER);
+        if (msg.sender != CONFIGURATOR) {
+            revert InvalidCaller();
+        }
         _;
     }
 
@@ -78,9 +94,15 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         override(IAaveLendingBridge)
         onlyConfigurator
     {
-        require(underlyingToZkAToken[underlyingAsset] == address(0), Errors.ZK_TOKEN_ALREADY_SET);
-        require(aTokenAddress != address(0), Errors.INVALID_ATOKEN);
-        require(aTokenAddress != underlyingAsset, Errors.INVALID_ATOKEN);
+        if (underlyingToZkAToken[underlyingAsset] != address(0)) {
+            revert ZkTokenAlreadyExists();
+        }
+        if (aTokenAddress == address(0)) {
+            revert InvalidAToken();
+        }
+        if (aTokenAddress == underlyingAsset) {
+            revert InvalidAToken();
+        }
 
         IERC20Metadata aToken = IERC20Metadata(aTokenAddress);
 
@@ -106,7 +128,9 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
      */
     function performApprovals(address underlyingAsset) public override(IAaveLendingBridge) {
         address zkAToken = underlyingToZkAToken[underlyingAsset];
-        require(zkAToken != address(0), Errors.ZK_TOKEN_DONT_EXISTS);
+        if (underlyingToZkAToken[underlyingAsset] == address(0)) {
+            revert ZkTokenDontExist();
+        }
 
         // SafeApprove not needed because we know the zkAToken follows IERC20;
         IERC20(zkAToken).approve(ROLLUP_PROCESSOR, type(uint256).max);
@@ -202,7 +226,9 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         // Compute scaledAmount rounded down. Aave uses rayDiv which can round up and down (at 0.5).
         // For consistency we round down.
         uint256 scaledAmount = (amount * 1e27) / pool.getReserveNormalizedIncome(underlyingAsset);
-        require(scaledAmount > 0, Errors.ZERO_VALUE);
+        if (scaledAmount == 0) {
+            revert ZeroValue();
+        }
 
         pool.deposit(underlyingAsset, amount, address(this), 0);
 
@@ -242,7 +268,9 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         // Compute the underlying amount rounded down. Aave uses rayMul which can round up and down (at 0.5)
         // For consistency we round down. Will leave aToken dust.
         uint256 underlyingAmount = (scaledAmount * pool.getReserveNormalizedIncome(underlyingAsset)) / 1e27;
-        require(underlyingAmount > 0, Errors.ZERO_VALUE);
+        if (underlyingAmount == 0) {
+            revert ZeroValue();
+        }
 
         /// Return value by pool::withdraw() equal to underlyingAmount, unless underlying amount == type(uint256).max;
         uint256 outputValue = pool.withdraw(underlyingAsset, underlyingAmount, address(this));
@@ -288,8 +316,7 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
             bool
         )
     {
-        require(false, "Not implemented");
-        return (0, 0, false);
+        revert AsyncDisabled();
     }
 
     /**
@@ -320,24 +347,33 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
             bool
         )
     {
-        require(msg.sender == ROLLUP_PROCESSOR, Errors.INVALID_CALLER);
-        require(
-            !(inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
-                outputAssetA.assetType == AztecTypes.AztecAssetType.ETH),
-            Errors.INPUT_ASSET_A_AND_OUTPUT_ASSET_A_IS_ETH
-        );
-        require(
-            inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 ||
-                inputAssetA.assetType == AztecTypes.AztecAssetType.ETH,
-            Errors.INPUT_ASSET_A_NOT_ERC20_OR_ETH
-        );
-        require(
-            outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 ||
-                outputAssetA.assetType == AztecTypes.AztecAssetType.ETH,
-            Errors.OUTPUT_ASSET_A_NOT_ERC20_OR_ETH
-        );
-        require(inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED, Errors.INPUT_ASSET_B_NOT_EMPTY);
-        require(outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED, Errors.OUTPUT_ASSET_B_NOT_EMPTY);
+        if (msg.sender != ROLLUP_PROCESSOR) {
+            revert InvalidCaller();
+        }
+        if (
+            inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
+            outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
+        ) {
+            revert InputAssetAAndOutputAssetAIsEth();
+        }
+        if (
+            !(inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 ||
+                inputAssetA.assetType == AztecTypes.AztecAssetType.ETH)
+        ) {
+            revert InputAssetANotERC20OrEth();
+        }
+        if (
+            !(outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 ||
+                outputAssetA.assetType == AztecTypes.AztecAssetType.ETH)
+        ) {
+            revert OutputAssetANotERC20OrEth();
+        }
+        if (inputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED) {
+            revert InputAssetBNotEmpty();
+        }
+        if (outputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED) {
+            revert OutputAssetBNotEmpty();
+        }
 
         address inputAsset = inputAssetA.assetType == AztecTypes.AztecAssetType.ETH
             ? address(WETH)
@@ -347,8 +383,12 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
             ? address(WETH)
             : outputAssetA.erc20Address;
 
-        require(inputAsset != address(0), Errors.INPUT_ASSET_INVALID);
-        require(outputAsset != address(0), Errors.OUTPUT_ASSET_INVALID);
+        if (inputAsset == address(0)) {
+            revert InputAssetInvalid();
+        }
+        if (outputAsset == address(0)) {
+            revert OutputAssetInvalid();
+        }
 
         address underlying;
         address zkAToken;
@@ -357,7 +397,9 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         if (zkATokenCandidate == address(0)) {
             underlying = outputAsset;
             zkAToken = underlyingToZkAToken[underlying];
-            require(inputAsset == zkAToken, Errors.INPUT_ASSET_NOT_EQ_ZK_ATOKEN);
+            if (inputAsset != zkAToken) {
+                revert InputAssetNotEqZkAToken();
+            }
         } else {
             underlying = inputAsset;
             zkAToken = zkATokenCandidate;
