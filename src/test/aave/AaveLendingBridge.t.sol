@@ -1,34 +1,34 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {IERC20Metadata} from '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol';
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 // Aztec specific imports
-import {DefiBridgeProxy} from '../../aztec/DefiBridgeProxy.sol';
-import {RollupProcessor} from '../../aztec/RollupProcessor.sol';
-import {AztecTypes} from '../../aztec/AztecTypes.sol';
-import {IDefiBridge} from './../../interfaces/IDefiBridge.sol';
+import {DefiBridgeProxy} from "../../aztec/DefiBridgeProxy.sol";
+import {RollupProcessor} from "../../aztec/RollupProcessor.sol";
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {IDefiBridge} from "./../../interfaces/IDefiBridge.sol";
 
 // Aave-specific imports
-import {IWETH9} from '../../bridges/aave/imports/interfaces/IWETH9.sol';
-import {ILendingPool} from '../../bridges/aave/imports/interfaces/ILendingPool.sol';
-import {ILendingPoolAddressesProvider} from '../../bridges/aave/imports/interfaces/ILendingPoolAddressesProvider.sol';
-import {IAaveIncentivesController} from '../../bridges/aave/imports/interfaces/IAaveIncentivesController.sol';
-import {IAToken} from '../../bridges/aave/imports/interfaces/IAToken.sol';
+import {IWETH9} from "../../bridges/aave/imports/interfaces/IWETH9.sol";
+import {ILendingPool} from "../../bridges/aave/imports/interfaces/ILendingPool.sol";
+import {ILendingPoolAddressesProvider} from "../../bridges/aave/imports/interfaces/ILendingPoolAddressesProvider.sol";
+import {IAaveIncentivesController} from "../../bridges/aave/imports/interfaces/IAaveIncentivesController.sol";
+import {IAToken} from "../../bridges/aave/imports/interfaces/IAToken.sol";
 
-import {DataTypes} from '../../bridges/aave/imports/libraries/DataTypes.sol';
-import {WadRayMath} from '../../bridges/aave/imports/libraries/WadRayMath.sol';
+import {DataTypes} from "../../bridges/aave/imports/libraries/DataTypes.sol";
+import {WadRayMath} from "../../bridges/aave/imports/libraries/WadRayMath.sol";
 
-import {IAaveLendingBridge} from '../../bridges/aave/lending/interfaces/IAaveLendingBridge.sol';
-import {IAaveLendingBridgeConfigurator} from '../../bridges/aave/lending/interfaces/IAaveLendingBridgeConfigurator.sol';
-import {AaveLendingBridge} from '../../bridges/aave/lending/AaveLendingBridge.sol';
-import {AaveLendingBridgeConfigurator} from '../../bridges/aave/lending/AaveLendingBridgeConfigurator.sol';
-import {Errors} from '../../bridges/aave/lending/libraries/Errors.sol';
+import {IAaveLendingBridge} from "../../bridges/aave/lending/interfaces/IAaveLendingBridge.sol";
+import {IAaveLendingBridgeConfigurator} from "../../bridges/aave/lending/interfaces/IAaveLendingBridgeConfigurator.sol";
+import {AaveLendingBridge} from "../../bridges/aave/lending/AaveLendingBridge.sol";
+import {AaveLendingBridgeConfigurator} from "../../bridges/aave/lending/AaveLendingBridgeConfigurator.sol";
+import {Errors} from "../../bridges/aave/lending/libraries/Errors.sol";
 
 // Test specific imports
-import {AaveV3StorageEmulator} from './helpers/AaveV3StorageEmulator.sol';
-import {TestHelper} from './helpers/TestHelper.sol';
+import {AaveV3StorageEmulator} from "./helpers/AaveV3StorageEmulator.sol";
+import {TestHelper} from "./helpers/TestHelper.sol";
 
 library RoundingMath {
     function mulDiv(
@@ -66,7 +66,7 @@ contract AaveLendingTest is TestHelper {
 
     IAaveLendingBridge internal aaveLendingBridge;
     IAaveLendingBridgeConfigurator internal configurator;
-    bytes32 private constant LENDING_POOL = 'LENDING_POOL';
+    bytes32 private constant LENDING_POOL = "LENDING_POOL";
 
     IERC20 internal constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     IERC20 internal constant USDT = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7);
@@ -90,12 +90,12 @@ contract AaveLendingTest is TestHelper {
     }
 
     function _setupLabels() internal {
-        vm.label(address(DAI), 'DAI');
-        vm.label(address(USDT), 'USDT');
-        vm.label(address(USDC), 'USDC');
-        vm.label(address(WBTC), 'WBTC');
-        vm.label(address(WETH), 'WETH');
-        vm.label(address(pool), 'Pool');
+        vm.label(address(DAI), "DAI");
+        vm.label(address(USDT), "USDT");
+        vm.label(address(USDC), "USDC");
+        vm.label(address(WBTC), "WBTC");
+        vm.label(address(WETH), "WETH");
+        vm.label(address(pool), "Pool");
     }
 
     function _tokenSetup(IERC20 _token) internal {
@@ -117,8 +117,16 @@ contract AaveLendingTest is TestHelper {
         );
     }
 
+    function testReApproval() public {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            _tokenSetup(tokens[i]);
+            _addTokenToMapping();
+            aaveLendingBridge.performApprovals(address(tokens[i]));
+        }
+    }
+
     function testAddTokensToMappingFromV2() public {
-        emit log_named_address('Pool', address(pool));
+        emit log_named_address("Pool", address(pool));
         for (uint256 i = 0; i < tokens.length; i++) {
             _tokenSetup(tokens[i]);
             emit log_named_address(aToken.name(), address(aToken));
@@ -476,8 +484,8 @@ contract AaveLendingTest is TestHelper {
 
             Balances memory balancesAfter = _getBalances();
 
-            assertLt(balances.rollupZk, depositAmount, 'never entered, or entered at index = 1');
-            assertEq(balancesAfter.rollupZk, 0, 'Not exited with everything');
+            assertLt(balances.rollupZk, depositAmount, "never entered, or entered at index = 1");
+            assertEq(balancesAfter.rollupZk, 0, "Not exited with everything");
         }
     }
 
@@ -505,8 +513,8 @@ contract AaveLendingTest is TestHelper {
 
         Balances memory balancesAfter = _getBalances();
 
-        assertLt(balances.rollupZk, depositAmount, 'never entered, or entered at index = 1');
-        assertEq(balancesAfter.rollupZk, 0, 'Not exited with everything');
+        assertLt(balances.rollupZk, depositAmount, "never entered, or entered at index = 1");
+        assertEq(balancesAfter.rollupZk, 0, "Not exited with everything");
     }
 
     function testExitCompletely(uint128 _depositAmount, uint16 timeDiff) public {
@@ -526,8 +534,8 @@ contract AaveLendingTest is TestHelper {
 
             Balances memory balancesAfter = _getBalances();
 
-            assertLt(balances.rollupZk, depositAmount, 'entered at index = 1 RAY with and no interest accrual');
-            assertEq(balancesAfter.rollupZk, 0, 'Not exited with everything');
+            assertLt(balances.rollupZk, depositAmount, "entered at index = 1 RAY with and no interest accrual");
+            assertEq(balancesAfter.rollupZk, 0, "Not exited with everything");
         }
     }
 
@@ -547,8 +555,8 @@ contract AaveLendingTest is TestHelper {
 
         Balances memory balancesAfter = _getBalances();
 
-        assertLt(balances.rollupZk, depositAmount, 'entered at index = 1 RAY with and no interest accrual');
-        assertEq(balancesAfter.rollupZk, 0, 'Not exited with everything');
+        assertLt(balances.rollupZk, depositAmount, "entered at index = 1 RAY with and no interest accrual");
+        assertEq(balancesAfter.rollupZk, 0, "Not exited with everything");
     }
 
     function testClaimRewardstokenNotConfigurator(uint128 depositAmount, uint16 timeDiff) public {
@@ -563,8 +571,8 @@ contract AaveLendingTest is TestHelper {
 
         vm.expectRevert(bytes(Errors.INVALID_CALLER));
         aaveLendingBridge.claimLiquidityRewards(address(INCENTIVES), assets, BENEFICIARY);
-        assertEq(STK_AAVE.balanceOf(address(aaveLendingBridge)), 0, 'The bridge received the rewards');
-        assertEq(STK_AAVE.balanceOf(address(BENEFICIARY)), 0, 'The BENEFICIARY received the rewards');
+        assertEq(STK_AAVE.balanceOf(address(aaveLendingBridge)), 0, "The bridge received the rewards");
+        assertEq(STK_AAVE.balanceOf(address(BENEFICIARY)), 0, "The BENEFICIARY received the rewards");
     }
 
     function testClaimRewardsTokens(uint128 depositAmount, uint16 timeDiff) public {
@@ -586,10 +594,14 @@ contract AaveLendingTest is TestHelper {
                 assets,
                 BENEFICIARY
             );
-            assertEq(STK_AAVE.balanceOf(address(aaveLendingBridge)), 0, 'The bridge received the rewards');
+            assertEq(STK_AAVE.balanceOf(address(aaveLendingBridge)), 0, "The bridge received the rewards");
 
             // The claiming of liquidity rewards is not always returning the actual value increase
-            assertApproxEqAbs(STK_AAVE.balanceOf(BENEFICIARY), expectedRewards + beneficiaryCurrentStakedAaveBalance, 2);
+            assertApproxEqAbs(
+                STK_AAVE.balanceOf(BENEFICIARY),
+                expectedRewards + beneficiaryCurrentStakedAaveBalance,
+                2
+            );
         }
     }
 
@@ -609,7 +621,7 @@ contract AaveLendingTest is TestHelper {
             assets,
             BENEFICIARY
         );
-        assertEq(STK_AAVE.balanceOf(address(aaveLendingBridge)), 0, 'The bridge received the rewards');
+        assertEq(STK_AAVE.balanceOf(address(aaveLendingBridge)), 0, "The bridge received the rewards");
 
         // The claiming of liquidity rewards is not always returning the actual value increase
         assertApproxEqAbs(STK_AAVE.balanceOf(BENEFICIARY), expectedRewards + beneficiaryCurrentStakedAaveBalance, 2);
@@ -660,12 +672,12 @@ contract AaveLendingTest is TestHelper {
         uint256 expectedTokenAfter = balancesAfter.rollupZk.rayMul(pool.getReserveNormalizedIncome(address(token)));
 
         if (timeDiff > 0) {
-            assertGt(expectedTokenAfter, expectedTokenBefore, 'Did not earn any interest');
+            assertGt(expectedTokenAfter, expectedTokenBefore, "Did not earn any interest");
         }
 
         // As we are rounding down. There will be excess dust in the bridge. Ensure that there is dust and that it is small
-        assertLe(expectedTokenBefore, balancesBefore.bridgeAToken, 'Bridge aToken not matching before time');
-        assertLe(expectedTokenAfter, balancesAfter.bridgeAToken, 'Bridge aToken not matching after time');
+        assertLe(expectedTokenBefore, balancesBefore.bridgeAToken, "Bridge aToken not matching before time");
+        assertLe(expectedTokenAfter, balancesAfter.bridgeAToken, "Bridge aToken not matching after time");
 
         assertApproxEqAbs(expectedTokenBefore, balancesBefore.bridgeAToken, 3);
         assertApproxEqAbs(expectedTokenAfter, balancesAfter.bridgeAToken, 3);
@@ -702,24 +714,24 @@ contract AaveLendingTest is TestHelper {
             0
         );
 
-        assertFalse(isAsync, 'Convert is async');
-        assertEq(outputValueB, 0, 'OutputValue B not zero');
+        assertFalse(isAsync, "Convert is async");
+        assertEq(outputValueB, 0, "OutputValue B not zero");
 
         Balances memory balanceAfter = _getBalances();
 
         uint256 index = pool.getReserveNormalizedIncome(address(token));
         {
             uint256 scaledDiffZk = depositAmount.mulDiv(1e27, index);
-            assertEq(scaledDiffZk, outputValueA, 'Output value and zk balance not matching');
+            assertEq(scaledDiffZk, outputValueA, "Output value and zk balance not matching");
 
             assertEq(
                 balanceAfter.rollupZk - balanceBefore.rollupZk,
                 scaledDiffZk,
-                'Scaled zkbalance balance change not matching'
+                "Scaled zkbalance balance change not matching"
             );
 
             uint256 expectedScaledBalanceAfter = balanceBefore.rollupZk + scaledDiffZk;
-            assertEq(expectedScaledBalanceAfter, balanceAfter.rollupZk, 'aToken balance not matching');
+            assertEq(expectedScaledBalanceAfter, balanceAfter.rollupZk, "aToken balance not matching");
         }
 
         {
@@ -727,25 +739,25 @@ contract AaveLendingTest is TestHelper {
             assertEq(
                 balanceAfter.bridgeScaledAToken - balanceBefore.bridgeScaledAToken,
                 scaledDiffAToken,
-                'Scaled atoken balance change not matching'
+                "Scaled atoken balance change not matching"
             );
 
-            assertLe(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, 'Scaled balances before not matching');
-            assertLe(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, 'Scaled balances after not matching');
+            assertLe(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, "Scaled balances before not matching");
+            assertLe(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, "Scaled balances after not matching");
 
             uint256 expectedScaledATokenBalanceAfter = balanceBefore.bridgeScaledAToken + scaledDiffAToken;
             uint256 expectedATokenBalanceAfter = expectedScaledATokenBalanceAfter.rayMul(index);
             assertEq(
                 expectedScaledATokenBalanceAfter,
                 balanceAfter.bridgeScaledAToken,
-                'scaled aToken balance not matching'
+                "scaled aToken balance not matching"
             );
-            assertEq(expectedATokenBalanceAfter, balanceAfter.bridgeAToken, 'aToken balance not matching');
+            assertEq(expectedATokenBalanceAfter, balanceAfter.bridgeAToken, "aToken balance not matching");
         }
 
-        assertEq(balanceBefore.rollupToken - balanceAfter.rollupToken, depositAmount, 'Processor token not matching');
-        assertEq(balanceBefore.bridgeToken, 0, 'Bridge token balance before not matching');
-        assertEq(balanceAfter.bridgeToken, 0, 'Bridge token balance after not matching');
+        assertEq(balanceBefore.rollupToken - balanceAfter.rollupToken, depositAmount, "Processor token not matching");
+        assertEq(balanceBefore.bridgeToken, 0, "Bridge token balance before not matching");
+        assertEq(balanceAfter.bridgeToken, 0, "Bridge token balance after not matching");
     }
 
     function _enterWithEther(uint256 amount) public {
@@ -779,24 +791,24 @@ contract AaveLendingTest is TestHelper {
             1,
             0
         );
-        assertFalse(isAsync, 'Convert is async');
-        assertEq(outputValueB, 0, 'OutputValue B not zero');
+        assertFalse(isAsync, "Convert is async");
+        assertEq(outputValueB, 0, "OutputValue B not zero");
 
         Balances memory balanceAfter = _getBalances();
 
         uint256 index = pool.getReserveNormalizedIncome(address(token));
         {
             uint256 scaledDiffZk = depositAmount.mulDiv(1e27, index);
-            assertEq(scaledDiffZk, outputValueA, 'Output value and zk balance not matching');
+            assertEq(scaledDiffZk, outputValueA, "Output value and zk balance not matching");
 
             assertEq(
                 balanceAfter.rollupZk - balanceBefore.rollupZk,
                 scaledDiffZk,
-                'Scaled zkbalance balance change not matching'
+                "Scaled zkbalance balance change not matching"
             );
 
             uint256 expectedScaledBalanceAfter = balanceBefore.rollupZk + scaledDiffZk;
-            assertEq(expectedScaledBalanceAfter, balanceAfter.rollupZk, 'aToken balance not matching');
+            assertEq(expectedScaledBalanceAfter, balanceAfter.rollupZk, "aToken balance not matching");
         }
 
         {
@@ -804,25 +816,25 @@ contract AaveLendingTest is TestHelper {
             assertEq(
                 balanceAfter.bridgeScaledAToken - balanceBefore.bridgeScaledAToken,
                 scaledDiffAToken,
-                'Scaled atoken balance change not matching'
+                "Scaled atoken balance change not matching"
             );
 
-            assertLe(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, 'Scaled balances before not matching');
-            assertLe(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, 'Scaled balances after not matching');
+            assertLe(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, "Scaled balances before not matching");
+            assertLe(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, "Scaled balances after not matching");
 
             uint256 expectedScaledATokenBalanceAfter = balanceBefore.bridgeScaledAToken + scaledDiffAToken;
             uint256 expectedATokenBalanceAfter = expectedScaledATokenBalanceAfter.rayMul(index);
             assertEq(
                 expectedScaledATokenBalanceAfter,
                 balanceAfter.bridgeScaledAToken,
-                'scaled aToken balance not matching'
+                "scaled aToken balance not matching"
             );
-            assertEq(expectedATokenBalanceAfter, balanceAfter.bridgeAToken, 'aToken balance not matching');
+            assertEq(expectedATokenBalanceAfter, balanceAfter.bridgeAToken, "aToken balance not matching");
         }
 
-        assertEq(balanceBefore.rollupEth - balanceAfter.rollupEth, depositAmount, 'Processor token not matching');
-        assertEq(balanceBefore.bridgeEth, 0, 'Bridge eth balance before not matching');
-        assertEq(balanceAfter.bridgeEth, 0, 'Bridge eth balance after not matching');
+        assertEq(balanceBefore.rollupEth - balanceAfter.rollupEth, depositAmount, "Processor token not matching");
+        assertEq(balanceBefore.bridgeEth, 0, "Bridge eth balance before not matching");
+        assertEq(balanceAfter.bridgeEth, 0, "Bridge eth balance after not matching");
     }
 
     struct exitWithTokenParams {
@@ -865,8 +877,8 @@ contract AaveLendingTest is TestHelper {
             2,
             0
         );
-        assertFalse(isAsync, 'Convert is async');
-        assertEq(outputValueB, 0, 'OutputValue B not zero');
+        assertFalse(isAsync, "Convert is async");
+        assertEq(outputValueB, 0, "OutputValue B not zero");
 
         Balances memory balanceAfter = _getBalances();
 
@@ -877,21 +889,21 @@ contract AaveLendingTest is TestHelper {
         vars.expectedScaledATokenBalanceAfter = balanceBefore.bridgeScaledAToken - vars.aaveInnerScaledChange;
         vars.expectedATokenBalanceAfter = vars.expectedScaledATokenBalanceAfter.rayMul(vars.index);
 
-        assertEq(vars.innerATokenWithdraw, outputValueA, 'Output token does not match expected output');
+        assertEq(vars.innerATokenWithdraw, outputValueA, "Output token does not match expected output");
         // Ensure that there are at least as much scaled aToken as zkAToken.
-        assertLe(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, 'Scaled balances before not matching');
-        assertLe(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, 'Scaled balances after not matching');
+        assertLe(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, "Scaled balances before not matching");
+        assertLe(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, "Scaled balances after not matching");
 
         assertEq(
             vars.expectedScaledATokenBalanceAfter,
             balanceAfter.bridgeScaledAToken,
-            'Scaled balance after not matching'
+            "Scaled balance after not matching"
         );
-        assertEq(balanceAfter.rollupZk, vars.expectedScaledBalanceAfter, 'Scaled balance after not matching');
+        assertEq(balanceAfter.rollupZk, vars.expectedScaledBalanceAfter, "Scaled balance after not matching");
         assertEq(
             balanceBefore.rollupZk - balanceAfter.rollupZk,
             withdrawAmount,
-            'Change in zk balance is equal to deposit amount'
+            "Change in zk balance is equal to deposit amount"
         );
         assertEq(
             balanceAfter.bridgeAToken,
@@ -936,8 +948,8 @@ contract AaveLendingTest is TestHelper {
             2,
             0
         );
-        assertFalse(isAsync, 'Convert is async');
-        assertEq(outputValueB, 0, 'OutputValue B not zero');
+        assertFalse(isAsync, "Convert is async");
+        assertEq(outputValueB, 0, "OutputValue B not zero");
 
         Balances memory balanceAfter = _getBalances();
 
@@ -949,21 +961,21 @@ contract AaveLendingTest is TestHelper {
         vars.expectedScaledATokenBalanceAfter = balanceBefore.bridgeScaledAToken - vars.aaveInnerScaledChange;
         vars.expectedATokenBalanceAfter = vars.expectedScaledATokenBalanceAfter.rayMul(vars.index);
 
-        assertEq(vars.innerATokenWithdraw, outputValueA, 'Output token does not match expected output');
+        assertEq(vars.innerATokenWithdraw, outputValueA, "Output token does not match expected output");
         // Ensure that there are at least as much scaled aToken as zkAToken.
-        assertLe(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, 'Scaled balances before not matching');
-        assertLe(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, 'Scaled balances after not matching');
+        assertLe(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, "Scaled balances before not matching");
+        assertLe(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, "Scaled balances after not matching");
 
         assertEq(
             vars.expectedScaledATokenBalanceAfter,
             balanceAfter.bridgeScaledAToken,
-            'Scaled balance after not matching'
+            "Scaled balance after not matching"
         );
-        assertEq(balanceAfter.rollupZk, vars.expectedScaledBalanceAfter, 'Scaled balance after not matching');
+        assertEq(balanceAfter.rollupZk, vars.expectedScaledBalanceAfter, "Scaled balance after not matching");
         assertEq(
             balanceBefore.rollupZk - balanceAfter.rollupZk,
             withdrawAmount,
-            'Change in zk balance is equal to deposit amount'
+            "Change in zk balance is equal to deposit amount"
         );
         assertEq(
             balanceAfter.bridgeAToken,
@@ -981,8 +993,8 @@ contract AaveLendingTest is TestHelper {
         _addTokenPool();
         IERC20Metadata zkToken = IERC20Metadata(aaveLendingBridge.underlyingToZkAToken(address(token)));
 
-        string memory name = string(abi.encodePacked('ZK-', aToken.name()));
-        string memory symbol = string(abi.encodePacked('ZK-', aToken.symbol()));
+        string memory name = string(abi.encodePacked("ZK-", aToken.name()));
+        string memory symbol = string(abi.encodePacked("ZK-", aToken.symbol()));
 
         assertEq(zkToken.symbol(), symbol, "The zkAToken token symbol don't match");
         assertEq(zkToken.name(), name, "The zkAToken token name don't match");
@@ -997,7 +1009,7 @@ contract AaveLendingTest is TestHelper {
         aaveLendingBridge.setUnderlyingToZkAToken(address(token), address(token));
 
         // Add as invalid caller (revert)
-        vm.expectRevert('Ownable: caller is not the owner');
+        vm.expectRevert("Ownable: caller is not the owner");
         vm.prank(address(0x1));
         configurator.addPoolFromV2(address(aaveLendingBridge), address(token));
 
@@ -1026,7 +1038,7 @@ contract AaveLendingTest is TestHelper {
 
         bytes memory inputData = abi.encodeWithSelector(0x35ea6a75, address(token));
         (bool success, bytes memory mockData) = newCodeAddress.call(inputData);
-        require(success, 'Cannot create mock data');
+        require(success, "Cannot create mock data");
 
         vm.prank(ADDRESSES_PROVIDER.owner());
         ADDRESSES_PROVIDER.setAddress(LENDING_POOL, newCodeAddress);
@@ -1047,7 +1059,7 @@ contract AaveLendingTest is TestHelper {
 
         // Add as invalid caller (revert);
         vm.mockCall(lendingPool, inputData, mockData);
-        vm.expectRevert('Ownable: caller is not the owner');
+        vm.expectRevert("Ownable: caller is not the owner");
         vm.prank(address(0x01));
         configurator.addPoolFromV3(address(aaveLendingBridge), address(token));
 
@@ -1062,6 +1074,6 @@ contract AaveLendingTest is TestHelper {
 
         vm.prank(ADDRESSES_PROVIDER.owner());
         ADDRESSES_PROVIDER.setAddress(LENDING_POOL, oldPool);
-        assertEq(ADDRESSES_PROVIDER.getLendingPool(), oldPool, 'Pool not reset');
+        assertEq(ADDRESSES_PROVIDER.getLendingPool(), oldPool, "Pool not reset");
     }
 }

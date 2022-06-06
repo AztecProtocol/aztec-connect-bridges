@@ -69,10 +69,15 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
      * Also, the underlying asset MUST NOT be a rebasing token, as scaled balance computation differs from standard.
      * These properties must be enforced by the configurator.
      * @dev Underlying assets that already is supported cannot be added again.
+     * @dev Approving RollupProcessor and Aave to pull listed asset and zkAToken
      * @param underlyingAsset The address of the underlying asset
      * @param aTokenAddress The address of the aToken, only used to define name, symbol and decimals for the zkatoken.
      */
-    function setUnderlyingToZkAToken(address underlyingAsset, address aTokenAddress) external onlyConfigurator {
+    function setUnderlyingToZkAToken(address underlyingAsset, address aTokenAddress)
+        external
+        override(IAaveLendingBridge)
+        onlyConfigurator
+    {
         require(underlyingToZkAToken[underlyingAsset] == address(0), Errors.ZK_TOKEN_ALREADY_SET);
         require(aTokenAddress != address(0), Errors.INVALID_ATOKEN);
         require(aTokenAddress != underlyingAsset, Errors.INVALID_ATOKEN);
@@ -86,7 +91,29 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
 
         underlyingToZkAToken[underlyingAsset] = zkAToken;
 
+        performApprovals(underlyingAsset);
+
         emit UnderlyingAssetListed(underlyingAsset, zkAToken);
+    }
+
+    function performApprovals(address underlyingAsset) public override(IAaveLendingBridge) {
+        address zkAToken = underlyingToZkAToken[underlyingAsset];
+        require(zkAToken != address(0), Errors.ZK_TOKEN_DONT_EXISTS);
+
+        // SafeApprove not needed because we know the zkAToken follows IERC20;
+        IERC20(zkAToken).approve(ROLLUP_PROCESSOR, type(uint256).max);
+
+        // Contract is not expected to hold any underlying assets while not inside convert.
+        // Can infinite approve the used parties to save gas of future calls.
+
+        // Approve the Aave Pool Proxy to pull underlying asset, using safeApproval to handle non ERC20 compliant tokens
+        address pool = ADDRESSES_PROVIDER.getLendingPool();
+        IERC20(underlyingAsset).safeApprove(pool, 0);
+        IERC20(underlyingAsset).safeApprove(pool, type(uint256).max);
+
+        // Approve the RollupProcessor to pull underlying asset, using safeApproval to handle non ERC20 compliant tokens
+        IERC20(underlyingAsset).safeApprove(ROLLUP_PROCESSOR, 0);
+        IERC20(underlyingAsset).safeApprove(ROLLUP_PROCESSOR, type(uint256).max);
     }
 
     /**
@@ -158,10 +185,8 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
          * Interaction flow:
          * 0. If receiving ETH, wrap it such that WETH can be deposited
          * 1. Fetch current liquidity index from Aave and compute scaled amount
-         * 2. Approve underlying asset to be deposited into Aave
-         * 3. Deposit assets into Aave (receives aUnderlyingAsset in return)
-         * 4. Mint zkATokens equal to scaled amount
-         * 5. Approve ROLLUP_PROCESSOR to pull funds
+         * 2. Deposit assets into Aave (receives aUnderlyingAsset in return)
+         * 3. Mint zkATokens equal to scaled amount
          */
 
         if (isEth) {
@@ -174,12 +199,10 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         uint256 scaledAmount = (amount * 1e27) / pool.getReserveNormalizedIncome(underlyingAsset);
         require(scaledAmount > 0, Errors.ZERO_VALUE);
 
-        IERC20(underlyingAsset).safeApprove(address(pool), amount);
         pool.deposit(underlyingAsset, amount, address(this), 0);
 
         IAccountingToken zkAToken = IAccountingToken(zkATokenAddress);
         zkAToken.mint(address(this), scaledAmount);
-        zkAToken.approve(ROLLUP_PROCESSOR, scaledAmount);
 
         return scaledAmount;
     }
@@ -205,7 +228,6 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
          * 1. Compute the amount of underlying assets to withdraw
          * 2. Withdraw from the Aave pool
          * 3. If underlyingAsset is supposed to be ETH, unwrap WETH
-         * 4. Approve underlying asset to be pulled by ROLLUP_PROCESSOR or transfer ETH
          * Exit may fail if insufficient liquidity is available in the Aave pool.
          */
 
@@ -215,7 +237,7 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         // Compute the underlying amount rounded down. Aave uses rayMul which can round up and down (at 0.5)
         // For consistency we round down. Will leave aToken dust.
         uint256 underlyingAmount = (scaledAmount * pool.getReserveNormalizedIncome(underlyingAsset)) / 1e27;
-        require(scaledAmount > 0, Errors.ZERO_VALUE);
+        require(underlyingAmount > 0, Errors.ZERO_VALUE);
 
         /// Return value by pool::withdraw() equal to underlyingAmount, unless underlying amount == type(uint256).max;
         uint256 outputValue = pool.withdraw(underlyingAsset, underlyingAmount, address(this));
@@ -223,8 +245,6 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         if (isEth) {
             WETH.withdraw(outputValue);
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValue}(interactionNonce);
-        } else {
-            IERC20(underlyingAsset).safeApprove(ROLLUP_PROCESSOR, outputValue);
         }
 
         return outputValue;
