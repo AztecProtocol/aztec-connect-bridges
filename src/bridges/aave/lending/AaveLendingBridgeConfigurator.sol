@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.4;
 
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
-import {IAaveLendingBridgeConfigurator} from './interfaces/IAaveLendingBridgeConfigurator.sol';
-import {IAaveLendingBridge} from './interfaces/IAaveLendingBridge.sol';
-import {ILendingPool} from './../imports/interfaces/ILendingPool.sol';
-import {IPool} from './../imports/interfaces/IPool.sol';
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IAaveLendingBridgeConfigurator} from "./interfaces/IAaveLendingBridgeConfigurator.sol";
+import {IAaveLendingBridge} from "./interfaces/IAaveLendingBridge.sol";
+import {ILendingPool} from "./../imports/interfaces/ILendingPool.sol";
+import {IPool} from "./../imports/interfaces/IPool.sol";
 
 /**
  * @notice AaveLendingBridgeConfigurator implementation that is used to add new listings to the AaveLendingBridge
@@ -13,14 +13,6 @@ import {IPool} from './../imports/interfaces/IPool.sol';
  * @author Lasse Herskind
  */
 contract AaveLendingBridgeConfigurator is IAaveLendingBridgeConfigurator, Ownable {
-    function addNewPool(
-        address lendingBridge,
-        address underlyingAsset,
-        address aTokenAddress
-    ) public override(IAaveLendingBridgeConfigurator) onlyOwner {
-        IAaveLendingBridge(lendingBridge).setUnderlyingToZkAToken(underlyingAsset, aTokenAddress);
-    }
-
     function addPoolFromV2(address lendingBridge, address underlyingAsset)
         external
         override(IAaveLendingBridgeConfigurator)
@@ -52,5 +44,13 @@ contract AaveLendingBridgeConfigurator is IAaveLendingBridgeConfigurator, Ownabl
         address beneficiary
     ) external override(IAaveLendingBridgeConfigurator) onlyOwner returns (uint256) {
         return IAaveLendingBridge(lendingBridge).claimLiquidityRewards(incentivesController, assets, beneficiary);
+    }
+
+    function addNewPool(
+        address lendingBridge,
+        address underlyingAsset,
+        address aTokenAddress
+    ) public override(IAaveLendingBridgeConfigurator) onlyOwner {
+        IAaveLendingBridge(lendingBridge).setUnderlyingToZkAToken(underlyingAsset, aTokenAddress);
     }
 }

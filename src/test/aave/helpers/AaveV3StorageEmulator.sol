@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.4;
 
-import {ILendingPool} from '../../../bridges/aave/imports/interfaces/ILendingPool.sol';
-import {IPool} from '../../../bridges/aave/imports/interfaces/IPool.sol';
-import {DataTypes} from '../../../bridges/aave/imports/libraries/DataTypes.sol';
+import {ILendingPool} from "../../../bridges/aave/imports/interfaces/ILendingPool.sol";
+import {IPool} from "../../../bridges/aave/imports/interfaces/IPool.sol";
+import {DataTypes} from "../../../bridges/aave/imports/libraries/DataTypes.sol";
 
 contract AaveV3StorageEmulator is IPool {
     ILendingPool immutable POOL;
