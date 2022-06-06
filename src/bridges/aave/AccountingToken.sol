@@ -39,22 +39,22 @@ contract AccountingToken is IAccountingToken, ERC20Burnable {
     /**
      * @notice Mint tokens to address
      * @dev Only callable by the owner
-     * @param to The receiver of tokens
-     * @param amount The amount of tokens to mint
+     * @param _to The receiver of tokens
+     * @param _amount The amount of tokens to mint
      */
-    function mint(address to, uint256 amount) external override(IAccountingToken) {
+    function mint(address _to, uint256 _amount) external override(IAccountingToken) {
         if (msg.sender != OWNER) {
             revert InvalidCaller();
         }
-        _mint(to, amount);
+        _mint(_to, _amount);
     }
 
     /**
      * @notice Burn tokens of caller
      * @dev Included to satisfy interface
-     * @param amount The amount of tokens to burn from own account
+     * @param _amount The amount of tokens to burn from own account
      */
-    function burn(uint256 amount) public virtual override(IAccountingToken, ERC20Burnable) {
-        super.burn(amount);
+    function burn(uint256 _amount) public virtual override(IAccountingToken, ERC20Burnable) {
+        super.burn(_amount);
     }
 }
