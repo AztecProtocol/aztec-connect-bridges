@@ -44,8 +44,6 @@ contract AceOfZkBridge is IDefiBridge {
 
         IERC721(ACE_OF_ZK_NFT).transferFrom(NFT_HOLDER, ROLLUP_PROCESSOR, NFT_ID);
 
-        // IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: inputValue}(interactionNonce);
-
         return (0, 0, false);
     }
 
