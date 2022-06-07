@@ -118,7 +118,7 @@ contract VaultBridge is IDefiBridge, Ownable {
      *
      * @param vault address of erc4626 vault
      * @param token address of the vault
-     * @param amount amount of an shares to be redeemed
+     * @param amount amount of shares to be redeemed
      *
      */
     function exit(
