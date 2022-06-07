@@ -30,7 +30,7 @@ contract StabilityPoolBridgeTestInternal is TestUtil, StabilityPoolBridge(addres
         payable(address(0)).transfer(address(this).balance - 1 ether);
 
         uint256 depositedLUSDBeforeSwap = STABILITY_POOL.getCompoundedLUSDDeposit(address(this));
-        swapRewardsToLUSDAndDeposit();
+        _swapRewardsToLUSDAndDeposit();
         uint256 depositedLUSDAfterSwap = STABILITY_POOL.getCompoundedLUSDDeposit(address(this));
 
         // Verify that rewards were swapped for non-zero amount and correctly staked
