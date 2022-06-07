@@ -13,6 +13,7 @@ import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
 import {IBorrowerOperations} from "./interfaces/IBorrowerOperations.sol";
 import {ITroveManager} from "./interfaces/ITroveManager.sol";
 import {ISortedTroves} from "./interfaces/ISortedTroves.sol";
+import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 
 /**
  * @title Aztec Connect Bridge for opening and closing Liquity's troves
@@ -20,15 +21,19 @@ import {ISortedTroves} from "./interfaces/ISortedTroves.sol";
  * @notice You can use this contract to borrow and repay LUSD
  * @dev The contract inherits from OpenZeppelin's implementation of ERC20 token because token balances are used to track
  * the depositor's ownership of the assets controlled by the bridge contract. The token is called TroveBridge and
- * the token symbol is TB-[initial ICR] (ICR is an acronym for individual collateral ratio). 1 TB token always
- * represents 1 LUSD worth of debt. In case the trove is not closed by redemption or liquidation, users can withdraw
- * their collateral by supplying TB and an equal amount of LUSD to the bridge. 1 deployment of the bridge contract
- * controls 1 trove. The bridge keeps precise accounting of debt by making sure that no user can change the trove's ICR.
- * This means that when a price goes down the only way how a user can avoid liquidation penalty is to repay their debt.
+ * the token symbol is TB-[initial ICR] (ICR is an acronym for individual collateral ratio). 1 TB token represents
+ * 1 LUSD worth of debt if no redistribution took place (Liquity whitepaper section 4.2). If redistribution took place
+ * 1 TB corresponds to more than 1 LUSD. In case the trove is not closed by redemption or liquidation, users can
+ * withdraw their collateral by supplying TB and an equal amount of LUSD to the bridge. If 1 TB corresponds to more than
+ * 1 LUSD part of the ETH collateral withdrawn is swapped to LUSD and the output amount is repaid. This swap is
+ * necessary because it's impossible to deploy different amounts of _inputAssetA and _inputAssetB. 1 deployment
+ * of the bridge contract controls 1 trove. The bridge keeps precise accounting of debt by making sure that no user
+ * can change the trove's ICR. This means that when a price goes down the only way how a user can avoid liquidation
+ * penalty is to repay their debt.
  *
  * In case the trove gets liquidated, the bridge no longer controls any ETH and all the TB balances are irrelevant.
- * At this point the bridge is defunct unless owner is the only one who borrowed. If owner is the only who borrowed
- * calling closeTrove() will succeed and owner's balance will get burned making TB total supply 0.
+ * At this point the bridge is defunct (unless owner is the only one who borrowed). If owner is the only who borrowed
+ * calling closeTrove() will succeed and owner's balance will get burned, making TB total supply 0.
  *
  * If the trove is closed by redemption, users can withdraw their remaining collateral by supplying their TB.
  */
@@ -44,12 +49,16 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
     error TransferFailed();
     error AsyncModeDisabled();
 
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
 
     IBorrowerOperations public constant BORROWER_OPERATIONS =
         IBorrowerOperations(0x24179CD81c9e782A4096035f7eC97fB8B783e007);
     ITroveManager public constant TROVE_MANAGER = ITroveManager(0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2);
     ISortedTroves public constant SORTED_TROVES = ISortedTroves(0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6);
+
+    ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     // The amount of dust to leave in the contract
     // Optimization based on EIP-1087
@@ -157,9 +166,6 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
         Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(this)));
 
-        address upperHint = SORTED_TROVES.getPrev(address(this));
-        address lowerHint = SORTED_TROVES.getNext(address(this));
-
         if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
             _outputAssetA.erc20Address == address(this) &&
@@ -167,16 +173,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         ) {
             // Borrowing
             if (troveStatus != Status.active) revert IncorrectStatus(Status.active, troveStatus);
-            // outputValueA = by how much debt will increase and how much TB to mint
-            outputValueB = computeAmtToBorrow(_inputValue); // LUSD amount to borrow
-
-            (uint256 debtBefore, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
-            BORROWER_OPERATIONS.adjustTrove{value: _inputValue}(_auxData, 0, outputValueB, true, upperHint, lowerHint);
-            (uint256 debtAfter, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
-
-            // outputValueA = debt increase = amount of TB to mint
-            outputValueA = debtAfter - debtBefore;
-            _mint(address(this), outputValueA);
+            (outputValueA, outputValueB) = _borrow(_inputValue, _auxData);
         } else if (
             _inputAssetA.erc20Address == address(this) &&
             _inputAssetB.erc20Address == LUSD &&
@@ -184,24 +181,14 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         ) {
             // Repaying
             if (troveStatus != Status.active) revert IncorrectStatus(Status.active, troveStatus);
-            (, uint256 coll, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
-            outputValueA = (coll * _inputValue) / this.totalSupply(); // Amount of collateral to withdraw
-            BORROWER_OPERATIONS.adjustTrove(0, outputValueA, _inputValue, false, upperHint, lowerHint);
-            _burn(address(this), _inputValue);
-            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
+            outputValueA = _repay(_inputValue, _interactionNonce);
         } else if (
             _inputAssetA.erc20Address == address(this) && _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
             // Redeeming
             if (troveStatus != Status.closedByRedemption)
                 revert IncorrectStatus(Status.closedByRedemption, troveStatus);
-            if (!collateralClaimed) {
-                BORROWER_OPERATIONS.claimCollateral();
-                collateralClaimed = true;
-            }
-            outputValueA = (address(this).balance * _inputValue) / this.totalSupply();
-            _burn(address(this), _inputValue);
-            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
+            outputValueA = _redeem(_inputValue, _interactionNonce);
         } else {
             revert IncorrectInput();
         }
@@ -304,5 +291,77 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
      */
     function totalSupply() public view override(ERC20) returns (uint256) {
         return super.totalSupply() - DUST;
+    }
+
+    function _borrow(uint256 _inputValue, uint64 _maxFee) private returns (uint256 outputValueA, uint256 outputValueB) {
+        outputValueB = computeAmtToBorrow(_inputValue); // LUSD amount to borrow
+        (uint256 debtBefore, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
+
+        address upperHint = SORTED_TROVES.getPrev(address(this));
+        address lowerHint = SORTED_TROVES.getNext(address(this));
+
+        BORROWER_OPERATIONS.adjustTrove{value: _inputValue}(_maxFee, 0, outputValueB, true, upperHint, lowerHint);
+        (uint256 debtAfter, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
+        // outputValueA = amount of TB to mint = (debt_increase [LUSD] / debt_before [LUSD]) * TB_total_supply
+        // debt_increase = debtAfter - debtBefore
+        // In case no redistribution took place (TB/LUSD = 1) then debt_before = TB_total_supply
+        // and debt_increase amount of TB is minted.
+        // In case there was redistribution, 1 TB corresponds to more than 1 LUSD and the amount of TB minted
+        // will be lower than the amount of LUSD borrowed.
+        outputValueA = ((debtAfter - debtBefore) * this.totalSupply()) / debtBefore;
+        _mint(address(this), outputValueA);
+    }
+
+    function _repay(uint256 _inputValue, uint256 _interactionNonce) private returns (uint256 outputValueA) {
+        (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
+        // 1. Compute how much ought to be repaid
+        uint256 debtToRepay = (_inputValue * debtBefore) / this.totalSupply();
+        // 2. Compute how much collateral can be withdrawn
+        uint256 collToWithdraw = (_inputValue * collBefore) / this.totalSupply();
+        // 3. Repay _inputValue of LUSD and withdraw collateral - drops CR if trove was part of redistribution
+        address upperHint = SORTED_TROVES.getPrev(address(this));
+        address lowerHint = SORTED_TROVES.getNext(address(this));
+        BORROWER_OPERATIONS.adjustTrove(0, collToWithdraw, _inputValue, false, upperHint, lowerHint);
+        // 4. Check if the trove was part of redistribution - TB/LUSD ratio is no longer 1
+        if (debtToRepay != _inputValue) {
+            // 4.1 Swap part of collateral to LUSD
+            uint256 remainingToRepay = debtToRepay - _inputValue;
+            _swapEthToLusd(remainingToRepay);
+            BORROWER_OPERATIONS.adjustTrove(0, 0, remainingToRepay, false, upperHint, lowerHint);
+        }
+        // 5. Burn input TB and return ETH to rollup processor
+        outputValueA = address(this).balance;
+        _burn(address(this), _inputValue);
+        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
+    }
+
+    function _redeem(uint256 _inputValue, uint256 _interactionNonce) private returns (uint256 outputValueA) {
+        if (!collateralClaimed) {
+            BORROWER_OPERATIONS.claimCollateral();
+            collateralClaimed = true;
+        }
+        outputValueA = (address(this).balance * _inputValue) / this.totalSupply();
+        _burn(address(this), _inputValue);
+        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
+    }
+
+    /*
+     * @notice Swaps ETH to an _amtToReceive
+     *
+     * @dev Note1: The best route for LUSD -> ETH is consistently LUSD -> USDC -> ETH (500 BIP fee pools)
+     * @dev Note2: Slippage is not set so this bridge has to be used with MEV protection
+     *             (if redistribution took place).
+     */
+    function _swapEthToLusd(uint256 _amountOut) private {
+        uint256 amountInMaximum = address(this).balance;
+        UNI_ROUTER.exactOutput{value: amountInMaximum}(
+            ISwapRouter.ExactOutputParams({
+                path: abi.encodePacked(WETH, uint24(500), USDC, uint24(500), LUSD),
+                recipient: address(this),
+                deadline: block.timestamp,
+                amountOut: _amountOut,
+                amountInMaximum: amountInMaximum
+            })
+        );
     }
 }
