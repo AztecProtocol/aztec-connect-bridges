@@ -57,7 +57,7 @@ contract AceOfZkTest is Test {
         assertEq(outputValueA, 0, "Non zero return a");
         assertEq(outputValueB, 0, "Non zero return b");
         assertFalse(isAsync, "The convert was async");
-        assertEq(ACE_OF_ZK_NFT.ownerOf(NFT_ID), address(rollupProcessor), "The rollup processor don't own the nft");
+        assertEq(ACE_OF_ZK_NFT.ownerOf(NFT_ID), address(rollupProcessor), "The rollup processor does not own the nft");
     }
 
     function testWrongCaller(address _caller) public {

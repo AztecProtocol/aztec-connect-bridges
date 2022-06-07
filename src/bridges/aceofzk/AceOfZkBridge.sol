@@ -33,9 +33,9 @@ contract AceOfZkBridge is IDefiBridge {
         external
         payable
         returns (
-            uint256 outputValueA,
             uint256,
-            bool isAsync
+            uint256,
+            bool
         )
     {
         if (msg.sender != ROLLUP_PROCESSOR) {
