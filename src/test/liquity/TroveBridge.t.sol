@@ -178,7 +178,7 @@ contract TroveBridgeTest is TestUtil {
         // Setting maxEthDelta to 0.05 ETH because there is some loss during swap
         _repay(ROLLUP_PROCESSOR_WEI_BALANCE * 3, 5e16);
 
-//        _closeTrove();
+        _closeTroveAfterRedistribution();
     }
 
     function _openTrove() private {
@@ -391,5 +391,39 @@ contract TroveBridgeTest is TestUtil {
 
         assertEq(address(bridge).balance, 0, "Bridge holds ETH after interaction");
         assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST(), "Bridge holds LUSD after interaction");
+    }
+
+    function _closeTroveAfterRedistribution() private {
+        // Set msg.sender to OWNER
+        vm.startPrank(OWNER);
+
+        (uint256 debtBeforeClosure, uint256 collBeforeClosure, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(
+            address(bridge)
+        );
+
+        uint256 amountToRepay = debtBeforeClosure - 200e18;
+
+        // Increase OWNER's LUSD balance by borrowerFee
+        deal(tokens["LUSD"].addr, OWNER, amountToRepay);
+        tokens["LUSD"].erc.approve(address(bridge), amountToRepay);
+
+        bridge.closeTrove();
+
+        Status troveStatus = Status(bridge.TROVE_MANAGER().getTroveStatus(address(bridge)));
+        assertTrue(troveStatus == Status.closedByOwner, "Incorrect trove status");
+
+        assertEq(address(bridge).balance, 0, "Bridge holds ETH after trove closure");
+        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST(), "Bridge holds LUSD after trove closure");
+
+        assertApproxEqAbs(
+            OWNER.balance,
+            OWNER_WEI_BALANCE,
+            1e17,
+            "Current owner balance differs from the initial balance by more than 0.1 ETH"
+        );
+
+        assertEq(bridge.totalSupply(), 0, "TB total supply is not 0 after trove closure");
+
+        vm.stopPrank();
     }
 }
