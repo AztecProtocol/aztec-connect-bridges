@@ -9,6 +9,8 @@ interface ITroveManager is ILiquityBase {
 
     function liquidate(address _borrower) external;
 
+    function liquidateTroves(uint256 _n) external;
+
     function redeemCollateral(
         uint256 _LUSDAmount,
         address _firstRedemptionHint,

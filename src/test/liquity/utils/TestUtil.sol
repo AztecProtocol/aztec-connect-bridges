@@ -46,9 +46,9 @@ contract TestUtil is Test {
         assertEq(feed.fetchPrice(), price);
     }
 
-    function dropLiquityPriceByHalf() public {
+    function dropLiquityPriceByXPerc(uint256 percents) public {
         uint256 currentPrice = IPriceFeed(LIQUITY_PRICE_FEED_ADDR).fetchPrice();
-        setLiquityPrice(currentPrice / 2);
+        setLiquityPrice((currentPrice * (100 - percents)) / 100);
     }
 
     function _aztecPreSetup() internal {
