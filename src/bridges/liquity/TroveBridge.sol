@@ -137,12 +137,14 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
      * @param _inputAssetA -         ETH                     TB                      TB
      * @param _inputAssetB -         None                    LUSD                    None
      * @param _outputAssetA -        TB                      ETH                     ETH
-     * @param _outputAssetB -        LUSD                    None                    None
+     * @param _outputAssetB -        LUSD                    LUSD                    None
      * @param _inputValue -          amount of ETH           amount of TB and LUSD   amount of TB
      * @param _interactionNonce -    nonce                   nonce                   nonce
      * @param _auxData -             max borrower fee        0                       0
-     * @return outputValueA -       amount of TB            amount of ETH           amount of ETH
-     * @return outputValueB -       amount of LUSD          0                       0
+     * @return outputValueA -       amount of TB            amount of ETH            amount of ETH
+     * @return outputValueB -       amount of LUSD          amount of LUSD           0
+     * @dev The amount of LUSD returned (outputValueB) during repayment will be non-zero only when the trove was
+     * partially redeemed.
      */
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
@@ -177,11 +179,12 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         } else if (
             _inputAssetA.erc20Address == address(this) &&
             _inputAssetB.erc20Address == LUSD &&
-            _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
+            _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
+            _outputAssetB.erc20Address == LUSD
         ) {
             // Repaying
             if (troveStatus != Status.active) revert IncorrectStatus(Status.active, troveStatus);
-            outputValueA = _repay(_inputValue, _interactionNonce);
+            (outputValueA, outputValueB) = _repay(_inputValue, _interactionNonce);
         } else if (
             _inputAssetA.erc20Address == address(this) && _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
@@ -312,7 +315,10 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         _mint(address(this), outputValueA);
     }
 
-    function _repay(uint256 _inputValue, uint256 _interactionNonce) private returns (uint256 outputValueA) {
+    function _repay(uint256 _inputValue, uint256 _interactionNonce)
+        private
+        returns (uint256 outputValueA, uint256 outputValueB)
+    {
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
         // 1. Compute how much ought to be repaid
         uint256 debtToRepay = (_inputValue * debtBefore) / this.totalSupply();
@@ -322,12 +328,17 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         address upperHint = SORTED_TROVES.getPrev(address(this));
         address lowerHint = SORTED_TROVES.getNext(address(this));
         BORROWER_OPERATIONS.adjustTrove(0, collToWithdraw, _inputValue, false, upperHint, lowerHint);
-        // 4. Check if the trove was part of redistribution - TB/LUSD ratio is no longer 1
-        if (debtToRepay != _inputValue) {
-            // 4.1 Swap part of collateral to LUSD
+        // 4. Check if the trove was part of redistribution or partial redemption
+        if (debtToRepay > _inputValue) {
+            // Collateral and debt was redistributed to bridge's trove (1 TB corresponds to more than 1 LUSD worth
+            // of debt) --> swap part of collateral to LUSD and repay the debt in full
             uint256 remainingToRepay = debtToRepay - _inputValue;
             _swapEthToLusd(remainingToRepay);
             BORROWER_OPERATIONS.adjustTrove(0, 0, remainingToRepay, false, upperHint, lowerHint);
+        } else if (debtToRepay < _inputValue) {
+            // Trove was partially redeemed - 1 TB corresponds to less than 1 LUSD worth of debt
+            // --> return the remaining LUSD
+            outputValueB = _inputValue - debtToRepay;
         }
         // 5. Burn input TB and return ETH to rollup processor
         outputValueA = address(this).balance;

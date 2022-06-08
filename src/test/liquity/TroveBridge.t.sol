@@ -270,7 +270,7 @@ contract TroveBridgeTest is TestUtil {
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
             processorTBBalance,
             1,
             MAX_FEE
