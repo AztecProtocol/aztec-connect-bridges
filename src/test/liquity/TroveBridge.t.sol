@@ -48,10 +48,14 @@ contract TroveBridgeTest is TestUtil {
         vm.prank(OWNER);
         bridge = new TroveBridge(address(rollupProcessor), initialCollateralRatio);
 
-        vm.label(address(bridge.TROVE_MANAGER()), "TROVE_MANAGER");
+        vm.label(address(bridge.WETH()), "WETH");
+        vm.label(address(bridge.USDC()), "USDC");
+        vm.label(address(bridge.LUSD()), "LUSD");
         vm.label(address(bridge.BORROWER_OPERATIONS()), "BORROWER_OPERATIONS");
+        vm.label(address(bridge.TROVE_MANAGER()), "TROVE_MANAGER");
         vm.label(address(bridge.SORTED_TROVES()), "SORTED_TROVES");
-        vm.label(address(bridge.UNI_ROUTER()), "UNI_ROUTER");
+        vm.label(address(bridge.LUSD_USDC_POOL()), "LUSD_USDC_POOL");
+        vm.label(address(bridge.USDC_ETH_POOL()), "USDC_ETH_POOL");
 
         // Set OWNER's and ROLLUP_PROCESSOR's balances
         vm.deal(OWNER, OWNER_WEI_BALANCE);
