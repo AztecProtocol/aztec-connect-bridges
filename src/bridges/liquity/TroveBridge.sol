@@ -9,11 +9,13 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+import {IWETH} from "../../interfaces/IWETH.sol";
 
 import {IBorrowerOperations} from "./interfaces/IBorrowerOperations.sol";
 import {ITroveManager} from "./interfaces/ITroveManager.sol";
 import {ISortedTroves} from "./interfaces/ISortedTroves.sol";
-import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
+import {IUniswapV3PoolActions} from "./interfaces/IUniswapV3PoolActions.sol";
+import {IUniswapV3SwapCallback} from "./interfaces/IUniswapV3SwapCallback.sol";
 
 /**
  * @title Aztec Connect Bridge for opening and closing Liquity's troves
@@ -37,7 +39,7 @@ import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
  *
  * If the trove is closed by redemption, users can withdraw their remaining collateral by supplying their TB.
  */
-contract TroveBridge is ERC20, Ownable, IDefiBridge {
+contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
     using Strings for uint256;
 
     error NonZeroTotalSupply();
@@ -49,6 +51,21 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
     error TransferFailed();
     error AsyncModeDisabled();
 
+    // Trove status taken from TroveManager.sol
+    enum Status {
+        nonExistent,
+        active,
+        closedByOwner,
+        closedByLiquidation,
+        closedByRedemption
+    }
+
+    struct SwapCallbackData {
+        bool firstCallback;
+        uint256 debtToRepay;
+        uint256 collToWithdraw;
+    }
+
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
@@ -58,7 +75,10 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
     ITroveManager public constant TROVE_MANAGER = ITroveManager(0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2);
     ISortedTroves public constant SORTED_TROVES = ISortedTroves(0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6);
 
-    ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+    IUniswapV3PoolActions public constant LUSD_USDC_POOL =
+        IUniswapV3PoolActions(0x4e0924d3a751bE199C426d52fb1f2337fa96f736);
+    IUniswapV3PoolActions public constant USDC_ETH_POOL =
+        IUniswapV3PoolActions(0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640);
 
     // The amount of dust to leave in the contract
     // Optimization based on EIP-1087
@@ -69,15 +89,6 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
 
     // Used to check whether collateral has already been claimed during redemptions.
     bool private collateralClaimed;
-
-    // Trove status taken from TroveManager.sol
-    enum Status {
-        nonExistent,
-        active,
-        closedByOwner,
-        closedByLiquidation,
-        closedByRedemption
-    }
 
     /**
      * @notice Set the address of RollupProcessor.sol and initial ICR
@@ -246,6 +257,41 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         revert AsyncModeDisabled();
     }
 
+    /// @inheritdoc IUniswapV3SwapCallback
+    function uniswapV3SwapCallback(
+        int256 amount0Delta,
+        int256 amount1Delta,
+        bytes calldata _data
+    ) external override(IUniswapV3SwapCallback) {
+        require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
+        SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
+        if (data.firstCallback) {
+            // Repay debt in full
+            address upperHint = SORTED_TROVES.getPrev(address(this));
+            address lowerHint = SORTED_TROVES.getNext(address(this));
+            BORROWER_OPERATIONS.adjustTrove(0, data.collToWithdraw, data.debtToRepay, false, upperHint, lowerHint);
+            // Pay LUSD_USDC_POOL for the swap by passing it as a recipient to the next swap
+            address recipient = address(LUSD_USDC_POOL);
+            bool zeroForOne = false;
+            int256 usdcAmtToReceive = amount1Delta; // amount of USDC to pay to LUSD_USDC_POOL for the swap
+            // TickMath.MAX_SQRT_RATIO - 1
+            uint160 sqrtPriceLimitX96 = 1461446703485210103287273052203988822378723970341;
+
+            USDC_ETH_POOL.swap(
+                recipient,
+                zeroForOne,
+                usdcAmtToReceive,
+                sqrtPriceLimitX96,
+                abi.encode(SwapCallbackData({firstCallback: false, debtToRepay: 0, collToWithdraw: 0}))
+            );
+        } else {
+            // Pay USDC_ETH_POOL for the USDC
+            uint256 amountToPay = uint256(amount1Delta);
+            IWETH(WETH).deposit{value: amountToPay}(); // wrap only what is needed to pay
+            IWETH(WETH).transfer(address(USDC_ETH_POOL), amountToPay);
+        }
+    }
+
     /**
      * @notice Compute how much LUSD to borrow against collateral in order to keep ICR constant and by how much total
      * trove debt will increase.
@@ -324,21 +370,31 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         uint256 debtToRepay = (_inputValue * debtBefore) / this.totalSupply();
         // 2. Compute how much collateral can be withdrawn
         uint256 collToWithdraw = (_inputValue * collBefore) / this.totalSupply();
-        // 3. Repay _inputValue of LUSD and withdraw collateral - drops CR if trove was part of redistribution
-        address upperHint = SORTED_TROVES.getPrev(address(this));
-        address lowerHint = SORTED_TROVES.getNext(address(this));
-        BORROWER_OPERATIONS.adjustTrove(0, collToWithdraw, _inputValue, false, upperHint, lowerHint);
-        // 4. Check if the trove was part of redistribution or partial redemption
+
         if (debtToRepay > _inputValue) {
             // Collateral and debt was redistributed to bridge's trove (1 TB corresponds to more than 1 LUSD worth
-            // of debt) --> swap part of collateral to LUSD and repay the debt in full
-            uint256 remainingToRepay = debtToRepay - _inputValue;
-            _swapEthToLusd(remainingToRepay);
-            BORROWER_OPERATIONS.adjustTrove(0, 0, remainingToRepay, false, upperHint, lowerHint);
-        } else if (debtToRepay < _inputValue) {
-            // Trove was partially redeemed - 1 TB corresponds to less than 1 LUSD worth of debt
-            // --> return the remaining LUSD
-            outputValueB = _inputValue - debtToRepay;
+            // of debt) --> flash loan LUSD, repay the debt in full, swap part of collateral to LUSD, repay flash loan
+            address recipient = address(this);
+            bool zeroForOne = false;
+            int256 lusdAmtToReceive = -int256(debtToRepay - _inputValue);
+            // TickMath.MAX_SQRT_RATIO - 1
+            uint160 sqrtPriceLimitX96 = 1461446703485210103287273052203988822378723970341;
+
+            LUSD_USDC_POOL.swap(
+                recipient,
+                zeroForOne,
+                lusdAmtToReceive,
+                sqrtPriceLimitX96,
+                abi.encode(
+                    SwapCallbackData({firstCallback: true, debtToRepay: debtToRepay, collToWithdraw: collToWithdraw})
+                )
+            );
+        } else {
+            // 3. Repay _inputValue of LUSD and withdraw collateral - drops CR if trove was part of redistribution
+            address upperHint = SORTED_TROVES.getPrev(address(this));
+            address lowerHint = SORTED_TROVES.getNext(address(this));
+            BORROWER_OPERATIONS.adjustTrove(0, collToWithdraw, debtToRepay, false, upperHint, lowerHint);
+            outputValueB = _inputValue - debtToRepay; // LUSD to return --> 0 unless trove was partially redeemed
         }
         // 5. Burn input TB and return ETH to rollup processor
         outputValueA = address(this).balance;
@@ -354,26 +410,5 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         outputValueA = (address(this).balance * _inputValue) / this.totalSupply();
         _burn(address(this), _inputValue);
         IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
-    }
-
-    /*
-     * @notice Swaps ETH to an _amtToReceive
-     *
-     * @dev Note1: The best route for ETH -> LUSD is consistently ETH -> USDC -> LUSD (500 BIP fee pools)
-     * @dev Note2: Slippage is not set so this bridge has to be used with MEV protection
-     *             (if redistribution took place).
-     */
-    function _swapEthToLusd(uint256 _amountOut) internal {
-        uint256 amountInMaximum = address(this).balance;
-        UNI_ROUTER.exactOutput{value: amountInMaximum}(
-            ISwapRouter.ExactOutputParams({
-                path: abi.encodePacked(LUSD, uint24(500), USDC, uint24(500), WETH),
-                recipient: address(this),
-                deadline: block.timestamp,
-                amountOut: _amountOut,
-                amountInMaximum: amountInMaximum
-            })
-        );
-        UNI_ROUTER.refundETH();
     }
 }
