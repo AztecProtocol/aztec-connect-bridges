@@ -9,10 +9,10 @@ import {IERC4626} from './../../bridges/erc4626/Interfaces/IERC4626.sol';
 import {VaultBridge} from './../../bridges/erc4626/VaultBridge.sol';
 import {AztecTypes} from './../../aztec/AztecTypes.sol';
 import {console} from '../console.sol';
-import '../../../lib/ds-test/src/test.sol';
+import {Test} from 'forge-std/Test.sol';
 
 //Tested at block 14886873 may not work at other blocks
-contract ERC4626 is DSTest {
+contract ERC4626 is Test {
     Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     DefiBridgeProxy defiBridgeProxy;
@@ -39,8 +39,8 @@ contract ERC4626 is DSTest {
 
     function testVaultBridge() public {
         uint256 depositAmount = 5000;
-
-        _setTokenBalance(address(maple), address(rollupProcessor), depositAmount);
+        deal(address(maple), address(rollupProcessor), depositAmount);
+        //_setTokenBalance(address(maple), address(rollupProcessor), depositAmount);
 
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
@@ -73,26 +73,5 @@ contract ERC4626 is DSTest {
         console.log(rollupMapleToken, 'withdraw amount');
         assertEq(rollupMapleToken, 4999);
         //assertEq(depositAmount, rollupBeefy, 'Balances must match');
-    }
-
-    function assertNotEq(address a, address b) internal {
-        if (a == b) {
-            emit log('Error: a != b not satisfied [address]');
-            emit log_named_address('  Expected', b);
-            emit log_named_address('    Actual', a);
-            fail();
-        }
-    }
-
-    function _setTokenBalance(
-        address token,
-        address user,
-        uint256 balance
-    ) internal {
-        uint256 slot = 0; // May vary depending on token
-
-        vm.store(token, keccak256(abi.encode(user, slot)), bytes32(uint256(balance)));
-        console.log('setting up token balance things');
-        assertEq(IERC20(token).balanceOf(user), balance, 'wrong balance');
     }
 }

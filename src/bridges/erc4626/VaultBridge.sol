@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.6.10 <=0.8.10;
+pragma solidity ^0.8.4;
 pragma experimental ABIEncoderV2;
 
 import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
@@ -104,11 +104,11 @@ contract VaultBridge is IDefiBridge, Ownable {
         uint256 amount
     ) internal returns (uint256) {
         IERC20 depositToken = IERC20(token);
-        depositToken.approve(vault, amount);
+        // depositToken.approve(vault, amount);
         uint256 prev = IERC4626(vault).balanceOf(address(this));
         IERC4626(vault).deposit(amount, address(this));
         uint256 _after = IERC4626(vault).balanceOf(address(this));
-        IERC4626(vault).approve(rollupProcessor, _after.sub(prev));
+        // IERC4626(vault).approve(rollupProcessor, _after.sub(prev));
         return _after.sub(prev);
     }
 
@@ -130,8 +130,13 @@ contract VaultBridge is IDefiBridge, Ownable {
         uint256 prev = withdrawToken.balanceOf(address(this));
         IERC4626(vault).redeem(amount, msg.sender, address(this));
         uint256 _after = withdrawToken.balanceOf(address(this));
-        withdrawToken.approve(rollupProcessor, _after.sub(prev));
+        //withdrawToken.approve(rollupProcessor, _after.sub(prev));
         return _after.sub(prev);
+    }
+
+    function approvePair(address vault, address token) public {
+        IERC20(token).approve(vault, type(uint256).max);
+        IERC20(vault).approve(rollupProcessor, type(uint256).max);
     }
 
     // @notice This function always reverts because this contract does not implement async flow.
