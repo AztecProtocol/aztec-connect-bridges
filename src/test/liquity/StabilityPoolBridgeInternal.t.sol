@@ -26,7 +26,7 @@ contract StabilityPoolBridgeTestInternal is TestUtil, StabilityPoolBridge(addres
         deal(tokens["LQTY"].addr, address(this), 1e21);
 
         // Note: to make the tests faster I will burn most of the ETH. This contract gets 79 million ETH by default.
-        // This makes swapping through Uni v3 slow as it has the loop through the ticks for many seconds
+        // This makes swapping through Uni v3 slow as it has to loop through the ticks for many seconds
         payable(address(0)).transfer(address(this).balance - 1 ether);
 
         uint256 depositedLUSDBeforeSwap = STABILITY_POOL.getCompoundedLUSDDeposit(address(this));

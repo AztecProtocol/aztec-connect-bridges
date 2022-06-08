@@ -348,20 +348,21 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
     /*
      * @notice Swaps ETH to an _amtToReceive
      *
-     * @dev Note1: The best route for LUSD -> ETH is consistently LUSD -> USDC -> ETH (500 BIP fee pools)
+     * @dev Note1: The best route for ETH -> LUSD is consistently ETH -> USDC -> LUSD (500 BIP fee pools)
      * @dev Note2: Slippage is not set so this bridge has to be used with MEV protection
      *             (if redistribution took place).
      */
-    function _swapEthToLusd(uint256 _amountOut) private {
+    function _swapEthToLusd(uint256 _amountOut) internal {
         uint256 amountInMaximum = address(this).balance;
         UNI_ROUTER.exactOutput{value: amountInMaximum}(
             ISwapRouter.ExactOutputParams({
-                path: abi.encodePacked(WETH, uint24(500), USDC, uint24(500), LUSD),
+                path: abi.encodePacked(LUSD, uint24(500), USDC, uint24(500), WETH),
                 recipient: address(this),
                 deadline: block.timestamp,
                 amountOut: _amountOut,
                 amountInMaximum: amountInMaximum
             })
         );
+        UNI_ROUTER.refundETH();
     }
 }
