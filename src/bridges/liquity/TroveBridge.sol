@@ -52,6 +52,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
     error InvalidCaller();
     error IncorrectStatus(Status expected, Status received);
     error IncorrectInput();
+    error IncorrectDeltaAmounts();
     error OwnerNotLast();
     error TransferFailed();
     error AsyncModeDisabled();
@@ -269,11 +270,12 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
     // @inheritdoc IUniswapV3SwapCallback
     // @dev See _repay(...) method for more information about how this callback is entered.
     function uniswapV3SwapCallback(
-        int256 amount0Delta,
-        int256 amount1Delta,
+        int256 _amount0Delta,
+        int256 _amount1Delta,
         bytes calldata _data
     ) external override(IUniswapV3SwapCallback) {
-        require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
+        // swaps entirely within 0-liquidity regions are not supported
+        if (_amount0Delta <= 0 && _amount1Delta <= 0) revert IncorrectDeltaAmounts();
         SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
         if (data.firstCallback) {
             // Uniswap pools always call callback on msg.sender so this check is enough to prevent malicious behavior
@@ -287,14 +289,14 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
             IUniswapV3PoolActions(USDC_ETH_POOL).swap(
                 LUSD_USDC_POOL, // recipient
                 false, // zeroForOne
-                -amount1Delta, // amount of USDC to pay to LUSD_USDC_POOL for the swap
+                -_amount1Delta, // amount of USDC to pay to LUSD_USDC_POOL for the swap
                 SQRT_PRICE_LIMIT_X96,
                 abi.encode(SwapCallbackData({firstCallback: false, debtToRepay: 0, collToWithdraw: 0}))
             );
         } else {
             if (msg.sender != USDC_ETH_POOL) revert InvalidCaller();
             // Pay USDC_ETH_POOL for the USDC
-            uint256 amountToPay = uint256(amount1Delta);
+            uint256 amountToPay = uint256(_amount1Delta);
             IWETH(WETH).deposit{value: amountToPay}(); // wrap only what is needed to pay
             IWETH(WETH).transfer(address(USDC_ETH_POOL), amountToPay);
         }

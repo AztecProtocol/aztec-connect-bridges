@@ -10,7 +10,13 @@ import {TroveBridge} from "../../bridges/liquity/TroveBridge.sol";
 import {ISortedTroves} from "../../bridges/liquity/interfaces/ISortedTroves.sol";
 
 contract TroveBridgeTest is TestUtil {
-    TroveBridge private bridge;
+    enum Status {
+        nonExistent,
+        active,
+        closedByOwner,
+        closedByLiquidation,
+        closedByRedemption
+    }
 
     IHintHelpers private constant HINT_HELPERS = IHintHelpers(0xE84251b93D9524E0d2e621Ba7dc7cb3579F997C0);
     ISortedTroves private constant SORTED_TROVES = ISortedTroves(0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6);
@@ -26,13 +32,7 @@ contract TroveBridgeTest is TestUtil {
     // From LiquityMath.sol
     uint256 private constant NICR_PRECISION = 1e20;
 
-    enum Status {
-        nonExistent,
-        active,
-        closedByOwner,
-        closedByLiquidation,
-        closedByRedemption
-    }
+    TroveBridge private bridge;
 
     receive() external payable {}
 
@@ -119,7 +119,7 @@ contract TroveBridgeTest is TestUtil {
         _borrow();
 
         // Drop price and liquidate the trove
-        dropLiquityPriceByXPerc(50);
+        setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
         bridge.TROVE_MANAGER().liquidate(address(bridge));
         Status troveStatus = Status(bridge.TROVE_MANAGER().getTroveStatus(address(bridge)));
         assertTrue(troveStatus == Status.closedByLiquidation, "Incorrect trove status");
@@ -164,11 +164,9 @@ contract TroveBridgeTest is TestUtil {
 
         uint256 priceBeforeDrop = bridge.TROVE_MANAGER().priceFeed().fetchPrice();
 
-        dropLiquityPriceByXPerc(50);
+        setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
         bridge.TROVE_MANAGER().liquidateTroves(10);
 
-        uint256 price = bridge.TROVE_MANAGER().priceFeed().fetchPrice();
-        uint256 icrAfter = bridge.TROVE_MANAGER().getCurrentICR(address(bridge), price);
         (uint256 debtAfter, uint256 collAfter, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
 
         assertGt(debtAfter, debtBefore, "Debt hasn't increased after liquidations");
@@ -262,7 +260,7 @@ contract TroveBridgeTest is TestUtil {
         assertGt(tokens["LUSD"].erc.balanceOf(address(rollupProcessor)), 0, "Rollup processor doesn't hold any LUSD");
     }
 
-    function _repay(uint256 _expectedBalance, uint256 maxEthDelta) private {
+    function _repay(uint256 _expectedBalance, uint256 _maxEthDelta) private {
         uint256 processorTBBalance = bridge.balanceOf(address(rollupProcessor));
 
         // Mint the borrower fee to ROLLUP_PROCESSOR in order to have a big enough balance for repaying
@@ -287,7 +285,7 @@ contract TroveBridgeTest is TestUtil {
         assertApproxEqAbs(
             address(rollupProcessor).balance,
             _expectedBalance,
-            maxEthDelta,
+            _maxEthDelta,
             "Current rollup processor balance differs from the expected balance by more than maxEthDelta"
         );
     }
@@ -401,9 +399,7 @@ contract TroveBridgeTest is TestUtil {
         // Set msg.sender to OWNER
         vm.startPrank(OWNER);
 
-        (uint256 debtBeforeClosure, uint256 collBeforeClosure, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(
-            address(bridge)
-        );
+        (uint256 debtBeforeClosure, , , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
 
         uint256 amountToRepay = debtBeforeClosure - 200e18;
 

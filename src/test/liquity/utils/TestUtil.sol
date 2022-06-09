@@ -19,7 +19,7 @@ contract TestUtil is Test {
         IERC20 erc;
     }
 
-    address internal constant LIQUITY_PRICE_FEED_ADDR = 0x4c517D4e2C851CA76d7eC94B805269Df0f2201De;
+    IPriceFeed internal constant LIQUITY_PRICE_FEED = IPriceFeed(0x4c517D4e2C851CA76d7eC94B805269Df0f2201De);
 
     mapping(bytes32 => Token) internal tokens;
 
@@ -41,14 +41,8 @@ contract TestUtil is Test {
 
     function setLiquityPrice(uint256 price) public {
         IPriceFeed mockFeed = new MockPriceFeed(price);
-        vm.etch(LIQUITY_PRICE_FEED_ADDR, address(mockFeed).code);
-        IPriceFeed feed = IPriceFeed(LIQUITY_PRICE_FEED_ADDR);
-        assertEq(feed.fetchPrice(), price);
-    }
-
-    function dropLiquityPriceByXPerc(uint256 percents) public {
-        uint256 currentPrice = IPriceFeed(LIQUITY_PRICE_FEED_ADDR).fetchPrice();
-        setLiquityPrice((currentPrice * (100 - percents)) / 100);
+        vm.etch(address(LIQUITY_PRICE_FEED), address(mockFeed).code);
+        assertEq(LIQUITY_PRICE_FEED.fetchPrice(), price);
     }
 
     function _aztecPreSetup() internal {
