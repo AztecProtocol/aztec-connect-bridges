@@ -10,6 +10,7 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import {AztecTypes} from '../../aztec/AztecTypes.sol';
 import {IERC4626} from './Interfaces/IERC4626.sol';
+error Unauthorized();
 
 /**
  * @title Aztec Connect Bridge for ERC4626 compatible vaults
@@ -61,7 +62,7 @@ contract VaultBridge is IDefiBridge, Ownable {
         )
     {
         // // ### INITIALIZATION AND SANITY CHECKS
-        require(msg.sender == rollupProcessor, 'ExampleBridge: INVALID_CALLER');
+        require(msg.sender == rollupProcessor, Unathorized());
 
         if (testPair(outputAssetA.erc20Address, inputAssetA.erc20Address)) {
             outputValueA = enter(outputAssetA.erc20Address, inputAssetA.erc20Address, totalInputValue);
