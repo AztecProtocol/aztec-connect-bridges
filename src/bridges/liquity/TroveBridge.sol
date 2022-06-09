@@ -85,6 +85,12 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
     address public immutable ROLLUP_PROCESSOR;
     uint256 public immutable INITIAL_ICR;
 
+    // We are not setting price impact protection and in both swaps zeroForOne is false so sqrtPriceLimitX96
+    // is set to TickMath.MAX_SQRT_RATIO - 1 = 1461446703485210103287273052203988822378723970341
+    // See https://github.com/Uniswap/v3-periphery/blob/22a7ead071fff53f00d9ddc13434f285f4ed5c7d/contracts/SwapRouter.sol#L187
+    // for more information.
+    uint160 private constant SQRT_PRICE_LIMIT_X96 = 1461446703485210103287273052203988822378723970341;
+
     // Used to check whether collateral has already been claimed during redemptions.
     bool private collateralClaimed;
 
@@ -269,18 +275,13 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
             address upperHint = SORTED_TROVES.getPrev(address(this));
             address lowerHint = SORTED_TROVES.getNext(address(this));
             BORROWER_OPERATIONS.adjustTrove(0, data.collToWithdraw, data.debtToRepay, false, upperHint, lowerHint);
-            // Pay LUSD_USDC_POOL for the swap by passing it as a recipient to the next swap
-            address recipient = address(LUSD_USDC_POOL);
-            bool zeroForOne = false;
-            int256 usdcAmtToReceive = amount1Delta; // amount of USDC to pay to LUSD_USDC_POOL for the swap
-            // TickMath.MAX_SQRT_RATIO - 1
-            uint160 sqrtPriceLimitX96 = 1461446703485210103287273052203988822378723970341;
 
+            // Pay LUSD_USDC_POOL for the swap by passing it as a recipient to the next swap (WETH -> USDC)
             IUniswapV3PoolActions(USDC_ETH_POOL).swap(
-                recipient,
-                zeroForOne,
-                usdcAmtToReceive,
-                sqrtPriceLimitX96,
+                LUSD_USDC_POOL, // recipient
+                false, // zeroForOne
+                -amount1Delta, // amount of USDC to pay to LUSD_USDC_POOL for the swap
+                SQRT_PRICE_LIMIT_X96,
                 abi.encode(SwapCallbackData({firstCallback: false, debtToRepay: 0, collToWithdraw: 0}))
             );
         } else {
@@ -373,18 +374,18 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
 
         if (debtToRepay > _inputValue) {
             // Collateral and debt was redistributed to bridge's trove (1 TB corresponds to more than 1 LUSD worth
-            // of debt) --> flash loan LUSD, repay the debt in full, swap part of collateral to LUSD, repay flash loan
-            address recipient = address(this);
-            bool zeroForOne = false;
-            int256 lusdAmtToReceive = -int256(debtToRepay - _inputValue);
-            // TickMath.MAX_SQRT_RATIO - 1
-            uint160 sqrtPriceLimitX96 = 1461446703485210103287273052203988822378723970341;
-
+            // of debt). For this reason the bridge doesn't currently have enough LUSD to repay the debt in full.
+            // It's important that CR never drops because if Liquity was in recovery mode the tx would revert
+            // (CR drops in recovery mode not allowed).
+            // For this reason I came up with the following construction:
+            // 1) flash swap USDC to LUSD, 2) repay the user's trove debt in full (in the 1st callback),
+            // 3) flash swap WETH to USDC with recipient being the LUSD_USDC_POOL - this pays for the first swap,
+            // 4) in the 2nd callback deposit part of the withdrawn collateral to WETH and pay for the 2nd swap.
             IUniswapV3PoolActions(LUSD_USDC_POOL).swap(
-                recipient,
-                zeroForOne,
-                lusdAmtToReceive,
-                sqrtPriceLimitX96,
+                address(this), // recipient
+                false, // zeroForOne
+                -int256(debtToRepay - _inputValue), // amount of LUSD to receive
+                SQRT_PRICE_LIMIT_X96,
                 abi.encode(
                     SwapCallbackData({firstCallback: true, debtToRepay: debtToRepay, collToWithdraw: collToWithdraw})
                 )
