@@ -4,5 +4,5 @@ pragma solidity >=0.6.10 <=0.8.10;
 pragma experimental ABIEncoderV2;
 
 interface ILendingPoolAddressesProvider {
-  function getLendingPool() external view returns (address);
+    function getLendingPool() external view returns (address);
 }

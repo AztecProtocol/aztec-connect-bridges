@@ -4,6 +4,7 @@ pragma solidity >=0.6.10 <=0.8.10;
 pragma experimental ABIEncoderV2;
 
 interface IEthJoin {
-    function join(address usr, uint wad) external;
-    function exit(address usr, uint wad) external;
+    function join(address usr, uint256 wad) external;
+
+    function exit(address usr, uint256 wad) external;
 }

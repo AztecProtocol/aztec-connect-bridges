@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.0 <=0.8.10;
-pragma abicoder v2;
+pragma solidity >=0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../../interfaces/IDefiBridge.sol";
-import "../../interfaces/IWETH.sol";
-import "./interfaces/ILQTYStaking.sol";
-import "./interfaces/ISwapRouter.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {IWETH} from "../../interfaces/IWETH.sol";
+
+import {ILQTYStaking} from "./interfaces/ILQTYStaking.sol";
+import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 
 /**
  * @title Aztec Connect Bridge for Liquity's LQTYStaking.sol
@@ -28,6 +30,11 @@ import "./interfaces/ISwapRouter.sol";
  * Note: StakingBridge.sol is very similar to StabilityPoolBridge.sol.
  */
 contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
+    error ApproveFailed(address token);
+    error InvalidCaller();
+    error IncorrectInput();
+    error AsyncModeDisabled();
+
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant LQTY = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
@@ -36,31 +43,37 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
     ILQTYStaking public constant STAKING_CONTRACT = ILQTYStaking(0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d);
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
-    address public immutable processor;
+    // The amount of dust to leave in the contract
+    // Optimization based on EIP-1087
+    uint256 internal constant DUST = 1;
+
+    address public immutable ROLLUP_PROCESSOR;
 
     /**
-     * @notice Set the addresses of RollupProcessor.sol and token approvals.
-     * @param _processor Address of the RollupProcessor.sol
+     * @notice Set the address of RollupProcessor.sol.
+     * @param _rollupProcessor Address of the RollupProcessor.sol
      */
-    constructor(address _processor) {
-        processor = _processor;
+    constructor(address _rollupProcessor) {
+        ROLLUP_PROCESSOR = _rollupProcessor;
+        _mint(address(this), DUST);
     }
+
+    receive() external payable {}
+
+    fallback() external payable {}
 
     /**
      * @notice Sets all the important approvals.
      * @dev StakingBridge never holds LUSD, LQTY, USDC or WETH after or before an invocation of any of its functions.
      * For this reason the following is not a security risk and makes the convert() function more gas efficient.
      */
-    function setApprovals() public {
-        require(this.approve(processor, type(uint256).max), "StakingBridge: SBB_APPROVE_FAILED");
-        require(IERC20(LQTY).approve(processor, type(uint256).max), "StakingBridge: LUSD_APPROVE_FAILED");
-        require(
-            IERC20(LQTY).approve(address(STAKING_CONTRACT), type(uint256).max),
-            "StakingBridge: LQTY_APPROVE_FAILED"
-        );
-        require(IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max), "StakingBridge: WETH_APPROVE_FAILED");
-        require(IERC20(LUSD).approve(address(UNI_ROUTER), type(uint256).max), "StakingBridge: LUSD_APPROVE_FAILED");
-        require(IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max), "StakingBridge: USDC_APPROVE_FAILED");
+    function setApprovals() external {
+        if (!this.approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(address(this));
+        if (!IERC20(LQTY).approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(LQTY);
+        if (!IERC20(LQTY).approve(address(STAKING_CONTRACT), type(uint256).max)) revert ApproveFailed(LQTY);
+        if (!IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(WETH);
+        if (!IERC20(LUSD).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(LUSD);
+        if (!IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(USDC);
     }
 
     /**
@@ -70,102 +83,63 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
      * the method. If this is not the case, the function will revert (either in STAKING_CONTRACT.stake(...) or during
      * SB burn).
      *
-     * @param inputAssetA - LQTY (Staking) or SB (Unstaking)
-     * @param outputAssetA - SB (Staking) or LQTY (Unstaking)
-     * @param inputValue - the amount of LQTY to stake or the amount of SB to burn and exchange for LQTY
+     * @param _inputAssetA - LQTY (Staking) or SB (Unstaking)
+     * @param _outputAssetA - SB (Staking) or LQTY (Unstaking)
+     * @param _inputValue - the amount of LQTY to stake or the amount of SB to burn and exchange for LQTY
      * @return outputValueA - the amount of SB (Staking) or LQTY (Unstaking) minted/transferred to
      * the RollupProcessor.sol
      */
     function convert(
-        AztecTypes.AztecAsset calldata inputAssetA,
+        AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata outputAssetA,
+        AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
-        uint256 inputValue,
+        uint256 _inputValue,
         uint256,
         uint64,
         address
     )
         external
         payable
+        override(IDefiBridge)
         returns (
             uint256 outputValueA,
             uint256,
-            bool isAsync
+            bool
         )
     {
-        require(msg.sender == processor, "StakingBridge: INVALID_CALLER");
+        if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
 
-        if (inputAssetA.erc20Address == LQTY) {
+        if (_inputAssetA.erc20Address == LQTY && _outputAssetA.erc20Address == address(this)) {
             // Deposit
-            require(outputAssetA.erc20Address == address(this), "StakingBridge: INCORRECT_DEPOSIT_INPUT");
             // Stake and claim rewards
-            STAKING_CONTRACT.stake(inputValue);
+            STAKING_CONTRACT.stake(_inputValue);
             _swapRewardsToLQTYAndStake();
+            uint256 totalSupply = this.totalSupply();
             // outputValueA = how much SB should be minted
-            if (this.totalSupply() == 0) {
+            if (totalSupply == 0) {
                 // When the totalSupply is 0, I set the SB/LQTY ratio to be 1.
-                outputValueA = inputValue;
+                outputValueA = _inputValue;
             } else {
-                uint256 totalLQTYOwnedBeforeDeposit = STAKING_CONTRACT.stakes(address(this)) - inputValue;
-                // this.totalSupply() / totalLQTYOwnedBeforeDeposit = how much SB one LQTY is worth
+                uint256 totalLQTYOwnedBeforeDeposit = STAKING_CONTRACT.stakes(address(this)) - _inputValue;
+                // totalSupply / totalLQTYOwnedBeforeDeposit = how much SB one LQTY is worth
                 // When I multiply this ^ with the amount of LQTY deposited I get the amount of SB to be minted.
-                outputValueA = (this.totalSupply() * inputValue) / totalLQTYOwnedBeforeDeposit;
+                outputValueA = (totalSupply * _inputValue) / totalLQTYOwnedBeforeDeposit;
             }
             _mint(address(this), outputValueA);
-        } else {
+        } else if (_inputAssetA.erc20Address == address(this) && _outputAssetA.erc20Address == LQTY) {
             // Withdrawal
-            require(
-                inputAssetA.erc20Address == address(this) && outputAssetA.erc20Address == LQTY,
-                "StakingBridge: INCORRECT_WITHDRAWAL_INPUT"
-            );
             // Claim rewards
             STAKING_CONTRACT.unstake(0);
             _swapRewardsToLQTYAndStake();
 
             // STAKING_CONTRACT.stakes(address(this)) / this.totalSupply() = how much LQTY is one SB
             // outputValueA = amount of LQTY to be withdrawn and sent to rollupProcessor
-            outputValueA = (STAKING_CONTRACT.stakes(address(this)) * inputValue) / this.totalSupply();
+            outputValueA = (STAKING_CONTRACT.stakes(address(this)) * _inputValue) / this.totalSupply();
             STAKING_CONTRACT.unstake(outputValueA);
-            _burn(address(this), inputValue);
-        }
-    }
-
-    /*
-     * @notice Swaps any ETH and LUSD currently held by the contract to LQTY and stakes LQTY in LQTYStaking.sol.
-     *
-     * @dev Note: The best route for LUSD -> LQTY is consistently LUSD -> USDC -> WETH -> LQTY. Since I want to swap
-     * liquidation rewards (ETH) to LQTY as well, I will first swap LUSD to WETH through USDC and then swap it all
-     * to LQTY
-     */
-    function _swapRewardsToLQTYAndStake() internal {
-        uint256 lusdBalance = IERC20(LUSD).balanceOf(address(this));
-        if (lusdBalance != 0) {
-            UNI_ROUTER.exactInput(
-                ISwapRouter.ExactInputParams({
-                    path: abi.encodePacked(LUSD, uint24(500), USDC, uint24(500), WETH),
-                    recipient: address(this),
-                    deadline: block.timestamp,
-                    amountIn: lusdBalance,
-                    amountOutMinimum: 0
-                })
-            );
-        }
-
-        uint256 ethBalance = address(this).balance;
-        if (ethBalance != 0) {
-            // Wrap ETH in WETH
-            IWETH(WETH).deposit{value: ethBalance}();
-        }
-
-        uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
-        if (wethBalance != 0) {
-            uint256 amountLQTYOut = UNI_ROUTER.exactInputSingle(
-                ISwapRouter.ExactInputSingleParams(WETH, LQTY, 3000, address(this), block.timestamp, wethBalance, 0, 0)
-            );
-            if (amountLQTYOut != 0) {
-                STAKING_CONTRACT.stake(amountLQTYOut);
-            }
+            _burn(address(this), _inputValue);
+        } else {
+            revert IncorrectInput();
         }
     }
 
@@ -180,16 +154,67 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
     )
         external
         payable
+        override(IDefiBridge)
         returns (
             uint256,
             uint256,
             bool
         )
     {
-        require(false, "StakingBridge: ASYNC_MODE_DISABLED");
+        revert AsyncModeDisabled();
     }
 
-    receive() external payable {}
+    /**
+     * @dev See {IERC20-totalSupply}.
+     */
+    function totalSupply() public view override(ERC20) returns (uint256) {
+        return super.totalSupply() - DUST;
+    }
 
-    fallback() external payable {}
+    /*
+     * @notice Swaps any ETH and LUSD currently held by the contract to LQTY and stakes LQTY in LQTYStaking.sol.
+     *
+     * @dev Note: The best route for LUSD -> LQTY is consistently LUSD -> USDC -> WETH -> LQTY. Since I want to swap
+     * liquidation rewards (ETH) to LQTY as well, I will first swap LUSD to WETH through USDC and then swap it all
+     * to LQTY
+     */
+    function _swapRewardsToLQTYAndStake() internal {
+        uint256 lusdBalance = IERC20(LUSD).balanceOf(address(this));
+        if (lusdBalance > DUST) {
+            UNI_ROUTER.exactInput(
+                ISwapRouter.ExactInputParams({
+                    path: abi.encodePacked(LUSD, uint24(500), USDC, uint24(500), WETH),
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: lusdBalance - DUST,
+                    amountOutMinimum: 0
+                })
+            );
+        }
+
+        uint256 ethBalance = address(this).balance;
+        if (ethBalance != 0) {
+            // Wrap ETH in WETH
+            IWETH(WETH).deposit{value: ethBalance}();
+        }
+
+        uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
+        if (wethBalance > DUST) {
+            uint256 amountLQTYOut = UNI_ROUTER.exactInputSingle(
+                ISwapRouter.ExactInputSingleParams(
+                    WETH,
+                    LQTY,
+                    3000,
+                    address(this),
+                    block.timestamp,
+                    wethBalance - DUST,
+                    0,
+                    0
+                )
+            );
+            if (amountLQTYOut != 0) {
+                STAKING_CONTRACT.stake(amountLQTYOut);
+            }
+        }
+    }
 }

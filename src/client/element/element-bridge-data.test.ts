@@ -1,11 +1,22 @@
-import { ElementBridgeData } from './element-bridge-data';
+import { ChainProperties, ElementBridgeData } from './element-bridge-data';
 import { BigNumber } from 'ethers';
 import { randomBytes } from 'crypto';
-import { RollupProcessor, ElementBridge, IVault } from '../../../typechain-types';
-import { AsyncDefiBridgeProcessedEventFilter } from '../../../typechain-types/RollupProcessor';
-import { BridgeId, BitConfig } from '../aztec/bridge_id';
+import {
+  RollupProcessor,
+  ElementBridge,
+  IVault,
+  ElementBridge__factory,
+  RollupProcessor__factory,
+  IVault__factory,
+} from '../../../typechain-types';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { AztecAssetType } from '../bridge-data';
 import { AddressZero } from '@ethersproject/constants';
+import { EthAddress } from '@aztec/barretenberg/address';
+
+jest.mock('../aztec/provider', () => ({
+  createWeb3Provider: jest.fn(),
+}));
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -41,8 +52,8 @@ describe('element bridge data', () => {
   const expiration1 = BigInt(now + 86400 * 60);
   const expiration2 = BigInt(now + 86400 * 90);
   const startDate = BigInt(now - 86400 * 30);
-  const bridge1 = new BridgeId(1, 4, 4, 0, 0, BitConfig.EMPTY, Number(expiration1));
-  const bridge2 = new BridgeId(1, 5, 5, 0, 0, BitConfig.EMPTY, Number(expiration2));
+  const bridge1 = new BridgeId(1, 4, 4, undefined, undefined, Number(expiration1));
+  const bridge2 = new BridgeId(1, 5, 5, undefined, undefined, Number(expiration2));
   const outputValue = 10n * 10n ** 18n;
 
   const defiEvents = [
@@ -116,12 +127,20 @@ describe('element bridge data', () => {
     } as any,
   } as any;
 
+  const createElementBridgeData = (
+    element: ElementBridge = elementBridge as any,
+    balancer: IVault = balancerContract as any,
+    rollup: RollupProcessor = rollupContract as any,
+    chainProperties: ChainProperties = { eventBatchSize: 10 },
+  ) => {
+    ElementBridge__factory.connect = () => element as any;
+    IVault__factory.connect = () => balancer as any;
+    RollupProcessor__factory.connect = () => rollup as any;
+    return ElementBridgeData.create({} as any, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO, chainProperties); // can pass in dummy values here as the above factories do all of the work
+  };
+
   it('should return the correct amount of interest', async () => {
-    const elementBridgeData = new ElementBridgeData(
-      elementBridge as any,
-      balancerContract as any,
-      rollupContract as any,
-    );
+    const elementBridgeData = createElementBridgeData();
     interactions[56] = {
       quantityPT: BigNumber.from(outputValue),
       expiry: BigNumber.from(expiration1),
@@ -137,17 +156,11 @@ describe('element bridge data', () => {
     const out = defiEvent.totalInputValue + (delta * ratio) / scalingFactor;
 
     expect(daiValue.amount).toStrictEqual(out);
-    expect(Number(daiValue.assetId)).toStrictEqual(bridge1.inputAssetId);
+    expect(Number(daiValue.assetId)).toStrictEqual(bridge1.inputAssetIdA);
   });
 
   it('should return the correct amount of interest for multiple interactions', async () => {
-    const elementBridgeData = new ElementBridgeData(
-      elementBridge as any,
-      balancerContract as any,
-      rollupContract as any,
-      { chunkSize: 10 },
-    );
-
+    const elementBridgeData = createElementBridgeData();
     const testInteraction = async (nonce: number) => {
       const defiEvent = getDefiEvent(nonce)!;
       const bridgeId = BridgeId.fromBigInt(defiEvent.bridgeId);
@@ -166,7 +179,7 @@ describe('element bridge data', () => {
       const out = defiEvent.totalInputValue + (delta * ratio) / scalingFactor;
 
       expect(daiValue.amount).toStrictEqual(out);
-      expect(Number(daiValue.assetId)).toStrictEqual(bridgeId.inputAssetId);
+      expect(Number(daiValue.assetId)).toStrictEqual(bridgeId.inputAssetIdA);
     };
     await testInteraction(56);
     await testInteraction(190);
@@ -179,11 +192,7 @@ describe('element bridge data', () => {
   });
 
   it('requesting the present value of an unknown interaction should return empty values', async () => {
-    const elementBridgeData = new ElementBridgeData(
-      elementBridge as any,
-      balancerContract as any,
-      rollupContract as any,
-    );
+    const elementBridgeData = createElementBridgeData();
     const values = await elementBridgeData.getInteractionPresentValue(57n);
     expect(values).toStrictEqual([]);
   });
@@ -206,23 +215,19 @@ describe('element bridge data', () => {
       },
     } as any;
 
-    const elementBridgeData = new ElementBridgeData(
-      elementBridge as any,
-      balancerContract as any,
-      rollupContract as any,
-    );
+    const elementBridgeData = createElementBridgeData(elementBridge as any);
     const expiration = await elementBridgeData.getExpiration(1n);
 
     expect(expiration).toBe(BigInt(endDate));
   });
 
-  it('should return the correct yearly output of the tranche', async () => {
+  it('should return the correct yield of the tranche', async () => {
     const now = Math.floor(Date.now() / 1000);
     const expiry = BigInt(now + 86400 * 30);
     const trancheAddress = '0x90ca5cef5b29342b229fb8ae2db5d8f4f894d652';
     const poolId = '0x90ca5cef5b29342b229fb8ae2db5d8f4f894d6520002000000000000000000b5';
-    const interest = 100000n;
-    const inputValue = 10e18,
+    const interest = BigInt(1e16);
+    const inputValue = BigInt(10e18),
       elementBridge = {
         hashAssetAndExpiry: jest.fn().mockResolvedValue('0xa'),
         pools: jest.fn().mockResolvedValue([trancheAddress, '', poolId]),
@@ -235,18 +240,16 @@ describe('element bridge data', () => {
     balancerContract = {
       ...balancerContract,
       queryBatchSwap: jest.fn().mockImplementation((...args) => {
-        const amount = args[1][0].amount;
-
-        return Promise.resolve([BigNumber.from(BigInt(amount)), BigNumber.from(-BigInt(BigInt(amount) + interest))]);
+        return Promise.resolve([BigNumber.from(inputValue), BigNumber.from(-BigInt(inputValue + interest))]);
       }),
     };
 
-    const elementBridgeData = new ElementBridgeData(
+    const elementBridgeData = createElementBridgeData(
       elementBridge as any,
       balancerContract as any,
       rollupContract as any,
     );
-    const output = await elementBridgeData.getExpectedYearlyOuput(
+    const output = await elementBridgeData.getExpectedYield(
       {
         assetType: AztecAssetType.ERC20,
         erc20Address: 'test',
@@ -274,8 +277,11 @@ describe('element bridge data', () => {
     const timeToExpiration = expiry - BigInt(now);
     const scaledOut = (BigInt(interest) * elementBridgeData.scalingFactor) / timeToExpiration;
     const yearlyOut = (scaledOut * BigInt(YEAR)) / elementBridgeData.scalingFactor;
+    const scaledPercentage = (yearlyOut * elementBridgeData.scalingFactor) / inputValue;
+    const percentage2sf = scaledPercentage / (elementBridgeData.scalingFactor / 10000n);
+    const percent = Number(percentage2sf) / 100;
 
-    expect(output[0]).toBe(yearlyOut + BigInt(inputValue));
+    expect(output[0]).toBe(percent);
   });
 
   it('should return the correct market size for a given tranche', async () => {
@@ -297,7 +303,7 @@ describe('element bridge data', () => {
       getPoolTokens: jest.fn().mockResolvedValue([[tokenAddress], [BigNumber.from(BigInt(tokenBalance))]]),
     };
 
-    const elementBridgeData = new ElementBridgeData(
+    const elementBridgeData = createElementBridgeData(
       elementBridge as any,
       balancerContract as any,
       rollupContract as any,

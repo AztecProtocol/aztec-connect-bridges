@@ -1,8 +1,18 @@
-import { BridgeId } from '../aztec/bridge_id';
 import { AddressZero } from '@ethersproject/constants';
-import { AssetValue, AsyncYieldBridgeData, AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
-import { ElementBridge, RollupProcessor, IVault } from '../../../typechain-types';
+import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
+import {
+  ElementBridge,
+  IVault,
+  RollupProcessor,
+  ElementBridge__factory,
+  IVault__factory,
+  RollupProcessor__factory,
+} from '../../../typechain-types';
 import { AsyncDefiBridgeProcessedEvent } from '../../../typechain-types/RollupProcessor';
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { createWeb3Provider } from '../aztec/provider';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 
 export type BatchSwapStep = {
   poolId: string;
@@ -25,11 +35,11 @@ export type FundManagement = {
 };
 
 // Some operations on this class require us to scan back over the blockchain
-// to find published events. This is done in batches of blocks. The chunk size in this set of properties
+// to find published events. This is done in batches of blocks. The batch size in this set of properties
 // determines how many blocks to request in each batch.
 // Users of this class can customise this to their provider requirements
 export type ChainProperties = {
-  chunkSize: number;
+  eventBatchSize: number;
 };
 
 interface EventBlock {
@@ -59,22 +69,29 @@ const decodeEvent = async (event: AsyncDefiBridgeProcessedEvent) => {
   return newEventBlock;
 };
 
-export class ElementBridgeData implements AsyncYieldBridgeData {
-  private elementBridgeContract: ElementBridge;
-  private rollupContract: RollupProcessor;
-  private balancerContract: IVault;
+export class ElementBridgeData implements BridgeDataFieldGetters {
   public scalingFactor = BigInt(1n * 10n ** 18n);
   private interactionBlockNumbers: Array<EventBlock> = [];
 
-  constructor(
-    elementBridge: ElementBridge,
-    balancer: IVault,
-    rollupContract: RollupProcessor,
-    private chainProperties: ChainProperties = { chunkSize: 10000 },
+  private constructor(
+    private elementBridgeContract: ElementBridge,
+    private balancerContract: IVault,
+    private rollupContract: RollupProcessor,
+    private chainProperties: ChainProperties,
+  ) {}
+
+  static create(
+    provider: EthereumProvider,
+    elementBridgeAddress: EthAddress,
+    balancerAddress: EthAddress,
+    rollupContractAddress: EthAddress,
+    chainProperties: ChainProperties = { eventBatchSize: 10000 },
   ) {
-    this.elementBridgeContract = elementBridge;
-    this.rollupContract = rollupContract;
-    this.balancerContract = balancer;
+    const ethersProvider = createWeb3Provider(provider);
+    const elementBridgeContract = ElementBridge__factory.connect(elementBridgeAddress.toString(), ethersProvider);
+    const rollupContract = RollupProcessor__factory.connect(rollupContractAddress.toString(), ethersProvider);
+    const vaultContract = IVault__factory.connect(balancerAddress.toString(), ethersProvider);
+    return new ElementBridgeData(elementBridgeContract, vaultContract, rollupContract, chainProperties);
   }
 
   private async storeEventBlocks(events: AsyncDefiBridgeProcessedEvent[]) {
@@ -134,7 +151,7 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
     }
 
     let end = latestBlockNumber;
-    let start = end - (this.chainProperties.chunkSize - 1);
+    let start = end - (this.chainProperties.eventBatchSize - 1);
     start = Math.max(start, earliestBlockNumber);
 
     while (end > earliestBlockNumber) {
@@ -155,7 +172,7 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
 
       // if we didn't find an event then go round again but search further back in time
       end = start - 1;
-      start = end - (this.chainProperties.chunkSize - 1);
+      start = end - (this.chainProperties.eventBatchSize - 1);
       start = Math.max(start, earliestBlockNumber);
     }
   }
@@ -189,10 +206,36 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
 
     return [
       {
-        assetId: BigInt(BridgeId.fromBigInt(defiEvent.bridgeId).inputAssetId),
+        assetId: BigInt(BridgeId.fromBigInt(defiEvent.bridgeId).inputAssetIdA),
         amount: defiEvent.totalInputValue + accruedInterst,
       },
     ];
+  }
+
+  async getCurrentYield(interactionNonce: bigint): Promise<number[]> {
+    const interaction = await this.elementBridgeContract.interactions(interactionNonce);
+    if (interaction === undefined) {
+      return [];
+    }
+    const exitTimestamp = interaction.expiry;
+    const endValue = interaction.quantityPT;
+
+    // we get the present value of the interaction
+    const defiEvent = await this.findDefiEventForNonce(interactionNonce);
+    if (defiEvent === undefined) {
+      return [];
+    }
+
+    const YEAR = 60n * 60n * 24n * 365n;
+
+    const totalInterest = endValue.toBigInt() - defiEvent.totalInputValue;
+    const totalTime = exitTimestamp.toBigInt() - BigInt(defiEvent.timestamp);
+    const interestPerSecondScaled = divide(totalInterest, totalTime, this.scalingFactor);
+    const yearlyInterest = (interestPerSecondScaled * YEAR) / this.scalingFactor;
+
+    const percentageScaled = divide(yearlyInterest, defiEvent.totalInputValue, this.scalingFactor);
+    const percentage2sf = (percentageScaled * 10000n) / this.scalingFactor;
+    return [Number(percentage2sf) / 100];
   }
 
   async getAuxData(
@@ -201,7 +244,11 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
-    return (await this.elementBridgeContract.getAssetExpiries(inputAssetA.erc20Address)).map(a => a.toBigInt());
+    const assetExpiries = await this.elementBridgeContract.getAssetExpiries(inputAssetA.erc20Address);
+    if (assetExpiries && assetExpiries.length) {
+      return assetExpiries.map(a => a.toBigInt());
+    }
+    return [];
   }
 
   public auxDataConfig: AuxDataConfig[] = [
@@ -225,14 +272,14 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
     return [BigInt(0), BigInt(0), BigInt(1)];
   }
 
-  async getExpectedYearlyOuput(
+  async getExpectedYield(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
     precision: bigint,
-  ): Promise<bigint[]> {
+  ): Promise<number[]> {
     const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(inputAssetA.erc20Address, auxData);
     const pool = await this.elementBridgeContract.pools(assetExpiryHash);
     const poolId = pool.poolId;
@@ -270,8 +317,10 @@ export class ElementBridgeData implements AsyncYieldBridgeData {
     const interest = -outputAssetAValue.toBigInt() - precision;
     const scaledOutput = divide(interest, timeToExpiration, this.scalingFactor);
     const yearlyOutput = (scaledOutput * YEAR) / this.scalingFactor;
+    const percentageScaled = divide(yearlyOutput, precision, this.scalingFactor);
+    const percentage2sf = (percentageScaled * 10000n) / this.scalingFactor;
 
-    return [yearlyOutput + precision, BigInt(0)];
+    return [Number(percentage2sf) / 100];
   }
 
   async getMarketSize(
