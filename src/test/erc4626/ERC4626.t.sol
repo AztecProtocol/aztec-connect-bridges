@@ -37,10 +37,48 @@ contract ERC4626 is Test {
         rollupProcessor.setBridgeGasLimit(address(vaultbridge), 1000000);
     }
 
-    function testVaultBridge() public {
+    function testVaultBridge1() public {
         uint256 depositAmount = 5000;
         deal(address(maple), address(rollupProcessor), depositAmount);
-        //_setTokenBalance(address(maple), address(rollupProcessor), depositAmount);
+        vault.approve(address(vault), address(maple));
+        vault.approvePair(address(vault), address(maple));
+        AztecTypes.AztecAsset memory empty;
+        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(maple),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(vault),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
+            address(vaultbridge),
+            inputAsset,
+            empty,
+            outputAsset,
+            empty,
+            depositAmount,
+            1,
+            0
+        );
+
+        uint256 rollupMapleShares = vault.balanceOf(address(rollupProcessor));
+        console.log(rollupMapleShares, 'ouput amount');
+        assertEq(rollupMapleShares, 4996);
+        rollupProcessor.convert(address(vaultbridge), outputAsset, empty, inputAsset, empty, rollupMapleShares, 1, 0);
+        uint256 rollupMapleToken = maple.balanceOf(address(rollupProcessor));
+        console.log(rollupMapleToken, 'withdraw amount');
+        assertEq(rollupMapleToken, 4999);
+        //assertEq(depositAmount, rollupBeefy, 'Balances must match');
+    }
+
+    function testVaultBridge1() public {
+        uint256 depositAmount = 5000;
+        deal(address(maple), address(rollupProcessor), depositAmount);
+        vault.approve(address(vault), address(maple));
         vault.approvePair(address(vault), address(maple));
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
