@@ -9,7 +9,7 @@ import {IERC4626} from './../../bridges/erc4626/Interfaces/IERC4626.sol';
 import {VaultBridge} from './../../bridges/erc4626/VaultBridge.sol';
 import {AztecTypes} from './../../aztec/AztecTypes.sol';
 import {console} from '../console.sol';
-import {Test} from 'forge-std/Test.sol';
+import {Test} from '../../../lib/forge-std/src/Test.sol';
 
 //Tested at block 14886873 may not work at other blocks
 contract ERC4626 is Test {
@@ -21,7 +21,8 @@ contract ERC4626 is Test {
     VaultBridge vaultbridge;
 
     IERC20 constant maple = IERC20(0x33349B282065b0284d756F0577FB39c158F935e6);
-
+    IERC20 constant fei= IERC20(0xc7283b66Eb1EB5FB86327f08e1B5816b0720212B)
+    IERC4626 constant tribeVault = IERC4626(0x4937A209D4cDbD3ecD48857277cfd4dA4D82914c);
     IERC4626 constant vault = IERC4626(0x4937A209D4cDbD3ecD48857277cfd4dA4D82914c);
 
     function _aztecPreSetup() internal {
@@ -40,7 +41,7 @@ contract ERC4626 is Test {
     function testVaultBridge1() public {
         uint256 depositAmount = 5000;
         deal(address(maple), address(rollupProcessor), depositAmount);
-        vault.approve(address(vault), address(maple));
+       
         vault.approvePair(address(vault), address(maple));
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
@@ -75,11 +76,11 @@ contract ERC4626 is Test {
         //assertEq(depositAmount, rollupBeefy, 'Balances must match');
     }
 
-    function testVaultBridge1() public {
+    function testVaultBridge2() public {
         uint256 depositAmount = 5000;
-        deal(address(maple), address(rollupProcessor), depositAmount);
-        vault.approve(address(vault), address(maple));
-        vault.approvePair(address(vault), address(maple));
+        deal(address(fei), address(rollupProcessor), depositAmount);
+        vault.approvePair(address(tribeVault), address(fei));
+       
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,
