@@ -67,7 +67,6 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
     }
 
     struct SwapCallbackData {
-        bool firstCallback;
         uint256 debtToRepay;
         uint256 collToWithdraw;
     }
@@ -276,10 +275,9 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
     ) external override(IUniswapV3SwapCallback) {
         // swaps entirely within 0-liquidity regions are not supported
         if (_amount0Delta <= 0 && _amount1Delta <= 0) revert IncorrectDeltaAmounts();
-        SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
-        if (data.firstCallback) {
-            // Uniswap pools always call callback on msg.sender so this check is enough to prevent malicious behavior
-            if (msg.sender != LUSD_USDC_POOL) revert InvalidCaller();
+        // Uniswap pools always call callback on msg.sender so this check is enough to prevent malicious behavior
+        if (msg.sender == LUSD_USDC_POOL) {
+            SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
             // Repay debt in full
             address upperHint = SORTED_TROVES.getPrev(address(this));
             address lowerHint = SORTED_TROVES.getNext(address(this));
@@ -291,14 +289,15 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
                 false, // zeroForOne
                 -_amount1Delta, // amount of USDC to pay to LUSD_USDC_POOL for the swap
                 SQRT_PRICE_LIMIT_X96,
-                abi.encode(SwapCallbackData({firstCallback: false, debtToRepay: 0, collToWithdraw: 0}))
+                ""
             );
-        } else {
-            if (msg.sender != USDC_ETH_POOL) revert InvalidCaller();
+        } else if (msg.sender == USDC_ETH_POOL) {
             // Pay USDC_ETH_POOL for the USDC
             uint256 amountToPay = uint256(_amount1Delta);
             IWETH(WETH).deposit{value: amountToPay}(); // wrap only what is needed to pay
             IWETH(WETH).transfer(address(USDC_ETH_POOL), amountToPay);
+        } else {
+            revert InvalidCaller();
         }
     }
 
@@ -376,9 +375,9 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
         returns (uint256 outputValueA, uint256 outputValueB)
     {
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
-        // 1. Compute how much ought to be repaid
+        // Compute how much debt to be repay
         uint256 debtToRepay = (_inputValue * debtBefore) / this.totalSupply();
-        // 2. Compute how much collateral can be withdrawn
+        // Compute how much collateral to withdraw
         uint256 collToWithdraw = (_inputValue * collBefore) / this.totalSupply();
 
         if (debtToRepay > _inputValue) {
@@ -397,12 +396,10 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
                 false, // zeroForOne
                 -int256(debtToRepay - _inputValue), // amount of LUSD to receive
                 SQRT_PRICE_LIMIT_X96,
-                abi.encode(
-                    SwapCallbackData({firstCallback: true, debtToRepay: debtToRepay, collToWithdraw: collToWithdraw})
-                )
+                abi.encode(SwapCallbackData({debtToRepay: debtToRepay, collToWithdraw: collToWithdraw}))
             );
         } else {
-            // 3. Repay _inputValue of LUSD and withdraw collateral - drops CR if trove was part of redistribution
+            // Repay _inputValue of LUSD and withdraw collateral
             address upperHint = SORTED_TROVES.getPrev(address(this));
             address lowerHint = SORTED_TROVES.getNext(address(this));
             BORROWER_OPERATIONS.adjustTrove(0, collToWithdraw, debtToRepay, false, upperHint, lowerHint);
