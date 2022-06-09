@@ -38,6 +38,11 @@ import {IUniswapV3SwapCallback} from "./interfaces/IUniswapV3SwapCallback.sol";
  * calling closeTrove() will succeed and owner's balance will get burned, making TB total supply 0.
  *
  * If the trove is closed by redemption, users can withdraw their remaining collateral by supplying their TB.
+ *
+ * DISCLAIMER: Users are not able to exit the Trove in case the Liquity system is in recovery mode (total CR < 150%).
+ * This is because in recovery mode only pure collateral top-up or debt repayment is allowed. This makes exit
+ * from this bridge impossible in recovery mode because such exit is always a combination of debt repayment and
+ * collateral withdrawal.
  */
 contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
     using Strings for uint256;
@@ -149,15 +154,15 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
      * the method. If this is not the case, the function will revert.
      *
      *                              Borrowing               Repaying                Redeeming
-     * @param _inputAssetA -         ETH                     TB                      TB
-     * @param _inputAssetB -         None                    LUSD                    None
-     * @param _outputAssetA -        TB                      ETH                     ETH
-     * @param _outputAssetB -        LUSD                    LUSD                    None
-     * @param _inputValue -          amount of ETH           amount of TB and LUSD   amount of TB
-     * @param _interactionNonce -    nonce                   nonce                   nonce
-     * @param _auxData -             max borrower fee        0                       0
-     * @return outputValueA -       amount of TB            amount of ETH            amount of ETH
-     * @return outputValueB -       amount of LUSD          amount of LUSD           0
+     * @param _inputAssetA -        ETH                     TB                      TB
+     * @param _inputAssetB -        None                    LUSD                    None
+     * @param _outputAssetA -       TB                      ETH                     ETH
+     * @param _outputAssetB -       LUSD                    LUSD                    None
+     * @param _inputValue -         amount of ETH           amount of TB and LUSD   amount of TB
+     * @param _interactionNonce -   nonce                   nonce                   nonce
+     * @param _auxData -            max borrower fee        0                       0
+     * @return outputValueA -       amount of TB            amount of ETH           amount of ETH
+     * @return outputValueB -       amount of LUSD          amount of LUSD          0
      * @dev The amount of LUSD returned (outputValueB) during repayment will be non-zero only when the trove was
      * partially redeemed.
      */
@@ -214,7 +219,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
 
     /**
      * @notice A function which closes the trove.
-     * @dev LUSD allowance has to be at least (remaining debt - 200).
+     * @dev LUSD allowance has to be at least (remaining debt - 200 LUSD).
      */
     function closeTrove() external onlyOwner {
         address payable owner = payable(owner());
@@ -261,7 +266,8 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
         revert AsyncModeDisabled();
     }
 
-    /// @inheritdoc IUniswapV3SwapCallback
+    // @inheritdoc IUniswapV3SwapCallback
+    // @dev See _repay(...) method for more information about how this callback is entered.
     function uniswapV3SwapCallback(
         int256 amount0Delta,
         int256 amount1Delta,
@@ -270,6 +276,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
         require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
         SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
         if (data.firstCallback) {
+            // Uniswap pools always call callback on msg.sender so this check is enough to prevent malicious behavior
             if (msg.sender != LUSD_USDC_POOL) revert InvalidCaller();
             // Repay debt in full
             address upperHint = SORTED_TROVES.getPrev(address(this));
@@ -375,9 +382,11 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
         if (debtToRepay > _inputValue) {
             // Collateral and debt was redistributed to bridge's trove (1 TB corresponds to more than 1 LUSD worth
             // of debt). For this reason the bridge doesn't currently have enough LUSD to repay the debt in full.
-            // It's important that CR never drops because if Liquity was in recovery mode the tx would revert
-            // (CR drops in recovery mode not allowed).
-            // For this reason I came up with the following construction:
+            // It's important that CR never drops because if the trove was near minimum CR (MCR) the tx would revert.
+            // This would effectively stop users from being able to exit. Unfortunately users are also not able
+            // to exit when Liquity is in recovery mode (total collateral ratio < 150%) because in such a case
+            // only pure collateral top-up or debt repayment is allowed.
+            // To avoid CR from ever dropping bellow MCR I came up with the following construction:
             // 1) flash swap USDC to LUSD, 2) repay the user's trove debt in full (in the 1st callback),
             // 3) flash swap WETH to USDC with recipient being the LUSD_USDC_POOL - this pays for the first swap,
             // 4) in the 2nd callback deposit part of the withdrawn collateral to WETH and pay for the 2nd swap.
