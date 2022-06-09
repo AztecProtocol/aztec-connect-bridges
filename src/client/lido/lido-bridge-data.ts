@@ -5,7 +5,7 @@ import {
   SolidityType,
   AztecAssetType,
   BridgeDataFieldGetters,
-} from '../bridge-data';
+} from "../bridge-data";
 
 import {
   IWstETH,
@@ -14,10 +14,10 @@ import {
   IWstETH__factory,
   ILidoOracle__factory,
   ICurvePool__factory,
-} from '../../../typechain-types';
-import { EthereumProvider } from '@aztec/barretenberg/blockchain';
-import { createWeb3Provider } from '../aztec/provider';
-import { EthAddress } from '@aztec/barretenberg/address';
+} from "../../../typechain-types";
+import { EthereumProvider } from "@aztec/barretenberg/blockchain";
+import { createWeb3Provider } from "../aztec/provider";
+import { EthAddress } from "@aztec/barretenberg/address";
 
 export class LidoBridgeData implements BridgeDataFieldGetters {
   public scalingFactor: bigint = 1n * 10n ** 18n;
@@ -47,7 +47,7 @@ export class LidoBridgeData implements BridgeDataFieldGetters {
       start: 0,
       length: 64,
       solidityType: SolidityType.uint64,
-      description: 'Not Used',
+      description: "Not Used",
     },
   ];
 
@@ -76,12 +76,9 @@ export class LidoBridgeData implements BridgeDataFieldGetters {
   ): Promise<bigint[]> {
     // ETH -> wstETH
     if (inputAssetA.assetType == AztecAssetType.ETH) {
-      const curveMinOutput = await this.curvePoolContract.get_dy(0, 1, inputValue);
-      if (curveMinOutput.toBigInt() > inputValue) {
-        return [curveMinOutput.toBigInt()];
-      } else {
-        return [inputValue];
-      }
+      // Assume ETH -> stETh 1:1 (there will be a tiny diff because rounding down)
+      const wstETHBalance = await this.wstETHContract.getWstETHByStETH(inputValue);
+      return [wstETHBalance.toBigInt()];
     }
 
     // wstETH -> ETH

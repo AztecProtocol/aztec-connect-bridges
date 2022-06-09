@@ -1,4 +1,4 @@
-import { LidoBridgeData } from './lido-bridge-data';
+import { LidoBridgeData } from "./lido-bridge-data";
 import {
   IWstETH,
   ICurvePool,
@@ -6,12 +6,12 @@ import {
   IWstETH__factory,
   ICurvePool__factory,
   ILidoOracle__factory,
-} from '../../../typechain-types';
-import { AztecAsset, AztecAssetType } from '../bridge-data';
-import { BigNumber } from 'ethers';
-import { EthAddress } from '@aztec/barretenberg/address';
+} from "../../../typechain-types";
+import { AztecAsset, AztecAssetType } from "../bridge-data";
+import { BigNumber } from "ethers";
+import { EthAddress } from "@aztec/barretenberg/address";
 
-jest.mock('../aztec/provider', () => ({
+jest.mock("../aztec/provider", () => ({
   createWeb3Provider: jest.fn(),
 }));
 
@@ -19,7 +19,7 @@ type Mockify<T> = {
   [P in keyof T]: jest.Mock | any;
 };
 
-describe('lido bridge data', () => {
+describe("lido bridge data", () => {
   let lidoBridgeData: LidoBridgeData;
   let wstethContract: Mockify<IWstETH>;
   let curvePoolContract: Mockify<ICurvePool>;
@@ -44,27 +44,28 @@ describe('lido bridge data', () => {
     ethAsset = {
       id: 1n,
       assetType: AztecAssetType.ETH,
-      erc20Address: '0x0',
+      erc20Address: "0x0",
     };
     wstETHAsset = {
       id: 2n,
       assetType: AztecAssetType.ERC20,
-      erc20Address: '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0',
+      erc20Address: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
     };
     emptyAsset = {
       id: 0n,
       assetType: AztecAssetType.NOT_USED,
-      erc20Address: '0x0',
+      erc20Address: "0x0",
     };
   });
 
-  it('should get wstETH when deposit small amount of ETH - curve route', async () => {
+  it("should get wstETH when deposit small amount of ETH", async () => {
     const depositAmount = BigInt(10e18);
-    const expectedOutput = depositAmount + 1n;
+    const wstEthAmount = BigInt(9.5e18);
+    const expectedOutput = wstEthAmount;
 
-    curvePoolContract = {
-      ...curvePoolContract,
-      get_dy: jest.fn().mockResolvedValue(BigNumber.from(expectedOutput)),
+    wstethContract = {
+      ...wstethContract,
+      getWstETHByStETH: jest.fn().mockResolvedValue(BigNumber.from(wstEthAmount)),
     };
 
     lidoBridgeData = createLidoBridgeData(wstethContract as any, curvePoolContract as any, lidoOracleContract as any);
@@ -79,13 +80,14 @@ describe('lido bridge data', () => {
     );
     expect(expectedOutput == output[0]).toBeTruthy();
   });
-  it('should get wstETH when deposit a large amount of ETH - lido route', async () => {
-    const depositAmount = BigInt(10000000e18);
-    const expectedOutput = depositAmount;
+  it("should get wstETH when deposit a large amount of ETH", async () => {
+    const depositAmount = BigInt(10000e18);
+    const wstEthAmount = BigInt(9500e18);
+    const expectedOutput = wstEthAmount;
 
-    curvePoolContract = {
-      ...curvePoolContract,
-      get_dy: jest.fn().mockResolvedValue(BigNumber.from(depositAmount - 1n)),
+    wstethContract = {
+      ...wstethContract,
+      getWstETHByStETH: jest.fn().mockResolvedValue(BigNumber.from(wstEthAmount)),
     };
 
     lidoBridgeData = createLidoBridgeData(wstethContract as any, curvePoolContract as any, lidoOracleContract as any);
@@ -100,9 +102,9 @@ describe('lido bridge data', () => {
     );
     expect(expectedOutput == output[0]).toBeTruthy();
   });
-  it('should exit to ETH when deposit WstETH', async () => {
+  it("should exit to ETH when deposit WstETH", async () => {
     const depositAmount = BigInt(100e18);
-    const stethOutputAmount = BigInt(101e18);
+    const stethOutputAmount = BigInt(110e18);
     const expectedOutput = BigInt(105e18);
 
     wstethContract = {
@@ -129,7 +131,7 @@ describe('lido bridge data', () => {
     expect(expectedOutput == output[0]).toBeTruthy();
   });
 
-  it('should correctly return the expectedYearlyOutput', async () => {
+  it("should correctly return the expectedYearlyOutput", async () => {
     const depositAmount = BigInt(1 * 10e18);
     const expectedOutput = 4.32;
 
