@@ -26,7 +26,7 @@ jobs:
           shell: /bin/bash
           command: |
             yarn config set script-shell /bin/bash
-            yarn prettier:check
+            yarn formatting:check
       - run:
           name: Test Contracts
           shell: /bin/bash
