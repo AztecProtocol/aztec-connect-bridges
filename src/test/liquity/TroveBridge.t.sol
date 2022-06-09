@@ -28,6 +28,7 @@ contract TroveBridgeTest is TestUtil {
     uint256 private constant ROLLUP_PROCESSOR_WEI_BALANCE = 1e18; // 1 ETH
 
     uint64 private constant MAX_FEE = 5e16; // Slippage protection: 5%
+    uint256 public constant MCR = 1100000000000000000; // 110%
 
     // From LiquityMath.sol
     uint256 private constant NICR_PRECISION = 1e20;
@@ -160,6 +161,7 @@ contract TroveBridgeTest is TestUtil {
 
         (uint256 debtBefore, uint256 collBefore, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
 
+        // Erase stability pool's LUSD balance
         deal(tokens["LUSD"].addr, STABILITY_POOL, 0);
 
         uint256 priceBeforeDrop = bridge.TROVE_MANAGER().priceFeed().fetchPrice();
@@ -180,7 +182,57 @@ contract TroveBridgeTest is TestUtil {
         // Setting maxEthDelta to 0.05 ETH because there is some loss during swap
         _repay(ROLLUP_PROCESSOR_WEI_BALANCE * 3, 5e16);
 
-        _closeTroveAfterRedistribution();
+        _closeTroveAfterRedistribution(OWNER_WEI_BALANCE);
+    }
+
+    function testExitWhenICREqualsMCRAfterRedistribution() public {
+        vm.prank(OWNER);
+        bridge = new TroveBridge(address(rollupProcessor), 500);
+
+        _openTrove();
+        _borrow();
+
+        // Erase stability pool's LUSD balance
+        deal(tokens["LUSD"].addr, STABILITY_POOL, 0);
+
+        uint256 priceBeforeDrop = bridge.TROVE_MANAGER().priceFeed().fetchPrice();
+
+        setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
+        bridge.TROVE_MANAGER().liquidateTroves(10);
+
+        _borrowAfterRedistribution();
+
+        // Rise the price back so that the system is not in recovery mode - allows me to drop trove's CR for a bit
+        setLiquityPrice(priceBeforeDrop);
+
+        // Drop Trove's CR to MCR by impersonating the bridge and directly withdrawing collateral
+        (uint256 debt, uint256 coll, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+
+        uint256 icrAfterRedistribution = (coll * priceBeforeDrop) / debt;
+
+        uint256 collToWithdraw = ((icrAfterRedistribution - MCR) * coll) / icrAfterRedistribution;
+
+        address upperHint = bridge.SORTED_TROVES().getPrev(address(this));
+        address lowerHint = bridge.SORTED_TROVES().getNext(address(this));
+        vm.startPrank(address(bridge));
+        bridge.BORROWER_OPERATIONS().withdrawColl(collToWithdraw, upperHint, lowerHint);
+        vm.stopPrank();
+
+        // Erase withdrawn collateral from the bridge
+        vm.deal(address(bridge), 0);
+
+        (debt, coll, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+        uint256 icrAfterWithdrawal = (coll * priceBeforeDrop) / debt;
+
+        assertEq(icrAfterWithdrawal, MCR, "ICR after withdrawal doesn't equal MCR");
+
+        // Setting maxEthDelta to 0.05 ETH because there is some loss during swap
+        uint256 expectedBalance = (coll * bridge.balanceOf(address(rollupProcessor))) / bridge.totalSupply();
+        _repay(expectedBalance, 5e16);
+
+        (, coll, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+        uint256 expectedOwnerBalance = (coll * bridge.balanceOf(OWNER)) / bridge.totalSupply();
+        _closeTroveAfterRedistribution(expectedOwnerBalance);
     }
 
     function _openTrove() private {
@@ -395,7 +447,7 @@ contract TroveBridgeTest is TestUtil {
         assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST(), "Bridge holds LUSD after interaction");
     }
 
-    function _closeTroveAfterRedistribution() private {
+    function _closeTroveAfterRedistribution(uint256 _expectedBalance) private {
         // Set msg.sender to OWNER
         vm.startPrank(OWNER);
 
@@ -417,7 +469,7 @@ contract TroveBridgeTest is TestUtil {
 
         assertApproxEqAbs(
             OWNER.balance,
-            OWNER_WEI_BALANCE,
+            _expectedBalance,
             1e17,
             "Current owner balance differs from the initial balance by more than 0.1 ETH"
         );

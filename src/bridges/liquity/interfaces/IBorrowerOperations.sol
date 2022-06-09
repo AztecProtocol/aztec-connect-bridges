@@ -20,5 +20,11 @@ interface IBorrowerOperations {
         address _lowerHint
     ) external payable;
 
+    function withdrawColl(
+        uint256 _amount,
+        address _upperHint,
+        address _lowerHint
+    ) external;
+
     function claimCollateral() external;
 }
