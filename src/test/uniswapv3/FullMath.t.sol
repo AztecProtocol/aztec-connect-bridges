@@ -1,16 +1,12 @@
 pragma solidity 0.8.10;
 
-import "../../../lib/ds-test/src/test.sol";
-import {Vm} from "../../../lib/forge-std/src/Vm.sol";
+import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
 import {FullMath} from "../../bridges/uniswapv3/libraries/FullMath.sol";
 
-import {console} from "forge-std/console.sol";
-
-contract MathTest is DSTest {
-    Vm private vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
-    uint256 constant Q128 = 2**128;
-    uint256 constant MAX_UINT = type(uint256).max;
+contract MathTest is Test {
+    uint256 private constant Q128 = 2**128;
+    uint256 private constant MAX_UINT = type(uint256).max;
 
     function setUp() public {}
 
@@ -25,17 +21,17 @@ contract MathTest is DSTest {
     }
 
     function testShouldCorrectlyCalculateMulDivWithNoOverflow(
-        uint64 a,
-        uint64 b,
-        uint256 denominator
+        uint64 _a,
+        uint64 _b,
+        uint256 _denominator
     ) public {
-        if (denominator == 0) {
+        if (_denominator == 0) {
             vm.expectRevert(bytes(""));
-            FullMath.mulDiv(a, b, denominator);
+            FullMath.mulDiv(_a, _b, _denominator);
             return;
         }
-        uint256 fullMathResult = FullMath.mulDiv(a, b, denominator);
-        uint256 result = (uint256(a) * uint256(b)) / denominator;
+        uint256 fullMathResult = FullMath.mulDiv(_a, _b, _denominator);
+        uint256 result = (uint256(_a) * uint256(_b)) / _denominator;
         assertEq(fullMathResult, result);
     }
 
