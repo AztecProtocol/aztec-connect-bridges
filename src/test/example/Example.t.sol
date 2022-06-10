@@ -12,20 +12,16 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ExampleBridgeContract} from "./../../bridges/example/ExampleBridge.sol";
 
 contract ExampleTest is Test {
+    IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+
     DefiBridgeProxy internal defiBridgeProxy;
     RollupProcessor internal rollupProcessor;
 
     ExampleBridgeContract internal exampleBridge;
 
-    IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-
-    function _aztecPreSetup() internal {
+    function setUp() public {
         defiBridgeProxy = new DefiBridgeProxy();
         rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
-    }
-
-    function setUp() public {
-        _aztecPreSetup();
 
         exampleBridge = new ExampleBridgeContract(address(rollupProcessor));
 
@@ -59,6 +55,8 @@ contract ExampleTest is Test {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
+        // Disabling linting errors here to show return variables
+        // solhint-disable-next-line
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
             address(exampleBridge),
             inputAsset,
