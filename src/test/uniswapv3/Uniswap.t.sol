@@ -1,8 +1,9 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.10;
-pragma experimental ABIEncoderV2;
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright 2022 Spilsbury Holdings Ltd
+pragma solidity >=0.8.4;
 
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 
@@ -19,23 +20,6 @@ import {LiquidityAmounts} from "../../bridges/uniswapv3/libraries/LiquidityAmoun
 import {AztecKeeper} from "./../../bridges/uniswapv3/AztecKeeper.sol";
 
 contract UniswapTest is Test {
-    DefiBridgeProxy defiBridgeProxy;
-    RollupProcessor rollupProcessor;
-
-    SyncUniswapV3Bridge syncBridge;
-    AsyncUniswapV3Bridge asyncBridge;
-
-    IERC20 constant dai = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7);
-    IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    IERC20 constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-    address constant factory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
-    address constant router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
-    address constant nonfungiblePositionManager = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
-    address constant quoter = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
-    address constant pool = 0x4e68Ccd3E89f51C3074ca5072bbAC773960dFa36;
-
-    INonfungiblePositionManager public immutable manager = INonfungiblePositionManager(nonfungiblePositionManager);
-
     struct Deposit {
         uint256 tokenId;
         uint128 liquidity;
@@ -48,30 +32,41 @@ contract UniswapTest is Test {
         address token1;
     }
 
-    function _aztecPreSetup() internal {
-        defiBridgeProxy = new DefiBridgeProxy();
-        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
-    }
+    IERC20 private constant DAI = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7);
+    IERC20 private constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    IERC20 private constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+    address private constant FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
+    address private constant ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+    address private constant NONFUNGIBLE_POSITION_MANAGER = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
+    address private constant QUOTER = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
+    address private constant POOL = 0x4e68Ccd3E89f51C3074ca5072bbAC773960dFa36;
+
+    DefiBridgeProxy private defiBridgeProxy;
+    RollupProcessor private rollupProcessor;
+
+    SyncUniswapV3Bridge private syncBridge;
+    AsyncUniswapV3Bridge private asyncBridge;
 
     function setUp() public {
-        _aztecPreSetup();
+        defiBridgeProxy = new DefiBridgeProxy();
+        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
 
         syncBridge = new SyncUniswapV3Bridge(
             address(rollupProcessor),
-            router,
-            nonfungiblePositionManager,
-            factory,
+            ROUTER,
+            NONFUNGIBLE_POSITION_MANAGER,
+            FACTORY,
             address(WETH),
-            quoter
+            QUOTER
         );
 
         asyncBridge = new AsyncUniswapV3Bridge(
             address(rollupProcessor),
-            router,
-            nonfungiblePositionManager,
-            factory,
+            ROUTER,
+            NONFUNGIBLE_POSITION_MANAGER,
+            FACTORY,
             address(WETH),
-            quoter
+            QUOTER
         );
 
         vm.deal(address(asyncBridge), uint256(10000));
@@ -79,54 +74,36 @@ contract UniswapTest is Test {
         vm.deal(address(this), uint256(10000));
     }
 
-    function adjustTickParams(
-        int24 tickLower,
-        int24 tickUpper,
-        address _pool
-    ) internal returns (int24 newTickLower, int24 newTickUpper) {
-        //adjust the params s.t. they conform to tick spacing and do not fail the tick % tickSpacing == 0 check
-        IUniswapV3Pool pool = IUniswapV3Pool(_pool);
-
-        newTickLower = tickLower % pool.tickSpacing() == 0 ? tickLower : tickLower - (tickLower % pool.tickSpacing());
-        newTickUpper = tickUpper % pool.tickSpacing() == 0 ? tickUpper : tickUpper - (tickUpper % pool.tickSpacing());
-    }
-
-    function assumptions(uint256 deposit) internal {
-        if (address(dai) == 0xdAC17F958D2ee523a2206206994597C13D831ec7) {
-            vm.assume(deposit <= 3769678424353192924097187526);
-        }
-    }
-
     function testAsyncLimitOrderKeeper(uint256 _deposit) public {
         vm.assume(_deposit >= 1000000000000000);
         vm.assume(_deposit <= 60048070258392067512707354988);
         uint256 depositAmount = _deposit;
-        _setTokenBalance(address(dai), address(rollupProcessor), depositAmount, 2);
+        _setTokenBalance(address(DAI), address(rollupProcessor), depositAmount, 2);
 
         uint64 data;
 
         {
-            (uint160 price, int24 currentTick, , , , , ) = IUniswapV3Pool(pool).slot0();
+            (uint160 price, int24 currentTick, , , , , ) = IUniswapV3Pool(POOL).slot0();
             price = (price * 80) / 100; //increase price by 1%
             currentTick = TickMath.getTickAtSqrtRatio(price); //get new current tick
             //buy limit
-            (int24 _a, int24 _b) = adjustTickParams(
-                currentTick - (20 * IUniswapV3Pool(pool).tickSpacing()),
-                currentTick + (20 * IUniswapV3Pool(pool).tickSpacing()),
-                pool
+            (int24 _a, int24 _b) = _adjustTickParams(
+                currentTick - (20 * IUniswapV3Pool(POOL).tickSpacing()),
+                currentTick + (20 * IUniswapV3Pool(POOL).tickSpacing()),
+                POOL
             );
             uint24 a = uint24(_a);
             uint24 b = uint24(_b);
             uint48 ticks = (uint48(a) << 24) | uint48(b);
             uint8 fee = uint8(30);
-            uint8 days_to_cancel = 0;
-            uint16 last16 = ((uint16(fee) << 8) | uint16(days_to_cancel));
+            uint8 daysToCancel = 0;
+            uint16 last16 = ((uint16(fee) << 8) | uint16(daysToCancel));
             data = (uint64(ticks) << 16) | uint64(last16);
         }
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dai),
+            erc20Address: address(DAI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
@@ -144,7 +121,7 @@ contract UniswapTest is Test {
 
         AztecTypes.AztecAsset memory outputAssetB = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dai),
+            erc20Address: address(DAI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
@@ -168,11 +145,11 @@ contract UniswapTest is Test {
 
             _setTokenBalance(address(WETH), address(this), WETH.totalSupply(), 3);
 
-            TransferHelper.safeApprove(address(WETH), router, WETH.totalSupply());
+            TransferHelper.safeApprove(address(WETH), ROUTER, WETH.totalSupply());
             {
-                ISwapRouter.ExactInputSingleParams memory swap_params = ISwapRouter.ExactInputSingleParams({
+                ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
                     tokenIn: address(WETH),
-                    tokenOut: address(dai),
+                    tokenOut: address(DAI),
                     fee: 3000,
                     recipient: address(this),
                     deadline: block.timestamp,
@@ -181,15 +158,15 @@ contract UniswapTest is Test {
                     sqrtPriceLimitX96: 0
                 });
 
-                (uint160 new_price, , , , , , ) = IUniswapV3Pool(pool).slot0();
+                (uint160 newPrice, , , , , , ) = IUniswapV3Pool(POOL).slot0();
 
                 while (
-                    !(tickLower <= TickMath.getTickAtSqrtRatio(new_price) &&
-                        TickMath.getTickAtSqrtRatio(new_price) <= tickUpper)
+                    !(tickLower <= TickMath.getTickAtSqrtRatio(newPrice) &&
+                        TickMath.getTickAtSqrtRatio(newPrice) <= tickUpper)
                 ) {
-                    uint256 amountOut = ISwapRouter(router).exactInputSingle(swap_params);
-                    (new_price, , , , , , ) = IUniswapV3Pool(pool).slot0();
-                    console.log(new_price, "prices");
+                    ISwapRouter(ROUTER).exactInputSingle(swapParams);
+                    (newPrice, , , , , , ) = IUniswapV3Pool(POOL).slot0();
+                    console.log(newPrice, "prices");
                 }
             }
         }
@@ -197,12 +174,12 @@ contract UniswapTest is Test {
         (, , uint256 amount0, uint256 amount1, , , , , ) = asyncBridge.getDeposit(1);
 
         console.log("trigger");
-        AztecKeeper keeper = new AztecKeeper(1, factory, address(rollupProcessor), address(asyncBridge));
+        AztecKeeper keeper = new AztecKeeper(1, FACTORY, address(rollupProcessor), address(asyncBridge));
 
         {
             uint256[] memory interactions = new uint256[](1);
             interactions[0] = 1;
-            (bool upkeep, bytes memory performData) = keeper.checkUpkeep(abi.encode(interactions));
+            (, bytes memory performData) = keeper.checkUpkeep(abi.encode(interactions));
             keeper.performUpkeep(performData);
         }
 
@@ -219,32 +196,32 @@ contract UniswapTest is Test {
         vm.assume(_deposit >= 1000000000000000);
         vm.assume(_deposit <= 60048070258392067512707354988);
         uint256 depositAmount = _deposit;
-        _setTokenBalance(address(dai), address(rollupProcessor), depositAmount, 2);
+        _setTokenBalance(address(DAI), address(rollupProcessor), depositAmount, 2);
 
         uint64 data;
 
         {
-            (uint160 price, int24 currentTick, , , , , ) = IUniswapV3Pool(pool).slot0();
+            (uint160 price, int24 currentTick, , , , , ) = IUniswapV3Pool(POOL).slot0();
             price = (price * 80) / 100; //increase price by 1%
             currentTick = TickMath.getTickAtSqrtRatio(price); //get new current tick
             //buy limit
-            (int24 _a, int24 _b) = adjustTickParams(
-                currentTick - (20 * IUniswapV3Pool(pool).tickSpacing()),
-                currentTick + (20 * IUniswapV3Pool(pool).tickSpacing()),
-                pool
+            (int24 _a, int24 _b) = _adjustTickParams(
+                currentTick - (20 * IUniswapV3Pool(POOL).tickSpacing()),
+                currentTick + (20 * IUniswapV3Pool(POOL).tickSpacing()),
+                POOL
             );
             uint24 a = uint24(_a);
             uint24 b = uint24(_b);
             uint48 ticks = (uint48(a) << 24) | uint48(b);
             uint8 fee = uint8(30);
-            uint8 days_to_cancel = 0;
-            uint16 last16 = ((uint16(fee) << 8) | uint16(days_to_cancel));
+            uint8 daysToCancel = 0;
+            uint16 last16 = ((uint16(fee) << 8) | uint16(daysToCancel));
             data = (uint64(ticks) << 16) | uint64(last16);
         }
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dai),
+            erc20Address: address(DAI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
@@ -262,7 +239,7 @@ contract UniswapTest is Test {
 
         AztecTypes.AztecAsset memory outputAssetB = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dai),
+            erc20Address: address(DAI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
@@ -286,11 +263,11 @@ contract UniswapTest is Test {
 
             _setTokenBalance(address(WETH), address(this), WETH.totalSupply(), 3);
 
-            TransferHelper.safeApprove(address(WETH), router, WETH.totalSupply());
+            TransferHelper.safeApprove(address(WETH), ROUTER, WETH.totalSupply());
             {
-                ISwapRouter.ExactInputSingleParams memory swap_params = ISwapRouter.ExactInputSingleParams({
+                ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
                     tokenIn: address(WETH),
-                    tokenOut: address(dai),
+                    tokenOut: address(DAI),
                     fee: 3000,
                     recipient: address(this),
                     deadline: block.timestamp,
@@ -299,15 +276,15 @@ contract UniswapTest is Test {
                     sqrtPriceLimitX96: 0
                 });
 
-                (uint160 new_price, , , , , , ) = IUniswapV3Pool(pool).slot0();
+                (uint160 newPrice, , , , , , ) = IUniswapV3Pool(POOL).slot0();
 
                 while (
-                    !(tickLower <= TickMath.getTickAtSqrtRatio(new_price) &&
-                        TickMath.getTickAtSqrtRatio(new_price) <= tickUpper)
+                    !(tickLower <= TickMath.getTickAtSqrtRatio(newPrice) &&
+                        TickMath.getTickAtSqrtRatio(newPrice) <= tickUpper)
                 ) {
-                    uint256 amountOut = ISwapRouter(router).exactInputSingle(swap_params);
-                    (new_price, , , , , , ) = IUniswapV3Pool(pool).slot0();
-                    console.log(new_price, "prices");
+                    ISwapRouter(ROUTER).exactInputSingle(swapParams);
+                    (newPrice, , , , , , ) = IUniswapV3Pool(POOL).slot0();
+                    console.log(newPrice, "prices");
                 }
             }
         }
@@ -326,39 +303,39 @@ contract UniswapTest is Test {
 
     function testAsyncLimitOrderThenCancel(uint256 _deposit) public {
         vm.assume(_deposit >= 1000000000000);
-        assumptions(_deposit);
+        _assumptions(_deposit);
 
         vm.assume(_deposit <= 4844169603388782940195207690438998); //maxLiquidity is reached here, causing LO error code.
         //this is a logical upper boundary
 
         uint256 depositAmount = _deposit;
 
-        _setTokenBalance(address(dai), address(rollupProcessor), depositAmount, 2);
+        _setTokenBalance(address(DAI), address(rollupProcessor), depositAmount, 2);
 
         uint64 data;
 
         {
-            (uint160 price, int24 currentTick, , , , , ) = IUniswapV3Pool(pool).slot0();
+            (uint160 price, int24 currentTick, , , , , ) = IUniswapV3Pool(POOL).slot0();
             price = (price * 50) / 100; //decrease price by 50%
             currentTick = TickMath.getTickAtSqrtRatio(price); //get new current tick
             //buy limit
-            (int24 _a, int24 _b) = adjustTickParams(
-                currentTick - (2 * IUniswapV3Pool(pool).tickSpacing()),
-                currentTick + (2 * IUniswapV3Pool(pool).tickSpacing()),
-                pool
+            (int24 _a, int24 _b) = _adjustTickParams(
+                currentTick - (2 * IUniswapV3Pool(POOL).tickSpacing()),
+                currentTick + (2 * IUniswapV3Pool(POOL).tickSpacing()),
+                POOL
             );
             uint24 a = uint24(_a);
             uint24 b = uint24(_b);
             uint48 ticks = (uint48(a) << 24) | uint48(b);
             uint8 fee = uint8(30);
-            uint8 days_to_cancel = 0;
-            uint16 last16 = ((uint16(fee) << 8) | uint16(days_to_cancel));
+            uint8 daysToCancel = 0;
+            uint16 last16 = ((uint16(fee) << 8) | uint16(daysToCancel));
             data = (uint64(ticks) << 16) | uint64(last16);
         }
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dai),
+            erc20Address: address(DAI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
@@ -376,7 +353,7 @@ contract UniswapTest is Test {
 
         AztecTypes.AztecAsset memory outputAssetB = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dai),
+            erc20Address: address(DAI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
@@ -418,13 +395,13 @@ contract UniswapTest is Test {
         vm.assume(_deposit <= 18543829948235660536859190385180672 && _ethDeposit <= 218809284046322613163859525526366);
 
         uint256 depositAmount = _deposit;
-        _setTokenBalance(address(dai), address(rollupProcessor), depositAmount, 2);
+        _setTokenBalance(address(DAI), address(rollupProcessor), depositAmount, 2);
         uint256 wethDeposit = _ethDeposit;
         _setTokenBalance(address(WETH), address(rollupProcessor), wethDeposit, 3);
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dai),
+            erc20Address: address(DAI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
@@ -449,7 +426,7 @@ contract UniswapTest is Test {
         uint256 virtualNoteAmount;
 
         {
-            (uint256 outputValueA, uint256 outputValueB, ) = rollupProcessor.convert(
+            (uint256 outputValueA, , ) = rollupProcessor.convert(
                 address(syncBridge),
                 inputAssetA,
                 inputAssetB,
@@ -460,7 +437,7 @@ contract UniswapTest is Test {
                 0
             );
 
-            uint256 bridgeDai = dai.balanceOf(address(syncBridge));
+            uint256 bridgeDai = DAI.balanceOf(address(syncBridge));
             virtualNoteAmount = outputValueA;
 
             assertEq(depositAmount, bridgeDai, "Balances must match");
@@ -486,7 +463,7 @@ contract UniswapTest is Test {
 
         outputAssetB = AztecTypes.AztecAsset({
             id: 2,
-            erc20Address: address(dai),
+            erc20Address: address(DAI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
@@ -494,7 +471,7 @@ contract UniswapTest is Test {
             uint64 data;
 
             {
-                (int24 _a, int24 _b) = adjustTickParams(TickMath.MIN_TICK, TickMath.MAX_TICK, pool);
+                (int24 _a, int24 _b) = _adjustTickParams(TickMath.MIN_TICK, TickMath.MAX_TICK, POOL);
                 uint24 a = uint24(_a);
                 uint24 b = uint24(_b);
                 uint48 ticks = (uint48(a) << 24) | uint48(b);
@@ -538,11 +515,11 @@ contract UniswapTest is Test {
         vm.assume(_depositAmount <= 506840802329476492815900036);
         uint256 depositAmount = _depositAmount;
         console.log("setting dai balance");
-        _setTokenBalance(address(dai), address(rollupProcessor), depositAmount, 2);
+        _setTokenBalance(address(DAI), address(rollupProcessor), depositAmount, 2);
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(dai),
+            erc20Address: address(DAI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
@@ -572,8 +549,7 @@ contract UniswapTest is Test {
             (uint160 sqrtPriceX96,,,,,,) = pool.slot0();
             int24 currentTick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
             */
-            address pool = IUniswapV3Factory(factory).getPool(address(dai), address(WETH), 3000);
-            (int24 _a, int24 _b) = adjustTickParams(TickMath.MIN_TICK, TickMath.MAX_TICK, pool);
+            (int24 _a, int24 _b) = _adjustTickParams(TickMath.MIN_TICK, TickMath.MAX_TICK, POOL);
             uint24 a = uint24(_a);
             uint24 b = uint24(_b);
             uint48 ticks = (uint48(a) << 24) | uint48(b);
@@ -581,7 +557,7 @@ contract UniswapTest is Test {
             data = (uint64(ticks) << 16) | uint64(fee);
         }
 
-        (uint256 outputValueA, uint256 outputValueB, ) = rollupProcessor.convert(
+        (uint256 outputValueA, , ) = rollupProcessor.convert(
             address(syncBridge),
             inputAssetA,
             inputAssetB,
@@ -610,11 +586,11 @@ contract UniswapTest is Test {
     }
 
     function _marginOfError(
-        uint256 amount0,
-        uint256 redeem0,
-        uint256 amount1,
-        uint256 redeem1,
-        uint256 marginFrac
+        uint256 _amount0,
+        uint256 _redeem0,
+        uint256 _amount1,
+        uint256 _redeem1,
+        uint256 _marginFrac
     ) internal {
         //tests for rounding error
 
@@ -623,42 +599,46 @@ contract UniswapTest is Test {
 
         //we dont care if the amount redeemed is more than the amount minted, only less than
 
-        uint256 SCALE = 1000000;
+        uint256 scale = 1000000;
 
         //sometimes when 1 output is much less than the input , the other output is much larger than its original input
         //e.g. token0 input of 100, output of 99, but token1 input of 100 and output of 101
-        console.log((redeem0 * SCALE) / amount0, (redeem1 * SCALE) / amount1, "percents");
+        console.log((_redeem0 * scale) / _amount0, (_redeem1 * scale) / _amount1, "percents");
 
-        uint256 sum = ((redeem0 * SCALE) / amount0) + ((redeem1 * SCALE) / amount1);
+        uint256 sum = ((_redeem0 * scale) / _amount0) + ((_redeem1 * scale) / _amount1);
 
-        assertTrue(sum >= (2 * SCALE) - SCALE / marginFrac, "not within %margin");
+        assertTrue(sum >= (2 * scale) - scale / _marginFrac, "not within %margin");
     }
 
-    function _redeem(uint256 inputValue, uint256 nonce) internal returns (uint256, uint256) {
+    function _redeem(uint256 _inputValue, uint256 _nonce) internal returns (uint256, uint256) {
         AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset({
-            id: nonce,
+            id: _nonce,
             erc20Address: address(WETH),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
         AztecTypes.AztecAsset memory outputAssetB = AztecTypes.AztecAsset({
-            id: nonce,
-            erc20Address: address(dai),
+            id: _nonce,
+            erc20Address: address(DAI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
         (uint256 outputValueA, uint256 outputValueB, ) = rollupProcessor.convert(
             address(syncBridge),
             AztecTypes.AztecAsset({
-                id: nonce - 1,
+                id: _nonce - 1,
                 erc20Address: address(0),
                 assetType: AztecTypes.AztecAssetType.VIRTUAL
             }),
-            AztecTypes.AztecAsset({id: nonce, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.NOT_USED}),
+            AztecTypes.AztecAsset({
+                id: _nonce,
+                erc20Address: address(0),
+                assetType: AztecTypes.AztecAssetType.NOT_USED
+            }),
             outputAssetA,
             outputAssetB,
-            inputValue,
-            nonce,
+            _inputValue,
+            _nonce,
             0
         );
         ///sort in terms of token0 or token1
@@ -669,25 +649,38 @@ contract UniswapTest is Test {
         );
     }
 
-    function assertNotEq(address a, address b) internal {
-        if (a == b) {
-            emit log("Error: a != b not satisfied [address]");
-            emit log_named_address("  Expected", b);
-            emit log_named_address("    Actual", a);
-            fail();
-        }
-    }
-
     function _setTokenBalance(
-        address token,
-        address user,
-        uint256 balance,
-        uint256 slot
+        address _token,
+        address _user,
+        uint256 _balance,
+        uint256 _slot
     ) internal {
         // May vary depending on token
 
-        vm.store(token, keccak256(abi.encode(user, slot)), bytes32(uint256(balance)));
+        vm.store(_token, keccak256(abi.encode(_user, _slot)), bytes32(uint256(_balance)));
 
-        assertEq(IERC20(token).balanceOf(user), balance, "wrong balance");
+        assertEq(IERC20(_token).balanceOf(_user), _balance, "wrong balance");
+    }
+
+    function _adjustTickParams(
+        int24 _tickLower,
+        int24 _tickUpper,
+        address _pool
+    ) internal returns (int24 newTickLower, int24 newTickUpper) {
+        //adjust the params s.t. they conform to tick spacing and do not fail the tick % tickSpacing == 0 check
+        IUniswapV3Pool pool = IUniswapV3Pool(_pool);
+
+        newTickLower = _tickLower % pool.tickSpacing() == 0
+            ? _tickLower
+            : _tickLower - (_tickLower % pool.tickSpacing());
+        newTickUpper = _tickUpper % pool.tickSpacing() == 0
+            ? _tickUpper
+            : _tickUpper - (_tickUpper % pool.tickSpacing());
+    }
+
+    function _assumptions(uint256 _deposit) internal {
+        if (address(DAI) == 0xdAC17F958D2ee523a2206206994597C13D831ec7) {
+            vm.assume(_deposit <= 3769678424353192924097187526);
+        }
     }
 }
