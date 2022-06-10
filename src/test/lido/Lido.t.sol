@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.4;
 
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -12,30 +12,8 @@ import {LidoBridge} from "./../../bridges/lido/LidoBridge.sol";
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 
 contract LidoTest is Test {
-    IERC20 private wstETH = IERC20(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
-
-    error InvalidConfiguration();
-    error InvalidCaller();
-    error InvalidInput();
-    error InvalidOutput();
-    error InvalidWrapReturnValue();
-    error InvalidUnwrapReturnValue();
-    error AsyncDisabled();
-
-    event DefiBridgeProcessed(
-        uint256 indexed bridgeId,
-        uint256 indexed nonce,
-        uint256 totalInputValue,
-        uint256 totalOutputValueA,
-        uint256 totalOutputValueB,
-        bool result,
-        bytes errorReason
-    );
-
-    DefiBridgeProxy private defiBridgeProxy;
-    RollupProcessor private rollupProcessor;
-
-    LidoBridge private bridge;
+    // solhint-disable-next-line
+    IERC20 private constant wstETH = IERC20(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
 
     AztecTypes.AztecAsset private empty;
     AztecTypes.AztecAsset private ethAsset =
@@ -43,32 +21,34 @@ contract LidoTest is Test {
     AztecTypes.AztecAsset private wstETHAsset =
         AztecTypes.AztecAsset({id: 2, erc20Address: address(wstETH), assetType: AztecTypes.AztecAssetType.ERC20});
 
-    function _aztecPreSetup() internal {
-        defiBridgeProxy = new DefiBridgeProxy();
-        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
-    }
+    RollupProcessor private rollupProcessor;
+    DefiBridgeProxy private defiBridgeProxy;
+
+    LidoBridge private bridge;
 
     function setUp() public {
-        _aztecPreSetup();
+        defiBridgeProxy = new DefiBridgeProxy();
+        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
+
         bridge = new LidoBridge(address(rollupProcessor), address(rollupProcessor));
     }
 
     function testErrorCodes() public {
-        vm.expectRevert(InvalidCaller.selector);
+        vm.expectRevert(LidoBridge.InvalidCaller.selector);
         bridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
 
         vm.startPrank(address(rollupProcessor));
 
-        vm.expectRevert(InvalidInput.selector);
+        vm.expectRevert(LidoBridge.InvalidInput.selector);
         bridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
 
-        vm.expectRevert(InvalidOutput.selector);
+        vm.expectRevert(LidoBridge.InvalidOutput.selector);
         bridge.convert(ethAsset, empty, empty, empty, 0, 0, 0, address(0));
 
-        vm.expectRevert(InvalidOutput.selector);
+        vm.expectRevert(LidoBridge.InvalidOutput.selector);
         bridge.convert(wstETHAsset, empty, empty, empty, 0, 0, 0, address(0));
 
-        vm.expectRevert(AsyncDisabled.selector);
+        vm.expectRevert(LidoBridge.AsyncDisabled.selector);
         bridge.finalise(wstETHAsset, empty, empty, empty, 0, 0);
 
         vm.stopPrank();
@@ -116,19 +96,19 @@ contract LidoTest is Test {
         3. Send wstETH to bridge
         4. Get back ETH
      */
-    function validateLidoBridge(uint256 balance, uint256 depositAmount) public {
+    function validateLidoBridge(uint256 _balance, uint256 _depositAmount) public {
         // Send ETH to bridge
 
-        vm.deal(address(rollupProcessor), balance);
+        vm.deal(address(rollupProcessor), _balance);
 
         // Convert ETH to wstETH
-        validateETHToWstETH(depositAmount);
+        validateETHToWstETH(_depositAmount);
 
         // convert wstETH back to ETH using the same bridge
         validateWstETHToETH(wstETH.balanceOf(address(rollupProcessor)));
     }
 
-    function validateWstETHToETH(uint256 depositAmount) public {
+    function validateWstETHToETH(uint256 _depositAmount) public {
         uint256 beforeETHBalance = address(rollupProcessor).balance;
         uint256 beforeWstEthBalance = wstETH.balanceOf(address(rollupProcessor));
 
@@ -138,7 +118,7 @@ contract LidoTest is Test {
             empty,
             ethAsset,
             empty,
-            depositAmount,
+            _depositAmount,
             2,
             0
         );
@@ -153,10 +133,10 @@ contract LidoTest is Test {
         assertEq(outputValueB, 0, "OutputValueB not 0");
         assertGt(outputValueA, 0, "No Eth received");
         assertEq(afterETHBalance, beforeETHBalance + outputValueA, "ETH balance not maching");
-        assertEq(afterWstETHBalance, beforeWstEthBalance - depositAmount, "WST ETH balance not matching");
+        assertEq(afterWstETHBalance, beforeWstEthBalance - _depositAmount, "WST ETH balance not matching");
     }
 
-    function validateETHToWstETH(uint256 depositAmount) public {
+    function validateETHToWstETH(uint256 _depositAmount) public {
         uint256 beforeETHBalance = address(rollupProcessor).balance;
         uint256 beforeWstETHBalance = wstETH.balanceOf(address(rollupProcessor));
 
@@ -169,7 +149,7 @@ contract LidoTest is Test {
             empty,
             wstETHAsset,
             empty,
-            depositAmount,
+            _depositAmount,
             1,
             0
         );
@@ -182,7 +162,7 @@ contract LidoTest is Test {
 
         assertFalse(isAsync, "Async interaction");
         assertEq(outputValueB, 0, "OutputValueB not 0");
-        assertEq(afterETHBalance, beforeETHBalance - depositAmount, "ETH balance not matching");
+        assertEq(afterETHBalance, beforeETHBalance - _depositAmount, "ETH balance not matching");
         assertGt(outputValueA, 0, "No WST ETH received");
         assertEq(afterWstETHBalance, beforeWstETHBalance + outputValueA, "WST ETH balance not matching");
     }
