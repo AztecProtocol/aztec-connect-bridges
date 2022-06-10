@@ -26,13 +26,9 @@ contract SetTest is Test {
     IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     IERC20 public constant DPI = IERC20(0x1494CA1F11D487c2bBe4543E90080AeBa4BA3C2b);
 
-    function _aztecPreSetup() internal {
+    function setUp() public {
         defiBridgeProxy = new DefiBridgeProxy();
         rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
-    }
-
-    function setUp() public {
-        _aztecPreSetup();
 
         issuanceBridge = new IssuanceBridge(address(rollupProcessor));
 
