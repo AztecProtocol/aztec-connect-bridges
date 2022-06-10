@@ -20,18 +20,20 @@ contract TestUtil is Test {
 
     mapping(bytes32 => Token) internal tokens;
 
-    DefiBridgeProxy internal defiBridgeProxy;
     RollupProcessor internal rollupProcessor;
 
     function setUpTokens() public {
         tokens["LUSD"].addr = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
         tokens["LUSD"].erc = IERC20(tokens["LUSD"].addr);
+        vm.label(tokens["LUSD"].addr, "LUSD");
 
         tokens["WETH"].addr = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
         tokens["WETH"].erc = IERC20(tokens["WETH"].addr);
+        vm.label(tokens["WETH"].addr, "WETH");
 
         tokens["LQTY"].addr = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
         tokens["LQTY"].erc = IERC20(tokens["LQTY"].addr);
+        vm.label(tokens["LQTY"].addr, "LQTY");
     }
 
     function setLiquityPrice(uint256 _price) public {
@@ -46,7 +48,6 @@ contract TestUtil is Test {
     }
 
     function _aztecPreSetup() internal {
-        defiBridgeProxy = new DefiBridgeProxy();
-        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
+        rollupProcessor = new RollupProcessor(address(new DefiBridgeProxy()));
     }
 }
