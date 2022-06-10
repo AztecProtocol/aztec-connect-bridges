@@ -11,9 +11,6 @@ import {MockPriceFeed} from "./MockPriceFeed.sol";
 import {IPriceFeed} from "../../../bridges/liquity/interfaces/IPriceFeed.sol";
 
 contract TestUtil is Test {
-    DefiBridgeProxy internal defiBridgeProxy;
-    RollupProcessor internal rollupProcessor;
-
     struct Token {
         address addr; // ERC20 Mainnet address
         IERC20 erc;
@@ -22,6 +19,9 @@ contract TestUtil is Test {
     IPriceFeed internal constant LIQUITY_PRICE_FEED = IPriceFeed(0x4c517D4e2C851CA76d7eC94B805269Df0f2201De);
 
     mapping(bytes32 => Token) internal tokens;
+
+    DefiBridgeProxy internal defiBridgeProxy;
+    RollupProcessor internal rollupProcessor;
 
     function setUpTokens() public {
         tokens["LUSD"].addr = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
@@ -34,15 +34,15 @@ contract TestUtil is Test {
         tokens["LQTY"].erc = IERC20(tokens["LQTY"].addr);
     }
 
-    function rand(uint256 seed) public pure returns (uint256) {
-        // I want a number between 1 WAD and 10 million WAD
-        return uint256(keccak256(abi.encodePacked(seed))) % 10**25;
+    function setLiquityPrice(uint256 _price) public {
+        IPriceFeed mockFeed = new MockPriceFeed(_price);
+        vm.etch(address(LIQUITY_PRICE_FEED), address(mockFeed).code);
+        assertEq(LIQUITY_PRICE_FEED.fetchPrice(), _price);
     }
 
-    function setLiquityPrice(uint256 price) public {
-        IPriceFeed mockFeed = new MockPriceFeed(price);
-        vm.etch(address(LIQUITY_PRICE_FEED), address(mockFeed).code);
-        assertEq(LIQUITY_PRICE_FEED.fetchPrice(), price);
+    function rand(uint256 _seed) public pure returns (uint256) {
+        // I want a number between 1 WAD and 10 million WAD
+        return uint256(keccak256(abi.encodePacked(_seed))) % 10**25;
     }
 
     function _aztecPreSetup() internal {

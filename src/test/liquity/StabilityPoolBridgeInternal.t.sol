@@ -12,8 +12,11 @@ contract StabilityPoolBridgeTestInternal is TestUtil, StabilityPoolBridge(addres
         _aztecPreSetup();
         setUpTokens();
 
+        // solhint-disable-next-line
         require(IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max), "WETH_APPROVE_FAILED");
+        // solhint-disable-next-line
         require(IERC20(LQTY).approve(address(UNI_ROUTER), type(uint256).max), "LQTY_APPROVE_FAILED");
+        // solhint-disable-next-line
         require(IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max), "USDC_APPROVE_FAILED");
 
         // EIP-1087 optimization related mints
