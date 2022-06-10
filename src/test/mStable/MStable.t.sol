@@ -1,7 +1,8 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.10;
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright 2022 Spilsbury Holdings Ltd
+pragma solidity >=0.8.4;
 
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
@@ -11,20 +12,16 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MStableBridge} from "./../../bridges/mStable/MStableBridge.sol";
 
 contract MStableTest is Test {
-    DefiBridgeProxy defiBridgeProxy;
-    RollupProcessor rollupProcessor;
+    RollupProcessor private rollupProcessor;
+    DefiBridgeProxy private defiBridgeProxy;
 
-    MStableBridge mStableBridge;
+    MStableBridge private mStableBridge;
 
-    mapping(string => IERC20) tokens;
-
-    function _aztecPreSetup() internal {
-        defiBridgeProxy = new DefiBridgeProxy();
-        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
-    }
+    mapping(string => IERC20) private tokens;
 
     function setUp() public {
-        _aztecPreSetup();
+        defiBridgeProxy = new DefiBridgeProxy();
+        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
 
         mStableBridge = new MStableBridge(address(rollupProcessor));
 
