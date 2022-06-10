@@ -322,25 +322,20 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
      */
     function computeAmtToBorrow(uint256 _collateral) public returns (uint256 amtToBorrow) {
         uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
-        bool isRecoveryMode = TROVE_MANAGER.checkRecoveryMode(price);
         if (TROVE_MANAGER.getTroveStatus(address(this)) == 1) {
             // Trove is active - use current ICR and not the initial one
             uint256 icr = TROVE_MANAGER.getCurrentICR(address(this), price);
             amtToBorrow = (_collateral * price) / icr;
-            if (!isRecoveryMode) {
-                // Liquity is not in recovery mode so borrowing fee applies
-                uint256 borrowingRate = TROVE_MANAGER.getBorrowingRateWithDecay();
-                amtToBorrow = (amtToBorrow * 1e18) / (borrowingRate + 1e18);
-            }
         } else {
             // Trove is inactive - I will use initial ICR to compute debt
             // 200e18 - 200 LUSD gas compensation to liquidators
             amtToBorrow = (_collateral * price) / INITIAL_ICR - 200e18;
-            if (!isRecoveryMode) {
-                // Liquity is not in recovery mode so borrowing fee applies
-                uint256 borrowingRate = TROVE_MANAGER.getBorrowingRateWithDecay();
-                amtToBorrow = (amtToBorrow * 1e18) / (borrowingRate + 1e18);
-            }
+        }
+
+        if (!TROVE_MANAGER.checkRecoveryMode(price)) {
+            // Liquity is not in recovery mode so borrowing fee applies
+            uint256 borrowingRate = TROVE_MANAGER.getBorrowingRateWithDecay();
+            amtToBorrow = (amtToBorrow * 1e18) / (borrowingRate + 1e18);
         }
     }
 
