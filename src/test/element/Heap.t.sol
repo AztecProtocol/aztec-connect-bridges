@@ -1,12 +1,13 @@
-pragma solidity 0.8.10;
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright 2022 Spilsbury Holdings Ltd
+pragma solidity >=0.8.4;
+
+import {Test} from "forge-std/Test.sol";
 
 import {HeapTestContract} from "./HeapTestContract.sol";
-import "../../../lib/ds-test/src/test.sol";
 
-import {console} from "forge-std/console.sol";
-
-contract HeapTest is DSTest {
-    HeapTestContract heap;
+contract HeapTest is Test {
+    HeapTestContract private heap;
 
     function setUp() public {
         heap = new HeapTestContract(100);
@@ -132,17 +133,17 @@ contract HeapTest is DSTest {
         }
     }
 
-    function testAddAndRemoveMinMultiples(uint64[100] memory values) public {
-        uint64[] memory sortedValues = sortArray(values);
+    function testAddAndRemoveMinMultiples(uint64[100] memory _values) public {
+        uint64[] memory sortedValues = _sortArray(_values);
         uint64 minimum = type(uint64).max;
-        for (uint256 i = 0; i < values.length; i++) {
-            heap.add(values[i]);
-            if (values[i] < minimum) {
-                minimum = values[i];
+        for (uint256 i = 0; i < _values.length; i++) {
+            heap.add(_values[i]);
+            if (_values[i] < minimum) {
+                minimum = _values[i];
             }
             assertEq(heap.min(), minimum, "insert");
         }
-        assertEq(heap.size(), values.length);
+        assertEq(heap.size(), _values.length);
 
         for (uint256 i = 0; i < sortedValues.length; i++) {
             assertEq(heap.min(), sortedValues[i], "pop");
@@ -152,37 +153,37 @@ contract HeapTest is DSTest {
         assertEq(heap.size(), 0);
     }
 
-    function testAddAndRemoveNonMinMultiples(uint64[100] memory values) public {
+    function testAddAndRemoveNonMinMultiples(uint64[100] memory _values) public {
         uint64 minimum = type(uint64).max;
-        for (uint256 i = 0; i < values.length; i++) {
-            heap.add(values[i]);
-            if (values[i] < minimum) {
-                minimum = values[i];
+        for (uint256 i = 0; i < _values.length; i++) {
+            heap.add(_values[i]);
+            if (_values[i] < minimum) {
+                minimum = _values[i];
             }
             assertEq(heap.min(), minimum, "insert");
         }
-        assertEq(heap.size(), values.length);
+        assertEq(heap.size(), _values.length);
 
-        for (uint256 i = 0; i < values.length - 1; i++) {
-            heap.remove(values[values.length - (i + 1)]);
-            assertEq(heap.size(), values.length - (i + 1));
-            assertEq(heap.min(), getMin(values, values.length - (i + 1)));
+        for (uint256 i = 0; i < _values.length - 1; i++) {
+            heap.remove(_values[_values.length - (i + 1)]);
+            assertEq(heap.size(), _values.length - (i + 1));
+            assertEq(heap.min(), _getMin(_values, _values.length - (i + 1)));
         }
         assertEq(heap.size(), 1);
-        assertEq(heap.min(), values[0]);
+        assertEq(heap.min(), _values[0]);
     }
 
-    function testAddAndRemoveMinViaSearch(uint64[100] memory values) public {
-        uint64[] memory sortedValues = sortArray(values);
+    function testAddAndRemoveMinViaSearch(uint64[100] memory _values) public {
+        uint64[] memory sortedValues = _sortArray(_values);
         uint64 minimum = type(uint64).max;
-        for (uint256 i = 0; i < values.length; i++) {
-            heap.add(values[i]);
-            if (values[i] < minimum) {
-                minimum = values[i];
+        for (uint256 i = 0; i < _values.length; i++) {
+            heap.add(_values[i]);
+            if (_values[i] < minimum) {
+                minimum = _values[i];
             }
             assertEq(heap.min(), minimum, "insert");
         }
-        assertEq(heap.size(), values.length);
+        assertEq(heap.size(), _values.length);
 
         for (uint256 i = 0; i < sortedValues.length; i++) {
             assertEq(heap.min(), sortedValues[i], "pop");
@@ -193,19 +194,19 @@ contract HeapTest is DSTest {
         assertEq(heap.size(), 0);
     }
 
-    function testCanBuildHeapGreaterThanInitialised(uint64[100] memory values) public {
-        uint64[] memory sortedValues = sortArray(values);
+    function testCanBuildHeapGreaterThanInitialised(uint64[100] memory _values) public {
+        uint64[] memory sortedValues = _sortArray(_values);
 
         HeapTestContract newHeap = new HeapTestContract(1);
         uint64 minimum = type(uint64).max;
-        for (uint256 i = 0; i < values.length; i++) {
-            newHeap.add(values[i]);
-            if (values[i] < minimum) {
-                minimum = values[i];
+        for (uint256 i = 0; i < _values.length; i++) {
+            newHeap.add(_values[i]);
+            if (_values[i] < minimum) {
+                minimum = _values[i];
             }
             assertEq(newHeap.min(), minimum, "insert");
         }
-        assertEq(newHeap.size(), values.length);
+        assertEq(newHeap.size(), _values.length);
 
         for (uint256 i = 0; i < sortedValues.length; i++) {
             assertEq(newHeap.min(), sortedValues[i], "pop");
@@ -215,29 +216,29 @@ contract HeapTest is DSTest {
         assertEq(newHeap.size(), 0);
     }
 
-    function getMin(uint64[100] memory array, uint256 upperBound) internal pure returns (uint64 min) {
+    function _getMin(uint64[100] memory _array, uint256 _upperBound) internal pure returns (uint64 min) {
         min = type(uint64).max;
-        for (uint256 i = 0; i < upperBound; i++) {
-            if (array[i] < min) {
-                min = array[i];
+        for (uint256 i = 0; i < _upperBound; i++) {
+            if (_array[i] < min) {
+                min = _array[i];
             }
         }
     }
 
-    function sortArray(uint64[100] memory array) private pure returns (uint64[] memory outputArray) {
-        if (array.length == 0) {
+    function _sortArray(uint64[100] memory _array) private pure returns (uint64[] memory outputArray) {
+        if (_array.length == 0) {
             return new uint64[](0);
         }
-        uint256 l = array.length;
-        outputArray = new uint64[](l);
-        for (uint256 i = 0; i < l; i++) {
-            outputArray[i] = array[i];
+        uint256 length = _array.length;
+        outputArray = new uint64[](length);
+        for (uint256 i = 0; i < length; i++) {
+            outputArray[i] = _array[i];
         }
 
         bool swapped = false;
-        for (uint256 i = 0; i < l - 1; i++) {
+        for (uint256 i = 0; i < length - 1; i++) {
             swapped = false;
-            for (uint256 j = 0; j < l - i - 1; j++) {
+            for (uint256 j = 0; j < length - i - 1; j++) {
                 if (outputArray[j] > outputArray[j + 1]) {
                     uint64 temp = outputArray[j];
                     outputArray[j] = outputArray[j + 1];
