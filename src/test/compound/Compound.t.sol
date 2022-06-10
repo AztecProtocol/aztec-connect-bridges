@@ -43,9 +43,9 @@ contract CompoundTest is Test {
         compoundBridge = new CompoundBridge(address(rollupProcessor));
     }
 
-    function testETHDepositAndWithdrawal(uint88 depositAmount) public {
-        vm.assume(depositAmount > 1e9);
-        vm.deal(address(rollupProcessor), depositAmount);
+    function testETHDepositAndWithdrawal(uint88 _depositAmount) public {
+        vm.assume(_depositAmount > 1e9);
+        vm.deal(address(rollupProcessor), _depositAmount);
 
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory depositInputAssetA = AztecTypes.AztecAsset({
@@ -66,7 +66,7 @@ contract CompoundTest is Test {
             empty,
             depositOutputAssetA,
             empty,
-            depositAmount,
+            _depositAmount,
             1,
             0
         );
@@ -92,13 +92,13 @@ contract CompoundTest is Test {
         // ETH withdrawn should be approximately equal to ETH deposited
         // --> the amounts are not the same due to rounding errors in Compound
         assertLt(
-            depositAmount - outputValueA,
+            _depositAmount - outputValueA,
             1e10,
             "amount of ETH withdrawn is not similar to the amount of ETH deposited"
         );
     }
 
-    function testERC20DepositAndWithdrawal(uint88 depositAmount) public {
+    function testERC20DepositAndWithdrawal(uint88 _depositAmount) public {
         // Note: if Foundry implements parametrized tests remove this for loop,
         // stop calling setup() from _depositAndWithdrawERC20 and use the native
         // functionality
@@ -106,67 +106,10 @@ contract CompoundTest is Test {
         // For the tests to pass a return value of cTokens has to be >0.
         // Since the ratio of token/cToken is very skewed plenty of the times
         // I set relatively high minimum value.
-        vm.assume(depositAmount > 1e14);
+        vm.assume(_depositAmount > 1e14);
         for (uint256 i; i < cTokens.length; ++i) {
-            _depositAndWithdrawERC20(cTokens[i], depositAmount);
+            _depositAndWithdrawERC20(cTokens[i], _depositAmount);
         }
-    }
-
-    function _depositAndWithdrawERC20(address cToken, uint256 depositAmount) private {
-        setUp();
-        address underlyingToken = ICERC20(cToken).underlying();
-
-        deal(underlyingToken, address(rollupProcessor), depositAmount);
-
-        AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory depositInputAssetA = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: underlyingToken,
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-        AztecTypes.AztecAsset memory depositOutputAssetA = AztecTypes.AztecAsset({
-            id: 2,
-            erc20Address: cToken,
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-
-        // cToken minting
-        (uint256 outputValueA, , ) = rollupProcessor.convert(
-            address(compoundBridge),
-            depositInputAssetA,
-            empty,
-            depositOutputAssetA,
-            empty,
-            depositAmount,
-            0,
-            0
-        );
-
-        assertGt(outputValueA, 0, "cToken received is zero");
-
-        uint256 redeemAmount = outputValueA;
-        AztecTypes.AztecAsset memory redeemInputAssetA = depositOutputAssetA;
-        AztecTypes.AztecAsset memory redeemOutputAssetA = depositInputAssetA;
-
-        // withdrawing underlying (cToken burning)
-        (outputValueA, , ) = rollupProcessor.convert(
-            address(compoundBridge),
-            redeemInputAssetA,
-            empty,
-            redeemOutputAssetA,
-            empty,
-            redeemAmount,
-            1,
-            1
-        );
-
-        // token withdrawn should be approximately equal to token deposited
-        // --> the amounts are not exactly the same due to rounding errors in Compound
-        assertLt(
-            depositAmount - outputValueA,
-            1e10,
-            "amount of underlying Token withdrawn is not similar to the amount of cToken deposited"
-        );
     }
 
     function testInvalidCaller() public {
@@ -204,5 +147,62 @@ contract CompoundTest is Test {
         vm.prank(address(rollupProcessor));
         vm.expectRevert(CompoundBridge.IncorrectAuxData.selector);
         compoundBridge.convert(empty, empty, empty, empty, 0, 0, 2, address(0));
+    }
+
+    function _depositAndWithdrawERC20(address _cToken, uint256 _depositAmount) private {
+        setUp();
+        address underlyingToken = ICERC20(_cToken).underlying();
+
+        deal(underlyingToken, address(rollupProcessor), _depositAmount);
+
+        AztecTypes.AztecAsset memory empty;
+        AztecTypes.AztecAsset memory depositInputAssetA = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: underlyingToken,
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        AztecTypes.AztecAsset memory depositOutputAssetA = AztecTypes.AztecAsset({
+            id: 2,
+            erc20Address: _cToken,
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+
+        // cToken minting
+        (uint256 outputValueA, , ) = rollupProcessor.convert(
+            address(compoundBridge),
+            depositInputAssetA,
+            empty,
+            depositOutputAssetA,
+            empty,
+            _depositAmount,
+            0,
+            0
+        );
+
+        assertGt(outputValueA, 0, "cToken received is zero");
+
+        uint256 redeemAmount = outputValueA;
+        AztecTypes.AztecAsset memory redeemInputAssetA = depositOutputAssetA;
+        AztecTypes.AztecAsset memory redeemOutputAssetA = depositInputAssetA;
+
+        // withdrawing underlying (cToken burning)
+        (outputValueA, , ) = rollupProcessor.convert(
+            address(compoundBridge),
+            redeemInputAssetA,
+            empty,
+            redeemOutputAssetA,
+            empty,
+            redeemAmount,
+            1,
+            1
+        );
+
+        // token withdrawn should be approximately equal to token deposited
+        // --> the amounts are not exactly the same due to rounding errors in Compound
+        assertLt(
+            _depositAmount - outputValueA,
+            1e10,
+            "amount of underlying Token withdrawn is not similar to the amount of cToken deposited"
+        );
     }
 }
