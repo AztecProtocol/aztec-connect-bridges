@@ -279,8 +279,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
         if (msg.sender == LUSD_USDC_POOL) {
             SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
             // Repay debt in full
-            address upperHint = SORTED_TROVES.getPrev(address(this));
-            address lowerHint = SORTED_TROVES.getNext(address(this));
+            (address upperHint, address lowerHint) = _getHints();
             BORROWER_OPERATIONS.adjustTrove(0, data.collToWithdraw, data.debtToRepay, false, upperHint, lowerHint);
 
             // Pay LUSD_USDC_POOL for the swap by passing it as a recipient to the next swap (WETH -> USDC)
@@ -346,36 +345,48 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
         return super.totalSupply() - DUST;
     }
 
-    function _borrow(uint256 _inputValue, uint64 _maxFee) private returns (uint256 outputValueA, uint256 outputValueB) {
-        outputValueB = computeAmtToBorrow(_inputValue); // LUSD amount to borrow
+    /**
+     * @notice Borrow LUSD
+     * @param _collateral Amount of ETH denominated in Wei
+     * @param _maxFee Maximum borrowing fee
+     * @return tbMinted Amount of TB minted for borrower.
+     * @return lusdBorrowed Amount of LUSD borrowed.
+     */
+    function _borrow(uint256 _collateral, uint64 _maxFee) private returns (uint256 tbMinted, uint256 lusdBorrowed) {
+        lusdBorrowed = computeAmtToBorrow(_collateral); // LUSD amount to borrow
         (uint256 debtBefore, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
 
-        address upperHint = SORTED_TROVES.getPrev(address(this));
-        address lowerHint = SORTED_TROVES.getNext(address(this));
-
-        BORROWER_OPERATIONS.adjustTrove{value: _inputValue}(_maxFee, 0, outputValueB, true, upperHint, lowerHint);
+        (address upperHint, address lowerHint) = _getHints();
+        BORROWER_OPERATIONS.adjustTrove{value: _collateral}(_maxFee, 0, lusdBorrowed, true, upperHint, lowerHint);
         (uint256 debtAfter, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
-        // outputValueA = amount of TB to mint = (debt_increase [LUSD] / debt_before [LUSD]) * TB_total_supply
-        // debt_increase = debtAfter - debtBefore
+        // tbMinted = amount of TB to mint = (debtIncrease [LUSD] / debtBefore [LUSD]) * tbTotalSupply
+        // debtIncrease = debtAfter - debtBefore
         // In case no redistribution took place (TB/LUSD = 1) then debt_before = TB_total_supply
         // and debt_increase amount of TB is minted.
         // In case there was redistribution, 1 TB corresponds to more than 1 LUSD and the amount of TB minted
         // will be lower than the amount of LUSD borrowed.
-        outputValueA = ((debtAfter - debtBefore) * this.totalSupply()) / debtBefore;
-        _mint(address(this), outputValueA);
+        tbMinted = ((debtAfter - debtBefore) * this.totalSupply()) / debtBefore;
+        _mint(address(this), tbMinted);
     }
 
-    function _repay(uint256 _inputValue, uint256 _interactionNonce)
+    /**
+     * @notice Repay debt.
+     * @param _tbAmount Amount of TB to burn.
+     * @param _interactionNonce Same as in convert(...) method.
+     * @return collateral Amount of collateral withdrawn.
+     * @return lusdReturned Amount of LUSD returned (non-zero only if the trove was partially redeemed)
+     */
+    function _repay(uint256 _tbAmount, uint256 _interactionNonce)
         private
-        returns (uint256 outputValueA, uint256 outputValueB)
+        returns (uint256 collateral, uint256 lusdReturned)
     {
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
         // Compute how much debt to be repay
-        uint256 debtToRepay = (_inputValue * debtBefore) / this.totalSupply();
+        uint256 debtToRepay = (_tbAmount * debtBefore) / this.totalSupply();
         // Compute how much collateral to withdraw
-        uint256 collToWithdraw = (_inputValue * collBefore) / this.totalSupply();
+        uint256 collToWithdraw = (_tbAmount * collBefore) / this.totalSupply();
 
-        if (debtToRepay > _inputValue) {
+        if (debtToRepay > _tbAmount) {
             // Collateral and debt was redistributed to bridge's trove (1 TB corresponds to more than 1 LUSD worth
             // of debt). For this reason the bridge doesn't currently have enough LUSD to repay the debt in full.
             // It's important that CR never drops because if the trove was near minimum CR (MCR) the tx would revert.
@@ -383,36 +394,52 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
             // to exit when Liquity is in recovery mode (total collateral ratio < 150%) because in such a case
             // only pure collateral top-up or debt repayment is allowed.
             // To avoid CR from ever dropping bellow MCR I came up with the following construction:
-            // 1) flash swap USDC to LUSD, 2) repay the user's trove debt in full (in the 1st callback),
-            // 3) flash swap WETH to USDC with recipient being the LUSD_USDC_POOL - this pays for the first swap,
-            // 4) in the 2nd callback deposit part of the withdrawn collateral to WETH and pay for the 2nd swap.
+            //   1) Flash swap USDC to LUSD,
+            //   2) repay the user's trove debt in full (in the 1st callback),
+            //   3) flash swap WETH to USDC with recipient being the LUSD_USDC_POOL - this pays for the first swap,
+            //   4) in the 2nd callback deposit part of the withdrawn collateral to WETH and pay for the 2nd swap.
             IUniswapV3PoolActions(LUSD_USDC_POOL).swap(
                 address(this), // recipient
                 false, // zeroForOne
-                -int256(debtToRepay - _inputValue), // amount of LUSD to receive
+                -int256(debtToRepay - _tbAmount), // amount of LUSD to receive
                 SQRT_PRICE_LIMIT_X96,
                 abi.encode(SwapCallbackData({debtToRepay: debtToRepay, collToWithdraw: collToWithdraw}))
             );
         } else {
             // Repay _inputValue of LUSD and withdraw collateral
-            address upperHint = SORTED_TROVES.getPrev(address(this));
-            address lowerHint = SORTED_TROVES.getNext(address(this));
+            (address upperHint, address lowerHint) = _getHints();
             BORROWER_OPERATIONS.adjustTrove(0, collToWithdraw, debtToRepay, false, upperHint, lowerHint);
-            outputValueB = _inputValue - debtToRepay; // LUSD to return --> 0 unless trove was partially redeemed
+            lusdReturned = _tbAmount - debtToRepay; // LUSD to return --> 0 unless trove was partially redeemed
         }
         // 5. Burn input TB and return ETH to rollup processor
-        outputValueA = address(this).balance;
-        _burn(address(this), _inputValue);
-        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
+        collateral = address(this).balance;
+        _burn(address(this), _tbAmount);
+        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: collateral}(_interactionNonce);
     }
 
-    function _redeem(uint256 _inputValue, uint256 _interactionNonce) private returns (uint256 outputValueA) {
+    /**
+     * @notice Redeem collateral.
+     * @param _tbAmount Amount of TB to burn.
+     * @param _interactionNonce Same as in convert(...) method.
+     * @return collateral Amount of collateral withdrawn.
+     */
+    function _redeem(uint256 _tbAmount, uint256 _interactionNonce) private returns (uint256 collateral) {
         if (!collateralClaimed) {
             BORROWER_OPERATIONS.claimCollateral();
             collateralClaimed = true;
         }
-        outputValueA = (address(this).balance * _inputValue) / this.totalSupply();
-        _burn(address(this), _inputValue);
-        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
+        collateral = (address(this).balance * _tbAmount) / this.totalSupply();
+        _burn(address(this), _tbAmount);
+        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: collateral}(_interactionNonce);
+    }
+
+    /**
+     * @notice Get lower and upper insertion hints.
+     * @return upperHint Upper insertion hint.
+     * @return lowerHint Lower insertion hint.
+     * @dev See https://github.com/liquity/dev#supplying-hints-to-trove-operations for more details on hints.
+     */
+    function _getHints() private view returns (address upperHint, address lowerHint) {
+        return (SORTED_TROVES.getPrev(address(this)), SORTED_TROVES.getNext(address(this)));
     }
 }
