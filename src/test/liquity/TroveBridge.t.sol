@@ -24,8 +24,8 @@ contract TroveBridgeTest is TestUtil {
 
     address private constant OWNER = address(24);
 
-    uint256 private constant OWNER_WEI_BALANCE = 5e18; // 5 ETH
-    uint256 private constant ROLLUP_PROCESSOR_WEI_BALANCE = 1e18; // 1 ETH
+    uint256 private constant OWNER_WEI_BALANCE = 50 ether;
+    uint256 private constant ROLLUP_PROCESSOR_WEI_BALANCE = 1 ether;
 
     uint64 private constant MAX_FEE = 5e16; // Slippage protection: 5%
     uint256 public constant MCR = 1100000000000000000; // 110%
