@@ -140,17 +140,48 @@ contract TroveBridgeTest is TestUtil {
     }
 
     function testRedeemFlow() public {
+        vm.prank(OWNER);
+        bridge = new TroveBridge(address(rollupProcessor), 110);
+
         _openTrove();
         _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
 
+        address lowestIcrTrove = bridge.SORTED_TROVES().getLast();
+        assertEq(lowestIcrTrove, address(bridge), "Bridge's trove is not the first one to redeem.");
+
+        (uint256 debtBefore, , , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+
+        uint256 amountToRedeem = debtBefore * 2;
+
+        uint256 price = bridge.TROVE_MANAGER().priceFeed().fetchPrice();
+
+        (, uint256 partialRedemptionHintNICR, ) = HINT_HELPERS.getRedemptionHints(amountToRedeem, price, 0);
+
+        (address approxPartialRedemptionHint, , ) = HINT_HELPERS.getApproxHint(partialRedemptionHintNICR, 50, 42);
+
+        (address exactUpperPartialRedemptionHint, address exactLowerPartialRedemptionHint) = SORTED_TROVES
+            .findInsertPosition(partialRedemptionHintNICR, approxPartialRedemptionHint, approxPartialRedemptionHint);
+
         // Keep on redeeming 20 million LUSD until the trove is in the closedByRedemption status
-        uint256 amountToRedeem = 2e25;
-        do {
-            deal(tokens["LUSD"].addr, address(this), amountToRedeem);
-            bridge.TROVE_MANAGER().redeemCollateral(amountToRedeem, address(0), address(0), address(0), 0, 0, 1e18);
-        } while (Status(bridge.TROVE_MANAGER().getTroveStatus(address(bridge))) != Status.closedByRedemption);
+        deal(tokens["LUSD"].addr, address(this), amountToRedeem);
+        bridge.TROVE_MANAGER().redeemCollateral(
+            amountToRedeem,
+            lowestIcrTrove,
+            exactUpperPartialRedemptionHint,
+            exactLowerPartialRedemptionHint,
+            partialRedemptionHintNICR,
+            0,
+            1e18
+        );
+
+        assertEq(
+            bridge.TROVE_MANAGER().getTroveStatus(address(bridge)),
+            4,
+            "Status is not closedByRedemption"
+        );
 
         _redeem();
+        _closeRedeem();
     }
 
     function testPartialRedeemFlow() public {
