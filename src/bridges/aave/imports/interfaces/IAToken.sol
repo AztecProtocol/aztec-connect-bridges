@@ -8,8 +8,5 @@ import {IAaveIncentivesController} from "./IAaveIncentivesController.sol";
 import {IScaledBalanceToken} from "./IScaledBalanceToken.sol";
 
 interface IAToken is IERC20Metadata, IScaledBalanceToken {
-    function getIncentivesController()
-        external
-        view
-        returns (IAaveIncentivesController);
+    function getIncentivesController() external view returns (IAaveIncentivesController);
 }

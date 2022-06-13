@@ -14,11 +14,7 @@ interface IAaveIncentivesController {
      */
     event RewardsAccrued(address indexed user, uint256 amount);
 
-    event RewardsClaimed(
-        address indexed user,
-        address indexed to,
-        uint256 amount
-    );
+    event RewardsClaimed(address indexed user, address indexed to, uint256 amount);
 
     /**
      * @dev Emitted during `claimRewards` and `claimRewardsOnBehalf`
@@ -27,12 +23,7 @@ interface IAaveIncentivesController {
      * @param claimer The address that performed the claim
      * @param amount The amount of rewards
      */
-    event RewardsClaimed(
-        address indexed user,
-        address indexed to,
-        address indexed claimer,
-        uint256 amount
-    );
+    event RewardsClaimed(address indexed user, address indexed to, address indexed claimer, uint256 amount);
 
     /**
      * @dev Emitted during `setClaimer`
@@ -91,10 +82,7 @@ interface IAaveIncentivesController {
      * @param assets The assets to incentivize
      * @param emissionsPerSecond The emission for each asset
      */
-    function configureAssets(
-        address[] calldata assets,
-        uint256[] calldata emissionsPerSecond
-    ) external;
+    function configureAssets(address[] calldata assets, uint256[] calldata emissionsPerSecond) external;
 
     /**
      * @notice Called by the corresponding asset on any update that affects the rewards distribution
@@ -114,10 +102,7 @@ interface IAaveIncentivesController {
      * @param user The address of the user
      * @return The rewards
      **/
-    function getRewardsBalance(address[] calldata assets, address user)
-        external
-        view
-        returns (uint256);
+    function getRewardsBalance(address[] calldata assets, address user) external view returns (uint256);
 
     /**
      * @notice Claims reward for a user, on the assets of the pool, accumulating the pending rewards
@@ -153,10 +138,7 @@ interface IAaveIncentivesController {
      * @param user The address of the user
      * @return The unclaimed user rewards
      */
-    function getUserUnclaimedRewards(address user)
-        external
-        view
-        returns (uint256);
+    function getUserUnclaimedRewards(address user) external view returns (uint256);
 
     /**
      * @notice Returns the user index for a specific asset
@@ -164,10 +146,7 @@ interface IAaveIncentivesController {
      * @param asset The asset to incentivize
      * @return The user index for the asset
      */
-    function getUserAssetData(address user, address asset)
-        external
-        view
-        returns (uint256);
+    function getUserAssetData(address user, address asset) external view returns (uint256);
 
     /**
      * @notice for backward compatibility with previous implementation of the Incentives controller
