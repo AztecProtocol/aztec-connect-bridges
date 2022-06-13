@@ -22,6 +22,12 @@ jobs:
             yarn setup:foundry
             yarn compile:typechain
       - run:
+          name: Check Formatting
+          shell: /bin/bash
+          command: |
+            yarn config set script-shell /bin/bash
+            yarn formatting:check
+      - run:
           name: Test Contracts
           shell: /bin/bash
           command: |
