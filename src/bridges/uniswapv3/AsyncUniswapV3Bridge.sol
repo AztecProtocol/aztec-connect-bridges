@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.6.10 <=0.8.10;
+// Copyright 2022 Spilsbury Holdings Ltd
+pragma solidity >=0.8.4;
+
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 import {TickMath} from "./libraries/TickMath.sol";
-import "./interfaces/IERC20.sol";
 import "./interfaces/IUniswapV3Pool.sol";
 import "./UniswapV3Bridge.sol";
 import "../../interfaces/IDefiBridge.sol";
@@ -13,9 +15,9 @@ import "./interfaces/IQuoter.sol";
 // import 'hardhat/console.sol';
 
 contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
-    using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
-    /* 
+    /*
         STRUCTS AND ENUMS
     */
 
@@ -49,7 +51,7 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
     }
 
     modifier onlyRollup() {
-        require(msg.sender == address(rollupProcessor), "INVALID_CALLER");
+        require(msg.sender == address(ROLLUP_PROCESSOR), "INVALID_CALLER");
         _;
     }
 
@@ -87,7 +89,7 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
 
     function _checkLimitConditions(uint256 interactionNonce) internal view returns (bool) {
         Deposit memory deposit = deposits[interactionNonce];
-        IUniswapV3Pool pool = IUniswapV3Pool(uniswapFactory.getPool(deposit.token0, deposit.token1, deposit.fee));
+        IUniswapV3Pool pool = IUniswapV3Pool(UNISWAP_FACTORY.getPool(deposit.token0, deposit.token1, deposit.fee));
         (uint160 sqrtPriceX96, , , , , , ) = pool.slot0();
         int24 currentTick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
@@ -116,14 +118,14 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
 
             //(,,,,,,,,,,uint128 tokensOwed0,uint128 tokensOwed1) = nonfungiblePositionManager.positions(deposits[interactionNonce].tokenId);
             //implement a fee percentage rather than approving whole thing?
-            ERC20NoReturnApprove(
-                deposits[interactionNonce].token0,
-                address(msg.sender),
+            // TODO: isn't using msg.sender a security vulnerability here given that the method doesn't do any entry checks and is called externally?
+            IERC20(deposits[interactionNonce].token0).safeIncreaseAllowance(
+                msg.sender,
                 amount0 * (deposits[interactionNonce].fee / 1000000)
             );
-            ERC20NoReturnApprove(
-                deposits[interactionNonce].token1,
-                address(msg.sender),
+            // TODO: why is amount 0 here and not amount 1?
+            IERC20(deposits[interactionNonce].token1).safeIncreaseAllowance(
+                msg.sender,
                 amount0 * (deposits[interactionNonce].fee / 1000000)
             );
         }
@@ -191,7 +193,7 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             bool isAsync
         )
     {
-        require(msg.sender == address(rollupProcessor), "INVALID_CALLER");
+        require(msg.sender == address(ROLLUP_PROCESSOR), "INVALID_CALLER");
 
         //Uniswap V3 range limit order
         isAsync = true;
@@ -239,7 +241,7 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
 
         asyncOrders[interactionNonce] = AsyncOrder({
             finalisable: false,
-            expiry: block.timestamp.add((uint256(days_to_cancel)).mul(MAGIC_NUMBER_DAYS))
+            expiry: block.timestamp + uint256(days_to_cancel) * MAGIC_NUMBER_DAYS
         });
 
         //no refunding necessary because it is impossible for it to occur as one entry in amounts[] will always be 0
@@ -306,19 +308,15 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
                 (outputValueA, outputValueB) = (outputValueB, outputValueA);
             }
 
+            IERC20(A).safeIncreaseAllowance(address(ROLLUP_PROCESSOR), outputValueA);
+            IERC20(B).safeIncreaseAllowance(address(ROLLUP_PROCESSOR), outputValueB);
+            // TODO: simplify this logic
             if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
-                ERC20NoReturnApprove(B, address(rollupProcessor), outputValueB);
-                TransferHelper.safeApprove(A, address(rollupProcessor), outputValueA);
                 WETH.withdraw(outputValueA);
-                rollupProcessor.receiveEthFromBridge{value: outputValueA}(interactionNonce);
+                ROLLUP_PROCESSOR.receiveEthFromBridge{value: outputValueA}(interactionNonce);
             } else if (inputAssetB.assetType == AztecTypes.AztecAssetType.ETH) {
-                TransferHelper.safeApprove(B, address(rollupProcessor), outputValueB);
-                ERC20NoReturnApprove(A, address(rollupProcessor), outputValueA);
                 WETH.withdraw(outputValueB);
-                rollupProcessor.receiveEthFromBridge{value: outputValueB}(interactionNonce);
-            } else {
-                ERC20NoReturnApprove(B, address(rollupProcessor), outputValueB);
-                ERC20NoReturnApprove(A, address(rollupProcessor), outputValueA);
+                ROLLUP_PROCESSOR.receiveEthFromBridge{value: outputValueB}(interactionNonce);
             }
 
             //now that the settlement is finalised and the rollup will return user funds, clear map element for this interaction

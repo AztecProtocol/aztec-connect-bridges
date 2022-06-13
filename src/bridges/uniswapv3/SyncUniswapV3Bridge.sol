@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.6.10 <=0.8.10;
-pragma abicoder v2;
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec.
+pragma solidity >=0.8.4;
 
-import {IERC20Detailed, IERC20} from "./interfaces/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 import "./UniswapV3Bridge.sol";
 import "./interfaces/IUniswapV3Pool.sol";
@@ -11,9 +12,9 @@ import "../../interfaces/IDefiBridge.sol";
 import "./interfaces/IQuoter.sol";
 
 contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
-    using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
-    /* 
+    /*
         STRUCTS AND ENUMS
     */
 
@@ -47,7 +48,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
     }
 
     modifier onlyRollup() {
-        require(msg.sender == address(rollupProcessor), "INVALID_CALLER");
+        require(msg.sender == address(ROLLUP_PROCESSOR), "INVALID_CALLER");
         _;
     }
 
@@ -150,7 +151,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
     {
         //require(inputValue == 0, "ZERO");
         require(
-            msg.sender == address(rollupProcessor) || msg.sender == address(this),
+            msg.sender == address(ROLLUP_PROCESSOR) || msg.sender == address(this),
             "UniswapV3Bridge: INVALID_CALLER"
         );
 
@@ -256,19 +257,14 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
                 (outputValueA, outputValueB) = (outputValueB, outputValueA);
             }
 
+            IERC20(A).safeIncreaseAllowance(address(ROLLUP_PROCESSOR), outputValueA);
+            IERC20(B).safeIncreaseAllowance(address(ROLLUP_PROCESSOR), outputValueB);
             if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
-                ERC20NoReturnApprove(B, address(rollupProcessor), outputValueB);
-                TransferHelper.safeApprove(A, address(rollupProcessor), outputValueA);
                 WETH.withdraw(outputValueA);
-                rollupProcessor.receiveEthFromBridge{value: outputValueA}(interactionNonce);
+                ROLLUP_PROCESSOR.receiveEthFromBridge{value: outputValueA}(interactionNonce);
             } else if (inputAssetB.assetType == AztecTypes.AztecAssetType.ETH) {
-                TransferHelper.safeApprove(B, address(rollupProcessor), outputValueB);
-                ERC20NoReturnApprove(A, address(rollupProcessor), outputValueA);
                 WETH.withdraw(outputValueB);
-                rollupProcessor.receiveEthFromBridge{value: outputValueB}(interactionNonce);
-            } else {
-                ERC20NoReturnApprove(B, address(rollupProcessor), outputValueB);
-                ERC20NoReturnApprove(A, address(rollupProcessor), outputValueA);
+                ROLLUP_PROCESSOR.receiveEthFromBridge{value: outputValueB}(interactionNonce);
             }
         }
     }
@@ -343,7 +339,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             //console.log("refunding");
             outputValueB = token[0] == refund ? refund0 : refund1;
             uint256 amountOut = _refundConversion(refund0, refund1, refund, token[0], token[1], fee);
-            outputValueB = outputValueB.add(amountOut);
+            outputValueB = outputValueB + amountOut;
         }
 
         //console.log("passed");
@@ -352,7 +348,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
 
         //approve rollupProcessor to receive refund
 
-        TransferHelper.safeApprove(refund, address(rollupProcessor), outputValueB);
+        TransferHelper.safeApprove(refund, address(ROLLUP_PROCESSOR), outputValueB);
     }
 
     /**
@@ -378,7 +374,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         uint24 fee = uint24(unpack_48_to_64(params));
 
         {
-            ERC20NoReturnApprove(input, address(swapRouter), inputValue / 2);
+            IERC20(input).safeIncreaseAllowance(address(SWAP_ROUTER), inputValue / 2);
             ISwapRouter.ExactInputSingleParams memory swap_params = ISwapRouter.ExactInputSingleParams({
                 tokenIn: input,
                 tokenOut: output,
@@ -390,7 +386,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
                 sqrtPriceLimitX96: 0
             });
 
-            uint256 amountOut = swapRouter.exactInputSingle(swap_params);
+            uint256 amountOut = SWAP_ROUTER.exactInputSingle(swap_params);
 
             amounts[0] = input < output ? inputValue / 2 : amountOut;
             amounts[1] = input < output ? amountOut : inputValue / 2;
@@ -424,10 +420,10 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         if ((refund1 > 0 && output == token0) || (refund0 > 0 && output == token1)) {
             outputValueB = token0 == output ? refund0 : refund1;
             amounts[0] = _refundConversion(refund0, refund1, output, token0, token1, fee);
-            outputValueB = outputValueB.add(amounts[0]);
+            outputValueB = outputValueB + amounts[0];
         }
 
-        TransferHelper.safeApprove(output, address(rollupProcessor), outputValueB);
+        TransferHelper.safeApprove(output, address(ROLLUP_PROCESSOR), outputValueB);
     }
 
     function canFinalise(uint256 interactionNonce) external view onlyRollup returns (bool) {
