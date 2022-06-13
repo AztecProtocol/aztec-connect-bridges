@@ -3,23 +3,42 @@ import {
   AuxDataConfig,
   AztecAsset,
   SolidityType,
-  BridgeData,
   AztecAssetType,
-  YieldBridgeData,
-} from '../bridge-data';
+  BridgeDataFieldGetters,
+} from "../bridge-data";
 
-import { IWstETH, ILidoOracle, ICurvePool } from '../../../typechain-types';
+import {
+  IWstETH,
+  ILidoOracle,
+  ICurvePool,
+  IWstETH__factory,
+  ILidoOracle__factory,
+  ICurvePool__factory,
+} from "../../../typechain-types";
+import { EthereumProvider } from "@aztec/barretenberg/blockchain";
+import { createWeb3Provider } from "../aztec/provider";
+import { EthAddress } from "@aztec/barretenberg/address";
 
-export class LidoBridgeData implements YieldBridgeData {
-  private wstETHContract: IWstETH;
-  private lidoOracleContract: ILidoOracle;
-  private curvePoolContract: ICurvePool;
+export class LidoBridgeData implements BridgeDataFieldGetters {
   public scalingFactor: bigint = 1n * 10n ** 18n;
 
-  constructor(wstETHContract: IWstETH, lidoOracleContract: ILidoOracle, curvePoolContract: ICurvePool) {
-    this.wstETHContract = wstETHContract;
-    this.lidoOracleContract = lidoOracleContract;
-    this.curvePoolContract = curvePoolContract;
+  private constructor(
+    private wstETHContract: IWstETH,
+    private lidoOracleContract: ILidoOracle,
+    private curvePoolContract: ICurvePool,
+  ) {}
+
+  static create(
+    provider: EthereumProvider,
+    wstEthAddress: EthAddress,
+    lidoOracleAddress: EthAddress,
+    curvePoolAddress: EthAddress,
+  ) {
+    const ethersProvider = createWeb3Provider(provider);
+    const wstEthContract = IWstETH__factory.connect(wstEthAddress.toString(), ethersProvider);
+    const lidoContract = ILidoOracle__factory.connect(lidoOracleAddress.toString(), ethersProvider);
+    const curvePoolContract = ICurvePool__factory.connect(curvePoolAddress.toString(), ethersProvider);
+    return new LidoBridgeData(wstEthContract, lidoContract, curvePoolContract);
   }
 
   // Unused
@@ -28,7 +47,7 @@ export class LidoBridgeData implements YieldBridgeData {
       start: 0,
       length: 64,
       solidityType: SolidityType.uint64,
-      description: 'Not Used',
+      description: "Not Used",
     },
   ];
 
@@ -57,12 +76,9 @@ export class LidoBridgeData implements YieldBridgeData {
   ): Promise<bigint[]> {
     // ETH -> wstETH
     if (inputAssetA.assetType == AztecAssetType.ETH) {
-      const curveMinOutput = await this.curvePoolContract.get_dy(0, 1, inputValue);
-      if (curveMinOutput.toBigInt() > inputValue) {
-        return [curveMinOutput.toBigInt()];
-      } else {
-        return [inputValue];
-      }
+      // Assume ETH -> stETh 1:1 (there will be a tiny diff because rounding down)
+      const wstETHBalance = await this.wstETHContract.getWstETHByStETH(inputValue);
+      return [wstETHBalance.toBigInt()];
     }
 
     // wstETH -> ETH
@@ -73,14 +89,14 @@ export class LidoBridgeData implements YieldBridgeData {
     }
     return [0n];
   }
-  async getExpectedYearlyOuput(
+  async getExpectedYield(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
     precision: bigint,
-  ): Promise<bigint[]> {
+  ): Promise<number[]> {
     const YEAR = 60n * 60n * 24n * 365n;
     if (outputAssetA.assetType === AztecAssetType.ETH) {
       const { postTotalPooledEther, preTotalPooledEther, timeElapsed } =
@@ -89,13 +105,10 @@ export class LidoBridgeData implements YieldBridgeData {
       const scaledAPR =
         ((postTotalPooledEther.toBigInt() - preTotalPooledEther.toBigInt()) * YEAR * this.scalingFactor) /
         (preTotalPooledEther.toBigInt() * timeElapsed.toBigInt());
-      const stETHBalance = await this.wstETHContract.getStETHByWstETH(precision);
-      const ETHBalance = (await this.curvePoolContract.get_dy(1, 0, stETHBalance)).toBigInt();
-      const expectedYearlyOutputETH = ETHBalance + (ETHBalance * scaledAPR) / this.scalingFactor;
 
-      return [expectedYearlyOutputETH];
+      return [Number(scaledAPR / (this.scalingFactor / 10000n)) / 100];
     }
-    return [0n];
+    return [0];
   }
 
   async getMarketSize(

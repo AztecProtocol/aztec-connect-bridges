@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: Apache-2.0
-// Copyright 2022 Aztec
-pragma solidity >=0.8.4 <0.8.11;
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright 2022 Spilsbury Holdings Ltd
+pragma solidity >=0.8.4;
 
 interface IRollupProcessor {
     function defiBridgeProxy() external view returns (address);

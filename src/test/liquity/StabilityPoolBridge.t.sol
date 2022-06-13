@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Spilsbury Holdings Ltd
-pragma solidity >=0.8.0 <=0.8.10;
-pragma abicoder v2;
+pragma solidity >=0.8.4;
 
-import "./utils/TestUtil.sol";
-import "../../bridges/liquity/StabilityPoolBridge.sol";
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
+
+import {TestUtil} from "./utils/TestUtil.sol";
+import {StabilityPoolBridge} from "../../bridges/liquity/StabilityPoolBridge.sol";
 
 contract StabilityPoolBridgeTest is TestUtil {
     StabilityPoolBridge private bridge;
@@ -15,6 +16,14 @@ contract StabilityPoolBridgeTest is TestUtil {
 
         bridge = new StabilityPoolBridge(address(rollupProcessor), address(0));
         bridge.setApprovals();
+
+        // EIP-1087 optimization related mints
+        // Note: For LQTY and LUSD the optimization would work even without
+        // this mint after the first rewards are claimed. This is not the case
+        // for LUSD.
+        deal(tokens["LUSD"].addr, address(bridge), 1);
+        deal(tokens["LQTY"].addr, address(bridge), 1);
+        deal(tokens["WETH"].addr, address(bridge), 1);
     }
 
     function testInitialERC20Params() public {
@@ -23,12 +32,28 @@ contract StabilityPoolBridgeTest is TestUtil {
         assertEq(uint256(bridge.decimals()), 18);
     }
 
+    function testIncorrectInput() public {
+        // Call convert with incorrect input
+        vm.prank(address(rollupProcessor));
+        vm.expectRevert(StabilityPoolBridge.IncorrectInput.selector);
+        bridge.convert(
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            0,
+            0,
+            0,
+            address(0)
+        );
+    }
+
     function testFullDepositWithdrawalFlow() public {
         // I will deposit and withdraw 1 million LUSD
         uint256 depositAmount = 1e24;
 
         // 1. Mint the deposit amount of LUSD to the bridge
-        mint("LUSD", address(rollupProcessor), depositAmount);
+        deal(tokens["LUSD"].addr, address(rollupProcessor), depositAmount);
 
         // 2. Deposit LUSD to the StabilityPool contract through the bridge
         rollupProcessor.convert(
@@ -83,10 +108,10 @@ contract StabilityPoolBridgeTest is TestUtil {
         while (i < numIters) {
             depositAmount = rand(depositAmount);
             // 1. Mint deposit amount of LUSD to the rollupProcessor
-            mint("LUSD", address(rollupProcessor), depositAmount);
+            deal(tokens["LUSD"].addr, address(rollupProcessor), depositAmount);
             // 2. Mint rewards to the bridge
-            mint("LQTY", address(bridge), 1e20);
-            mint("WETH", address(bridge), 1e18);
+            deal(tokens["LQTY"].addr, address(bridge), 1e20);
+            deal(tokens["WETH"].addr, address(bridge), 1e18);
 
             // 3. Deposit LUSD to StabilityPool through the bridge
             (uint256 outputValueA, , ) = rollupProcessor.convert(

@@ -1,47 +1,30 @@
-import axios from 'axios';
-import { AuxDataConfig, AztecAsset, SolidityType, YieldBridgeData } from '../bridge-data';
-import { MStableBridge, IRollupProcessor, IMStableSavingsContract, IMStableAsset } from '../../../typechain-types';
+import fetch from 'node-fetch';
+import { AuxDataConfig, AztecAsset, SolidityType, BridgeDataFieldGetters } from '../bridge-data';
+import {
+  IMStableSavingsContract,
+  IMStableAsset,
+  IMStableSavingsContract__factory,
+  IMStableAsset__factory,
+} from '../../../typechain-types';
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { createWeb3Provider } from '../aztec/provider';
+import { EthAddress } from '@aztec/barretenberg/address';
 
-export type BatchSwapStep = {
-  poolId: string;
-  assetInIndex: number;
-  assetOutIndex: number;
-  amount: string;
-  userData: string;
-};
-
-export enum SwapType {
-  SwapExactIn,
-  SwapExactOut,
-}
-
-export type FundManagement = {
-  sender: string;
-  recipient: string;
-  fromInternalBalance: boolean;
-  toInternalBalance: boolean;
-};
-
-export class MStableBridgeData {
-  private mStableBridgeContract: MStableBridge;
-  private rollupContract: IRollupProcessor;
-  private mStableSavingsContract: IMStableSavingsContract;
-  private mStableAssetContract: IMStableAsset;
-  private imUSD = '0x30647a72Dc82d7Fbb1123EA74716aB8A317Eac19';
+export class MStableBridgeData implements BridgeDataFieldGetters {
   private dai = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 
   public scalingFactor = 1000000000n;
 
-  constructor(
-    mStableBridge: MStableBridge,
-    mStableSavings: IMStableSavingsContract,
-    rollupContract: IRollupProcessor,
-    mStableAsset: IMStableAsset,
-  ) {
-    this.mStableBridgeContract = mStableBridge;
-    this.rollupContract = rollupContract;
-    this.mStableSavingsContract = mStableSavings;
-    this.mStableAssetContract = mStableAsset;
+  private constructor(
+    private mStableSavingsContract: IMStableSavingsContract,
+    private mStableAssetContract: IMStableAsset,
+  ) {}
+
+  static create(provider: EthereumProvider, mStableSavingsAddress: EthAddress, mStableAssetAddress: EthAddress) {
+    const ethersProvider = createWeb3Provider(provider);
+    const savingsContract = IMStableSavingsContract__factory.connect(mStableSavingsAddress.toString(), ethersProvider);
+    const assetContract = IMStableAsset__factory.connect(mStableAssetAddress.toString(), ethersProvider);
+    return new MStableBridgeData(savingsContract, assetContract);
   }
 
   async getAuxData(
@@ -81,23 +64,26 @@ export class MStableBridgeData {
     }
   }
 
-  async getExpectedYearlyOuput(
+  async getExpectedYield(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
     precision: bigint,
-  ): Promise<bigint[]> {
+  ): Promise<number[]> {
     if (outputAssetA.erc20Address === this.dai) {
       // input asset is IMUSD
-      let res = await axios('https://api.mstable.org/pools');
-      const scaledApy = BigInt(Math.floor(res.data.pools[2].apy * Number(this.scalingFactor))) / 100n;
-      const exchangeRate = (await this.mStableSavingsContract.exchangeRate()).toBigInt();
-      const redeemOutput = (await this.mStableAssetContract.getRedeemOutput(this.dai, precision)).toBigInt();
-      const expectedYearlyOutput = exchangeRate * (redeemOutput + (redeemOutput * scaledApy) / this.scalingFactor);
+      const res = await fetch('https://api.thegraph.com/subgraphs/name/mstable/mstable-protocol', {
+        method: 'POST',
+        body: JSON.stringify({
+          query: 'query MyQuery {\n  savingsContracts {\n    dailyAPY\n  }\n}\n',
+          variables: null,
+          operationName: 'MyQuery',
+        }),
+      }).then(response => response.json());
 
-      return [expectedYearlyOutput];
+      return [Number(res.data.savingsContracts[2].dailyAPY)];
     }
     return [];
   }

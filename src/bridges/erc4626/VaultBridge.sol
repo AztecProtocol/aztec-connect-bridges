@@ -3,13 +3,13 @@
 pragma solidity ^0.8.4;
 pragma experimental ABIEncoderV2;
 
-import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
+import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-import {IDefiBridge} from '../../interfaces/IDefiBridge.sol';
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/access/Ownable.sol';
-import {AztecTypes} from '../../aztec/AztecTypes.sol';
-import {IERC4626} from './Interfaces/IERC4626.sol';
+import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {IERC4626} from "./Interfaces/IERC4626.sol";
 error Unauthorized();
 
 /**
@@ -62,14 +62,15 @@ contract VaultBridge is IDefiBridge, Ownable {
         )
     {
         // // ### INITIALIZATION AND SANITY CHECKS
-        require(msg.sender == rollupProcessor, Unathorized());
+
+        if (msg.sender != rollupProcessor) revert Unauthorized();
 
         if (testPair(outputAssetA.erc20Address, inputAssetA.erc20Address)) {
             outputValueA = enter(outputAssetA.erc20Address, inputAssetA.erc20Address, totalInputValue);
         } else if (testPair(inputAssetA.erc20Address, outputAssetA.erc20Address)) {
             outputValueA = exit(inputAssetA.erc20Address, outputAssetA.erc20Address, totalInputValue);
         } else {
-            revert('invalid vault token pair address');
+            revert("invalid vault token pair address");
         }
     }
 
@@ -77,13 +78,13 @@ contract VaultBridge is IDefiBridge, Ownable {
      * @notice Function which test whether a token is a vaild asset for a given vault
      * @dev This method is used to check whether input and output assets are matching vault share/asset pairs
      *
-     * @param a address of erc4626 vault
-     * @param b address of the vault asset token
+     * @param vault address of erc4626 vault
+     * @param asset address of the vault asset token
      *
      */
-    function testPair(address a, address b) public returns (bool) {
-        try IERC4626(a).asset() returns (IERC20 token) {
-            return address(token) == b;
+    function testPair(address vault, address asset) public returns (bool) {
+        try IERC4626(vault).asset() returns (IERC20 token) {
+            return address(token) == asset;
         } catch {
             return false;
         }
@@ -118,7 +119,7 @@ contract VaultBridge is IDefiBridge, Ownable {
      * @dev This method redeems an exact number of shares into an erc4626 vault then approves the rollup processor
      *
      * @param vault address of erc4626 vault
-     * @param token address of the vault
+     * @param token address of the vault asset
      * @param amount amount of shares to be redeemed
      *
      */
@@ -135,6 +136,11 @@ contract VaultBridge is IDefiBridge, Ownable {
         return _after.sub(prev);
     }
 
+    /**
+     * @notice Public Function used to preapprove vault pairs
+     * @param vault address of erc4626 vault
+     * @param token address of the vault asset
+     */
     function approvePair(address vault, address token) public {
         IERC20(token).approve(vault, type(uint256).max);
         IERC20(vault).approve(rollupProcessor, type(uint256).max);
