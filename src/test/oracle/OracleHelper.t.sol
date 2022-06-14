@@ -21,8 +21,8 @@ contract OracleHelperTest is Test {
     ];
 
     function testSlippageToAmountOutMin(int16 _slippageBps, uint96 _amountIn) public {
-        vm.assume(_slippageBps >= 10 && _slippageBps <= 2000 && _amountIn > 1);
-        emit log_int(_slippageBps);
+        _slippageBps = int16(int256(bound(uint256(int256(_slippageBps)), 10, 2000)));
+        _amountIn = uint96(bound(_amountIn, 1, type(uint96).max));
         for (uint256 i; i < pools.length; ++i) {
             IUniswapV3PoolImmutables pool = IUniswapV3PoolImmutables(pools[i]);
             address token0 = pool.token0();
