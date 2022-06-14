@@ -7,6 +7,7 @@ import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ICERC20} from "./../../bridges/compound/interfaces/ICERC20.sol";
 import {CompoundBridge} from "./../../bridges/compound/CompoundBridge.sol";
 
@@ -44,8 +45,15 @@ contract CompoundTest is Test {
     }
 
     function testETHDepositAndWithdrawal(uint88 _depositAmount) public {
-        vm.assume(_depositAmount > 1e9);
-        vm.deal(address(rollupProcessor), _depositAmount);
+        uint256 depositAmount;
+        {
+            uint8 underlyingDecimals = 18;
+            uint256 exchangeRate = ICERC20(cETH).exchangeRateCurrent();
+            uint256 oneCTokenInUnderlying = (exchangeRate * 1e18) / (10**(18 + underlyingDecimals - 8));
+            depositAmount = bound(_depositAmount, oneCTokenInUnderlying, 10000 * 10**underlyingDecimals);
+        }
+
+        vm.deal(address(rollupProcessor), depositAmount);
 
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory depositInputAssetA = AztecTypes.AztecAsset({
@@ -66,12 +74,13 @@ contract CompoundTest is Test {
             empty,
             depositOutputAssetA,
             empty,
-            _depositAmount,
+            depositAmount,
             1,
             0
         );
 
         assertGt(outputValueA, 0, "cETH received is zero");
+        assertEq(outputValueA, IERC20(cETH).balanceOf(address(rollupProcessor)), "cToken balance not matching");
 
         uint256 redeemAmount = outputValueA;
         AztecTypes.AztecAsset memory redeemInputAssetA = depositOutputAssetA;
@@ -92,9 +101,14 @@ contract CompoundTest is Test {
         // ETH withdrawn should be approximately equal to ETH deposited
         // --> the amounts are not the same due to rounding errors in Compound
         assertLt(
-            _depositAmount - outputValueA,
+            depositAmount - outputValueA,
             1e10,
             "amount of ETH withdrawn is not similar to the amount of ETH deposited"
+        );
+        assertLt(
+            IERC20(cETH).balanceOf(address(rollupProcessor)),
+            outputValueA,
+            "cEther balance not reduced by withdraw"
         );
     }
 
@@ -102,11 +116,6 @@ contract CompoundTest is Test {
         // Note: if Foundry implements parametrized tests remove this for loop,
         // stop calling setup() from _depositAndWithdrawERC20 and use the native
         // functionality
-
-        // For the tests to pass a return value of cTokens has to be >0.
-        // Since the ratio of token/cToken is very skewed plenty of the times
-        // I set relatively high minimum value.
-        vm.assume(_depositAmount > 1e14);
         for (uint256 i; i < cTokens.length; ++i) {
             _depositAndWithdrawERC20(cTokens[i], _depositAmount);
         }
@@ -152,8 +161,15 @@ contract CompoundTest is Test {
     function _depositAndWithdrawERC20(address _cToken, uint256 _depositAmount) private {
         setUp();
         address underlyingToken = ICERC20(_cToken).underlying();
+        uint256 depositAmount;
+        {
+            uint8 underlyingDecimals = 18;
+            uint256 exchangeRate = ICERC20(_cToken).exchangeRateCurrent();
+            uint256 oneCTokenInUnderlying = (exchangeRate * 1e18) / (10**(18 + underlyingDecimals - 8));
+            depositAmount = bound(_depositAmount, oneCTokenInUnderlying, 10000 * 10**underlyingDecimals);
+        }
 
-        deal(underlyingToken, address(rollupProcessor), _depositAmount);
+        deal(underlyingToken, address(rollupProcessor), depositAmount);
 
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory depositInputAssetA = AztecTypes.AztecAsset({
@@ -174,12 +190,13 @@ contract CompoundTest is Test {
             empty,
             depositOutputAssetA,
             empty,
-            _depositAmount,
+            depositAmount,
             0,
             0
         );
 
         assertGt(outputValueA, 0, "cToken received is zero");
+        assertEq(outputValueA, IERC20(_cToken).balanceOf(address(rollupProcessor)), "cToken balance not matching");
 
         uint256 redeemAmount = outputValueA;
         AztecTypes.AztecAsset memory redeemInputAssetA = depositOutputAssetA;
@@ -200,9 +217,14 @@ contract CompoundTest is Test {
         // token withdrawn should be approximately equal to token deposited
         // --> the amounts are not exactly the same due to rounding errors in Compound
         assertLt(
-            _depositAmount - outputValueA,
+            depositAmount - outputValueA,
             1e10,
             "amount of underlying Token withdrawn is not similar to the amount of cToken deposited"
+        );
+        assertLt(
+            IERC20(_cToken).balanceOf(address(rollupProcessor)),
+            outputValueA,
+            "balance not decreased by withdraw"
         );
     }
 }

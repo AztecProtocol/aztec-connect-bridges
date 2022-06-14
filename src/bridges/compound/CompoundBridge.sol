@@ -38,29 +38,29 @@ contract CompoundBridge is IDefiBridge {
 
     /**
      * @notice Function which mints and burns cTokens in an exchange for the underlying asset.
-     * @dev This method can only be called from RollupProcessor.sol. If auxData is 0 the mint flow is executed,
+     * @dev This method can only be called from RollupProcessor.sol. If `_auxData` is 0 the mint flow is executed,
      * if 1 redeem flow.
      *
-     * @param inputAssetA - ETH/ERC20 (Mint), cToken ERC20 (Redeem)
-     * @param outputAssetA - cToken (Mint), ETH/ERC20 (Redeem)
-     * @param totalInputValue - the amount of ERC20 token/ETH to deposit (Mint), the amount of cToken to burn (Redeem)
-     * @param interactionNonce - interaction nonce as defined in RollupProcessor.sol
-     * @param auxData - 0 (Mint), 1 (Redeem)
+     * @param _inputAssetA - ETH/ERC20 (Mint), cToken ERC20 (Redeem)
+     * @param _outputAssetA - cToken (Mint), ETH/ERC20 (Redeem)
+     * @param _inputValue - the amount of ERC20 token/ETH to deposit (Mint), the amount of cToken to burn (Redeem)
+     * @param _interactionNonce - interaction nonce as defined in RollupProcessor.sol
+     * @param _auxData - 0 (Mint), 1 (Redeem)
      * @return outputValueA - the amount of cToken (Mint) or ETH/ERC20 (Redeem) transferred to RollupProcessor.sol
      */
     function convert(
-        AztecTypes.AztecAsset calldata inputAssetA,
+        AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata outputAssetA,
+        AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
-        uint256 totalInputValue,
-        uint256 interactionNonce,
-        uint64 auxData,
+        uint256 _inputValue,
+        uint256 _interactionNonce,
+        uint64 _auxData,
         address
     )
         external
         payable
-        override
+        override(IDefiBridge)
         returns (
             uint256 outputValueA,
             uint256,
@@ -69,40 +69,40 @@ contract CompoundBridge is IDefiBridge {
     {
         if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
 
-        if (auxData == 0) {
+        if (_auxData == 0) {
             // Mint
-            if (outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert IncorrectOutputAsset();
+            if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert IncorrectOutputAsset();
 
-            if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
-                ICETH cToken = ICETH(outputAssetA.erc20Address);
+            if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+                ICETH cToken = ICETH(_outputAssetA.erc20Address);
                 cToken.mint{value: msg.value}();
                 outputValueA = cToken.balanceOf(address(this));
                 cToken.approve(ROLLUP_PROCESSOR, outputValueA);
-            } else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
-                IERC20 tokenIn = IERC20(inputAssetA.erc20Address);
-                ICERC20 tokenOut = ICERC20(outputAssetA.erc20Address);
+            } else if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
+                IERC20 tokenIn = IERC20(_inputAssetA.erc20Address);
+                ICERC20 tokenOut = ICERC20(_outputAssetA.erc20Address);
                 // Using safeIncreaseAllowance(...) instead of approve(...) here because tokenIn can be Tether
-                tokenIn.safeIncreaseAllowance(address(tokenOut), totalInputValue);
-                tokenOut.mint(totalInputValue);
+                tokenIn.safeIncreaseAllowance(address(tokenOut), _inputValue);
+                tokenOut.mint(_inputValue);
                 outputValueA = tokenOut.balanceOf(address(this));
                 tokenOut.approve(ROLLUP_PROCESSOR, outputValueA);
             } else {
                 revert IncorrectInputAsset();
             }
-        } else if (auxData == 1) {
+        } else if (_auxData == 1) {
             // Redeem
-            if (inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert IncorrectInputAsset();
+            if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert IncorrectInputAsset();
 
-            if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+            if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 // Redeem cETH case
-                ICETH cToken = ICETH(inputAssetA.erc20Address);
-                cToken.redeem(totalInputValue);
+                ICETH cToken = ICETH(_inputAssetA.erc20Address);
+                cToken.redeem(_inputValue);
                 outputValueA = address(this).balance;
-                IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(interactionNonce);
-            } else if (outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
-                ICERC20 tokenIn = ICERC20(inputAssetA.erc20Address);
-                IERC20 tokenOut = IERC20(outputAssetA.erc20Address);
-                tokenIn.redeem(totalInputValue);
+                IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
+            } else if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
+                ICERC20 tokenIn = ICERC20(_inputAssetA.erc20Address);
+                IERC20 tokenOut = IERC20(_outputAssetA.erc20Address);
+                tokenIn.redeem(_inputValue);
                 outputValueA = tokenOut.balanceOf(address(this));
                 // Using safeIncreaseAllowance(...) instead of approve(...) here because tokenOut can be Tether
                 tokenOut.safeIncreaseAllowance(ROLLUP_PROCESSOR, outputValueA);
@@ -124,6 +124,7 @@ contract CompoundBridge is IDefiBridge {
     )
         external
         payable
+        override(IDefiBridge)
         returns (
             uint256,
             uint256,
