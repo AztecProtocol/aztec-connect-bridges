@@ -82,6 +82,7 @@ contract CompoundTest is Test {
         );
 
         assertGt(outputValueA, 0, "cETH received is zero");
+        assertEq(outputValueA, IERC20(cETH).balanceOf(address(rollupProcessor)), "cToken balance not matching");
 
         uint256 redeemAmount = outputValueA;
         AztecTypes.AztecAsset memory redeemInputAssetA = depositOutputAssetA;
@@ -105,6 +106,11 @@ contract CompoundTest is Test {
             depositAmount - outputValueA,
             1e10,
             "amount of ETH withdrawn is not similar to the amount of ETH deposited"
+        );
+        assertLt(
+            IERC20(cETH).balanceOf(address(rollupProcessor)),
+            outputValueA,
+            "cEther balance not reduced by withdraw"
         );
     }
 
@@ -192,6 +198,7 @@ contract CompoundTest is Test {
         );
 
         assertGt(outputValueA, 0, "cToken received is zero");
+        assertEq(outputValueA, IERC20(_cToken).balanceOf(address(rollupProcessor)), "cToken balance not matching");
 
         uint256 redeemAmount = outputValueA;
         AztecTypes.AztecAsset memory redeemInputAssetA = depositOutputAssetA;
@@ -215,6 +222,11 @@ contract CompoundTest is Test {
             depositAmount - outputValueA,
             1e10,
             "amount of underlying Token withdrawn is not similar to the amount of cToken deposited"
+        );
+        assertLt(
+            IERC20(_cToken).balanceOf(address(rollupProcessor)),
+            outputValueA,
+            "balance not decreased by withdraw"
         );
     }
 }
