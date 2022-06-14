@@ -9,25 +9,30 @@ import {FullMath} from "../bridges/uniswapv3/libraries/FullMath.sol";
 
 // Code based on https://github.com/Uniswap/v3-periphery/blob/main/contracts/libraries/OracleLibrary.sol
 library OracleHelper {
-    function _slippageToAmountOutMin(
+    error IncorrectInput(int24 slippageBps);
+
+    uint256 internal constant TWAP_SECONDS = 600; // 10 * 60 = 10 minutes
+
+    function slippageToAmountOutMin(
         address _tokenIn,
         address _tokenOut,
         address _pool,
         uint256 _amountIn,
         int24 _slippageBps
     ) internal view returns (uint256 amountOutMinimum) {
+        if (_slippageBps < 10 || _slippageBps > 2000) revert IncorrectInput(_slippageBps);
+
         // 1st get arithmetic mean tick for the last 10 minutes
-        uint256 secondsAgo = 600; // 10 * 60 = 10 minutes
         uint32[] memory secondsAgos = new uint32[](2);
-        secondsAgos[0] = uint32(secondsAgo);
+        secondsAgos[0] = uint32(TWAP_SECONDS);
         secondsAgos[1] = 0;
 
         (int56[] memory tickCumulatives, ) = IUniswapV3PoolDerivedState(_pool).observe(secondsAgos);
 
         int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
-        int24 arithmeticMeanTick = int24(tickCumulativesDelta / int256(secondsAgo));
+        int24 arithmeticMeanTick = int24(tickCumulativesDelta / int256(TWAP_SECONDS));
         // Always round to negative infinity
-        if (tickCumulativesDelta < 0 && (tickCumulativesDelta % int256(secondsAgo) != 0)) arithmeticMeanTick--;
+        if (tickCumulativesDelta < 0 && (tickCumulativesDelta % int256(TWAP_SECONDS) != 0)) arithmeticMeanTick--;
 
         // 2nd drop/rise the tick by a given bips amount
         bool tokenOrder = _tokenIn < _tokenOut;
