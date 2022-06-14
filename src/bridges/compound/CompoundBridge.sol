@@ -38,14 +38,14 @@ contract CompoundBridge is IDefiBridge {
 
     /**
      * @notice Function which mints and burns cTokens in an exchange for the underlying asset.
-     * @dev This method can only be called from RollupProcessor.sol. If auxData is 0 the mint flow is executed,
+     * @dev This method can only be called from RollupProcessor.sol. If `_auxData` is 0 the mint flow is executed,
      * if 1 redeem flow.
      *
-     * @param inputAssetA - ETH/ERC20 (Mint), cToken ERC20 (Redeem)
-     * @param outputAssetA - cToken (Mint), ETH/ERC20 (Redeem)
-     * @param totalInputValue - the amount of ERC20 token/ETH to deposit (Mint), the amount of cToken to burn (Redeem)
-     * @param interactionNonce - interaction nonce as defined in RollupProcessor.sol
-     * @param auxData - 0 (Mint), 1 (Redeem)
+     * @param _inputAssetA - ETH/ERC20 (Mint), cToken ERC20 (Redeem)
+     * @param _outputAssetA - cToken (Mint), ETH/ERC20 (Redeem)
+     * @param _totalInputValue - the amount of ERC20 token/ETH to deposit (Mint), the amount of cToken to burn (Redeem)
+     * @param _interactionNonce - interaction nonce as defined in RollupProcessor.sol
+     * @param _auxData - 0 (Mint), 1 (Redeem)
      * @return outputValueA - the amount of cToken (Mint) or ETH/ERC20 (Redeem) transferred to RollupProcessor.sol
      */
     function convert(
