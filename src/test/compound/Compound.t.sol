@@ -50,8 +50,6 @@ contract CompoundTest is Test {
             uint8 underlyingDecimals = 18;
             uint256 exchangeRate = ICERC20(cETH).exchangeRateCurrent();
             uint256 oneCTokenInUnderlying = (exchangeRate * 1e18) / (10**(18 + underlyingDecimals - 8));
-            emit log_named_uint("exchangeRate", exchangeRate);
-            emit log_named_uint("oneCTokenInUnderlying", oneCTokenInUnderlying);
             depositAmount = bound(_depositAmount, oneCTokenInUnderlying, 10000 * 10**underlyingDecimals);
         }
 
