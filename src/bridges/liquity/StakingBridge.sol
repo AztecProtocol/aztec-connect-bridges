@@ -14,7 +14,7 @@ import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 /**
  * @title Aztec Connect Bridge for Liquity's LQTYStaking.sol
  * @author Jan Benes (@benesjan on Github and Telegram)
- * @notice You can use this contract to stake and unstake LQRTY to and from LQTY staking contract.
+ * @notice You can use this contract to stake and unstake LQTY to and from LQTY staking contract.
  * @dev Implementation of the IDefiBridge interface for LQTYStaking.sol from Liquity protocol.
  *
  * The contract inherits from OpenZeppelin's implementation of ERC20 token because token balances are used to track
