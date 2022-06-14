@@ -4,7 +4,7 @@
     "setup:foundry": "foundryup && git submodule update --init",
     "install:foundry": "curl -L https://foundry.paradigm.xyz | bash",
     "compile:contracts": "yarn clean && forge build",
-    "compile:typechain": "yarn compile:contracts && hardhat compile ",
+    "compile:typechain": "hardhat compile ",
     "compile:client-dest:watch": "yarn compile:typechain && tsc --project tsconfig.client-dest.json --watch",
     "compile:client-dest": "yarn compile:typechain && tsc --project tsconfig.client-dest.json",
     "clean": "rm -rf ./cache ./dest ./out ./artifacts ./typechain-types ./client-dest",
@@ -26,9 +26,7 @@
   },
   "dependencies": {
     "@aztec/barretenberg": "2.1.0-testnet.29",
-    "@ethersproject/providers": "^5.6.5",
-    "detect-node": "^2.1.0",
-    "sha3": "^2.1.4"
+    "@ethersproject/providers": "^5.6.5"
   },
   "jest": {
     "transform": {
@@ -44,17 +42,13 @@
   "license": "MIT",
   "devDependencies": {
     "@ethersproject/constants": "^5.5.0",
-    "@nomiclabs/hardhat-ethers": "^2.0.2",
-    "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@openzeppelin/contracts": "^4.4.2",
-    "@typechain/ethers-v4": "^7.0.0",
+    "@openzeppelin/contracts": "^4.6.0",
     "@typechain/ethers-v5": "^9.0.0",
     "@typechain/hardhat": "^4.0.0",
-    "@types/detect-node": "^2.0.0",
     "@types/jest": "^27.4.0",
     "@types/node-fetch": "^2.6.1",
     "ethers": "^5.5.4",
-    "hardhat": "^2.6.8",
+    "hardhat": "^2.9.9",
     "jest": "^27.5.0",
     "node-fetch": "2.6.7",
     "prettier": "^2.6.2",
