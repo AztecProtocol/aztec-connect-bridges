@@ -6,10 +6,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {IDefiBridge} from "../../aztec/interfaces/IDefiBridge.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
-
+import {BridgeBase} from "../base/BridgeBase.sol";
 import {IBorrowerOperations} from "./interfaces/IBorrowerOperations.sol";
 import {ITroveManager} from "./interfaces/ITroveManager.sol";
 import {ISortedTroves} from "./interfaces/ISortedTroves.sol";
@@ -32,7 +31,7 @@ import {ISortedTroves} from "./interfaces/ISortedTroves.sol";
  *
  * If the trove is closed by redemption, users can withdraw their remaining collateral by supplying their TB.
  */
-contract TroveBridge is ERC20, Ownable, IDefiBridge {
+contract TroveBridge is BridgeBase, ERC20, Ownable {
     using Strings for uint256;
 
     error NonZeroTotalSupply();
@@ -55,7 +54,6 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
     // Optimization based on EIP-1087
     uint256 public constant DUST = 1;
 
-    address public immutable ROLLUP_PROCESSOR;
     uint256 public immutable INITIAL_ICR;
 
     // Used to check whether collateral has already been claimed during redemptions.
@@ -76,9 +74,9 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
      * @param _initialICRPerc Collateral ratio denominated in percents to be used when opening the Trove
      */
     constructor(address _rollupProcessor, uint256 _initialICRPerc)
+        BridgeBase(_rollupProcessor)
         ERC20("TroveBridge", string(abi.encodePacked("TB-", _initialICRPerc.toString())))
     {
-        ROLLUP_PROCESSOR = _rollupProcessor;
         INITIAL_ICR = _initialICRPerc * 1e16;
         _mint(address(this), DUST);
     }
@@ -147,14 +145,14 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
     )
         external
         payable
-        override(IDefiBridge)
+        override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
             uint256 outputValueB,
             bool
         )
     {
-        if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
         Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(this)));
 
         address upperHint = SORTED_TROVES.getPrev(address(this));
@@ -233,27 +231,6 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge {
         }
 
         owner.transfer(address(this).balance);
-    }
-
-    // @notice This function always reverts because this contract does not implement async flow.
-    function finalise(
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        uint256,
-        uint64
-    )
-        external
-        payable
-        override(IDefiBridge)
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        revert AsyncModeDisabled();
     }
 
     /**

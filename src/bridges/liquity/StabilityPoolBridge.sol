@@ -4,10 +4,9 @@ pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IDefiBridge} from "../../aztec/interfaces/IDefiBridge.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
-
+import {BridgeBase} from "../base/BridgeBase.sol";
 import {IStabilityPool} from "./interfaces/IStabilityPool.sol";
 import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 
@@ -15,7 +14,6 @@ import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
  * @title Aztec Connect Bridge for Liquity's StabilityPool.sol
  * @author Jan Benes (@benesjan on Github and Telegram)
  * @notice You can use this contract to deposit and withdraw LUSD to and from Liquity's StabilityPool.sol.
- * @dev Implementation of the IDefiBridge interface for StabilityPool.sol.
  *
  * The contract inherits from OpenZeppelin's implementation of ERC20 token because token balances are used to track
  * the depositor's ownership of the assets controlled by the bridge contract. The token is called StabilityPoolBridge
@@ -31,11 +29,9 @@ import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
  *
  * Note: StabilityPoolBridge.sol is very similar to StakingBridge.sol.
  */
-contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB") {
+contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") {
     error ApproveFailed(address token);
-    error InvalidCaller();
     error IncorrectInput();
-    error AsyncModeDisabled();
 
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -49,7 +45,6 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
     // Optimization based on EIP-1087
     uint256 internal constant DUST = 1;
 
-    address public immutable ROLLUP_PROCESSOR;
     address public immutable FRONTEND_TAG; // see StabilityPool.sol for details
 
     /**
@@ -59,8 +54,7 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
      * @dev Frontend tag is set here because there can be only 1 frontend tag per msg.sender in the StabilityPool.sol.
      * See https://docs.liquity.org/faq/frontend-operators#how-do-frontend-tags-work[Liquity docs] for more details.
      */
-    constructor(address _rollupProcessor, address _frontEndTag) {
-        ROLLUP_PROCESSOR = _rollupProcessor;
+    constructor(address _rollupProcessor, address _frontEndTag) BridgeBase(_rollupProcessor) {
         FRONTEND_TAG = _frontEndTag;
         _mint(address(this), DUST);
     }
@@ -109,15 +103,14 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
     )
         external
         payable
-        override(IDefiBridge)
+        override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
             uint256,
             bool
         )
     {
-        if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
-
         if (_inputAssetA.erc20Address == LUSD && _outputAssetA.erc20Address == address(this)) {
             // Deposit
             // Provides LUSD to the pool and claim rewards.
@@ -149,27 +142,6 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
         } else {
             revert IncorrectInput();
         }
-    }
-
-    // @notice This function always reverts because this contract does not implement async flow.
-    function finalise(
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        uint256,
-        uint64
-    )
-        external
-        payable
-        override(IDefiBridge)
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        revert AsyncModeDisabled();
     }
 
     /**
