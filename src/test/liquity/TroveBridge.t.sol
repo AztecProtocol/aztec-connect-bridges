@@ -6,8 +6,11 @@ import {AztecTypes} from "../../aztec/AztecTypes.sol";
 
 import {TestUtil} from "./utils/TestUtil.sol";
 import {IHintHelpers} from "./interfaces/IHintHelpers.sol";
-import {TroveBridge} from "../../bridges/liquity/TroveBridge.sol";
+import {ITroveManager} from "../../bridges/liquity/interfaces/ITroveManager.sol";
 import {ISortedTroves} from "../../bridges/liquity/interfaces/ISortedTroves.sol";
+import {IBorrowerOperations} from "../../bridges/liquity/interfaces/IBorrowerOperations.sol";
+
+import {TroveBridge} from "../../bridges/liquity/TroveBridge.sol";
 
 contract TroveBridgeTest is TestUtil {
     enum Status {
@@ -19,8 +22,11 @@ contract TroveBridgeTest is TestUtil {
     }
 
     IHintHelpers private constant HINT_HELPERS = IHintHelpers(0xE84251b93D9524E0d2e621Ba7dc7cb3579F997C0);
-    ISortedTroves private constant SORTED_TROVES = ISortedTroves(0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6);
     address private constant STABILITY_POOL = 0x66017D22b0f8556afDd19FC67041899Eb65a21bb;
+    IBorrowerOperations public constant BORROWER_OPERATIONS =
+        IBorrowerOperations(0x24179CD81c9e782A4096035f7eC97fB8B783e007);
+    ITroveManager public constant TROVE_MANAGER = ITroveManager(0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2);
+    ISortedTroves private constant SORTED_TROVES = ISortedTroves(0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6);
 
     address private constant OWNER = address(24);
 
@@ -50,9 +56,9 @@ contract TroveBridgeTest is TestUtil {
         bridge = new TroveBridge(address(rollupProcessor), initialCollateralRatio);
 
         vm.label(address(bridge.USDC()), "USDC");
-        vm.label(address(bridge.BORROWER_OPERATIONS()), "BORROWER_OPERATIONS");
-        vm.label(address(bridge.TROVE_MANAGER()), "TROVE_MANAGER");
-        vm.label(address(bridge.SORTED_TROVES()), "SORTED_TROVES");
+        vm.label(address(BORROWER_OPERATIONS), "BORROWER_OPERATIONS");
+        vm.label(address(TROVE_MANAGER), "TROVE_MANAGER");
+        vm.label(address(SORTED_TROVES), "SORTED_TROVES");
         vm.label(address(bridge.LUSD_USDC_POOL()), "LUSD_USDC_POOL");
         vm.label(address(bridge.USDC_ETH_POOL()), "USDC_ETH_POOL");
         vm.label(address(LIQUITY_PRICE_FEED), "LIQUITY_PRICE_FEED");
@@ -122,8 +128,8 @@ contract TroveBridgeTest is TestUtil {
 
         // Drop price and liquidate the trove
         setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
-        bridge.TROVE_MANAGER().liquidate(address(bridge));
-        Status troveStatus = Status(bridge.TROVE_MANAGER().getTroveStatus(address(bridge)));
+        TROVE_MANAGER.liquidate(address(bridge));
+        Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(bridge)));
         assertTrue(troveStatus == Status.closedByLiquidation, "Incorrect trove status");
 
         // Set msg.sender to OWNER
@@ -146,14 +152,14 @@ contract TroveBridgeTest is TestUtil {
         _openTrove();
         _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
 
-        address lowestIcrTrove = bridge.SORTED_TROVES().getLast();
+        address lowestIcrTrove = SORTED_TROVES.getLast();
         assertEq(lowestIcrTrove, address(bridge), "Bridge's trove is not the first one to redeem.");
 
-        (uint256 debtBefore, , , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+        (uint256 debtBefore, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         uint256 amountToRedeem = debtBefore * 2;
 
-        uint256 price = bridge.TROVE_MANAGER().priceFeed().fetchPrice();
+        uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
 
         (, uint256 partialRedemptionHintNICR, ) = HINT_HELPERS.getRedemptionHints(amountToRedeem, price, 0);
 
@@ -164,7 +170,7 @@ contract TroveBridgeTest is TestUtil {
 
         // Keep on redeeming 20 million LUSD until the trove is in the closedByRedemption status
         deal(tokens["LUSD"].addr, address(this), amountToRedeem);
-        bridge.TROVE_MANAGER().redeemCollateral(
+        TROVE_MANAGER.redeemCollateral(
             amountToRedeem,
             lowestIcrTrove,
             exactUpperPartialRedemptionHint,
@@ -174,11 +180,7 @@ contract TroveBridgeTest is TestUtil {
             1e18
         );
 
-        assertEq(
-            bridge.TROVE_MANAGER().getTroveStatus(address(bridge)),
-            4,
-            "Status is not closedByRedemption"
-        );
+        assertEq(TROVE_MANAGER.getTroveStatus(address(bridge)), 4, "Status is not closedByRedemption");
 
         _redeem();
         _closeRedeem();
@@ -191,14 +193,14 @@ contract TroveBridgeTest is TestUtil {
         _openTrove();
         _borrow(60 ether);
 
-        address lowestIcrTrove = bridge.SORTED_TROVES().getLast();
+        address lowestIcrTrove = SORTED_TROVES.getLast();
         assertEq(lowestIcrTrove, address(bridge), "Bridge's trove is not the first one to redeem.");
 
-        (uint256 debtBefore, , , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+        (uint256 debtBefore, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         uint256 amountToRedeem = debtBefore / 2;
 
-        uint256 price = bridge.TROVE_MANAGER().priceFeed().fetchPrice();
+        uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
 
         (, uint256 partialRedemptionHintNICR, ) = HINT_HELPERS.getRedemptionHints(amountToRedeem, price, 0);
 
@@ -208,7 +210,7 @@ contract TroveBridgeTest is TestUtil {
             .findInsertPosition(partialRedemptionHintNICR, approxPartialRedemptionHint, approxPartialRedemptionHint);
 
         deal(tokens["LUSD"].addr, address(this), amountToRedeem);
-        bridge.TROVE_MANAGER().redeemCollateral(
+        TROVE_MANAGER.redeemCollateral(
             amountToRedeem,
             lowestIcrTrove,
             exactUpperPartialRedemptionHint,
@@ -220,14 +222,14 @@ contract TroveBridgeTest is TestUtil {
 
         // Check the trove was partially redeemed by checking that the trove's debt amount dropped but the trove
         // stayed active - not closed by redemption
-        (uint256 debtAfterRedemption, , , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+        (uint256 debtAfterRedemption, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         assertEq(
             debtAfterRedemption,
             debtBefore - amountToRedeem,
             "Debt amount isn't equal to original debt - amount redeemed"
         );
 
-        uint256 status = bridge.TROVE_MANAGER().getTroveStatus(address(bridge));
+        uint256 status = TROVE_MANAGER.getTroveStatus(address(bridge));
         assertEq(status, uint256(Status.active), "Status is not active");
 
         // Repay and see whether the returned amount of LUSD is as expected
@@ -248,7 +250,7 @@ contract TroveBridgeTest is TestUtil {
             MAX_FEE
         );
 
-        (uint256 debtAfterRepaying, , , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+        (uint256 debtAfterRepaying, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         uint256 expectedAmtLusdReturned = processorTBBalance - (debtAfterRedemption - debtAfterRepaying);
 
         // Check the bridge doesn't hold any ETH or LUSD
@@ -265,17 +267,17 @@ contract TroveBridgeTest is TestUtil {
         _openTrove();
         _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
 
-        (uint256 debtBefore, uint256 collBefore, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+        (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         // Erase stability pool's LUSD balance
         deal(tokens["LUSD"].addr, STABILITY_POOL, 0);
 
-        uint256 priceBeforeDrop = bridge.TROVE_MANAGER().priceFeed().fetchPrice();
+        uint256 priceBeforeDrop = TROVE_MANAGER.priceFeed().fetchPrice();
 
         setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
-        bridge.TROVE_MANAGER().liquidateTroves(10);
+        TROVE_MANAGER.liquidateTroves(10);
 
-        (uint256 debtAfter, uint256 collAfter, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+        (uint256 debtAfter, uint256 collAfter, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         assertGt(debtAfter, debtBefore, "Debt hasn't increased after liquidations");
         assertGt(collAfter, collBefore, "Collateral hasn't increased after liquidations");
@@ -301,10 +303,10 @@ contract TroveBridgeTest is TestUtil {
         // Erase stability pool's LUSD balance
         deal(tokens["LUSD"].addr, STABILITY_POOL, 0);
 
-        uint256 priceBeforeDrop = bridge.TROVE_MANAGER().priceFeed().fetchPrice();
+        uint256 priceBeforeDrop = TROVE_MANAGER.priceFeed().fetchPrice();
 
         setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
-        bridge.TROVE_MANAGER().liquidateTroves(10);
+        TROVE_MANAGER.liquidateTroves(10);
 
         _borrowAfterRedistribution();
 
@@ -312,22 +314,22 @@ contract TroveBridgeTest is TestUtil {
         setLiquityPrice(priceBeforeDrop);
 
         // Drop Trove's CR to MCR by impersonating the bridge and directly withdrawing collateral
-        (uint256 debt, uint256 coll, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+        (uint256 debt, uint256 coll, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         uint256 icrAfterRedistribution = (coll * priceBeforeDrop) / debt;
 
         uint256 collToWithdraw = ((icrAfterRedistribution - MCR) * coll) / icrAfterRedistribution;
 
-        address upperHint = bridge.SORTED_TROVES().getPrev(address(this));
-        address lowerHint = bridge.SORTED_TROVES().getNext(address(this));
+        address upperHint = SORTED_TROVES.getPrev(address(this));
+        address lowerHint = SORTED_TROVES.getNext(address(this));
         vm.startPrank(address(bridge));
-        bridge.BORROWER_OPERATIONS().withdrawColl(collToWithdraw, upperHint, lowerHint);
+        BORROWER_OPERATIONS.withdrawColl(collToWithdraw, upperHint, lowerHint);
         vm.stopPrank();
 
         // Erase withdrawn collateral from the bridge
         vm.deal(address(bridge), 0);
 
-        (debt, coll, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+        (debt, coll, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         uint256 icrAfterWithdrawal = (coll * priceBeforeDrop) / debt;
 
         assertEq(icrAfterWithdrawal, MCR, "ICR after withdrawal doesn't equal MCR");
@@ -336,7 +338,7 @@ contract TroveBridgeTest is TestUtil {
         uint256 expectedBalance = (coll * bridge.balanceOf(address(rollupProcessor))) / bridge.totalSupply();
         _repay(expectedBalance, 5e16);
 
-        (, coll, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+        (, coll, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         uint256 expectedOwnerBalance = (coll * bridge.balanceOf(OWNER)) / bridge.totalSupply();
         _closeTroveAfterRedistribution(expectedOwnerBalance);
     }
@@ -357,11 +359,11 @@ contract TroveBridgeTest is TestUtil {
         // Open the trove
         bridge.openTrove{value: OWNER_WEI_BALANCE}(upperHint, lowerHint, MAX_FEE);
 
-        uint256 price = bridge.TROVE_MANAGER().priceFeed().fetchPrice();
-        uint256 icr = bridge.TROVE_MANAGER().getCurrentICR(address(bridge), price);
+        uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
+        uint256 icr = TROVE_MANAGER.getCurrentICR(address(bridge), price);
         assertEq(icr, bridge.INITIAL_ICR(), "ICR doesn't equal initial ICR");
 
-        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(
+        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
             address(bridge)
         );
         assertEq(bridge.totalSupply(), debtAfterBorrowing, "TB total supply doesn't equal totalDebt");
@@ -379,10 +381,10 @@ contract TroveBridgeTest is TestUtil {
     function _borrow(uint256 _collateral) private {
         vm.deal(address(rollupProcessor), _collateral);
 
-        uint256 price = bridge.TROVE_MANAGER().priceFeed().fetchPrice();
-        uint256 icrBeforeBorrowing = bridge.TROVE_MANAGER().getCurrentICR(address(bridge), price);
+        uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
+        uint256 icrBeforeBorrowing = TROVE_MANAGER.getCurrentICR(address(bridge), price);
 
-        (, uint256 collBeforeBorrowing, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+        (, uint256 collBeforeBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         // Borrow against collateral
         rollupProcessor.convert(
@@ -396,7 +398,7 @@ contract TroveBridgeTest is TestUtil {
             MAX_FEE
         );
 
-        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(
+        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
             address(bridge)
         );
         assertEq(
@@ -405,7 +407,7 @@ contract TroveBridgeTest is TestUtil {
             "Collateral increase differs from deposited collateral"
         );
 
-        uint256 icrAfterBorrowing = bridge.TROVE_MANAGER().getCurrentICR(address(bridge), price);
+        uint256 icrAfterBorrowing = TROVE_MANAGER.getCurrentICR(address(bridge), price);
         assertEq(icrBeforeBorrowing, icrAfterBorrowing, "ICR changed");
 
         assertEq(bridge.totalSupply(), debtAfterBorrowing, "TB total supply doesn't equal totalDebt");
@@ -464,7 +466,7 @@ contract TroveBridgeTest is TestUtil {
 
         bridge.closeTrove();
 
-        Status troveStatus = Status(bridge.TROVE_MANAGER().getTroveStatus(address(bridge)));
+        Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(bridge)));
         assertTrue(troveStatus == Status.closedByOwner, "Incorrect trove status");
 
         assertEq(address(bridge).balance, 0, "Bridge holds ETH after trove closure");
@@ -518,10 +520,10 @@ contract TroveBridgeTest is TestUtil {
         uint256 depositAmount = ROLLUP_PROCESSOR_WEI_BALANCE * 2;
         vm.deal(address(rollupProcessor), depositAmount);
 
-        uint256 price = bridge.TROVE_MANAGER().priceFeed().fetchPrice();
-        uint256 icrBeforeBorrowing = bridge.TROVE_MANAGER().getCurrentICR(address(bridge), price);
+        uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
+        uint256 icrBeforeBorrowing = TROVE_MANAGER.getCurrentICR(address(bridge), price);
 
-        (, uint256 collBeforeBorrowing, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+        (, uint256 collBeforeBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         // Borrow against ROLLUP_PROCESSOR_WEI_BALANCE
         rollupProcessor.convert(
@@ -535,7 +537,7 @@ contract TroveBridgeTest is TestUtil {
             MAX_FEE
         );
 
-        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(
+        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
             address(bridge)
         );
         assertEq(
@@ -544,7 +546,7 @@ contract TroveBridgeTest is TestUtil {
             "Collateral increase differs from depositAmount"
         );
 
-        uint256 icrAfterBorrowing = bridge.TROVE_MANAGER().getCurrentICR(address(bridge), price);
+        uint256 icrAfterBorrowing = TROVE_MANAGER.getCurrentICR(address(bridge), price);
         assertEq(icrBeforeBorrowing, icrAfterBorrowing, "ICR changed");
 
         assertLt(bridge.totalSupply(), debtAfterBorrowing, "TB total supply isn't bigger than totalDebt");
@@ -557,7 +559,7 @@ contract TroveBridgeTest is TestUtil {
         // Set msg.sender to OWNER
         vm.startPrank(OWNER);
 
-        (uint256 debtBeforeClosure, , , ) = bridge.TROVE_MANAGER().getEntireDebtAndColl(address(bridge));
+        (uint256 debtBeforeClosure, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         uint256 amountToRepay = debtBeforeClosure - 200e18;
 
@@ -567,7 +569,7 @@ contract TroveBridgeTest is TestUtil {
 
         bridge.closeTrove();
 
-        Status troveStatus = Status(bridge.TROVE_MANAGER().getTroveStatus(address(bridge)));
+        Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(bridge)));
         assertTrue(troveStatus == Status.closedByOwner, "Incorrect trove status");
 
         assertEq(address(bridge).balance, 0, "Bridge holds ETH after trove closure");
