@@ -13,6 +13,16 @@ library OracleHelper {
 
     uint256 internal constant TWAP_SECONDS = 600; // 10 * 60 = 10 minutes
 
+    /**
+     * @notice Function which converts slippage denominated in BPS to and input amount to minimum output amount.
+     * @param _tokenIn - Address of the input token
+     * @param _tokenOut - Address of the output token
+     * @param _pool - Address of the Uniswap v3 pool
+     * @param _slippageBps - Maximum acceptable slippage denominated in BPS
+     * @return amountOutMinimum - Minimum acceptable amount of tokenOut
+     * @dev If 'OLD' error is thrown in Uniswap Oracle lib increase  the amount of observations by calling
+     *      IUniswapV3PoolActions(_pool).increaseObservationCardinalityNext(numberOfObservation)
+     */
     function slippageToAmountOutMin(
         address _tokenIn,
         address _tokenOut,
