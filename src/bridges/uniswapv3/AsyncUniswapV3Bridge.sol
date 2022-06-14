@@ -7,7 +7,7 @@ import {TickMath} from "./libraries/TickMath.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IUniswapV3Pool.sol";
 import "./UniswapV3Bridge.sol";
-import "../../interfaces/IDefiBridge.sol";
+import "../../aztec/interfaces/IDefiBridge.sol";
 import "./interfaces/IQuoter.sol";
 
 // import 'hardhat/console.sol';

@@ -2,7 +2,7 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import {AztecTypes} from "../aztec/AztecTypes.sol";
+import {AztecTypes} from "../AztecTypes.sol";
 
 interface IDefiBridge {
     /**

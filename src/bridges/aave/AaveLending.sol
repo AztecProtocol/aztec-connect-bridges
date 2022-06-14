@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
+import {IDefiBridge} from "../../aztec/interfaces/IDefiBridge.sol";
 import {ILendingPoolAddressesProvider} from "./interfaces/ILendingPoolAddressesProvider.sol";
 import {IERC20Detailed, IERC20} from "./interfaces/IERC20.sol";
 import {IPool} from "./interfaces/IPool.sol";

@@ -10,7 +10,7 @@ import {ITranche} from "./interfaces/ITranche.sol";
 import {IDeploymentValidator} from "./interfaces/IDeploymentValidator.sol";
 import {IERC20Permit, IERC20} from "../../interfaces/IERC20Permit.sol";
 import {IWrappedPosition} from "./interfaces/IWrappedPosition.sol";
-import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {MinHeap} from "./MinHeap.sol";
 import {FullMath} from "../uniswapv3/libraries/FullMath.sol";
 

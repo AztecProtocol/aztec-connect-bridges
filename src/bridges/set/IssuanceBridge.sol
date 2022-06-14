@@ -7,11 +7,10 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 
-import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
 import {ISetToken} from "./interfaces/ISetToken.sol";
 import {IController} from "./interfaces/IController.sol";
 import {IExchangeIssuance} from "./interfaces/IExchangeIssuance.sol";
-import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";

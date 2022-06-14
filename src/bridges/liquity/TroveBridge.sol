@@ -6,9 +6,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
+import {IDefiBridge} from "../../aztec/interfaces/IDefiBridge.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
-import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 
 import {IBorrowerOperations} from "./interfaces/IBorrowerOperations.sol";
 import {ITroveManager} from "./interfaces/ITroveManager.sol";

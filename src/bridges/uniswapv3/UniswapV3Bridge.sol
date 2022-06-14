@@ -6,7 +6,7 @@ import {TransferHelper} from "./libraries/TransferHelper.sol";
 import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import "../../interfaces/IRollupProcessor.sol";
+import "../../aztec/interfaces/IRollupProcessor.sol";
 import "./interfaces/IUniswapV3Factory.sol";
 import "./base/LiquidityManagement.sol";
 import "./interfaces/IWETH9.sol";

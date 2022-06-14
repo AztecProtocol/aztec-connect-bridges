@@ -16,7 +16,7 @@ import {ISafeEngine} from "./interfaces/ISafeEngine.sol";
 import {ISafeManager} from "./interfaces/ISafeManager.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
 import {AggregatorV3Interface} from "./interfaces/AggregatorV3Interface.sol";
-import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 
 // NOTE:

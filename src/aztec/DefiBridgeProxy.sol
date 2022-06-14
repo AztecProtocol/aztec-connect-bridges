@@ -2,7 +2,7 @@
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
-import {IDefiBridge} from "../interfaces/IDefiBridge.sol";
+import {IDefiBridge} from "./interfaces/IDefiBridge.sol";
 import {AztecTypes} from "./AztecTypes.sol";
 
 import {TokenTransfers} from "../libraries/TokenTransfers.sol";

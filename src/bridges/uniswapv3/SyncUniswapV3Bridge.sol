@@ -7,7 +7,7 @@ import {IERC20Detailed, IERC20} from "./interfaces/IERC20.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 import "./UniswapV3Bridge.sol";
 import "./interfaces/IUniswapV3Pool.sol";
-import "../../interfaces/IDefiBridge.sol";
+import "../../aztec/interfaces/IDefiBridge.sol";
 import "./interfaces/IQuoter.sol";
 
 contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {

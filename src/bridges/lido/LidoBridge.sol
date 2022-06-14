@@ -5,7 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ICurvePool} from "./interfaces/ICurvePool.sol";
 import {ILido} from "./interfaces/ILido.sol";
 import {IWstETH} from "./interfaces/IWstETH.sol";
-import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";

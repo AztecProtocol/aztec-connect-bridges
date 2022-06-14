@@ -3,8 +3,8 @@
 pragma solidity >=0.8.0 <=0.8.10;
 pragma abicoder v2;
 
-import {IDefiBridge} from "../interfaces/IDefiBridge.sol";
 import {IERC20} from "../interfaces/IERC20Permit.sol";
+import {IDefiBridge} from "./interfaces/IDefiBridge.sol";
 import {DefiBridgeProxy} from "./DefiBridgeProxy.sol";
 import {AztecTypes} from "./AztecTypes.sol";
 import {TokenTransfers} from "../libraries/TokenTransfers.sol";

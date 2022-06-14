@@ -2,7 +2,7 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 
 import {ErrorLib} from "./../base/ErrorLib.sol";
 import {BridgeBase} from "./../base/BridgeBase.sol";
