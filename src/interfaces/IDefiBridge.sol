@@ -55,7 +55,6 @@ interface IDefiBridge {
     )
         external
         payable
-        virtual
         returns (
             uint256 outputValueA,
             uint256 outputValueB,
@@ -82,7 +81,6 @@ interface IDefiBridge {
     )
         external
         payable
-        virtual
         returns (
             uint256 outputValueA,
             uint256 outputValueB,
