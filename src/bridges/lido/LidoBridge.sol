@@ -5,26 +5,22 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ICurvePool} from "./interfaces/ICurvePool.sol";
 import {ILido} from "./interfaces/ILido.sol";
 import {IWstETH} from "./interfaces/IWstETH.sol";
-import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
 import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
 
+import {BridgeBase} from "../base/BridgeBase.sol";
+import {ErrorLib} from "../base/ErrorLib.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract LidoBridge is IDefiBridge {
+contract LidoBridge is BridgeBase {
     using SafeERC20 for ILido;
     using SafeERC20 for IWstETH;
 
     error InvalidConfiguration();
-    error InvalidCaller();
-    error InvalidInput();
-    error InvalidOutput();
     error InvalidWrapReturnValue();
     error InvalidUnwrapReturnValue();
-    error AsyncDisabled();
 
-    address public immutable ROLLUP_PROCESSOR;
     address public immutable REFERRAL;
 
     ILido public constant LIDO = ILido(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
@@ -37,12 +33,11 @@ contract LidoBridge is IDefiBridge {
     // The amount of dust to leave in the contract
     uint256 private constant DUST = 1;
 
-    constructor(address _rollupProcessor, address _referral) {
+    constructor(address _rollupProcessor, address _referral) BridgeBase(_rollupProcessor) {
         if (CURVE_POOL.coins(uint256(uint128(CURVE_STETH_INDEX))) != address(LIDO)) {
             revert InvalidConfiguration();
         }
 
-        ROLLUP_PROCESSOR = _rollupProcessor;
         REFERRAL = _referral;
 
         // As the contract is not supposed to hold any funds, we can pre-approve
@@ -65,22 +60,20 @@ contract LidoBridge is IDefiBridge {
     )
         external
         payable
+        override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
             uint256,
             bool isAsync
         )
     {
-        if (msg.sender != ROLLUP_PROCESSOR) {
-            revert InvalidCaller();
-        }
-
         bool isETHInput = inputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
         bool isWstETHInput = inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 &&
             inputAssetA.erc20Address == address(WRAPPED_STETH);
 
         if (!(isETHInput || isWstETHInput)) {
-            revert InvalidInput();
+            revert ErrorLib.InvalidInputA();
         }
 
         isAsync = false;
@@ -100,7 +93,7 @@ contract LidoBridge is IDefiBridge {
             outputAsset.assetType != AztecTypes.AztecAssetType.ERC20 ||
             outputAsset.erc20Address != address(WRAPPED_STETH)
         ) {
-            revert InvalidOutput();
+            revert ErrorLib.InvalidOutputA();
         }
 
         // deposit into lido (return value is shares NOT stETH)
@@ -129,7 +122,7 @@ contract LidoBridge is IDefiBridge {
         uint256 interactionNonce
     ) private returns (uint256 outputValue) {
         if (outputAsset.assetType != AztecTypes.AztecAssetType.ETH) {
-            revert InvalidOutput();
+            revert ErrorLib.InvalidOutputA();
         }
 
         // Convert wstETH to stETH so we can exchange it on curve
@@ -145,24 +138,5 @@ contract LidoBridge is IDefiBridge {
 
         // Send ETH to rollup processor
         IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValue}(interactionNonce);
-    }
-
-    function finalise(
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        uint256,
-        uint64
-    )
-        external
-        payable
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        revert AsyncDisabled();
     }
 }

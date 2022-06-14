@@ -2,37 +2,31 @@
 // Copyright 2022 Spilsbury Holdings Ltd
 pragma solidity >=0.8.4;
 
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
 import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+
+import {ErrorLib} from "./../base/ErrorLib.sol";
+import {BridgeBase} from "./../base/BridgeBase.sol";
+import {AztecTypes} from "../../aztec/AztecTypes.sol";
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ICERC20} from "./interfaces/ICERC20.sol";
 import {ICETH} from "./interfaces/ICETH.sol";
+
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title Aztec Connect Bridge for Compound protocol
  * @notice You can use this contract to mint or redeem cTokens.
  * @dev Implementation of the IDefiBridge interface for cTokens.
  */
-contract CompoundBridge is IDefiBridge {
+contract CompoundBridge is BridgeBase {
     using SafeERC20 for IERC20;
-
-    error InvalidCaller();
-    error IncorrectInputAsset();
-    error IncorrectOutputAsset();
-    error IncorrectAuxData();
-    error AsyncModeDisabled();
-
-    address public immutable ROLLUP_PROCESSOR;
 
     /**
      * @notice Set the address of RollupProcessor.sol
      * @param _rollupProcessor Address of RollupProcessor.sol
      */
-    constructor(address _rollupProcessor) {
-        ROLLUP_PROCESSOR = _rollupProcessor;
-    }
+    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
     receive() external payable {}
 
@@ -60,18 +54,17 @@ contract CompoundBridge is IDefiBridge {
     )
         external
         payable
-        override(IDefiBridge)
+        override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
             uint256,
             bool
         )
     {
-        if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
-
         if (_auxData == 0) {
             // Mint
-            if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert IncorrectOutputAsset();
+            if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
 
             if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 ICETH cToken = ICETH(_outputAssetA.erc20Address);
@@ -87,11 +80,11 @@ contract CompoundBridge is IDefiBridge {
                 outputValueA = tokenOut.balanceOf(address(this));
                 tokenOut.approve(ROLLUP_PROCESSOR, outputValueA);
             } else {
-                revert IncorrectInputAsset();
+                revert ErrorLib.InvalidInputA();
             }
         } else if (_auxData == 1) {
             // Redeem
-            if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert IncorrectInputAsset();
+            if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidInputA();
 
             if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 // Redeem cETH case
@@ -107,30 +100,10 @@ contract CompoundBridge is IDefiBridge {
                 // Using safeIncreaseAllowance(...) instead of approve(...) here because tokenOut can be Tether
                 tokenOut.safeIncreaseAllowance(ROLLUP_PROCESSOR, outputValueA);
             } else {
-                revert IncorrectOutputAsset();
+                revert ErrorLib.InvalidInputA();
             }
         } else {
-            revert IncorrectAuxData();
+            revert ErrorLib.InvalidAuxData();
         }
-    }
-
-    function finalise(
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        uint256,
-        uint64
-    )
-        external
-        payable
-        override(IDefiBridge)
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        revert AsyncModeDisabled();
     }
 }

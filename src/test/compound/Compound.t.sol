@@ -10,6 +10,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ICERC20} from "./../../bridges/compound/interfaces/ICERC20.sol";
 import {CompoundBridge} from "./../../bridges/compound/CompoundBridge.sol";
+import {ErrorLib} from "./../../bridges/base/ErrorLib.sol";
 
 contract CompoundTest is Test {
     // solhint-disable-next-line
@@ -50,7 +51,7 @@ contract CompoundTest is Test {
             uint8 underlyingDecimals = 18;
             uint256 exchangeRate = ICERC20(cETH).exchangeRateCurrent();
             uint256 oneCTokenInUnderlying = (exchangeRate * 1e18) / (10**(18 + underlyingDecimals - 8));
-            depositAmount = bound(_depositAmount, oneCTokenInUnderlying, 10000 * 10**underlyingDecimals);
+            depositAmount = bound(_depositAmount, 10 * oneCTokenInUnderlying, 10000 * 10**underlyingDecimals);
         }
 
         vm.deal(address(rollupProcessor), depositAmount);
@@ -124,11 +125,11 @@ contract CompoundTest is Test {
     function testInvalidCaller() public {
         AztecTypes.AztecAsset memory empty;
 
-        vm.expectRevert(CompoundBridge.InvalidCaller.selector);
+        vm.expectRevert(ErrorLib.InvalidCaller.selector);
         compoundBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
     }
 
-    function testIncorrectInputAsset() public {
+    function testInvalidInputAsset() public {
         AztecTypes.AztecAsset memory empty;
 
         AztecTypes.AztecAsset memory ethAsset = AztecTypes.AztecAsset({
@@ -138,15 +139,15 @@ contract CompoundTest is Test {
         });
 
         vm.prank(address(rollupProcessor));
-        vm.expectRevert(CompoundBridge.IncorrectInputAsset.selector);
+        vm.expectRevert(ErrorLib.InvalidInputA.selector);
         compoundBridge.convert(ethAsset, empty, empty, empty, 0, 0, 1, address(0));
     }
 
-    function testIncorrectOutputAsset() public {
+    function testInvalidOutputAsset() public {
         AztecTypes.AztecAsset memory empty;
 
         vm.prank(address(rollupProcessor));
-        vm.expectRevert(CompoundBridge.IncorrectOutputAsset.selector);
+        vm.expectRevert(ErrorLib.InvalidOutputA.selector);
         compoundBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
     }
 
@@ -154,8 +155,16 @@ contract CompoundTest is Test {
         AztecTypes.AztecAsset memory empty;
 
         vm.prank(address(rollupProcessor));
-        vm.expectRevert(CompoundBridge.IncorrectAuxData.selector);
+        vm.expectRevert(ErrorLib.InvalidAuxData.selector);
         compoundBridge.convert(empty, empty, empty, empty, 0, 0, 2, address(0));
+    }
+
+    function testFinalise() public {
+        AztecTypes.AztecAsset memory empty;
+
+        vm.prank(address(rollupProcessor));
+        vm.expectRevert(ErrorLib.AsyncDisabled.selector);
+        compoundBridge.finalise(empty, empty, empty, empty, 0, 0);
     }
 
     function _depositAndWithdrawERC20(address _cToken, uint256 _depositAmount) private {
@@ -166,7 +175,7 @@ contract CompoundTest is Test {
             uint8 underlyingDecimals = 18;
             uint256 exchangeRate = ICERC20(_cToken).exchangeRateCurrent();
             uint256 oneCTokenInUnderlying = (exchangeRate * 1e18) / (10**(18 + underlyingDecimals - 8));
-            depositAmount = bound(_depositAmount, oneCTokenInUnderlying, 10000 * 10**underlyingDecimals);
+            depositAmount = bound(_depositAmount, 10 * oneCTokenInUnderlying, 10000 * 10**underlyingDecimals);
         }
 
         deal(underlyingToken, address(rollupProcessor), depositAmount);

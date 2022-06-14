@@ -13,27 +13,23 @@ import {IController} from "./interfaces/IController.sol";
 import {IExchangeIssuance} from "./interfaces/IExchangeIssuance.sol";
 import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
 
-contract IssuanceBridge is IDefiBridge {
+import {BridgeBase} from "../base/BridgeBase.sol";
+import {ErrorLib} from "../base/ErrorLib.sol";
+
+contract IssuanceBridge is BridgeBase {
     using SafeERC20 for IERC20;
 
     error ApproveFailed(address token);
-    error InvalidCaller();
     error ZeroInputValue();
-    error IncorrectInput();
-    error AsyncModeDisabled();
 
     IExchangeIssuance public constant EXCHANGE_ISSUANCE = IExchangeIssuance(0xc8C85A3b4d03FB3451e7248Ff94F780c92F884fD);
     IController public constant SET_CONTROLLER = IController(0xa4c8d221d8BB851f83aadd0223a8900A6921A349);
-
-    address public immutable ROLLUP_PROCESSOR;
 
     /**
      * @notice Sets the addresses of RollupProcessor
      * @param _rollupProcessor Address of the RollupProcessor.sol
      */
-    constructor(address _rollupProcessor) public {
-        ROLLUP_PROCESSOR = _rollupProcessor;
-    }
+    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
     // Empty receive function for the contract to be able to receive ETH
     receive() external payable {}
@@ -78,14 +74,14 @@ contract IssuanceBridge is IDefiBridge {
     )
         external
         payable
-        override
+        override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
             uint256,
             bool
         )
     {
-        if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
         if (_inputValue == 0) revert ZeroInputValue();
 
         if (SET_CONTROLLER.isSet(address(_inputAssetA.erc20Address))) {
@@ -107,7 +103,7 @@ contract IssuanceBridge is IDefiBridge {
                     _auxData //  _minOutputReceive
                 );
             } else {
-                revert IncorrectInput();
+                revert ErrorLib.InvalidInputA();
             }
         } else if (SET_CONTROLLER.isSet(address(_outputAssetA.erc20Address))) {
             // User wants to issue SetToken
@@ -126,30 +122,10 @@ contract IssuanceBridge is IDefiBridge {
                     _auxData // _minSetReceive
                 );
             } else {
-                revert IncorrectInput();
+                revert ErrorLib.InvalidInputA();
             }
         } else {
-            revert IncorrectInput();
+            revert ErrorLib.InvalidInputA();
         }
-    }
-
-    function finalise(
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        uint256,
-        uint64
-    )
-        external
-        payable
-        override
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        revert AsyncModeDisabled();
     }
 }

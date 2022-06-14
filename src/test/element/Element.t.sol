@@ -15,6 +15,7 @@ import {ITranche} from "../../bridges/element/interfaces/ITranche.sol";
 import {IPool} from "../../bridges/element/interfaces/IPool.sol";
 import {IWrappedPosition} from "../../bridges/element/interfaces/IWrappedPosition.sol";
 import {MockDeploymentValidator} from "./MockDeploymentValidator.sol";
+import {ErrorLib} from "../../bridges/base/ErrorLib.sol";
 
 import {AztecTypes} from "./../../aztec/AztecTypes.sol";
 
@@ -46,8 +47,8 @@ contract ElementTest is Test {
     bytes32 private constant BYTE_CODE_HASH = 0xf481a073666136ab1f5e93b296e84df58092065256d0db23b2d22b62c68e978d;
     address private constant TRANCHE_FACTORY_ADDRESS = 0x62F161BF3692E4015BefB05A03a94A40f520d1c0;
 
-    int64 private constant DAI_CONVERT_GAS = 237954;
-    int64 private constant USDC_FINALISE_GAS = 224844;
+    int64 private constant DAI_CONVERT_GAS = 237914;
+    int64 private constant USDC_FINALISE_GAS = 224810;
 
     uint256[] private timestamps = [
         1640995200, //Jan 01 2022
@@ -646,7 +647,7 @@ contract ElementTest is Test {
         uint256 depositAmount = 15000;
         _setTokenBalance("DAI", address(elementBridge), depositAmount);
 
-        vm.expectRevert(abi.encodeWithSelector(ElementBridge.INVALID_CALLER.selector));
+        vm.expectRevert(abi.encodeWithSelector(ErrorLib.InvalidCaller.selector));
         elementBridge.convert(
             inputAsset,
             emptyAsset,
@@ -757,12 +758,12 @@ contract ElementTest is Test {
         assertEq(blockNumber, block.number); // block.number = convergentPoolBlockNumber
     }
 
-    function testRetrieveTrancheDeploymentBlockNumberFailsForUnknownNonce() public {
+    function testRetrieveTrancheDeploymentBlockNumberFailsForInvalidNonce() public {
         TrancheConfig storage config = trancheConfigs["DAI"][0];
         _setupConvergentPool(config);
 
         // unknown nonce should revert
-        vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNKNOWN_NONCE.selector));
+        vm.expectRevert(abi.encodeWithSelector(ErrorLib.InvalidNonce.selector));
         elementBridge.getTrancheDeploymentBlockNumber(12345);
     }
 
@@ -789,17 +790,17 @@ contract ElementTest is Test {
             erc20Address: address(tokens["DAI"]),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
-        vm.expectRevert(abi.encodeWithSelector(ElementBridge.INVALID_CALLER.selector));
+        vm.expectRevert(abi.encodeWithSelector(ErrorLib.InvalidCaller.selector));
         elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, 1, trancheConfigs["DAI"][0].expiry);
     }
 
-    function testRejectFinaliseUnknownNonce() public {
+    function testRejectFinaliseInvalidNonce() public {
         AztecTypes.AztecAsset memory asset = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: address(tokens["DAI"]),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
-        vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNKNOWN_NONCE.selector));
+        vm.expectRevert(abi.encodeWithSelector(ErrorLib.InvalidNonce.selector));
         vm.prank(address(rollupProcessor));
         elementBridge.finalise(asset, emptyAsset, asset, emptyAsset, 6, trancheConfigs["DAI"][0].expiry);
     }
