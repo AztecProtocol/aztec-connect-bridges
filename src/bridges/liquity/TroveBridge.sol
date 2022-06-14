@@ -50,7 +50,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
     error NonZeroTotalSupply();
     error ApproveFailed(address token);
     error InvalidCaller();
-    error IncorrectStatus(Status expected, Status received);
+    error IncorrectStatus(Status acceptableStatus1, Status acceptableStatus2, Status received);
     error IncorrectInput();
     error IncorrectDeltaAmounts();
     error OwnerNotLast();
@@ -195,7 +195,7 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
             _outputAssetB.erc20Address == LUSD
         ) {
             // Borrowing
-            if (troveStatus != Status.active) revert IncorrectStatus(Status.active, troveStatus);
+            if (troveStatus != Status.active) revert IncorrectStatus(Status.active, Status.active, troveStatus);
             (outputValueA, outputValueB) = _borrow(_inputValue, _auxData);
         } else if (
             _inputAssetA.erc20Address == address(this) &&
@@ -204,14 +204,15 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
             _outputAssetB.erc20Address == LUSD
         ) {
             // Repaying
-            if (troveStatus != Status.active) revert IncorrectStatus(Status.active, troveStatus);
+            if (troveStatus != Status.active) revert IncorrectStatus(Status.active, Status.active, troveStatus);
             (outputValueA, outputValueB) = _repay(_inputValue, _interactionNonce);
         } else if (
             _inputAssetA.erc20Address == address(this) && _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
-            // Redeeming
-            if (troveStatus != Status.closedByRedemption)
-                revert IncorrectStatus(Status.closedByRedemption, troveStatus);
+            // Redeeming remaining collateral after the Trove is closed
+            if (troveStatus != Status.closedByRedemption && troveStatus != Status.closedByLiquidation) {
+                revert IncorrectStatus(Status.closedByRedemption, Status.closedByLiquidation, troveStatus);
+            }
             outputValueA = _redeem(_inputValue, _interactionNonce);
         } else {
             revert IncorrectInput();

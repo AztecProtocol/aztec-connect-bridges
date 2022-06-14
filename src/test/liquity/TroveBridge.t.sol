@@ -35,6 +35,7 @@ contract TroveBridgeTest is TestUtil {
 
     uint64 private constant MAX_FEE = 5e16; // Slippage protection: 5%
     uint256 public constant MCR = 1100000000000000000; // 110%
+    uint256 public constant CCR = 1500000000000000000; // 150%
 
     // From LiquityMath.sol
     uint256 private constant NICR_PRECISION = 1e20;
@@ -143,6 +144,30 @@ contract TroveBridgeTest is TestUtil {
         bridge.openTrove(address(0), address(0), MAX_FEE);
 
         vm.stopPrank();
+    }
+
+    function testLiquidationFlowWithCollateralToClaim() public {
+        uint256 currentPrice = LIQUITY_PRICE_FEED.fetchPrice();
+        uint256 totalCollateralRatio = TROVE_MANAGER.getTCR(currentPrice);
+        uint256 targetCollateralRatio = 1300000000000000000;
+
+        vm.prank(OWNER);
+        bridge = new TroveBridge(address(rollupProcessor), totalCollateralRatio / 1e16);
+
+        _openTrove();
+        _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
+
+        uint256 targetPrice = (currentPrice * targetCollateralRatio) / totalCollateralRatio;
+        setLiquityPrice(targetPrice);
+        assertTrue(TROVE_MANAGER.checkRecoveryMode(targetPrice), "Liquity not in recovery mode");
+
+        uint256 icr = TROVE_MANAGER.getCurrentICR(address(bridge), targetPrice);
+        assertGt(icr, MCR, "Trove's ICR lower than MCR");
+        assertLt(icr, CCR, "Trove's ICR bigger than CCR");
+
+        TROVE_MANAGER.liquidate(address(bridge));
+
+        _redeem();
     }
 
     function testRedeemFlow() public {
