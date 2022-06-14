@@ -12,7 +12,7 @@ import {ErrorLib} from "./ErrorLib.sol";
  * @dev Reverts `convert` with missing implementation, and `finalise` with async disabled
  * @author Lasse Herskind
  */
-contract BridgeBase is IDefiBridge {
+abstract contract BridgeBase is IDefiBridge {
     error MissingImplementation();
 
     address public immutable ROLLUP_PROCESSOR;
