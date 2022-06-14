@@ -43,7 +43,7 @@ contract CompoundBridge is IDefiBridge {
      *
      * @param _inputAssetA - ETH/ERC20 (Mint), cToken ERC20 (Redeem)
      * @param _outputAssetA - cToken (Mint), ETH/ERC20 (Redeem)
-     * @param _totalInputValue - the amount of ERC20 token/ETH to deposit (Mint), the amount of cToken to burn (Redeem)
+     * @param _inputValue - the amount of ERC20 token/ETH to deposit (Mint), the amount of cToken to burn (Redeem)
      * @param _interactionNonce - interaction nonce as defined in RollupProcessor.sol
      * @param _auxData - 0 (Mint), 1 (Redeem)
      * @return outputValueA - the amount of cToken (Mint) or ETH/ERC20 (Redeem) transferred to RollupProcessor.sol
@@ -53,7 +53,7 @@ contract CompoundBridge is IDefiBridge {
         AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
-        uint256 _totalInputValue,
+        uint256 _inputValue,
         uint256 _interactionNonce,
         uint64 _auxData,
         address
@@ -82,8 +82,8 @@ contract CompoundBridge is IDefiBridge {
                 IERC20 tokenIn = IERC20(_inputAssetA.erc20Address);
                 ICERC20 tokenOut = ICERC20(_outputAssetA.erc20Address);
                 // Using safeIncreaseAllowance(...) instead of approve(...) here because tokenIn can be Tether
-                tokenIn.safeIncreaseAllowance(address(tokenOut), _totalInputValue);
-                tokenOut.mint(_totalInputValue);
+                tokenIn.safeIncreaseAllowance(address(tokenOut), _inputValue);
+                tokenOut.mint(_inputValue);
                 outputValueA = tokenOut.balanceOf(address(this));
                 tokenOut.approve(ROLLUP_PROCESSOR, outputValueA);
             } else {
@@ -96,13 +96,13 @@ contract CompoundBridge is IDefiBridge {
             if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 // Redeem cETH case
                 ICETH cToken = ICETH(_inputAssetA.erc20Address);
-                cToken.redeem(_totalInputValue);
+                cToken.redeem(_inputValue);
                 outputValueA = address(this).balance;
                 IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
             } else if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
                 ICERC20 tokenIn = ICERC20(_inputAssetA.erc20Address);
                 IERC20 tokenOut = IERC20(_outputAssetA.erc20Address);
-                tokenIn.redeem(_totalInputValue);
+                tokenIn.redeem(_inputValue);
                 outputValueA = tokenOut.balanceOf(address(this));
                 // Using safeIncreaseAllowance(...) instead of approve(...) here because tokenOut can be Tether
                 tokenOut.safeIncreaseAllowance(ROLLUP_PROCESSOR, outputValueA);
