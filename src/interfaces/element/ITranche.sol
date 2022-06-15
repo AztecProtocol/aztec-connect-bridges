@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity >=0.6.10 <=0.8.10;
 
-import "./IERC20Permit.sol";
+import "../IERC20Permit.sol";
 
 interface ITranche is IERC20Permit {
     function deposit(uint256 _shares, address destination) external returns (uint256, uint256);

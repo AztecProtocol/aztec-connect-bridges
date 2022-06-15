@@ -11,9 +11,9 @@ import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ElementBridge} from "../../bridges/element/ElementBridge.sol";
-import {ITranche} from "../../bridges/element/interfaces/ITranche.sol";
-import {IPool} from "../../bridges/element/interfaces/IPool.sol";
-import {IWrappedPosition} from "../../bridges/element/interfaces/IWrappedPosition.sol";
+import {ITranche} from "../../interfaces/element/ITranche.sol";
+import {IPool} from "../../interfaces/element/IPool.sol";
+import {IWrappedPosition} from "../../interfaces/element/IWrappedPosition.sol";
 import {MockDeploymentValidator} from "./MockDeploymentValidator.sol";
 import {ErrorLib} from "../../bridges/base/ErrorLib.sol";
 

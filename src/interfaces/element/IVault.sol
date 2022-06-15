@@ -2,7 +2,7 @@
 pragma solidity <=0.8.10;
 pragma abicoder v2;
 
-import {IERC20} from "./IERC20Permit.sol";
+import {IERC20} from "../IERC20Permit.sol";
 
 interface IAsset {
     // solhint-disable-previous-line no-empty-blocks

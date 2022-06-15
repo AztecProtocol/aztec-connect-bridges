@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import "./IERC20Permit.sol";
+import "../IERC20Permit.sol";
 
 interface IWrappedPosition is IERC20Permit {
     function token() external view returns (IERC20);

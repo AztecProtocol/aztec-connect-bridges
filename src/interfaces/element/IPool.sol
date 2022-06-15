@@ -2,7 +2,7 @@
 pragma solidity >=0.7.5;
 pragma abicoder v2;
 
-import {IERC20Permit, IERC20} from "./IERC20Permit.sol";
+import {IERC20Permit, IERC20} from "../IERC20Permit.sol";
 import {IVault} from "./IVault.sol";
 
 interface IPool is IERC20Permit {
