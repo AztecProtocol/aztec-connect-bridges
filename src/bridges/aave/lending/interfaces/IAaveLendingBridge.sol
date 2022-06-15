@@ -14,8 +14,6 @@ interface IAaveLendingBridge {
         address _beneficiary
     ) external returns (uint256);
 
-    function ROLLUP_PROCESSOR() external view returns (address);
-
     function ADDRESSES_PROVIDER() external view returns (ILendingPoolAddressesProvider);
 
     function CONFIGURATOR() external view returns (address);

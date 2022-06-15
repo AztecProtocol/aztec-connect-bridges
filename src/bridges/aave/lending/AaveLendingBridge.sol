@@ -15,7 +15,6 @@ import {IWETH} from "./../../../interfaces/IWETH.sol";
 import {DataTypes} from "./../../../libraries/aave/DataTypes.sol";
 
 import {IRollupProcessor} from "../../../aztec/interfaces/IRollupProcessor.sol";
-import {IDefiBridge} from "../../../aztec/interfaces/IDefiBridge.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 
 import {IAaveLendingBridge} from "./interfaces/IAaveLendingBridge.sol";
@@ -23,16 +22,18 @@ import {IAaveLendingBridge} from "./interfaces/IAaveLendingBridge.sol";
 import {IAccountingToken} from "./../interfaces/IAccountingToken.sol";
 import {AccountingToken} from "./../AccountingToken.sol";
 
+import {BridgeBase} from "../../base/BridgeBase.sol";
+import {ErrorLib} from "../../base/ErrorLib.sol";
+
 /**
  * @notice AaveLendingBridge implementation that allow a configurator to "list" a reserve and then anyone can
  * permissionlessly deposit and withdraw funds into the listed reserves. Configurator cannot remove nor update listings
  * @dev Only assets with large volume should be listed to ensure sufficiently large privacy sets
  * @author Lasse Herskind
  */
-contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
+contract AaveLendingBridge is BridgeBase, IAaveLendingBridge {
     using SafeERC20 for IERC20;
 
-    error InvalidCaller();
     error InputAssetAAndOutputAssetAIsEth();
     error InputAssetANotERC20OrEth();
     error OutputAssetANotERC20OrEth();
@@ -45,13 +46,11 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
     error ZkTokenAlreadyExists();
     error ZkTokenDontExist();
     error ZeroValue();
-    error AsyncDisabled();
 
     event UnderlyingAssetListed(address underlyingAsset, address zkAToken);
 
     IWETH public constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
-    address public immutable ROLLUP_PROCESSOR;
     ILendingPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
     address public immutable CONFIGURATOR;
 
@@ -60,7 +59,7 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
 
     modifier onlyConfigurator() {
         if (msg.sender != CONFIGURATOR) {
-            revert InvalidCaller();
+            revert ErrorLib.InvalidCaller();
         }
         _;
     }
@@ -72,8 +71,7 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         address _rollupProcessor,
         address _addressesProvider,
         address _configurator
-    ) {
-        ROLLUP_PROCESSOR = _rollupProcessor;
+    ) BridgeBase(_rollupProcessor) {
         /// @dev addressesProvider is used to fetch pool, used in case Aave governance update pool proxy
         ADDRESSES_PROVIDER = ILendingPoolAddressesProvider(_addressesProvider);
         CONFIGURATOR = _configurator;
@@ -172,7 +170,8 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
     )
         external
         payable
-        override(IDefiBridge)
+        override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
             uint256 outputValueB,
@@ -299,26 +298,6 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
         return IAaveIncentivesController(_incentivesController).claimRewards(_assets, type(uint256).max, _beneficiary);
     }
 
-    function finalise(
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        uint256,
-        uint64
-    )
-        external
-        payable
-        override(IDefiBridge)
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        revert AsyncDisabled();
-    }
-
     /**
      * @notice sanity checks of the caller and inputs to the convert function
      * @param _inputAssetA The input asset, accepts Eth or ERC20 if supported underlying or zkAToken
@@ -347,9 +326,6 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
             bool
         )
     {
-        if (msg.sender != ROLLUP_PROCESSOR) {
-            revert InvalidCaller();
-        }
         if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
             _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
