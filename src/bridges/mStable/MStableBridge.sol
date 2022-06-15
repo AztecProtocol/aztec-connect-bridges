@@ -5,8 +5,8 @@ pragma experimental ABIEncoderV2;
 
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IMStableAsset} from "./interfaces/IMStableAsset.sol";
-import {IMStableSavingsContract} from "./interfaces/IMStableSavingsContract.sol";
+import {IMStableAsset} from "../../interfaces/mstable/IMStableAsset.sol";
+import {IMStableSavingsContract} from "../../interfaces/mstable/IMStableSavingsContract.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 
