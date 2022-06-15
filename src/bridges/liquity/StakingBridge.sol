@@ -7,8 +7,8 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
-import {ILQTYStaking} from "./interfaces/ILQTYStaking.sol";
-import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
+import {ILQTYStaking} from "../../interfaces/liquity/ILQTYStaking.sol";
+import {ISwapRouter} from "../../interfaces/liquity/ISwapRouter.sol";
 
 /**
  * @title Aztec Connect Bridge for Liquity's LQTYStaking.sol

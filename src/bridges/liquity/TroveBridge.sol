@@ -9,9 +9,9 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
-import {IBorrowerOperations} from "./interfaces/IBorrowerOperations.sol";
-import {ITroveManager} from "./interfaces/ITroveManager.sol";
-import {ISortedTroves} from "./interfaces/ISortedTroves.sol";
+import {IBorrowerOperations} from "../../interfaces/liquity/IBorrowerOperations.sol";
+import {ITroveManager} from "../../interfaces/liquity/ITroveManager.sol";
+import {ISortedTroves} from "../../interfaces/liquity/ISortedTroves.sol";
 
 /**
  * @title Aztec Connect Bridge for opening and closing Liquity's troves

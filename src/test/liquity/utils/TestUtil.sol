@@ -8,7 +8,7 @@ import {DefiBridgeProxy} from "../../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "../../../aztec/RollupProcessor.sol";
 
 import {MockPriceFeed} from "./MockPriceFeed.sol";
-import {IPriceFeed} from "../../../bridges/liquity/interfaces/IPriceFeed.sol";
+import {IPriceFeed} from "../../../interfaces/liquity/IPriceFeed.sol";
 
 contract TestUtil is Test {
     DefiBridgeProxy internal defiBridgeProxy;

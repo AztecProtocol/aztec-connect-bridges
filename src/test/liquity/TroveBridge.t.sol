@@ -7,7 +7,7 @@ import {AztecTypes} from "../../aztec/AztecTypes.sol";
 import {TestUtil} from "./utils/TestUtil.sol";
 import {IHintHelpers} from "./interfaces/IHintHelpers.sol";
 import {TroveBridge} from "../../bridges/liquity/TroveBridge.sol";
-import {ISortedTroves} from "../../bridges/liquity/interfaces/ISortedTroves.sol";
+import {ISortedTroves} from "../../interfaces/liquity/ISortedTroves.sol";
 
 contract TroveBridgeTest is TestUtil {
     TroveBridge private bridge;
