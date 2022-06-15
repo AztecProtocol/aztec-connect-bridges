@@ -12,7 +12,7 @@ import {IERC20Permit, IERC20} from "../../interfaces/IERC20Permit.sol";
 import {IWrappedPosition} from "../../interfaces/element/IWrappedPosition.sol";
 import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {MinHeap} from "./MinHeap.sol";
-import {FullMath} from "../uniswapv3/libraries/FullMath.sol";
+import {FullMath} from "../../libraries/uniswapv3/FullMath.sol";
 
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
