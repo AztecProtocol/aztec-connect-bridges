@@ -3,7 +3,7 @@
 pragma solidity >=0.8.4;
 
 import {Test} from "forge-std/Test.sol";
-import {OracleHelper} from "../../libraries/OracleHelper.sol";
+import {OracleHelper} from "../../aztec/libraries/OracleHelper.sol";
 import {IUniswapV3PoolImmutables} from "../../bridges/uniswapv3/interfaces/pool/IUniswapV3PoolImmutables.sol";
 import {IUniswapV3PoolDerivedState} from "../../bridges/uniswapv3/interfaces/pool/IUniswapV3PoolDerivedState.sol";
 import {TickMath} from "../../bridges/uniswapv3/libraries/TickMath.sol";
