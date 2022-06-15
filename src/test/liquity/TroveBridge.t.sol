@@ -119,7 +119,7 @@ contract TroveBridgeTest is TestUtil {
         // unless ran repeatedly.
         _openTrove();
         _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
-        _repay(ROLLUP_PROCESSOR_WEI_BALANCE, 1);
+        _repay(ROLLUP_PROCESSOR_WEI_BALANCE, 1, false);
         _closeTrove();
     }
 
@@ -313,7 +313,7 @@ contract TroveBridgeTest is TestUtil {
         setLiquityPrice(priceBeforeDrop);
 
         // Setting maxEthDelta to 0.05 ETH because there is some loss during swap
-        _repay(ROLLUP_PROCESSOR_WEI_BALANCE * 3, 5e16);
+        _repay(ROLLUP_PROCESSOR_WEI_BALANCE * 3, 5e16, true);
 
         _closeTroveAfterRedistribution(OWNER_WEI_BALANCE);
     }
@@ -361,7 +361,7 @@ contract TroveBridgeTest is TestUtil {
 
         // Setting maxEthDelta to 0.05 ETH because there is some loss during swap
         uint256 expectedBalance = (coll * bridge.balanceOf(address(rollupProcessor))) / bridge.totalSupply();
-        _repay(expectedBalance, 5e16);
+        _repay(expectedBalance, 5e16, true);
 
         (, coll, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         uint256 expectedOwnerBalance = (coll * bridge.balanceOf(OWNER)) / bridge.totalSupply();
@@ -445,7 +445,11 @@ contract TroveBridgeTest is TestUtil {
         assertGt(tokens["LUSD"].erc.balanceOf(address(rollupProcessor)), 0, "Rollup processor doesn't hold any LUSD");
     }
 
-    function _repay(uint256 _expectedBalance, uint256 _maxEthDelta) private {
+    function _repay(
+        uint256 _expectedBalance,
+        uint256 _maxEthDelta,
+        bool afterRedistribution
+    ) private {
         uint256 processorTBBalance = bridge.balanceOf(address(rollupProcessor));
 
         // Mint the borrower fee to ROLLUP_PROCESSOR in order to have a big enough balance for repaying
@@ -457,7 +461,9 @@ contract TroveBridgeTest is TestUtil {
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH),
-            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+            afterRedistribution
+                ? AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20)
+                : AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
             processorTBBalance,
             1,
             MAX_FEE

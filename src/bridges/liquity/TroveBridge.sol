@@ -10,6 +10,7 @@ import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
+import {ErrorLib} from "../base/ErrorLib.sol";
 
 import {IBorrowerOperations} from "./interfaces/IBorrowerOperations.sol";
 import {ITroveManager} from "./interfaces/ITroveManager.sol";
@@ -154,16 +155,16 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
      * executed. If TB, repaying. RollupProcessor.sol has to transfer the tokens to the bridge before calling
      * the method. If this is not the case, the function will revert.
      *
-     *                              Borrowing               Repaying                Redeeming
-     * @param _inputAssetA -        ETH                     TB                      TB
-     * @param _inputAssetB -        None                    LUSD                    None
-     * @param _outputAssetA -       TB                      ETH                     ETH
-     * @param _outputAssetB -       LUSD                    LUSD                    None
-     * @param _inputValue -         amount of ETH           amount of TB and LUSD   amount of TB
-     * @param _interactionNonce -   nonce                   nonce                   nonce
-     * @param _auxData -            max borrower fee        0                       0
-     * @return outputValueA -       amount of TB            amount of ETH           amount of ETH
-     * @return outputValueB -       amount of LUSD          amount of LUSD          0
+     *                              Borrowing            Repaying             Repaying (redis.)      Redeeming
+     * @param _inputAssetA -        ETH                  TB                   TB                     TB
+     * @param _inputAssetB -        None                 LUSD                 LUSD                   None
+     * @param _outputAssetA -       TB                   ETH                  ETH                    ETH
+     * @param _outputAssetB -       LUSD                 LUSD                 TB                     None
+     * @param _inputValue -         ETH amount           TB and LUSD amt.     TB and LUSD amt.       TB amount
+     * @param _interactionNonce -   nonce                nonce                nonce                  nonce
+     * @param _auxData -            max borrower fee     0                    0                      0
+     * @return outputValueA -       TB amount            ETH amount           ETH amount             ETH amount
+     * @return outputValueB -       LUSD amount          LUSD amount          TB amount              0
      * @dev The amount of LUSD returned (outputValueB) during repayment will be non-zero only when the trove was
      * partially redeemed.
      */
@@ -200,12 +201,20 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
         } else if (
             _inputAssetA.erc20Address == address(this) &&
             _inputAssetB.erc20Address == LUSD &&
-            _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
-            _outputAssetB.erc20Address == LUSD
+            _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
             // Repaying
             if (troveStatus != Status.active) revert IncorrectStatus(Status.active, Status.active, troveStatus);
-            (outputValueA, outputValueB) = _repay(_inputValue, _interactionNonce);
+            if (_outputAssetB.erc20Address == LUSD) {
+                // A case when the trove was partially redeemed (1 TB corresponding to less than 1 LUSD of debt) or not
+                // redeemed and not touched by redistribution (1 TB correospinding to exactly 1 LUSD of debt)
+                (outputValueA, outputValueB) = _repay(_inputValue, _interactionNonce);
+            } else if (_outputAssetB.erc20Address == address(this)) {
+                // A case when the trove was touched by redistribution (1 TB corresponding to more than 1 LUSD of debt)
+                (outputValueA, outputValueB) = _repayAfterRedistribution(_inputValue, _interactionNonce);
+            } else {
+                revert ErrorLib.InvalidOutputB();
+            }
         } else if (
             _inputAssetA.erc20Address == address(this) && _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
@@ -385,34 +394,58 @@ contract TroveBridge is ERC20, Ownable, IDefiBridge, IUniswapV3SwapCallback {
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
         // Compute how much debt to be repay
         uint256 debtToRepay = (_tbAmount * debtBefore) / this.totalSupply();
+        if (debtToRepay > _tbAmount) revert ErrorLib.InvalidOutputB();
+
         // Compute how much collateral to withdraw
         uint256 collToWithdraw = (_tbAmount * collBefore) / this.totalSupply();
 
-        if (debtToRepay > _tbAmount) {
-            // Collateral and debt was redistributed to bridge's trove (1 TB corresponds to more than 1 LUSD worth
-            // of debt). For this reason the bridge doesn't currently have enough LUSD to repay the debt in full.
-            // It's important that CR never drops because if the trove was near minimum CR (MCR) the tx would revert.
-            // This would effectively stop users from being able to exit. Unfortunately users are also not able
-            // to exit when Liquity is in recovery mode (total collateral ratio < 150%) because in such a case
-            // only pure collateral top-up or debt repayment is allowed.
-            // To avoid CR from ever dropping bellow MCR I came up with the following construction:
-            //   1) Flash swap USDC to LUSD,
-            //   2) repay the user's trove debt in full (in the 1st callback),
-            //   3) flash swap WETH to USDC with recipient being the LUSD_USDC_POOL - this pays for the first swap,
-            //   4) in the 2nd callback deposit part of the withdrawn collateral to WETH and pay for the 2nd swap.
-            IUniswapV3PoolActions(LUSD_USDC_POOL).swap(
-                address(this), // recipient
-                false, // zeroForOne
-                -int256(debtToRepay - _tbAmount), // amount of LUSD to receive
-                SQRT_PRICE_LIMIT_X96,
-                abi.encode(SwapCallbackData({debtToRepay: debtToRepay, collToWithdraw: collToWithdraw}))
-            );
-        } else {
-            // Repay _inputValue of LUSD and withdraw collateral
-            (address upperHint, address lowerHint) = _getHints();
-            BORROWER_OPERATIONS.adjustTrove(0, collToWithdraw, debtToRepay, false, upperHint, lowerHint);
-            lusdReturned = _tbAmount - debtToRepay; // LUSD to return --> 0 unless trove was partially redeemed
-        }
+        // Repay _inputValue of LUSD and withdraw collateral
+        (address upperHint, address lowerHint) = _getHints();
+        BORROWER_OPERATIONS.adjustTrove(0, collToWithdraw, debtToRepay, false, upperHint, lowerHint);
+        lusdReturned = _tbAmount - debtToRepay; // LUSD to return --> 0 unless trove was partially redeemed
+        // 5. Burn input TB and return ETH to rollup processor
+        collateral = address(this).balance;
+        _burn(address(this), _tbAmount);
+        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: collateral}(_interactionNonce);
+    }
+
+    /**
+     * @notice Repay debt.
+     * @param _tbAmount Amount of TB to burn.
+     * @param _interactionNonce Same as in convert(...) method.
+     * @return collateral Amount of collateral withdrawn.
+     * @return tbReturned Amount of TB returned (non-zero only when the flash swap fails)
+     * @dev Collateral and debt was redistributed to bridge's trove (1 TB corresponds to more than 1 LUSD worth
+     *      of debt). For this reason the bridge doesn't currently have enough LUSD to repay the debt in full.
+     *      It's important that CR never drops because if the trove was near minimum CR (MCR) the tx would revert.
+     *      This would effectively stop users from being able to exit. Unfortunately users are also not able
+     *      to exit when Liquity is in recovery mode (total collateral ratio < 150%) because in such a case
+     *      only pure collateral top-up or debt repayment is allowed.
+     *      To avoid CR from ever dropping bellow MCR I came up with the following construction:
+     *        1) Flash swap USDC to LUSD,
+     *        2) repay the user's trove debt in full (in the 1st callback),
+     *        3) flash swap WETH to USDC with recipient being the LUSD_USDC_POOL - this pays for the first swap,
+     *        4) in the 2nd callback deposit part of the withdrawn collateral to WETH and pay for the 2nd swap.
+     */
+    function _repayAfterRedistribution(uint256 _tbAmount, uint256 _interactionNonce)
+        private
+        returns (uint256 collateral, uint256 tbReturned)
+    {
+        // TODO: handle failed swaps and return TB if that's the case
+        (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
+        // Compute how much debt to be repay
+        uint256 debtToRepay = (_tbAmount * debtBefore) / this.totalSupply();
+        if (debtToRepay <= _tbAmount) revert ErrorLib.InvalidOutputB();
+        // Compute how much collateral to withdraw
+        uint256 collToWithdraw = (_tbAmount * collBefore) / this.totalSupply();
+
+        IUniswapV3PoolActions(LUSD_USDC_POOL).swap(
+            address(this), // recipient
+            false, // zeroForOne
+            -int256(debtToRepay - _tbAmount), // amount of LUSD to receive
+            SQRT_PRICE_LIMIT_X96,
+            abi.encode(SwapCallbackData({debtToRepay: debtToRepay, collToWithdraw: collToWithdraw}))
+        );
         // 5. Burn input TB and return ETH to rollup processor
         collateral = address(this).balance;
         _burn(address(this), _tbAmount);
