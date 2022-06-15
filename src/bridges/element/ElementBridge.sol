@@ -4,20 +4,20 @@ pragma solidity >=0.6.10 <=0.8.10;
 pragma experimental ABIEncoderV2;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IVault, IAsset, PoolSpecialization} from "./interfaces/IVault.sol";
-import {IPool} from "./interfaces/IPool.sol";
-import {ITranche} from "./interfaces/ITranche.sol";
-import {IDeploymentValidator} from "./interfaces/IDeploymentValidator.sol";
+import {IVault, IAsset, PoolSpecialization} from "../../interfaces/element/IVault.sol";
+import {IPool} from "../../interfaces/element/IPool.sol";
+import {ITranche} from "../../interfaces/element/ITranche.sol";
+import {IDeploymentValidator} from "../../interfaces/element/IDeploymentValidator.sol";
 import {IERC20Permit, IERC20} from "../../interfaces/IERC20Permit.sol";
-import {IWrappedPosition} from "./interfaces/IWrappedPosition.sol";
-import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+import {IWrappedPosition} from "../../interfaces/element/IWrappedPosition.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {MinHeap} from "./MinHeap.sol";
-import {FullMath} from "../uniswapv3/libraries/FullMath.sol";
+import {FullMath} from "../../libraries/uniswapv3/FullMath.sol";
 
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 
 /**
  * @title Element Bridge

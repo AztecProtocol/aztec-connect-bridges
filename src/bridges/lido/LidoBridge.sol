@@ -2,14 +2,14 @@
 pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ICurvePool} from "./interfaces/ICurvePool.sol";
-import {ILido} from "./interfaces/ILido.sol";
-import {IWstETH} from "./interfaces/IWstETH.sol";
-import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+import {ICurvePool} from "../../interfaces/curve/ICurvePool.sol";
+import {ILido} from "../../interfaces/lido/ILido.sol";
+import {IWstETH} from "../../interfaces/lido/IWstETH.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 

@@ -2,10 +2,9 @@
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
-import {IDefiBridge} from "../interfaces/IDefiBridge.sol";
-import {AztecTypes} from "./AztecTypes.sol";
-
-import {TokenTransfers} from "../libraries/TokenTransfers.sol";
+import {IDefiBridge} from "./interfaces/IDefiBridge.sol";
+import {AztecTypes} from "./libraries/AztecTypes.sol";
+import {TokenTransfers} from "./libraries/TokenTransfers.sol";
 
 contract DefiBridgeProxy {
     error OUTPUT_A_EXCEEDS_252_BITS(uint256 outputValue);

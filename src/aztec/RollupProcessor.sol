@@ -1,13 +1,11 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.8.0 <=0.8.10;
-pragma abicoder v2;
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec
+pragma solidity >=0.8.4;
 
-import {IDefiBridge} from "../interfaces/IDefiBridge.sol";
-import {IERC20} from "../interfaces/IERC20Permit.sol";
+import {IDefiBridge} from "./interfaces/IDefiBridge.sol";
 import {DefiBridgeProxy} from "./DefiBridgeProxy.sol";
-import {AztecTypes} from "./AztecTypes.sol";
-import {TokenTransfers} from "../libraries/TokenTransfers.sol";
+import {AztecTypes} from "./libraries/AztecTypes.sol";
+import {TokenTransfers} from "./libraries/TokenTransfers.sol";
 
 /**
  * @notice Mock rollup processor to be used in testing. Will revert on a failing bridge to make debugging easier

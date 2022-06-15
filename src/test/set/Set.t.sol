@@ -8,9 +8,9 @@ import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IssuanceBridge} from "./../../bridges/set/IssuanceBridge.sol";
-import {IController} from "./../../bridges/set/interfaces/IController.sol";
-import {ISetToken} from "./../../bridges/set/interfaces/ISetToken.sol";
-import {AztecTypes} from "./../../aztec/AztecTypes.sol";
+import {IController} from "./../../interfaces/set/IController.sol";
+import {ISetToken} from "./../../interfaces/set/ISetToken.sol";
+import {AztecTypes} from "./../../aztec/libraries/AztecTypes.sol";
 
 import {ErrorLib} from "../../bridges/base/ErrorLib.sol";
 

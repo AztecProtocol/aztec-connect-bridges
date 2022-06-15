@@ -4,11 +4,11 @@ pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
-import {IStabilityPool} from "./interfaces/IStabilityPool.sol";
-import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
+import {IStabilityPool} from "../../interfaces/liquity/IStabilityPool.sol";
+import {ISwapRouter} from "../../interfaces/liquity/ISwapRouter.sol";
 
 /**
  * @title Aztec Connect Bridge for Liquity's StabilityPool.sol

@@ -4,7 +4,7 @@ pragma solidity >=0.8.4;
 
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
-import {AztecTypes} from "./../../aztec/AztecTypes.sol";
+import {AztecTypes} from "./../../aztec/libraries/AztecTypes.sol";
 import {Test} from "forge-std/Test.sol";
 
 // Example-specific imports

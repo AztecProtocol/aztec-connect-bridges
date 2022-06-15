@@ -8,7 +8,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 
 import {ICoinJoin} from "./interfaces/ICoinJoin.sol";
 import {IEthJoin} from "./interfaces/IEthJoin.sol";
@@ -16,7 +16,7 @@ import {ISafeEngine} from "./interfaces/ISafeEngine.sol";
 import {ISafeManager} from "./interfaces/ISafeManager.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
 import {AggregatorV3Interface} from "./interfaces/AggregatorV3Interface.sol";
-import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 
 // NOTE:

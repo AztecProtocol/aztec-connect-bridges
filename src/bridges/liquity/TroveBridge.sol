@@ -6,12 +6,12 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
-import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
-import {IBorrowerOperations} from "./interfaces/IBorrowerOperations.sol";
-import {ITroveManager} from "./interfaces/ITroveManager.sol";
-import {ISortedTroves} from "./interfaces/ISortedTroves.sol";
+import {IBorrowerOperations} from "../../interfaces/liquity/IBorrowerOperations.sol";
+import {ITroveManager} from "../../interfaces/liquity/ITroveManager.sol";
+import {ISortedTroves} from "../../interfaces/liquity/ISortedTroves.sol";
 
 /**
  * @title Aztec Connect Bridge for opening and closing Liquity's troves
