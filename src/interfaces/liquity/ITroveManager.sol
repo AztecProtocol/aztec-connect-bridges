@@ -9,6 +9,8 @@ interface ITroveManager is ILiquityBase {
 
     function liquidate(address _borrower) external;
 
+    function liquidateTroves(uint256 _n) external;
+
     function redeemCollateral(
         uint256 _LUSDAmount,
         address _firstRedemptionHint,
@@ -34,6 +36,8 @@ interface ITroveManager is ILiquityBase {
     function getBorrowingRateWithDecay() external view returns (uint256);
 
     function getTroveStatus(address _borrower) external view returns (uint256);
+
+    function getTCR(uint256 _price) external view returns (uint256);
 
     function checkRecoveryMode(uint256 _price) external view returns (bool);
 }
