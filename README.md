@@ -46,19 +46,19 @@ src/client/example
 To test run:
 
 ```
-yarn test --match YourBridge
+yarn test --match-contract YourBridge
 ```
 
 To get a gas report run:
 
 ```
-yarn test --match YourBridge --gas-report
+yarn test --match-contract YourBridge --gas-report
 ```
 
 To debug:
 
 ```
-yarn test --match YourBridge -vvvv
+yarn test --match-contract YourBridge -vvvv
 ```
 
 ## Testing methodolgy
