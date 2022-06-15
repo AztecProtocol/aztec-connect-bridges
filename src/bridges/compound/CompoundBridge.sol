@@ -9,8 +9,8 @@ import {BridgeBase} from "./../base/BridgeBase.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ICERC20} from "./interfaces/ICERC20.sol";
-import {ICETH} from "./interfaces/ICETH.sol";
+import {ICERC20} from "../../interfaces/compound/ICERC20.sol";
+import {ICETH} from "../../interfaces/compound/ICETH.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
