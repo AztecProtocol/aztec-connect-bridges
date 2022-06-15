@@ -2,7 +2,6 @@
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
-// TODO: move all the bridge imports to src/dependencies
 import {IUniswapV3PoolDerivedState} from "../../interfaces/uniswapv3/pool/IUniswapV3PoolDerivedState.sol";
 import {TickMath} from "../../libraries/uniswapv3/TickMath.sol";
 import {FullMath} from "../../libraries/uniswapv3/FullMath.sol";
