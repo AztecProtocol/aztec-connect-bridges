@@ -11,7 +11,7 @@ import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {IDefiBridge} from "./../../aztec/interfaces/IDefiBridge.sol";
 
 // Aave-specific imports
-import {IWETH9} from "../../interfaces/aave/IWETH9.sol";
+import {IWETH} from "../../interfaces/IWETH.sol";
 import {ILendingPool} from "../../interfaces/aave/ILendingPool.sol";
 import {ILendingPoolAddressesProvider} from "../../interfaces/aave/ILendingPoolAddressesProvider.sol";
 import {IAaveIncentivesController} from "../../interfaces/aave//IAaveIncentivesController.sol";
@@ -87,7 +87,7 @@ contract AaveLendingTest is TestHelper {
     IERC20 internal constant USDT = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7);
     IERC20 internal constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     IERC20 internal constant WBTC = IERC20(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
-    IWETH9 internal constant WETH = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    IWETH internal constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     IERC20[] internal tokens = [DAI, USDT, USDC, WBTC, IERC20(address(WETH))];
 
     // Test specific storage

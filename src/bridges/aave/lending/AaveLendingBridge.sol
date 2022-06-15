@@ -10,7 +10,7 @@ import {ILendingPool} from "./../../../interfaces/aave/ILendingPool.sol";
 import {IPool} from "./../../../interfaces/aave/IPool.sol";
 import {IScaledBalanceToken} from "./../../../interfaces/aave/IScaledBalanceToken.sol";
 import {IAaveIncentivesController} from "./../../../interfaces/aave/IAaveIncentivesController.sol";
-import {IWETH9} from "./../../../interfaces/aave/IWETH9.sol";
+import {IWETH} from "./../../../interfaces/IWETH.sol";
 
 import {DataTypes} from "./../../../libraries/aave/DataTypes.sol";
 
@@ -49,7 +49,7 @@ contract AaveLendingBridge is IAaveLendingBridge, IDefiBridge {
 
     event UnderlyingAssetListed(address underlyingAsset, address zkAToken);
 
-    IWETH9 public constant WETH = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    IWETH public constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     address public immutable ROLLUP_PROCESSOR;
     ILendingPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
