@@ -17,7 +17,7 @@ import {FullMath} from "../../libraries/uniswapv3/FullMath.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 
 /**
  * @title Element Bridge

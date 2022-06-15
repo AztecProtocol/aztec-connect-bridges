@@ -4,7 +4,7 @@ pragma solidity >=0.8.4;
 
 import {IDefiBridge} from "./interfaces/IDefiBridge.sol";
 import {DefiBridgeProxy} from "./DefiBridgeProxy.sol";
-import {AztecTypes} from "./AztecTypes.sol";
+import {AztecTypes} from "./libraries/AztecTypes.sol";
 import {TokenTransfers} from "./libraries/TokenTransfers.sol";
 
 /**

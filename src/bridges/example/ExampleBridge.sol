@@ -3,7 +3,7 @@
 pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 
 contract ExampleBridgeContract is BridgeBase {

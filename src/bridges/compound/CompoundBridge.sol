@@ -6,7 +6,7 @@ import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 
 import {ErrorLib} from "./../base/ErrorLib.sol";
 import {BridgeBase} from "./../base/BridgeBase.sol";
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ICERC20} from "../../interfaces/compound/ICERC20.sol";

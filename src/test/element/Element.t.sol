@@ -17,7 +17,7 @@ import {IWrappedPosition} from "../../interfaces/element/IWrappedPosition.sol";
 import {MockDeploymentValidator} from "./MockDeploymentValidator.sol";
 import {ErrorLib} from "../../bridges/base/ErrorLib.sol";
 
-import {AztecTypes} from "./../../aztec/AztecTypes.sol";
+import {AztecTypes} from "./../../aztec/libraries/AztecTypes.sol";
 
 contract ElementTest is Test {
     using stdStorage for StdStorage;

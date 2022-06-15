@@ -13,7 +13,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {RaiBridge} from "./../../bridges/rai/RaiBridge.sol";
 import {ISafeEngine} from "./../../bridges/rai/interfaces/ISafeEngine.sol";
 
-import {AztecTypes} from "./../../aztec/AztecTypes.sol";
+import {AztecTypes} from "./../../aztec/libraries/AztecTypes.sol";
 
 contract RaiBridgeTest is Test {
     AggregatorV3Interface private constant PRICE_FEED =

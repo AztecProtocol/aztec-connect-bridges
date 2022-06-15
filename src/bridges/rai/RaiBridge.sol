@@ -8,7 +8,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 
 import {ICoinJoin} from "./interfaces/ICoinJoin.sol";
 import {IEthJoin} from "./interfaces/IEthJoin.sol";

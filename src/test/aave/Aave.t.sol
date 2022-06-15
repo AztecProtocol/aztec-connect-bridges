@@ -13,7 +13,7 @@ import {IPool} from "./../../bridges/aave/interfaces/IPool.sol";
 import {ILendingPoolAddressesProvider} from "./../../bridges/aave/interfaces/ILendingPoolAddressesProvider.sol";
 import {IAToken} from "./../../bridges/aave/interfaces/IAToken.sol";
 import {ZkAToken} from "./../../bridges/aave/ZkAToken.sol";
-import {AztecTypes} from "./../../aztec/AztecTypes.sol";
+import {AztecTypes} from "./../../aztec/libraries/AztecTypes.sol";
 import {WadRayMath} from "./../../bridges/aave/libraries/WadRayMath.sol";
 
 import "../../../lib/ds-test/src/test.sol";

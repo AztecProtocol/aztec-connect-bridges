@@ -9,7 +9,7 @@ import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 
 import {LidoBridge} from "./../../bridges/lido/LidoBridge.sol";
-import {AztecTypes} from "./../../aztec/AztecTypes.sol";
+import {AztecTypes} from "./../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "./../../bridges/base/ErrorLib.sol";
 
 contract LidoTest is Test {
