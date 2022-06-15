@@ -47,7 +47,6 @@ contract IndexBridgeContract is IDefiBridge {
     address immutable UNIV3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
     address immutable UNIV3_QUOTER = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
     address immutable UNIV3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984; 
-    uint24 immutable uniFee = 3000;
 
     constructor(address _rollupProcessor) public {
         ROLLUP_PROCESSOR = _rollupProcessor;
@@ -100,7 +99,7 @@ contract IndexBridgeContract is IDefiBridge {
         if ( // To buy/issue
             inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
             outputAssetA.erc20Address == ICETH &&
-            outputAssetB.assetType == AztecTypes.AztecAssetType.ETH
+            outputAssetB.assetType == AztecTypes.AztecAssetType.ETH 
             ) 
         {
 
@@ -113,7 +112,7 @@ contract IndexBridgeContract is IDefiBridge {
         {
 
             outputValueA = getEth(totalInputValue, auxData, interactionNonce);
-
+            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueB}(interactionNonce);
         }
     }
 
@@ -157,51 +156,27 @@ contract IndexBridgeContract is IDefiBridge {
         internal 
         returns (uint256 outputValueA) 
     {
-
-        // Creating a SwapData structure used to specify a path in a DEX in the ExchangeIssuance contract
-        uint24[] memory fee;
-        address[] memory pathToEth = new address[](2); 
-        pathToEth[0] = STETH;
-        pathToEth[1] = ETH;
-
-        IExchangeIssue.SwapData memory  redeemData; 
-        redeemData = IExchangeIssue.SwapData(
-            pathToEth, 
-            fee,
-            CURVE, 
-            IExchangeIssue.Exchange.Curve
-        );
-
-        // Getting a quote of how much Eth can be aquired through a icETH->ETH swap on univ3
-        bytes memory path = abi.encodePacked(ICETH, uniFee);
-        path = abi.encodePacked(path, WETH);
-        uint256 ethFromDex = IQuoter(UNIV3_QUOTER).quoteExactInput(path, totalInputValue);
-
-        //  Getting a quote of how much Eth can be aquired by redeeming icETH->ETH through the ExchangeIssuance contract
-        uint256 ethFromEx  = IExchangeIssue(EXISSUE).getRedeemExactSet(
-            ISetToken(ICETH), 
-            totalInputValue, 
-            redeemData, 
-            redeemData
-        );
+        (uint64 flowSelector, uint64 maxSlip) = decodeAuxdata(auxData);
 
         uint256 minAmountOut;  
-        if (ethFromEx > 1e6 &&
-            ethFromEx - 1e6 > ethFromDex
-            ) 
-        { // ~1e6 is the difference in gas.
-
-            // Cheaper to issue
-            console2.log('Redeem Cheaper');
-
-            /* Calculate minimum acceptable received eth based on underlyin assets(STETH)
-            according to lido's oracle of icETH/ETH pool and the cost of a flashloan to
-            settle the WETH debt.
-            */
-            
-            minAmountOut = getEthFromRedeem(totalInputValue).mul(auxData).div(1e18);
-            ISetToken(ICETH).approve(address(EXISSUE), totalInputValue);
+        if (flowSelector ==1) 
+        { 
+            minAmountOut = getEthFromRedeem(totalInputValue).mul(maxSlip).div(1e4);
     
+            // Creating a SwapData structure used to specify a path in a DEX in the ExchangeIssuance contract
+            uint24[] memory fee;
+            address[] memory pathToEth = new address[](2); 
+            pathToEth[0] = STETH;
+            pathToEth[1] = ETH;
+
+            IExchangeIssue.SwapData memory redeemData = IExchangeIssue.SwapData(
+                pathToEth, 
+                fee,
+                CURVE, 
+                IExchangeIssue.Exchange.Curve
+            );
+
+            ISetToken(ICETH).approve(address(EXISSUE), totalInputValue);
             // Redeem icETH for eth
             IExchangeIssue(EXISSUE).redeemExactSetForETH(
                 ISetToken(ICETH),
@@ -215,11 +190,18 @@ contract IndexBridgeContract is IDefiBridge {
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(interactionNonce);
 
         } else {
-            // Cheaper to buy
-            console2.log('Buying Cheaper');
+
+            uint24 uniFee;
+            if (flowSelector == 3) {
+                uniFee = 3000;
+            } else if (flowSelector == 5) {
+                uniFee = 500;
+            } else {
+                revert("Unrecognized flowSelector");
+            }
 
             // Using univ3 TWAP Oracle to get a lower bound on returned ETH.
-            minAmountOut = getAmountBasedOnTwap(uint128(totalInputValue), ICETH, WETH).mul(auxData).div(1e18);
+            minAmountOut = getAmountBasedOnTwap(uint128(totalInputValue), ICETH, WETH).mul(maxSlip).div(1e4);
             
             IERC20(ICETH).approve(UNIV3_ROUTER, totalInputValue);
             ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
@@ -260,61 +242,32 @@ contract IndexBridgeContract is IDefiBridge {
         internal 
         returns (uint256 outputValueA, uint256 outputValueB) 
     {
+        (uint64 flowSelector, uint64 maxSlip) = decodeAuxdata(auxData);
+        console2.log('flowSelector in  getIc', flowSelector);
 
-        IExchangeIssue.SwapData memory issueData; 
-        uint256 issueCostOfTokens;
-        bool issueOpen;
+        if (flowSelector ==1) { 
 
-        {
-        // Creating a SwapData structure used specify path in DEX in the ExchangeIssuance contract
-            uint24[] memory fee;
-            address[] memory pathToSt = new address[](2);
-            pathToSt[0] = ETH;
-            pathToSt[1] = STETH;
-            issueData = IExchangeIssue.SwapData(
-                pathToSt, fee, CURVE, IExchangeIssue.Exchange.Curve);
+            (outputValueA, outputValueB) = issueIcEth(totalInputValue, maxSlip);
 
-        // Getting a quote of how much icEth can be aquired through a eth->icEth swap on univ3
-            bytes memory path = abi.encodePacked(WETH, uniFee);
-            path = abi.encodePacked(path, address(ICETH));
-            uint256 tokensFromDex = IQuoter(UNIV3_QUOTER).quoteExactInput(path, totalInputValue);
-
-        // Get eth needed to get the same amount of icETH through ExchangeIssuance
-            issueCostOfTokens = IExchangeIssue(EXISSUE).getIssueExactSet(
-                ISetToken(ICETH),
-                tokensFromDex,
-                issueData,
-                issueData
-            );
-
-        // Check if we are going over the supply cap of icETH, use DEX if we are.
-            uint256 currentSupply = IERC20(ICETH).totalSupply();
-            uint256 maxSupply = ISupplyCapIssuanceHook(ICETH_SUPPLY_CAP).supplyCap();
-            issueOpen = (currentSupply + tokensFromDex < maxSupply) ? true : false; 
-
-        }
-
-
-        if (issueCostOfTokens > 1e6 && 
-            (issueCostOfTokens - 1e6) < totalInputValue && 
-            issueOpen
-            ) 
-        { //Accounting for gas difference ~ 1e6 in difference. 
-
-            // Cheaper to issue
-            console2.log('Issuing Cheaper');
-
-            (outputValueA, outputValueB) = issueIcEth(totalInputValue, auxData, issueData);
+            console2.log('outputvalueb', outputValueB);
 
             ISetToken(ICETH).approve(ROLLUP_PROCESSOR, outputValueA);
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueB}(interactionNonce);
 
         } else {
-            // Cheaper to buy
-            console2.log('Buying Cheaper');
+
+            uint24 uniFee;
+            if (flowSelector == 3) {
+                uniFee = 3000;
+            } else if (flowSelector == 5) {
+                uniFee = 500;
+            } else {
+                console2.log('reverting due to flow');
+                revert('Unrecognized flowSelector');
+            }
 
             // Using univ3 TWAP Oracle to get a lower bound on returned ETH.
-            uint256 minAmountOut = getAmountBasedOnTwap(uint128(totalInputValue), WETH, ICETH).mul(auxData).div(1e18);
+            uint256 minAmountOut = getAmountBasedOnTwap(uint128(totalInputValue), WETH, ICETH).mul(maxSlip).div(1e4);
             IWeth(WETH).deposit{value: totalInputValue}();
             IERC20(WETH).approve(UNIV3_ROUTER, totalInputValue);
 
@@ -345,7 +298,7 @@ contract IndexBridgeContract is IDefiBridge {
     * @return amountOut - Amount received of quoteToken
     */
     
-    function getAmountBasedOnTwap(uint128 amountIn, address baseToken, address quoteToken) 
+    function getAmountBasedOnTwap(uint128 amountIn, address baseToken, address quoteToken) //@todo pool set by aux
         internal 
         returns (uint256 amountOut)
     { 
@@ -440,10 +393,7 @@ contract IndexBridgeContract is IDefiBridge {
     * based on Lido's Oracle, cost of flashloan and auxData provided by users. 
     *
     * @param totalInputValue - Total amount of ETH used to issue icETH 
-    * @param auxData - Used to specific maximal difference between expected
-    * @param issueData - Swapdata specifying path used to convert between 
-    * input/debt and collateral when creating a leveraged position through 
-    * a flashloan.
+    * @param maxSlip - Used to specific maximal difference between expected
     * @return outputValueA - Amount of icETH to return to the Rollupprocessor
     * @return outputValueB - Amount of ETH returned when issuing icETH. A portion of ETH 
     * is always returned when issuing icETH since the issuing function in ExchangeIssuance
@@ -452,17 +402,20 @@ contract IndexBridgeContract is IDefiBridge {
 
     function issueIcEth(
         uint256 totalInputValue, 
-        uint64 auxData, 
-        IExchangeIssue.SwapData memory issueData
+        uint64 maxSlip
         )
         internal 
         returns (uint256 outputValueA, uint256 outputValueB)
     {
 
-        /* Calculate minimum acceptable amount of icETH issued based
-        on the value stETH which we get from lido's oracle and the cost of
-        taking out a flashloan from aave (0.0009%).
-        */
+
+        uint24[] memory fee;
+        address[] memory pathToSt = new address[](2);
+        pathToSt[0] = ETH;
+        pathToSt[1] = STETH;
+        IExchangeIssue.SwapData memory issueData = IExchangeIssue.SwapData(
+                pathToSt, fee, CURVE, IExchangeIssue.Exchange.Curve
+        );
 
         uint256 costOfOneIc;
         {
@@ -485,7 +438,7 @@ contract IndexBridgeContract is IDefiBridge {
             ;
         }
 
-        uint256 minAmountOut = totalInputValue.mul(auxData).div(costOfOneIc);
+        uint256 minAmountOut = totalInputValue.mul(maxSlip).mul(1e12).div(costOfOneIc);
 
         IExchangeIssue(EXISSUE).issueExactSetFromETH{value: totalInputValue}(
             ISetToken(ICETH),
@@ -496,5 +449,10 @@ contract IndexBridgeContract is IDefiBridge {
 
         outputValueA = ISetToken(ICETH).balanceOf(address(this));
         outputValueB = address(this).balance;
+    }
+
+    function decodeAuxdata(uint64 encoded) internal pure returns (uint64 a, uint64 b) {
+        b = encoded >> 32;
+        a = (encoded << 32) >> 32;
     }
 }
