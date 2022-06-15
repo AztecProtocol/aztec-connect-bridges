@@ -48,14 +48,9 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     using Strings for uint256;
 
     error NonZeroTotalSupply();
-    error ApproveFailed(address token);
-    error InvalidCaller();
-    error IncorrectStatus(Status acceptableStatus1, Status acceptableStatus2, Status received);
-    error IncorrectInput();
-    error IncorrectDeltaAmounts();
+    error InvalidStatus(Status acceptableStatus1, Status acceptableStatus2, Status received);
+    error InvalidDeltaAmounts();
     error OwnerNotLast();
-    error TransferFailed();
-    error AsyncModeDisabled();
 
     // Trove status taken from TroveManager.sol
     enum Status {
@@ -133,8 +128,8 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         // Checks whether the trove can be safely opened/reopened
         if (this.totalSupply() != 0) revert NonZeroTotalSupply();
 
-        if (!IERC20(LUSD).approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(LUSD);
-        if (!this.approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(address(this));
+        if (!IERC20(LUSD).approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ErrorLib.ApproveFailed(LUSD);
+        if (!this.approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ErrorLib.ApproveFailed(address(this));
 
         uint256 amtToBorrow = computeAmtToBorrow(msg.value);
 
@@ -194,7 +189,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             _outputAssetB.erc20Address == LUSD
         ) {
             // Borrowing
-            if (troveStatus != Status.active) revert IncorrectStatus(Status.active, Status.active, troveStatus);
+            if (troveStatus != Status.active) revert InvalidStatus(Status.active, Status.active, troveStatus);
             (outputValueA, outputValueB) = _borrow(_inputValue, _auxData);
         } else if (
             _inputAssetA.erc20Address == address(this) &&
@@ -202,7 +197,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
             // Repaying
-            if (troveStatus != Status.active) revert IncorrectStatus(Status.active, Status.active, troveStatus);
+            if (troveStatus != Status.active) revert InvalidStatus(Status.active, Status.active, troveStatus);
             if (_outputAssetB.erc20Address == LUSD) {
                 // A case when the trove was partially redeemed (1 TB corresponding to less than 1 LUSD of debt) or not
                 // redeemed and not touched by redistribution (1 TB correospinding to exactly 1 LUSD of debt)
@@ -218,11 +213,11 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         ) {
             // Redeeming remaining collateral after the Trove is closed
             if (troveStatus != Status.closedByRedemption && troveStatus != Status.closedByLiquidation) {
-                revert IncorrectStatus(Status.closedByRedemption, Status.closedByLiquidation, troveStatus);
+                revert InvalidStatus(Status.closedByRedemption, Status.closedByLiquidation, troveStatus);
             }
             outputValueA = _redeem(_inputValue, _interactionNonce);
         } else {
-            revert IncorrectInput();
+            revert ErrorLib.InvalidInput();
         }
     }
 
@@ -241,7 +236,9 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         if (troveStatus == Status.active) {
             (uint256 remainingDebt, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
             // 200e18 is a part of debt which gets repaid from LUSD_GAS_COMPENSATION.
-            if (!IERC20(LUSD).transferFrom(owner, address(this), remainingDebt - 200e18)) revert TransferFailed();
+            if (!IERC20(LUSD).transferFrom(owner, address(this), remainingDebt - 200e18)) {
+                revert ErrorLib.TransferFailed(LUSD);
+            }
             BORROWER_OPERATIONS.closeTrove();
         } else if (troveStatus == Status.closedByRedemption) {
             if (!collateralClaimed) {
@@ -262,7 +259,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         bytes calldata _data
     ) external override(IUniswapV3SwapCallback) {
         // swaps entirely within 0-liquidity regions are not supported
-        if (_amount0Delta <= 0 && _amount1Delta <= 0) revert IncorrectDeltaAmounts();
+        if (_amount0Delta <= 0 && _amount1Delta <= 0) revert InvalidDeltaAmounts();
         // Uniswap pools always call callback on msg.sender so this check is enough to prevent malicious behavior
         if (msg.sender == LUSD_USDC_POOL) {
             SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
@@ -284,7 +281,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             IWETH(WETH).deposit{value: amountToPay}(); // wrap only what is needed to pay
             IWETH(WETH).transfer(address(USDC_ETH_POOL), amountToPay);
         } else {
-            revert InvalidCaller();
+            revert ErrorLib.InvalidCaller();
         }
     }
 

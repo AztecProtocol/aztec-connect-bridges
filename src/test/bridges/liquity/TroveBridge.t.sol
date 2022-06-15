@@ -3,13 +3,14 @@
 pragma solidity >=0.8.4;
 
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
+import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
+import {TroveBridge} from "../../../bridges/liquity/TroveBridge.sol";
+import {IBorrowerOperations} from "../../../interfaces/liquity/IBorrowerOperations.sol";
+import {ITroveManager} from "../../../interfaces/liquity/ITroveManager.sol";
+import {ISortedTroves} from "../../../interfaces/liquity/ISortedTroves.sol";
 
 import {TestUtil} from "./utils/TestUtil.sol";
 import {IHintHelpers} from "./interfaces/IHintHelpers.sol";
-import {IBorrowerOperations} from "../../../interfaces/liquity/IBorrowerOperations.sol";
-import {ITroveManager} from "../../../interfaces/liquity/ITroveManager.sol";
-import {TroveBridge} from "../../../bridges/liquity/TroveBridge.sol";
-import {ISortedTroves} from "../../../interfaces/liquity/ISortedTroves.sol";
 
 contract TroveBridgeTest is TestUtil {
     enum Status {
@@ -79,11 +80,11 @@ contract TroveBridgeTest is TestUtil {
         assertEq(uint256(bridge.decimals()), 18);
     }
 
-    function testIncorrectTroveState() public {
+    function testInvalidTroveStatus() public {
         // Attempt borrowing when trove was not opened - state 0
         vm.deal(address(rollupProcessor), ROLLUP_PROCESSOR_WEI_BALANCE);
         vm.prank(address(rollupProcessor));
-        vm.expectRevert(abi.encodeWithSignature("IncorrectStatus(uint8,uint8,uint8)", 1, 1, 0));
+        vm.expectRevert(abi.encodeWithSignature("InvalidStatus(uint8,uint8,uint8)", 1, 1, 0));
         bridge.convert(
             AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
@@ -96,10 +97,10 @@ contract TroveBridgeTest is TestUtil {
         );
     }
 
-    function testIncorrectInput() public {
-        // Call convert with incorrect input
+    function testInvalidInput() public {
+        // Call convert with invalid input
         vm.prank(address(rollupProcessor));
-        vm.expectRevert(TroveBridge.IncorrectInput.selector);
+        vm.expectRevert(ErrorLib.InvalidInput.selector);
         bridge.convert(
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
@@ -130,7 +131,7 @@ contract TroveBridgeTest is TestUtil {
         setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
         TROVE_MANAGER.liquidate(address(bridge));
         Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(bridge)));
-        assertTrue(troveStatus == Status.closedByLiquidation, "Incorrect trove status");
+        assertTrue(troveStatus == Status.closedByLiquidation, "Invalid trove status");
 
         // Set msg.sender to OWNER
         vm.startPrank(OWNER);
@@ -497,7 +498,7 @@ contract TroveBridgeTest is TestUtil {
         bridge.closeTrove();
 
         Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(bridge)));
-        assertTrue(troveStatus == Status.closedByOwner, "Incorrect trove status");
+        assertTrue(troveStatus == Status.closedByOwner, "Invalid trove status");
 
         assertEq(address(bridge).balance, 0, "Bridge holds ETH after trove closure");
         assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST(), "Bridge holds LUSD after trove closure");
@@ -600,7 +601,7 @@ contract TroveBridgeTest is TestUtil {
         bridge.closeTrove();
 
         Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(bridge)));
-        assertTrue(troveStatus == Status.closedByOwner, "Incorrect trove status");
+        assertTrue(troveStatus == Status.closedByOwner, "Invalid trove status");
 
         assertEq(address(bridge).balance, 0, "Bridge holds ETH after trove closure");
         assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST(), "Bridge holds LUSD after trove closure");

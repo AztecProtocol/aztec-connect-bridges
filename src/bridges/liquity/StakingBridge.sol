@@ -7,6 +7,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
+import {ErrorLib} from "../base/ErrorLib.sol";
 import {ILQTYStaking} from "../../interfaces/liquity/ILQTYStaking.sol";
 import {ISwapRouter} from "../../interfaces/liquity/ISwapRouter.sol";
 
@@ -28,9 +29,6 @@ import {ISwapRouter} from "../../interfaces/liquity/ISwapRouter.sol";
  * Note: StakingBridge.sol is very similar to StabilityPoolBridge.sol.
  */
 contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
-    error ApproveFailed(address token);
-    error IncorrectInput();
-
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant LQTY = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
@@ -61,12 +59,12 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
      * For this reason the following is not a security risk and makes the convert() function more gas efficient.
      */
     function setApprovals() external {
-        if (!this.approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(address(this));
-        if (!IERC20(LQTY).approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(LQTY);
-        if (!IERC20(LQTY).approve(address(STAKING_CONTRACT), type(uint256).max)) revert ApproveFailed(LQTY);
-        if (!IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(WETH);
-        if (!IERC20(LUSD).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(LUSD);
-        if (!IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(USDC);
+        if (!this.approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ErrorLib.ApproveFailed(address(this));
+        if (!IERC20(LQTY).approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ErrorLib.ApproveFailed(LQTY);
+        if (!IERC20(LQTY).approve(address(STAKING_CONTRACT), type(uint256).max)) revert ErrorLib.ApproveFailed(LQTY);
+        if (!IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max)) revert ErrorLib.ApproveFailed(WETH);
+        if (!IERC20(LUSD).approve(address(UNI_ROUTER), type(uint256).max)) revert ErrorLib.ApproveFailed(LUSD);
+        if (!IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max)) revert ErrorLib.ApproveFailed(USDC);
     }
 
     /**
@@ -131,7 +129,7 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
             STAKING_CONTRACT.unstake(outputValueA);
             _burn(address(this), _inputValue);
         } else {
-            revert IncorrectInput();
+            revert ErrorLib.InvalidInput();
         }
     }
 

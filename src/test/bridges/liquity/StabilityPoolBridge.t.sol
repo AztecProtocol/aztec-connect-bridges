@@ -3,7 +3,7 @@
 pragma solidity >=0.8.4;
 
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
-
+import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {TestUtil} from "./utils/TestUtil.sol";
 import {StabilityPoolBridge} from "../../../bridges/liquity/StabilityPoolBridge.sol";
 
@@ -35,7 +35,7 @@ contract StabilityPoolBridgeTest is TestUtil {
     function testIncorrectInput() public {
         // Call convert with incorrect input
         vm.prank(address(rollupProcessor));
-        vm.expectRevert(StabilityPoolBridge.IncorrectInput.selector);
+        vm.expectRevert(ErrorLib.InvalidInput.selector);
         bridge.convert(
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
