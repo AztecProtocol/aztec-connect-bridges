@@ -5,22 +5,22 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import {ILendingPoolAddressesProvider} from "./../imports/interfaces/ILendingPoolAddressesProvider.sol";
-import {ILendingPool} from "./../imports/interfaces/ILendingPool.sol";
-import {IPool} from "./../imports/interfaces/IPool.sol";
-import {IScaledBalanceToken} from "./../imports/interfaces/IScaledBalanceToken.sol";
-import {IAaveIncentivesController} from "./../imports/interfaces/IAaveIncentivesController.sol";
-import {IAccountingToken} from "../interfaces/IAccountingToken.sol";
-import {IWETH9} from "./../imports/interfaces/IWETH9.sol";
+import {ILendingPoolAddressesProvider} from "./../../../interfaces/aave/ILendingPoolAddressesProvider.sol";
+import {ILendingPool} from "./../../../interfaces/aave/ILendingPool.sol";
+import {IPool} from "./../../../interfaces/aave/IPool.sol";
+import {IScaledBalanceToken} from "./../../../interfaces/aave/IScaledBalanceToken.sol";
+import {IAaveIncentivesController} from "./../../../interfaces/aave/IAaveIncentivesController.sol";
+import {IWETH9} from "./../../../interfaces/aave/IWETH9.sol";
 
-import {DataTypes} from "./../imports/libraries/DataTypes.sol";
+import {DataTypes} from "./../../../libraries/aave/DataTypes.sol";
 
-import {IRollupProcessor} from "../../../interfaces/IRollupProcessor.sol";
-import {IDefiBridge} from "../../../interfaces/IDefiBridge.sol";
-import {AztecTypes} from "../../../aztec/AztecTypes.sol";
+import {IRollupProcessor} from "../../../aztec/interfaces/IRollupProcessor.sol";
+import {IDefiBridge} from "../../../aztec/interfaces/IDefiBridge.sol";
+import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 
 import {IAaveLendingBridge} from "./interfaces/IAaveLendingBridge.sol";
 
+import {IAccountingToken} from "./../interfaces/IAccountingToken.sol";
 import {AccountingToken} from "./../AccountingToken.sol";
 
 /**

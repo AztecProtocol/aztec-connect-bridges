@@ -7,18 +7,18 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 // Aztec specific imports
 import {DefiBridgeProxy} from "../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "../../aztec/RollupProcessor.sol";
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
-import {IDefiBridge} from "./../../interfaces/IDefiBridge.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
+import {IDefiBridge} from "./../../aztec/interfaces/IDefiBridge.sol";
 
 // Aave-specific imports
-import {IWETH9} from "../../bridges/aave/imports/interfaces/IWETH9.sol";
-import {ILendingPool} from "../../bridges/aave/imports/interfaces/ILendingPool.sol";
-import {ILendingPoolAddressesProvider} from "../../bridges/aave/imports/interfaces/ILendingPoolAddressesProvider.sol";
-import {IAaveIncentivesController} from "../../bridges/aave/imports/interfaces/IAaveIncentivesController.sol";
-import {IAToken} from "../../bridges/aave/imports/interfaces/IAToken.sol";
+import {IWETH9} from "../../interfaces/aave/IWETH9.sol";
+import {ILendingPool} from "../../interfaces/aave/ILendingPool.sol";
+import {ILendingPoolAddressesProvider} from "../../interfaces/aave/ILendingPoolAddressesProvider.sol";
+import {IAaveIncentivesController} from "../../interfaces/aave//IAaveIncentivesController.sol";
+import {IAToken} from "../../interfaces/aave/IAToken.sol";
 
-import {DataTypes} from "../../bridges/aave/imports/libraries/DataTypes.sol";
-import {WadRayMath} from "../../bridges/aave/imports/libraries/WadRayMath.sol";
+import {DataTypes} from "../../libraries/aave/DataTypes.sol";
+import {WadRayMath} from "../../libraries/aave/WadRayMath.sol";
 
 import {IAccountingToken} from "../../bridges/aave/interfaces/IAccountingToken.sol";
 import {IAaveLendingBridge} from "../../bridges/aave/lending/interfaces/IAaveLendingBridge.sol";

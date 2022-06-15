@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: agpl-3.0
 pragma solidity 0.8.10;
 
-import {DataTypes} from "./../libraries/DataTypes.sol";
+import {DataTypes} from "./../../libraries/aave/DataTypes.sol";
 
 /**
  * @notice Minimal interface for the Aave IPool for V3. Assuming that V3 will update the ReserveData struct

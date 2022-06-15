@@ -4,8 +4,8 @@ pragma solidity >=0.8.4;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IAaveLendingBridgeConfigurator} from "./interfaces/IAaveLendingBridgeConfigurator.sol";
 import {IAaveLendingBridge} from "./interfaces/IAaveLendingBridge.sol";
-import {ILendingPool} from "./../imports/interfaces/ILendingPool.sol";
-import {IPool} from "./../imports/interfaces/IPool.sol";
+import {ILendingPool} from "./../../../interfaces/aave/ILendingPool.sol";
+import {IPool} from "./../../../interfaces/aave/IPool.sol";
 
 /**
  * @notice AaveLendingBridgeConfigurator implementation that is used to add new listings to the AaveLendingBridge
