@@ -5,18 +5,13 @@ pragma experimental ABIEncoderV2;
 
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IMStableAsset} from "./interfaces/IMStableAsset.sol";
-import {IMStableSavingsContract} from "./interfaces/IMStableSavingsContract.sol";
-import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {IMStableAsset} from "../../interfaces/mstable/IMStableAsset.sol";
+import {IMStableSavingsContract} from "../../interfaces/mstable/IMStableSavingsContract.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
+import {BridgeBase} from "../base/BridgeBase.sol";
 
-contract MStableBridge is IDefiBridge {
-    // the aztec rollup processor contract
-    address public immutable rollupProcessor;
-
-    constructor(address _rollupProcessor) {
-        rollupProcessor = _rollupProcessor;
-    }
+contract MStableBridge is BridgeBase {
+    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
     // convert the input asset to the output asset
     // serves as the 'on ramp' to the interaction
@@ -26,21 +21,20 @@ contract MStableBridge is IDefiBridge {
         AztecTypes.AztecAsset calldata outputAssetA,
         AztecTypes.AztecAsset calldata,
         uint256 totalInputValue,
-        uint256 interactionNonce,
+        uint256,
         uint64 auxData,
-        address rollupBeneficiary
+        address
     )
         external
         payable
+        override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
-            uint256 outputValueB,
+            uint256,
             bool isAsync
         )
     {
-        // ### INITIALIZATION AND SANITY CHECKS
-        require(msg.sender == rollupProcessor, "MStableBridge: INVALID_CALLER");
-
         require(inputAssetA.id != outputAssetA.id, "MStableBridge: ASSET_IDS_EQUAL");
 
         require(inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20, "MStableBridge: NOT_ERC20");
@@ -61,32 +55,13 @@ contract MStableBridge is IDefiBridge {
 
             outputValueA = IMStableSavingsContract(imUSD).depositSavings(massetsMinted); // Deposit into save
 
-            ERC20(imUSD).approve(rollupProcessor, outputValueA);
+            ERC20(imUSD).approve(ROLLUP_PROCESSOR, outputValueA);
         } else {
             uint256 redeemedMUSD = IMStableSavingsContract(imUSD).redeemCredits(totalInputValue);
             uint256 minimumBAssetToRedeem = (redeemedMUSD * ((uint256(10000) - uint256(auxData)))) / 10000;
             uint256 redeemedValue = IMStableAsset(mUSD).redeem(dai, redeemedMUSD, minimumBAssetToRedeem, address(this));
             outputValueA = redeemedValue;
-            ERC20(dai).approve(rollupProcessor, outputValueA);
+            ERC20(dai).approve(ROLLUP_PROCESSOR, outputValueA);
         }
-    }
-
-    function finalise(
-        AztecTypes.AztecAsset calldata inputAssetA,
-        AztecTypes.AztecAsset calldata inputAssetB,
-        AztecTypes.AztecAsset calldata outputAssetA,
-        AztecTypes.AztecAsset calldata outputAssetB,
-        uint256 interactionNonce,
-        uint64 auxData
-    )
-        external
-        payable
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        require(false);
     }
 }

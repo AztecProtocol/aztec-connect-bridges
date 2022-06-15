@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import "../../bridges/element/interfaces/IDeploymentValidator.sol";
+import "../../interfaces/element/IDeploymentValidator.sol";
 
 // taken from the real Element deployment validator contract
 contract MockDeploymentValidator is IDeploymentValidator {

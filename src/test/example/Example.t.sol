@@ -4,12 +4,13 @@ pragma solidity >=0.8.4;
 
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
-import {AztecTypes} from "./../../aztec/AztecTypes.sol";
+import {AztecTypes} from "./../../aztec/libraries/AztecTypes.sol";
 import {Test} from "forge-std/Test.sol";
 
 // Example-specific imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ExampleBridgeContract} from "./../../bridges/example/ExampleBridge.sol";
+import {ErrorLib} from "../../bridges/base/ErrorLib.sol";
 
 contract ExampleTest is Test {
     IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
@@ -34,7 +35,7 @@ contract ExampleTest is Test {
         address callerAddress = address(bytes20(uint160(uint256(keccak256("non-rollup-processor-address")))));
 
         vm.prank(callerAddress);
-        vm.expectRevert(ExampleBridgeContract.InvalidCaller.selector);
+        vm.expectRevert(ErrorLib.InvalidCaller.selector);
         exampleBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
     }
 

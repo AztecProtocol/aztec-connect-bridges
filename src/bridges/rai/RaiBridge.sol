@@ -6,10 +6,9 @@ pragma experimental ABIEncoderV2;
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 
 import {ICoinJoin} from "./interfaces/ICoinJoin.sol";
 import {IEthJoin} from "./interfaces/IEthJoin.sol";
@@ -17,16 +16,16 @@ import {ISafeEngine} from "./interfaces/ISafeEngine.sol";
 import {ISafeManager} from "./interfaces/ISafeManager.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
 import {AggregatorV3Interface} from "./interfaces/AggregatorV3Interface.sol";
-import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
+import {BridgeBase} from "../base/BridgeBase.sol";
 
 // NOTE:
 // 1. Theres a minimum amount of RAI to be borrowed in the first call, which is currently 1469 RAI
 // 2. You can find the readme for the contract here: https://gist.github.com/realdiganta/2c73f86820bf7310bd934184fa960e3d
 
-contract RaiBridge is ERC20, IDefiBridge {
+contract RaiBridge is ERC20, BridgeBase {
     using SafeMath for uint256;
 
-    address public immutable rollupProcessor;
     AggregatorV3Interface internal priceFeed = AggregatorV3Interface(0x4ad7B025127e89263242aB68F0f9c4E5C033B489);
     address public constant SAFE_ENGINE = 0xCC88a9d330da1133Df3A7bD823B95e52511A6962;
     address public constant SAFE_MANAGER = 0xEfe0B4cA532769a3AE758fD82E1426a03A94F185;
@@ -43,9 +42,7 @@ contract RaiBridge is ERC20, IDefiBridge {
         address _rollupProcessor,
         string memory _name,
         string memory _symbol
-    ) ERC20(_name, _symbol) {
-        rollupProcessor = _rollupProcessor;
-
+    ) ERC20(_name, _symbol) BridgeBase(_rollupProcessor) {
         // OPEN THE SAFE
         safeId = ISafeManager(SAFE_MANAGER).openSAFE(
             0x4554482d41000000000000000000000000000000000000000000000000000000,
@@ -56,9 +53,9 @@ contract RaiBridge is ERC20, IDefiBridge {
 
         // do all one off approvals
         require(IWETH(WETH).approve(ETH_JOIN, type(uint256).max), "Weth approve failed");
-        require(IWETH(WETH).approve(rollupProcessor, type(uint256).max), "Weth approve failed");
+        require(IWETH(WETH).approve(ROLLUP_PROCESSOR, type(uint256).max), "Weth approve failed");
         require(IERC20(RAI).approve(COIN_JOIN, type(uint256).max), "Rai approve failed");
-        require(IERC20(RAI).approve(rollupProcessor, type(uint256).max), "Rai approve failed");
+        require(IERC20(RAI).approve(ROLLUP_PROCESSOR, type(uint256).max), "Rai approve failed");
         ISafeEngine(SAFE_ENGINE).approveSAFEModification(COIN_JOIN);
     }
 
@@ -100,15 +97,14 @@ contract RaiBridge is ERC20, IDefiBridge {
     )
         external
         payable
+        override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
             uint256 outputValueB,
             bool isAsync
         )
     {
-        // ### INITIALIZATION AND SANITY CHECKS
-        require(msg.sender == rollupProcessor, "RaiBridge: INVALID_CALLER");
-
         if (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
             // transfer to weth
             IWETH(WETH).deposit{value: msg.value}();
@@ -132,7 +128,7 @@ contract RaiBridge is ERC20, IDefiBridge {
                 if (outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                     // change weth to eth
                     IWETH(WETH).withdraw(outputValueA);
-                    IRollupProcessor(rollupProcessor).receiveEthFromBridge{value: outputValueA}(interactionNonce);
+                    IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(interactionNonce);
                 }
             }
         } else {
@@ -143,7 +139,7 @@ contract RaiBridge is ERC20, IDefiBridge {
             );
             isInitialized = true;
 
-            require(IERC20(address(this)).approve(rollupProcessor, type(uint256).max), "BridgeTokens approve failed");
+            require(IERC20(address(this)).approve(ROLLUP_PROCESSOR, type(uint256).max), "BridgeTokens approve failed");
 
             (, int256 raiToEth, , , ) = priceFeed.latestRoundData();
 
@@ -153,25 +149,6 @@ contract RaiBridge is ERC20, IDefiBridge {
             outputValueB = outputValueA;
             _mint(address(this), outputValueB);
         }
-    }
-
-    function finalise(
-        AztecTypes.AztecAsset calldata inputAssetA,
-        AztecTypes.AztecAsset calldata inputAssetB,
-        AztecTypes.AztecAsset calldata outputAssetA,
-        AztecTypes.AztecAsset calldata outputAssetB,
-        uint256 interactionNonce,
-        uint64 auxData
-    )
-        external
-        payable
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        require(false);
     }
 
     // ------------------------------- INTERNAL FUNCTIONS -------------------------------------------------

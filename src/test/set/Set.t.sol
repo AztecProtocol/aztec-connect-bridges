@@ -8,9 +8,11 @@ import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IssuanceBridge} from "./../../bridges/set/IssuanceBridge.sol";
-import {IController} from "./../../bridges/set/interfaces/IController.sol";
-import {ISetToken} from "./../../bridges/set/interfaces/ISetToken.sol";
-import {AztecTypes} from "./../../aztec/AztecTypes.sol";
+import {IController} from "./../../interfaces/set/IController.sol";
+import {ISetToken} from "./../../interfaces/set/ISetToken.sol";
+import {AztecTypes} from "./../../aztec/libraries/AztecTypes.sol";
+
+import {ErrorLib} from "../../bridges/base/ErrorLib.sol";
 
 import {Test} from "forge-std/Test.sol";
 
@@ -36,13 +38,16 @@ contract SetTest is Test {
         tokens[0] = address(DAI);
         tokens[1] = address(DPI);
         issuanceBridge.approveTokens(tokens);
+
+        vm.label(tokens[0], "DAI");
+        vm.label(tokens[1], "DPI");
     }
 
     function testInvalidCaller() public {
         AztecTypes.AztecAsset memory empty;
 
         vm.prank(address(124));
-        vm.expectRevert(IssuanceBridge.InvalidCaller.selector);
+        vm.expectRevert(ErrorLib.InvalidCaller.selector);
         issuanceBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
     }
 

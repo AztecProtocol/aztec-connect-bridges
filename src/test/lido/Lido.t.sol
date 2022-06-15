@@ -9,7 +9,8 @@ import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
 
 import {LidoBridge} from "./../../bridges/lido/LidoBridge.sol";
-import {AztecTypes} from "./../../aztec/AztecTypes.sol";
+import {AztecTypes} from "./../../aztec/libraries/AztecTypes.sol";
+import {ErrorLib} from "./../../bridges/base/ErrorLib.sol";
 
 contract LidoTest is Test {
     // solhint-disable-next-line
@@ -34,21 +35,21 @@ contract LidoTest is Test {
     }
 
     function testErrorCodes() public {
-        vm.expectRevert(LidoBridge.InvalidCaller.selector);
+        vm.expectRevert(ErrorLib.InvalidCaller.selector);
         bridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
 
         vm.startPrank(address(rollupProcessor));
 
-        vm.expectRevert(LidoBridge.InvalidInput.selector);
+        vm.expectRevert(ErrorLib.InvalidInputA.selector);
         bridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
 
-        vm.expectRevert(LidoBridge.InvalidOutput.selector);
+        vm.expectRevert(ErrorLib.InvalidOutputA.selector);
         bridge.convert(ethAsset, empty, empty, empty, 0, 0, 0, address(0));
 
-        vm.expectRevert(LidoBridge.InvalidOutput.selector);
+        vm.expectRevert(ErrorLib.InvalidOutputA.selector);
         bridge.convert(wstETHAsset, empty, empty, empty, 0, 0, 0, address(0));
 
-        vm.expectRevert(LidoBridge.AsyncDisabled.selector);
+        vm.expectRevert(ErrorLib.AsyncDisabled.selector);
         bridge.finalise(wstETHAsset, empty, empty, empty, 0, 0);
 
         vm.stopPrank();

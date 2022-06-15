@@ -4,18 +4,16 @@ pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
-
-import {ILQTYStaking} from "./interfaces/ILQTYStaking.sol";
-import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
+import {BridgeBase} from "../base/BridgeBase.sol";
+import {ILQTYStaking} from "../../interfaces/liquity/ILQTYStaking.sol";
+import {ISwapRouter} from "../../interfaces/liquity/ISwapRouter.sol";
 
 /**
  * @title Aztec Connect Bridge for Liquity's LQTYStaking.sol
  * @author Jan Benes (@benesjan on Github and Telegram)
  * @notice You can use this contract to stake and unstake LQRTY to and from LQTY staking contract.
- * @dev Implementation of the IDefiBridge interface for LQTYStaking.sol from Liquity protocol.
  *
  * The contract inherits from OpenZeppelin's implementation of ERC20 token because token balances are used to track
  * the depositor's ownership of the assets controlled by the bridge contract. The token is called LQTYStaking and
@@ -29,11 +27,9 @@ import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
  *
  * Note: StakingBridge.sol is very similar to StabilityPoolBridge.sol.
  */
-contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
+contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
     error ApproveFailed(address token);
-    error InvalidCaller();
     error IncorrectInput();
-    error AsyncModeDisabled();
 
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -47,14 +43,11 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
     // Optimization based on EIP-1087
     uint256 internal constant DUST = 1;
 
-    address public immutable ROLLUP_PROCESSOR;
-
     /**
      * @notice Set the address of RollupProcessor.sol.
      * @param _rollupProcessor Address of the RollupProcessor.sol
      */
-    constructor(address _rollupProcessor) {
-        ROLLUP_PROCESSOR = _rollupProcessor;
+    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {
         _mint(address(this), DUST);
     }
 
@@ -101,15 +94,14 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
     )
         external
         payable
-        override(IDefiBridge)
+        override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
             uint256,
             bool
         )
     {
-        if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
-
         if (_inputAssetA.erc20Address == LQTY && _outputAssetA.erc20Address == address(this)) {
             // Deposit
             // Stake and claim rewards
@@ -141,27 +133,6 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
         } else {
             revert IncorrectInput();
         }
-    }
-
-    // @notice This function always reverts because this contract does not implement async flow.
-    function finalise(
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        uint256,
-        uint64
-    )
-        external
-        payable
-        override(IDefiBridge)
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        revert AsyncModeDisabled();
     }
 
     /**
