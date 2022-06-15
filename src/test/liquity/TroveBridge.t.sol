@@ -84,7 +84,7 @@ contract TroveBridgeTest is TestUtil {
         // Attempt borrowing when trove was not opened - state 0
         vm.deal(address(rollupProcessor), ROLLUP_PROCESSOR_WEI_BALANCE);
         vm.prank(address(rollupProcessor));
-        vm.expectRevert(abi.encodeWithSignature("IncorrectStatus(uint8,uint8)", 1, 0));
+        vm.expectRevert(abi.encodeWithSignature("IncorrectStatus(uint8,uint8,uint8)", 1, 1, 0));
         bridge.convert(
             AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
