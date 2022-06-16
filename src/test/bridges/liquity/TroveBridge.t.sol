@@ -66,9 +66,6 @@ contract TroveBridgeTest is TestUtil {
         vm.label(0x66017D22b0f8556afDd19FC67041899Eb65a21bb, "STABILITY_POOL");
         vm.label(0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d, "LQTY_STAKING_CONTRACT");
 
-        // Set OWNER's and ROLLUP_PROCESSOR's balances
-        vm.deal(OWNER, OWNER_WEI_BALANCE);
-
         // Set LUSD bridge balance to 1 WEI
         // Necessary for the optimization based on EIP-1087 to work!
         deal(tokens["LUSD"].addr, address(bridge), 1);
@@ -121,6 +118,10 @@ contract TroveBridgeTest is TestUtil {
         _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
         _repay(ROLLUP_PROCESSOR_WEI_BALANCE, 1, false);
         _closeTrove();
+
+        // Try reopening the trove
+        deal(tokens["LUSD"].addr, OWNER, 0); // delete user's LUSD balance to make accounting easier in _openTrove(...)
+        _openTrove();
     }
 
     function testLiquidationFlow() public {
@@ -168,6 +169,21 @@ contract TroveBridgeTest is TestUtil {
         TROVE_MANAGER.liquidate(address(bridge));
 
         _redeem();
+
+        // Close the trove
+        uint256 ownerEthBalanceBefore = OWNER.balance;
+        vm.prank(OWNER);
+        bridge.closeTrove();
+        uint256 ownerEthBalanceAfter = OWNER.balance;
+        assertGt(
+            ownerEthBalanceAfter,
+            ownerEthBalanceBefore,
+            "Owner's ETH balance didn't rise after closing the trove"
+        );
+
+        // Try reopening the trove
+        deal(tokens["LUSD"].addr, OWNER, 0); // delete user's LUSD balance to make accounting easier in _openTrove(...)
+        _openTrove();
     }
 
     function testRedeemFlow() public {
@@ -209,6 +225,10 @@ contract TroveBridgeTest is TestUtil {
 
         _redeem();
         _closeRedeem();
+
+        // Try reopening the trove
+        deal(tokens["LUSD"].addr, OWNER, 0); // delete user's LUSD balance to make accounting easier in _openTrove(...)
+        _openTrove();
     }
 
     function testPartialRedeemFlow() public {
@@ -283,6 +303,26 @@ contract TroveBridgeTest is TestUtil {
         assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST(), "Bridge holds LUSD after interaction");
 
         assertEq(amtLusdReturned, expectedAmtLusdReturned, "Amount of LUSD returned doesn't equal expected amount");
+
+        // Close the trove
+        (uint256 remainingDebt, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+        uint256 ownerEthBalanceBefore = OWNER.balance;
+
+        vm.startPrank(OWNER);
+        tokens["LUSD"].erc.approve(address(bridge), remainingDebt - 200e18);
+        bridge.closeTrove();
+        vm.stopPrank();
+
+        uint256 ownerEthBalanceAfter = OWNER.balance;
+        assertGt(
+            ownerEthBalanceAfter,
+            ownerEthBalanceBefore,
+            "Owner's ETH balance didn't rise after closing the trove"
+        );
+
+        // Try reopening the trove
+        deal(tokens["LUSD"].addr, OWNER, 0); // delete user's LUSD balance to make accounting easier in _openTrove(...)
+        _openTrove();
     }
 
     // @dev run against a block when the flash swap doesn't fail
@@ -293,6 +333,10 @@ contract TroveBridgeTest is TestUtil {
         _repay(ROLLUP_PROCESSOR_WEI_BALANCE * 3, 5e16, true);
 
         _closeTroveAfterRedistribution(OWNER_WEI_BALANCE);
+
+        // Try reopening the trove
+        deal(tokens["LUSD"].addr, OWNER, 0); // delete user's LUSD balance to make accounting easier in _openTrove(...)
+        _openTrove();
     }
 
     function testRedistributionExitWhenICREqualsMCR() public {
@@ -343,6 +387,10 @@ contract TroveBridgeTest is TestUtil {
         (, coll, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         uint256 expectedOwnerBalance = (coll * bridge.balanceOf(OWNER)) / bridge.totalSupply();
         _closeTroveAfterRedistribution(expectedOwnerBalance);
+
+        // Try reopening the trove
+        deal(tokens["LUSD"].addr, OWNER, 0); // delete user's LUSD balance to make accounting easier in _openTrove(...)
+        _openTrove();
     }
 
     // @dev run against a block when the flash swap fails - e.g. block 14972101 (pool was lacking liquidity)
@@ -362,9 +410,14 @@ contract TroveBridgeTest is TestUtil {
         assertLt(tbBalanceAfter, tbBalanceBefore, "TB balance didn't drop");
         assertLt(tbTotalSupplyAfter, tbTotalSupplyBefore, "TB total supply didn't drop");
         assertGt(tbBalanceAfter, 0, "All the debt was unexpectedly repaid");
+
+        // Reopening the trove doesn't make sense here because user didn't burn his full TB balance
     }
 
     function _openTrove() private {
+        // Set owner's balance
+        vm.deal(OWNER, OWNER_WEI_BALANCE);
+
         // Set msg.sender to OWNER
         vm.startPrank(OWNER);
 
