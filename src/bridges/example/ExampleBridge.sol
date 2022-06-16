@@ -13,11 +13,11 @@ contract ExampleBridgeContract is BridgeBase {
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
     function convert(
-        AztecTypes.AztecAsset memory inputAssetA,
+        AztecTypes.AztecAsset memory _inputAssetA,
         AztecTypes.AztecAsset memory,
         AztecTypes.AztecAsset memory,
         AztecTypes.AztecAsset memory,
-        uint256 totalInputValue,
+        uint256 _inputValue,
         uint256,
         uint64,
         address
@@ -33,7 +33,7 @@ contract ExampleBridgeContract is BridgeBase {
         )
     {
         // ### INITIALIZATION AND SANITY CHECKS
-        outputValueA = totalInputValue;
-        IERC20(inputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, totalInputValue);
+        outputValueA = _inputValue;
+        IERC20(_inputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, _inputValue);
     }
 }
