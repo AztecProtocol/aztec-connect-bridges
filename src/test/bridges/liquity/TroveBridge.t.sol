@@ -116,7 +116,7 @@ contract TroveBridgeTest is TestUtil {
         // unless ran repeatedly.
         _openTrove();
         _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
-        _repay(ROLLUP_PROCESSOR_WEI_BALANCE, 1, false);
+        _repay(ROLLUP_PROCESSOR_WEI_BALANCE, 1, false, 1);
         _closeTrove();
 
         // Try reopening the trove
@@ -330,7 +330,7 @@ contract TroveBridgeTest is TestUtil {
         _setUpRedistribution();
 
         // Setting maxEthDelta to 0.05 ETH because there is some loss during swap
-        _repay(ROLLUP_PROCESSOR_WEI_BALANCE * 3, 5e16, true);
+        _repay(ROLLUP_PROCESSOR_WEI_BALANCE * 3, 5e16, true, 1);
 
         _closeTroveAfterRedistribution(OWNER_WEI_BALANCE);
 
@@ -382,7 +382,7 @@ contract TroveBridgeTest is TestUtil {
 
         // Setting maxEthDelta to 0.05 ETH because there is some loss during swap
         uint256 expectedBalance = (coll * bridge.balanceOf(address(rollupProcessor))) / bridge.totalSupply();
-        _repay(expectedBalance, 5e16, true);
+        _repay(expectedBalance, 5e16, true, 1);
 
         (, coll, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         uint256 expectedOwnerBalance = (coll * bridge.balanceOf(OWNER)) / bridge.totalSupply();
@@ -402,14 +402,24 @@ contract TroveBridgeTest is TestUtil {
 
         // Disable balance check by setting max delta to high value - balance is expected to differ since
         // only a part of the debt should get repaid
-        _repay(ROLLUP_PROCESSOR_WEI_BALANCE * 3, type(uint256).max, true);
+        _repay(0, type(uint256).max, true, 1);
 
-        uint256 tbTotalSupplyAfter = bridge.totalSupply();
-        uint256 tbBalanceAfter = bridge.balanceOf(address(rollupProcessor));
+        uint256 tbTotalSupplyAfter1 = bridge.totalSupply();
+        uint256 tbBalanceAfter1 = bridge.balanceOf(address(rollupProcessor));
 
-        assertLt(tbBalanceAfter, tbBalanceBefore, "TB balance didn't drop");
-        assertLt(tbTotalSupplyAfter, tbTotalSupplyBefore, "TB total supply didn't drop");
-        assertGt(tbBalanceAfter, 0, "All the debt was unexpectedly repaid");
+        assertLt(tbBalanceAfter1, tbBalanceBefore, "TB balance didn't drop");
+        assertLt(tbTotalSupplyAfter1, tbTotalSupplyBefore, "TB total supply didn't drop");
+        assertGt(tbBalanceAfter1, 0, "All the debt was unexpectedly repaid");
+
+        // Since some of TB got returned, try repaying one more time
+        _repay(0, type(uint256).max, true, 3);
+
+        uint256 tbTotalSupplyAfter2 = bridge.totalSupply();
+        uint256 tbBalanceAfter2 = bridge.balanceOf(address(rollupProcessor));
+
+        assertLt(tbBalanceAfter2, tbBalanceAfter1, "TB balance didn't drop in the second run");
+        assertLt(tbTotalSupplyAfter2, tbTotalSupplyAfter1, "TB total supply didn't drop in the second run");
+        assertGt(tbBalanceAfter2, 0, "All the debt was unexpectedly repaid in the second run");
 
         // Reopening the trove doesn't make sense here because user didn't burn his full TB balance
     }
@@ -525,7 +535,8 @@ contract TroveBridgeTest is TestUtil {
     function _repay(
         uint256 _expectedBalance,
         uint256 _maxEthDelta,
-        bool _afterRedistribution
+        bool _afterRedistribution,
+        uint256 _interactionNonce
     ) private {
         uint256 processorTBBalance = bridge.balanceOf(address(rollupProcessor));
 
@@ -542,7 +553,7 @@ contract TroveBridgeTest is TestUtil {
                 ? AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20)
                 : AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
             processorTBBalance,
-            1,
+            _interactionNonce,
             MAX_FEE
         );
 
