@@ -33,7 +33,7 @@ contract StakingBridgeTestInternal is TestUtil, StakingBridge(address(0)) {
         payable(address(0)).transfer(address(this).balance - 1 ether);
 
         uint256 stakedLQTYBeforeSwap = STAKING_CONTRACT.stakes(address(this));
-        _swapRewardsToLQTYAndStake();
+        _swapRewardsToLQTYAndStake(false);
         uint256 stakedLQTYAfterSwap = STAKING_CONTRACT.stakes(address(this));
 
         // Verify that rewards were swapped for non-zero amount and correctly staked

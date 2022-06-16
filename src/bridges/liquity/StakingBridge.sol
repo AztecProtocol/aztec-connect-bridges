@@ -81,8 +81,16 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
      * @param _inputAssetA - LQTY (Staking) or SB (Unstaking)
      * @param _outputAssetA - SB (Staking) or LQTY (Unstaking)
      * @param _inputValue - the amount of LQTY to stake or the amount of SB to burn and exchange for LQTY
+     * @param _auxData - when set to 1 during withdrawals "urgent withdrawal mode" is set (see note bellow)
      * @return outputValueA - the amount of SB (Staking) or LQTY (Unstaking) minted/transferred to
      * the RollupProcessor.sol
+     *
+     * @dev Note: When swapping rewards fails during withdrawals and "urgent withdrawal mode" is set, the method
+     *            doesn't revert and the withdrawer gives up on their claim on the rewards. This mode is present
+     *            in order to avoid a scenario when issues with Uniswap pools (lacking liquidity etc.) prevents users
+     *            from withdrawing their funds. This mode can't be set upon deposit because it would allow depositors
+     *            to steal value from previous bridge depositors. Also the deposit flow being bricked is much less
+     *            severe than for withdrawal flow.
      */
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
@@ -91,7 +99,7 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
         AztecTypes.AztecAsset calldata,
         uint256 _inputValue,
         uint256,
-        uint64,
+        uint64 _auxData,
         address
     )
         external
@@ -108,7 +116,7 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
             // Deposit
             // Stake and claim rewards
             STAKING_CONTRACT.stake(_inputValue);
-            _swapRewardsToLQTYAndStake();
+            _swapRewardsToLQTYAndStake(false);
             uint256 totalSupply = this.totalSupply();
             // outputValueA = how much SB should be minted
             if (totalSupply == 0) {
@@ -125,7 +133,7 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
             // Withdrawal
             // Claim rewards
             STAKING_CONTRACT.unstake(0);
-            _swapRewardsToLQTYAndStake();
+            _swapRewardsToLQTYAndStake(_auxData == 1);
 
             // STAKING_CONTRACT.stakes(address(this)) / this.totalSupply() = how much LQTY is one SB
             // outputValueA = amount of LQTY to be withdrawn and sent to rollupProcessor
@@ -146,23 +154,31 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
 
     /*
      * @notice Swaps any ETH and LUSD currently held by the contract to LQTY and stakes LQTY in LQTYStaking.sol.
-     *
+     * @param _isUrgentWithdrawalMode When set to true the function doesn't revert when the swaps fail.
      * @dev Note: The best route for LUSD -> LQTY is consistently LUSD -> USDC -> WETH -> LQTY. Since I want to swap
      * liquidation rewards (ETH) to LQTY as well, I will first swap LUSD to WETH through USDC and then swap it all
      * to LQTY
      */
-    function _swapRewardsToLQTYAndStake() internal {
+    function _swapRewardsToLQTYAndStake(bool _isUrgentWithdrawalMode) internal {
         uint256 lusdBalance = IERC20(LUSD).balanceOf(address(this));
         if (lusdBalance > MIN_LUSD_SWAP_AMT) {
-            UNI_ROUTER.exactInput(
-                ISwapRouter.ExactInputParams({
-                    path: abi.encodePacked(LUSD, uint24(500), USDC, uint24(500), WETH),
-                    recipient: address(this),
-                    deadline: block.timestamp,
-                    amountIn: lusdBalance - DUST,
-                    amountOutMinimum: 0
-                })
-            );
+            try
+                UNI_ROUTER.exactInput(
+                    ISwapRouter.ExactInputParams({
+                        path: abi.encodePacked(LUSD, uint24(500), USDC, uint24(500), WETH),
+                        recipient: address(this),
+                        deadline: block.timestamp,
+                        amountIn: lusdBalance - DUST,
+                        amountOutMinimum: 0
+                    })
+                )
+            {
+                // Method didn't throw or revert
+            } catch (bytes memory) {
+                if (_isUrgentWithdrawalMode) {
+                    revert ErrorLib.SwapFailed();
+                }
+            }
         }
 
         uint256 ethBalance = address(this).balance;
@@ -173,20 +189,28 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
 
         uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
         if (wethBalance > MIN_ETH_SWAP_AMT) {
-            uint256 amountLQTYOut = UNI_ROUTER.exactInputSingle(
-                ISwapRouter.ExactInputSingleParams(
-                    WETH,
-                    LQTY,
-                    3000,
-                    address(this),
-                    block.timestamp,
-                    wethBalance - DUST,
-                    0,
-                    0
+            try
+                UNI_ROUTER.exactInputSingle(
+                    ISwapRouter.ExactInputSingleParams(
+                        WETH,
+                        LQTY,
+                        3000,
+                        address(this),
+                        block.timestamp,
+                        wethBalance - DUST,
+                        0,
+                        0
+                    )
                 )
-            );
-            if (amountLQTYOut != 0) {
-                STAKING_CONTRACT.stake(amountLQTYOut);
+            returns (uint256 amountLQTYOut) {
+                // Method didn't throw or revert
+                if (amountLQTYOut != 0) {
+                    STAKING_CONTRACT.stake(amountLQTYOut);
+                }
+            } catch (bytes memory) {
+                if (_isUrgentWithdrawalMode) {
+                    revert ErrorLib.SwapFailed();
+                }
             }
         }
     }

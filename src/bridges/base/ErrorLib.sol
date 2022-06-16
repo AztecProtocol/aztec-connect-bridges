@@ -16,6 +16,8 @@ library ErrorLib {
     error ApproveFailed(address token);
     error TransferFailed(address token);
 
+    error SwapFailed();
+
     error InvalidNonce();
     error AsyncDisabled();
 }
