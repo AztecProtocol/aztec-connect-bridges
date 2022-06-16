@@ -367,17 +367,18 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     {
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
         // Compute how much debt to be repay
-        uint256 debtToRepay = (_tbAmount * debtBefore) / this.totalSupply();
+        uint256 tbTotalSupply = this.totalSupply(); // SLOAD optimization
+        uint256 debtToRepay = (_tbAmount * debtBefore) / tbTotalSupply;
         if (debtToRepay > _tbAmount) revert ErrorLib.InvalidOutputB();
 
         // Compute how much collateral to withdraw
-        uint256 collToWithdraw = (_tbAmount * collBefore) / this.totalSupply();
+        uint256 collToWithdraw = (_tbAmount * collBefore) / tbTotalSupply;
 
         // Repay _inputValue of LUSD and withdraw collateral
         (address upperHint, address lowerHint) = _getHints();
         BORROWER_OPERATIONS.adjustTrove(0, collToWithdraw, debtToRepay, false, upperHint, lowerHint);
         lusdReturned = _tbAmount - debtToRepay; // LUSD to return --> 0 unless trove was partially redeemed
-        // 5. Burn input TB and return ETH to rollup processor
+        // Burn input TB and return ETH to rollup processor
         collateral = address(this).balance;
         _burn(address(this), _tbAmount);
         IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: collateral}(_interactionNonce);
@@ -405,24 +406,38 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         private
         returns (uint256 collateral, uint256 tbReturned)
     {
-        // TODO: handle failed swaps and return TB if that's the case
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
         // Compute how much debt to be repay
-        uint256 debtToRepay = (_tbAmount * debtBefore) / this.totalSupply();
+        uint256 tbTotalSupply = this.totalSupply(); // SLOAD optimization
+        uint256 debtToRepay = (_tbAmount * debtBefore) / tbTotalSupply;
         if (debtToRepay <= _tbAmount) revert ErrorLib.InvalidOutputB();
         // Compute how much collateral to withdraw
-        uint256 collToWithdraw = (_tbAmount * collBefore) / this.totalSupply();
+        uint256 collToWithdraw = (_tbAmount * collBefore) / tbTotalSupply;
 
-        IUniswapV3PoolActions(LUSD_USDC_POOL).swap(
-            address(this), // recipient
-            false, // zeroForOne
-            -int256(debtToRepay - _tbAmount), // amount of LUSD to receive
-            SQRT_PRICE_LIMIT_X96,
-            abi.encode(SwapCallbackData({debtToRepay: debtToRepay, collToWithdraw: collToWithdraw}))
-        );
-        // 5. Burn input TB and return ETH to rollup processor
+        try
+            IUniswapV3PoolActions(LUSD_USDC_POOL).swap(
+                address(this), // recipient
+                false, // zeroForOne
+                -int256(debtToRepay - _tbAmount), // amount of LUSD to receive
+                SQRT_PRICE_LIMIT_X96,
+                abi.encode(SwapCallbackData({debtToRepay: debtToRepay, collToWithdraw: collToWithdraw}))
+            )
+        {
+            // Flash swap was executed without error/revert - burn all input TB
+            _burn(address(this), _tbAmount);
+        } catch (bytes memory) {
+            // Flash swap failed - repay as much debt as you can with current LUSD balance and return the remaining TB
+            debtToRepay = _tbAmount;
+            uint256 tbToBurn = (debtToRepay * tbTotalSupply) / debtBefore;
+            collToWithdraw = (tbToBurn * collBefore) / tbTotalSupply;
+            // Repay _inputValue of LUSD and withdraw collateral
+            (address upperHint, address lowerHint) = _getHints();
+            BORROWER_OPERATIONS.adjustTrove(0, collToWithdraw, debtToRepay, false, upperHint, lowerHint);
+            tbReturned = _tbAmount - tbToBurn;
+            _burn(address(this), tbToBurn);
+        }
+        // Return ETH to rollup processor
         collateral = address(this).balance;
-        _burn(address(this), _tbAmount);
         IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: collateral}(_interactionNonce);
     }
 

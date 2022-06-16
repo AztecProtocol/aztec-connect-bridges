@@ -285,32 +285,9 @@ contract TroveBridgeTest is TestUtil {
         assertEq(amtLusdReturned, expectedAmtLusdReturned, "Amount of LUSD returned doesn't equal expected amount");
     }
 
+    // @dev run against a block when the flash swap doesn't fail
     function testRedistribution() public {
-        vm.prank(OWNER);
-        bridge = new TroveBridge(address(rollupProcessor), 500);
-
-        _openTrove();
-        _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
-
-        (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
-
-        // Erase stability pool's LUSD balance
-        deal(tokens["LUSD"].addr, STABILITY_POOL, 0);
-
-        uint256 priceBeforeDrop = TROVE_MANAGER.priceFeed().fetchPrice();
-
-        setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
-        TROVE_MANAGER.liquidateTroves(10);
-
-        (uint256 debtAfter, uint256 collAfter, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
-
-        assertGt(debtAfter, debtBefore, "Debt hasn't increased after liquidations");
-        assertGt(collAfter, collBefore, "Collateral hasn't increased after liquidations");
-
-        _borrowAfterRedistribution();
-
-        // Rise the price back so that the system is not in recovery mode - allows me to drop trove's CR for a bit
-        setLiquityPrice(priceBeforeDrop);
+        _setUpRedistribution();
 
         // Setting maxEthDelta to 0.05 ETH because there is some loss during swap
         _repay(ROLLUP_PROCESSOR_WEI_BALANCE * 3, 5e16, true);
@@ -366,6 +343,25 @@ contract TroveBridgeTest is TestUtil {
         (, coll, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         uint256 expectedOwnerBalance = (coll * bridge.balanceOf(OWNER)) / bridge.totalSupply();
         _closeTroveAfterRedistribution(expectedOwnerBalance);
+    }
+
+    // @dev run against a block when the flash swap fails - e.g. block 14972101 (pool was lacking liquidity)
+    function testRedistributionFailingFlashSwap() public {
+        _setUpRedistribution();
+
+        uint256 tbBalanceBefore = bridge.balanceOf(address(rollupProcessor));
+        uint256 tbTotalSupplyBefore = bridge.totalSupply();
+
+        // Disable balance check by setting max delta to high value - balance is expected to differ since
+        // only a part of the debt should get repaid
+        _repay(ROLLUP_PROCESSOR_WEI_BALANCE * 3, type(uint256).max, true);
+
+        uint256 tbTotalSupplyAfter = bridge.totalSupply();
+        uint256 tbBalanceAfter = bridge.balanceOf(address(rollupProcessor));
+
+        assertLt(tbBalanceAfter, tbBalanceBefore, "TB balance didn't drop");
+        assertLt(tbTotalSupplyAfter, tbTotalSupplyBefore, "TB total supply didn't drop");
+        assertGt(tbBalanceAfter, 0, "All the debt was unexpectedly repaid");
     }
 
     function _openTrove() private {
@@ -445,6 +441,34 @@ contract TroveBridgeTest is TestUtil {
         assertGt(tokens["LUSD"].erc.balanceOf(address(rollupProcessor)), 0, "Rollup processor doesn't hold any LUSD");
     }
 
+    function _setUpRedistribution() private {
+        vm.prank(OWNER);
+        bridge = new TroveBridge(address(rollupProcessor), 500);
+
+        _openTrove();
+        _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
+
+        (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+
+        // Erase stability pool's LUSD balance in order to force redistribution
+        deal(tokens["LUSD"].addr, STABILITY_POOL, 0);
+
+        uint256 priceBeforeDrop = TROVE_MANAGER.priceFeed().fetchPrice();
+
+        setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
+        TROVE_MANAGER.liquidateTroves(10);
+
+        (uint256 debtAfter, uint256 collAfter, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+
+        assertGt(debtAfter, debtBefore, "Debt hasn't increased after liquidations");
+        assertGt(collAfter, collBefore, "Collateral hasn't increased after liquidations");
+
+        _borrowAfterRedistribution();
+
+        // Rise the price back so that the system is not in recovery mode - allows me to drop trove's CR for a bit
+        setLiquityPrice(priceBeforeDrop);
+    }
+
     function _repay(
         uint256 _expectedBalance,
         uint256 _maxEthDelta,
@@ -477,7 +501,7 @@ contract TroveBridgeTest is TestUtil {
             address(rollupProcessor).balance,
             _expectedBalance,
             _maxEthDelta,
-            "Current rollup processor balance differs from the expected balance by more than maxEthDelta"
+            "Current rollup processor ETH balance differs from the expected balance by more than maxEthDelta"
         );
     }
 
