@@ -286,7 +286,7 @@ contract TroveBridgeTest is TestUtil {
     }
 
     // @dev run against a block when the flash swap doesn't fail
-    function testRedistribution() public {
+    function testRedistributionSuccessfulSwap() public {
         _setUpRedistribution();
 
         // Setting maxEthDelta to 0.05 ETH because there is some loss during swap
@@ -295,7 +295,7 @@ contract TroveBridgeTest is TestUtil {
         _closeTroveAfterRedistribution(OWNER_WEI_BALANCE);
     }
 
-    function testExitWhenICREqualsMCRAfterRedistribution() public {
+    function testRedistributionExitWhenICREqualsMCR() public {
         vm.prank(OWNER);
         bridge = new TroveBridge(address(rollupProcessor), 500);
 
@@ -346,7 +346,7 @@ contract TroveBridgeTest is TestUtil {
     }
 
     // @dev run against a block when the flash swap fails - e.g. block 14972101 (pool was lacking liquidity)
-    function testRedistributionFailingFlashSwap() public {
+    function testRedistributionFailingSwap() public {
         _setUpRedistribution();
 
         uint256 tbBalanceBefore = bridge.balanceOf(address(rollupProcessor));
@@ -633,8 +633,8 @@ contract TroveBridgeTest is TestUtil {
         assertApproxEqAbs(
             OWNER.balance,
             _expectedBalance,
-            1e17,
-            "Current owner balance differs from the initial balance by more than 0.1 ETH"
+            2e17,
+            "Current owner balance differs from the initial balance by more than 0.2 ETH"
         );
 
         assertEq(bridge.totalSupply(), 0, "TB total supply is not 0 after trove closure");
