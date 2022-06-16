@@ -10,7 +10,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 import {IERC4626} from "./Interfaces/IERC4626.sol";
-error Unauthorized();
 
 /**
  * @title Aztec Connect Bridge for ERC4626 compatible vaults
@@ -22,7 +21,9 @@ error Unauthorized();
  */
 contract VaultBridge is IDefiBridge, Ownable {
     using SafeMath for uint256;
-
+    error Unauthorized();
+    error InvalidTokenPair();
+    error AssetMustEmpty();
     address public immutable rollupProcessor;
 
     constructor(address _rollupProcessor) public {
@@ -57,12 +58,15 @@ contract VaultBridge is IDefiBridge, Ownable {
         override
         returns (
             uint256 outputValueA,
-            uint256 outputValueB,
-            bool isAsync
+            uint256,
+            bool
         )
     {
         // // ### INITIALIZATION AND SANITY CHECKS
-
+        if (
+            outputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED ||
+            inputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED
+        ) revert AssetMustEmpty();
         if (msg.sender != rollupProcessor) revert Unauthorized();
 
         if (testPair(outputAssetA.erc20Address, inputAssetA.erc20Address)) {
@@ -70,7 +74,7 @@ contract VaultBridge is IDefiBridge, Ownable {
         } else if (testPair(inputAssetA.erc20Address, outputAssetA.erc20Address)) {
             outputValueA = exit(inputAssetA.erc20Address, outputAssetA.erc20Address, totalInputValue);
         } else {
-            revert("invalid vault token pair address");
+            revert InvalidTokenPair();
         }
     }
 
@@ -92,7 +96,7 @@ contract VaultBridge is IDefiBridge, Ownable {
 
     /**
      * @notice Internal Function used to stake
-     * @dev This method deposits an exact amount of asset into an erc4626 vault then approves the rollup processor
+     * @dev This method deposits an exact amount of asset into an erc4626 vault
      *
      * @param vault address of erc4626 vault
      * @param token address of the vault asset token
@@ -106,17 +110,15 @@ contract VaultBridge is IDefiBridge, Ownable {
         uint256 amount
     ) internal returns (uint256) {
         IERC20 depositToken = IERC20(token);
-        // depositToken.approve(vault, amount);
-        uint256 prev = IERC4626(vault).balanceOf(address(this));
-        IERC4626(vault).deposit(amount, address(this));
-        uint256 _after = IERC4626(vault).balanceOf(address(this));
-        // IERC4626(vault).approve(rollupProcessor, _after.sub(prev));
-        return _after.sub(prev);
+
+        uint256 shares = IERC4626(vault).deposit(amount, address(this));
+
+        return shares;
     }
 
     /**
      * @notice Internal Function used to unstake
-     * @dev This method redeems an exact number of shares into an erc4626 vault then approves the rollup processor
+     * @dev This method redeems an exact number of shares into an erc4626 vault
      *
      * @param vault address of erc4626 vault
      * @param token address of the vault asset
@@ -128,12 +130,9 @@ contract VaultBridge is IDefiBridge, Ownable {
         address token,
         uint256 amount
     ) internal returns (uint256) {
-        IERC20 withdrawToken = IERC20(token);
-        uint256 prev = withdrawToken.balanceOf(address(this));
-        IERC4626(vault).redeem(amount, msg.sender, address(this));
-        uint256 _after = withdrawToken.balanceOf(address(this));
-        //withdrawToken.approve(rollupProcessor, _after.sub(prev));
-        return _after.sub(prev);
+        uint256 assets = IERC4626(vault).redeem(amount, address(this), address(this));
+
+        return assets;
     }
 
     /**
@@ -142,6 +141,7 @@ contract VaultBridge is IDefiBridge, Ownable {
      * @param token address of the vault asset
      */
     function approvePair(address vault, address token) public {
+        IERC20(token).approve(rollupProcessor, type(uint256).max);
         IERC20(token).approve(vault, type(uint256).max);
         IERC20(vault).approve(rollupProcessor, type(uint256).max);
     }

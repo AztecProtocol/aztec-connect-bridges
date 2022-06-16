@@ -15,8 +15,6 @@ import "forge-std/console.sol";
 //Tested at block 14886873 may not work at other blocks
 // forge test --fork-block-number 14886873  --match-contract ERC4626 --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c
 contract ERC4626 is Test {
-    // Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
     DefiBridgeProxy defiBridgeProxy;
     RollupProcessor rollupProcessor;
 
@@ -37,12 +35,13 @@ contract ERC4626 is Test {
         _aztecPreSetup();
 
         vaultbridge = new VaultBridge(address(rollupProcessor));
-        //vaultbridge.validateVault(address(vault));
+
         rollupProcessor.setBridgeGasLimit(address(vaultbridge), 1000000);
     }
 
-    function testVaultBridge1() public {
-        uint256 depositAmount = 5000;
+    function testVaultBridge1(uint256 _depositAmount) public {
+        uint256 depositAmount = bound(_depositAmount, 5000, type(uint96).max);
+        // uint256 depositAmount = 5000;
         deal(address(maple), address(rollupProcessor), depositAmount);
 
         vaultbridge.approvePair(address(vault), address(maple));
@@ -71,15 +70,25 @@ contract ERC4626 is Test {
 
         uint256 rollupMapleShares = vault.balanceOf(address(rollupProcessor));
         console.log(rollupMapleShares, "ouput amount");
-        assertEq(rollupMapleShares, 4996);
-        rollupProcessor.convert(address(vaultbridge), outputAsset, empty, inputAsset, empty, rollupMapleShares, 1, 0);
+
+        assertEq(rollupMapleShares, outputValueA);
+        (outputValueA, outputValueB, isAsync) = rollupProcessor.convert(
+            address(vaultbridge),
+            outputAsset,
+            empty,
+            inputAsset,
+            empty,
+            outputValueA,
+            2,
+            0
+        );
+
         uint256 rollupMapleToken = maple.balanceOf(address(rollupProcessor));
         console.log(rollupMapleToken, "withdraw amount");
-        assertEq(rollupMapleToken, 4999);
-        //assertEq(depositAmount, rollupBeefy, 'Balances must match');
+        assertEq(outputValueA, rollupMapleToken);
     }
 
-    /* function testVaultBridge2() public {
+    /*function testVaultBridge2() public {
         uint256 depositAmount = 5;
         deal(address(fei), address(rollupProcessor), depositAmount);
         vaultbridge.approvePair(address(tribeVault), address(fei));
@@ -109,7 +118,7 @@ contract ERC4626 is Test {
 
         uint256 rollupMapleShares = vault.balanceOf(address(rollupProcessor));
         console.log(rollupMapleShares, "ouput amount");
-        /*assertEq(rollupMapleShares, 4996);
+        assertEq(rollupMapleShares, 4996);
         rollupProcessor.convert(address(vaultbridge), outputAsset, empty, inputAsset, empty, rollupMapleShares, 1, 0);
         uint256 rollupMapleToken = maple.balanceOf(address(rollupProcessor));
         console.log(rollupMapleToken, "withdraw amount");
