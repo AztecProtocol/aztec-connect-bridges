@@ -240,7 +240,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
                 revert ErrorLib.TransferFailed(LUSD);
             }
             BORROWER_OPERATIONS.closeTrove();
-        } else if (troveStatus == Status.closedByRedemption) {
+        } else if (troveStatus == Status.closedByRedemption || troveStatus == Status.closedByLiquidation) {
             if (!collateralClaimed) {
                 BORROWER_OPERATIONS.claimCollateral();
             } else {
@@ -401,6 +401,10 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
      *        2) repay the user's trove debt in full (in the 1st callback),
      *        3) flash swap WETH to USDC with recipient being the LUSD_USDC_POOL - this pays for the first swap,
      *        4) in the 2nd callback deposit part of the withdrawn collateral to WETH and pay for the 2nd swap.
+     *      In case the flash swap fails only a part of the debt gets repaid and the remaining TB balance corresponding
+     *      to the unpaid debt gets returned.
+     *      Note: Since owner is not able to exit until all the TB of everyone else gets burned his funds will be
+     *      stuck forever unless the Uniswap pools recover.
      */
     function _repayAfterRedistribution(uint256 _tbAmount, uint256 _interactionNonce)
         private
