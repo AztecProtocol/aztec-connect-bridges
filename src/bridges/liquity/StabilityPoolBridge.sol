@@ -43,6 +43,10 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
     // Optimization based on EIP-1087
     uint256 internal constant DUST = 1;
 
+    // Smallest amounts of rewards to swap (gas optimizations)
+    uint256 private constant MIN_LQTY_SWAP_AMT = 1e20; // 100 LQTY tokens
+    uint256 private constant MIN_ETH_SWAP_AMT = 1e17; // 0.1 ETH
+
     address public immutable FRONTEND_TAG; // see StabilityPool.sol for details
 
     /**
@@ -158,7 +162,7 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
      */
     function _swapRewardsToLUSDAndDeposit() internal {
         uint256 lqtyBalance = IERC20(LQTY).balanceOf(address(this));
-        if (lqtyBalance > DUST) {
+        if (lqtyBalance > MIN_LQTY_SWAP_AMT) {
             UNI_ROUTER.exactInputSingle(
                 ISwapRouter.ExactInputSingleParams(
                     LQTY,
@@ -180,7 +184,7 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
         }
 
         uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
-        if (wethBalance > DUST) {
+        if (wethBalance > MIN_ETH_SWAP_AMT) {
             uint256 lusdBalance = UNI_ROUTER.exactInput(
                 ISwapRouter.ExactInputParams({
                     path: abi.encodePacked(WETH, uint24(500), USDC, uint24(500), LUSD),

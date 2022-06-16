@@ -41,6 +41,10 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
     // Optimization based on EIP-1087
     uint256 internal constant DUST = 1;
 
+    // Smallest amounts of rewards to swap (gas optimizations)
+    uint256 private constant MIN_LUSD_SWAP_AMT = 1e20; // 100 LUSD
+    uint256 private constant MIN_ETH_SWAP_AMT = 1e17; // 0.1 ETH
+
     /**
      * @notice Set the address of RollupProcessor.sol.
      * @param _rollupProcessor Address of the RollupProcessor.sol
@@ -149,7 +153,7 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
      */
     function _swapRewardsToLQTYAndStake() internal {
         uint256 lusdBalance = IERC20(LUSD).balanceOf(address(this));
-        if (lusdBalance > DUST) {
+        if (lusdBalance > MIN_LUSD_SWAP_AMT) {
             UNI_ROUTER.exactInput(
                 ISwapRouter.ExactInputParams({
                     path: abi.encodePacked(LUSD, uint24(500), USDC, uint24(500), WETH),
@@ -168,7 +172,7 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
         }
 
         uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
-        if (wethBalance > DUST) {
+        if (wethBalance > MIN_ETH_SWAP_AMT) {
             uint256 amountLQTYOut = UNI_ROUTER.exactInputSingle(
                 ISwapRouter.ExactInputSingleParams(
                     WETH,
