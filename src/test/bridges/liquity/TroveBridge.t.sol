@@ -8,9 +8,9 @@ import {TroveBridge} from "../../../bridges/liquity/TroveBridge.sol";
 import {IBorrowerOperations} from "../../../interfaces/liquity/IBorrowerOperations.sol";
 import {ITroveManager} from "../../../interfaces/liquity/ITroveManager.sol";
 import {ISortedTroves} from "../../../interfaces/liquity/ISortedTroves.sol";
+import {IHintHelpers} from "../../../interfaces/liquity/IHintHelpers.sol";
 
 import {TestUtil} from "./utils/TestUtil.sol";
-import {IHintHelpers} from "./interfaces/IHintHelpers.sol";
 
 contract TroveBridgeTest is TestUtil {
     enum Status {
@@ -472,7 +472,7 @@ contract TroveBridgeTest is TestUtil {
     function _repay(
         uint256 _expectedBalance,
         uint256 _maxEthDelta,
-        bool afterRedistribution
+        bool _afterRedistribution
     ) private {
         uint256 processorTBBalance = bridge.balanceOf(address(rollupProcessor));
 
@@ -485,7 +485,7 @@ contract TroveBridgeTest is TestUtil {
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH),
-            afterRedistribution
+            _afterRedistribution
                 ? AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20)
                 : AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
             processorTBBalance,

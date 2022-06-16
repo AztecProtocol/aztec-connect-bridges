@@ -200,7 +200,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             if (troveStatus != Status.active) revert InvalidStatus(Status.active, Status.active, troveStatus);
             if (_outputAssetB.erc20Address == LUSD) {
                 // A case when the trove was partially redeemed (1 TB corresponding to less than 1 LUSD of debt) or not
-                // redeemed and not touched by redistribution (1 TB correospinding to exactly 1 LUSD of debt)
+                // redeemed and not touched by redistribution (1 TB corresponding to exactly 1 LUSD of debt)
                 (outputValueA, outputValueB) = _repay(_inputValue, _interactionNonce);
             } else if (_outputAssetB.erc20Address == address(this)) {
                 // A case when the trove was touched by redistribution (1 TB corresponding to more than 1 LUSD of debt)
