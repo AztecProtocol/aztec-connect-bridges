@@ -7,26 +7,24 @@ import {RollupProcessor} from "../../../aztec/RollupProcessor.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {Test} from "forge-std/Test.sol";
 
+import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
+
 // Example-specific imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ExampleBridgeContract} from "../../../bridges/example/ExampleBridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
-contract ExampleTest is Test {
+contract ExampleTest is BridgeTestBase {
     IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-
-    DefiBridgeProxy internal defiBridgeProxy;
-    RollupProcessor internal rollupProcessor;
-
     ExampleBridgeContract internal exampleBridge;
 
+    uint256 private id;
+
     function setUp() public {
-        defiBridgeProxy = new DefiBridgeProxy();
-        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
-
-        exampleBridge = new ExampleBridgeContract(address(rollupProcessor));
-
-        rollupProcessor.setBridgeGasLimit(address(exampleBridge), 100000);
+        exampleBridge = new ExampleBridgeContract(address(ROLLUP_PROCESSOR));
+        vm.prank(MULTI_SIG);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(exampleBridge), 100000);
+        id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
     }
 
     function testErrorCodes() public {
@@ -40,37 +38,29 @@ contract ExampleTest is Test {
     }
 
     function testExampleBridge() public {
-        uint256 depositAmount = 15000;
-        // Mint the depositAmount of Dai to rollupProcessor
-        deal(address(DAI), address(rollupProcessor), depositAmount);
-
         AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
-            id: 1,
+        // This is a little annoying, because we are not really using the erc20 address here, we are using using the Id. We might want to give an error?
+        AztecTypes.AztecAsset memory daiAsset = AztecTypes.AztecAsset({
+            id: 2,
             erc20Address: address(DAI),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
-        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(DAI),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        uint256 depositAmount = 15000;
 
-        // Disabling linting errors here to show return variables
-        // solhint-disable-next-line
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
-            address(exampleBridge),
-            inputAsset,
-            empty,
-            outputAsset,
-            empty,
-            depositAmount,
-            1,
-            0
-        );
+        // Mint the depositAmount of Dai to rollupProcessor
+        deal(address(DAI), address(ROLLUP_PROCESSOR), depositAmount);
 
-        uint256 rollupDai = DAI.balanceOf(address(rollupProcessor));
+        uint256 bridgeId = encodeBridgeId(id, daiAsset, empty, daiAsset, empty, 0);
+        vm.expectEmit(true, true, false, true);
+        emit DefiBridgeProcessed(bridgeId, getNextNonce(), depositAmount, depositAmount, 0, true, "");
+        sendDefiRollup(bridgeId, depositAmount);
 
-        assertEq(depositAmount, rollupDai, "Balances must match");
+        assertEq(depositAmount, DAI.balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
+
+        vm.expectEmit(true, true, false, true);
+        emit DefiBridgeProcessed(bridgeId, getNextNonce(), depositAmount / 2, depositAmount / 2, 0, true, "");
+        sendDefiRollup(bridgeId, depositAmount / 2);
+
+        assertEq(depositAmount, DAI.balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
     }
 }
