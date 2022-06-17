@@ -22,44 +22,37 @@ contract ExampleTest is BridgeTestBase {
 
     function setUp() public {
         exampleBridge = new ExampleBridgeContract(address(ROLLUP_PROCESSOR));
+        vm.label(address(exampleBridge), "Example Bridge");
         vm.prank(MULTI_SIG);
         ROLLUP_PROCESSOR.setSupportedBridge(address(exampleBridge), 100000);
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
     }
 
-    function testErrorCodes() public {
-        AztecTypes.AztecAsset memory empty;
-
-        address callerAddress = address(bytes20(uint160(uint256(keccak256("non-rollup-processor-address")))));
-
-        vm.prank(callerAddress);
+    function testErrorCodes(address _callerAddress) public {
+        vm.assume(_callerAddress != address(ROLLUP_PROCESSOR));
+        vm.prank(_callerAddress);
         vm.expectRevert(ErrorLib.InvalidCaller.selector);
-        exampleBridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
+        exampleBridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
-    function testExampleBridge() public {
-        AztecTypes.AztecAsset memory empty;
-        // This is a little annoying, because we are not really using the erc20 address here, we are using using the Id. We might want to give an error?
-        AztecTypes.AztecAsset memory daiAsset = AztecTypes.AztecAsset({
-            id: 2,
-            erc20Address: address(DAI),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-        uint256 depositAmount = 15000;
+    function testExampleBridge(uint256 _depositAmount) public {
+        uint256 depositAmount = bound(_depositAmount, 2, type(uint96).max);
+        AztecTypes.AztecAsset memory daiAsset = getRealAztecAsset(address(DAI));
 
         // Mint the depositAmount of Dai to rollupProcessor
         deal(address(DAI), address(ROLLUP_PROCESSOR), depositAmount);
 
-        uint256 bridgeId = encodeBridgeId(id, daiAsset, empty, daiAsset, empty, 0);
+        uint256 bridgeId = encodeBridgeId(id, daiAsset, emptyAsset, daiAsset, emptyAsset, 0);
         vm.expectEmit(true, true, false, true);
         emit DefiBridgeProcessed(bridgeId, getNextNonce(), depositAmount, depositAmount, 0, true, "");
         sendDefiRollup(bridgeId, depositAmount);
 
         assertEq(depositAmount, DAI.balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
 
+        uint256 secondDeposit = depositAmount / 2;
         vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), depositAmount / 2, depositAmount / 2, 0, true, "");
-        sendDefiRollup(bridgeId, depositAmount / 2);
+        emit DefiBridgeProcessed(bridgeId, getNextNonce(), secondDeposit, secondDeposit, 0, true, "");
+        sendDefiRollup(bridgeId, secondDeposit);
 
         assertEq(depositAmount, DAI.balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
     }

@@ -42,6 +42,11 @@ abstract contract BridgeTestBase is Test {
     );
     error PUBLIC_INPUTS_HASH_VERIFICATION_FAILED(uint256, uint256);
     error PROOF_VERIFICATION_FAILED();
+    error ASYNC_NONZERO_OUTPUT_VALUES(uint256 outputValueA, uint256 outputValueB);
+    error OUTPUT_A_EXCEEDS_252_BITS(uint256 outputValueA);
+    error OUTPUT_B_EXCEEDS_252_BITS(uint256 outputValueb);
+
+    error UnsupportedAsset(address);
 
     event OffchainData(uint256 indexed rollupId, uint256 chunk, uint256 totalChunks, address sender);
     event RollupProcessed(uint256 indexed rollupId, bytes32[] nextExpectedDefiHashes, address sender);
@@ -82,14 +87,17 @@ abstract contract BridgeTestBase is Test {
     address internal constant ROLLUP_PROVIDER = payable(0xA173BDdF4953C1E8be2cA0695CFc07502Ff3B1e7);
     address internal constant MULTI_SIG = 0xE298a76986336686CC3566469e3520d23D1a8aaD;
 
+    AztecTypes.AztecAsset internal emptyAsset;
+
     uint256 private nextRollupId = 0;
 
     constructor() {
         vm.label(address(ROLLUP_PROCESSOR), "Rollup");
         vm.label(address(IMPLEMENTATION), "Implementation");
-        vm.label(ROLLUP_PROVIDER, "Prover");
+        vm.label(ROLLUP_PROVIDER, "Rollup Provider");
         vm.label(MULTI_SIG, "Multisig");
         vm.label(ROLLUP_PROCESSOR.verifier(), "Verifier");
+        vm.label(ROLLUP_PROCESSOR.defiBridgeProxy(), "DefiBridgeProxy");
     }
 
     function getNextNonce() public view returns (uint256) {
@@ -100,6 +108,32 @@ abstract contract BridgeTestBase is Test {
         address asset = ROLLUP_PROCESSOR.getSupportedAsset(_asset.id);
         assertEq(asset, _asset.erc20Address, "ERC20 address do not match");
         // TODO: Finish
+    }
+
+    function getRealAztecAsset(address _asset) public view returns (AztecTypes.AztecAsset memory res) {
+        if (_asset == address(0)) {
+            res = AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
+        } else {
+            res = AztecTypes.AztecAsset({
+                id: tokenToId(_asset),
+                erc20Address: _asset,
+                assetType: AztecTypes.AztecAssetType.ERC20
+            });
+        }
+    }
+
+    function tokenToId(address _asset) public view returns (uint256) {
+        if (_asset == address(0)) {
+            return 0;
+        }
+        uint256 length = ROLLUP_PROCESSOR.getSupportedAssetsLength();
+        for (uint256 i = 1; i <= length; i++) {
+            address fetched = ROLLUP_PROCESSOR.getSupportedAsset(i);
+            if (fetched == _asset) {
+                return i;
+            }
+        }
+        revert UnsupportedAsset(_asset);
     }
 
     function encodeBridgeId(

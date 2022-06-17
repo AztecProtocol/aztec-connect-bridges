@@ -7,9 +7,6 @@ import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 
 contract ExampleBridgeContract is BridgeBase {
-    error InvalidCaller();
-    error AsyncModeDisabled();
-
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
     function convert(
