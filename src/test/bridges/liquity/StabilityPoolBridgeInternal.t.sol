@@ -8,6 +8,10 @@ import {TestUtil} from "./utils/TestUtil.sol";
 import {StabilityPoolBridge} from "../../../bridges/liquity/StabilityPoolBridge.sol";
 
 contract StabilityPoolBridgeTestInternal is TestUtil, StabilityPoolBridge(address(0), address(0)) {
+    address public constant LQTY_ETH_POOL = 0xD1D5A4c0eA98971894772Dcd6D2f1dc71083C44E; // 3000 bps fee tier
+    address public constant USDC_ETH_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640; // 500 bps fee tier
+    address public constant LUSD_USDC_POOL = 0x4e0924d3a751bE199C426d52fb1f2337fa96f736; // 500 bps fee tier
+
     function setUp() public {
         _aztecPreSetup();
         setUpTokens();
@@ -33,7 +37,7 @@ contract StabilityPoolBridgeTestInternal is TestUtil, StabilityPoolBridge(addres
         payable(address(0)).transfer(address(this).balance - 1 ether);
 
         uint256 depositedLUSDBeforeSwap = STABILITY_POOL.getCompoundedLUSDDeposit(address(this));
-        _swapRewardsToLUSDAndDeposit();
+        _swapRewardsToLUSDAndDeposit(false);
         uint256 depositedLUSDAfterSwap = STABILITY_POOL.getCompoundedLUSDDeposit(address(this));
 
         // Verify that rewards were swapped for non-zero amount and correctly staked
@@ -44,5 +48,32 @@ contract StabilityPoolBridgeTestInternal is TestUtil, StabilityPoolBridge(addres
         assertEq(tokens["LQTY"].erc.balanceOf(address(this)), DUST);
         assertEq(tokens["LUSD"].erc.balanceOf(address(this)), DUST);
         assertEq(address(this).balance, 0);
+    }
+
+    function testUrgentModeOnSwap1() public {
+        // Destroy the pools reserves in order for the swap to fail
+        deal(WETH, LQTY_ETH_POOL, 0);
+        deal(LQTY, address(this), 1e21);
+
+        // Call shouldn't revert even though swap 1 fails
+        _swapRewardsToLUSDAndDeposit(true);
+    }
+
+    function testUrgentModeOnSwap2() public {
+        // Destroy the pools reserves in order for the swap to fail
+        deal(USDC, USDC_ETH_POOL, 0);
+        deal(LQTY, address(this), 1e21);
+
+        // Call shouldn't revert even though swap 1 fails
+        _swapRewardsToLUSDAndDeposit(true);
+    }
+
+    function testUrgentModeOnSwap3() public {
+        // Destroy the pools reserves in order for the swap to fail
+        deal(LUSD, LUSD_USDC_POOL, 0);
+        deal(LQTY, address(this), 1e21);
+
+        // Call shouldn't revert even though swap 1 fails
+        _swapRewardsToLUSDAndDeposit(true);
     }
 }
