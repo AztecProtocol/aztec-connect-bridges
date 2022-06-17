@@ -40,6 +40,7 @@ contract CompoundTest is Test {
     CompoundBridge internal compoundBridge;
 
     function setUp() public {
+        emit log_named_uint("block number", block.number);
         defiBridgeProxy = new DefiBridgeProxy();
         rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
         compoundBridge = new CompoundBridge(address(rollupProcessor));
