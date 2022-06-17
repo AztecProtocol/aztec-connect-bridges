@@ -8,6 +8,10 @@ import {TestUtil} from "./utils/TestUtil.sol";
 import {StabilityPoolBridge} from "../../../bridges/liquity/StabilityPoolBridge.sol";
 
 contract StabilityPoolBridgeTest is TestUtil {
+    address public constant LQTY_ETH_POOL = 0xD1D5A4c0eA98971894772Dcd6D2f1dc71083C44E; // 3000 bps fee tier
+    address public constant USDC_ETH_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640; // 500 bps fee tier
+    address public constant LUSD_USDC_POOL = 0x4e0924d3a751bE199C426d52fb1f2337fa96f736; // 500 bps fee tier
+
     StabilityPoolBridge private bridge;
 
     function setUp() public {
@@ -120,6 +124,87 @@ contract StabilityPoolBridgeTest is TestUtil {
 
         // 5. Check the total supply of SPB token is 0
         assertEq(bridge.totalSupply(), 0);
+    }
+
+    function testUrgentModeOffSwap1() public {
+        // I will deposit and withdraw 1 million LUSD
+        uint256 lusdAmount = 1e24;
+        _deposit(lusdAmount);
+
+        // Mint rewards to the bridge
+        deal(tokens["LQTY"].addr, address(bridge), 1e21);
+        deal(tokens["WETH"].addr, address(bridge), 1e18);
+
+        // Destroy the pools reserves in order for the swap to fail
+        deal(tokens["WETH"].addr, LQTY_ETH_POOL, 0);
+
+        // Withdraw LUSD from StabilityPool through the bridge
+        vm.expectRevert(ErrorLib.SwapFailed.selector);
+        vm.prank(address(rollupProcessor));
+        bridge.convert(
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            lusdAmount,
+            1,
+            0,
+            address(0)
+        );
+    }
+
+    function testUrgentModeOffSwap2Q() public {
+        // I will deposit and withdraw 1 million LUSD
+        uint256 lusdAmount = 1e24;
+        _deposit(lusdAmount);
+
+        // Mint rewards to the bridge
+        deal(tokens["LQTY"].addr, address(bridge), 1e21);
+        deal(tokens["WETH"].addr, address(bridge), 1e18);
+
+        // Destroy the pools reserves in order for the swap to fail
+        deal(tokens["USDC"].addr, USDC_ETH_POOL, 0);
+
+        // Withdraw LUSD from StabilityPool through the bridge
+        vm.expectRevert(ErrorLib.SwapFailed.selector);
+        vm.prank(address(rollupProcessor));
+        bridge.convert(
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            lusdAmount,
+            1,
+            0,
+            address(0)
+        );
+    }
+
+    function testUrgentModeOffSwap3() public {
+        // I will deposit and withdraw 1 million LUSD
+        uint256 lusdAmount = 1e24;
+        _deposit(lusdAmount);
+
+        // Mint rewards to the bridge
+        deal(tokens["LQTY"].addr, address(bridge), 1e21);
+        deal(tokens["WETH"].addr, address(bridge), 1e18);
+
+        // Destroy the pools reserves in order for the swap to fail
+        deal(tokens["LUSD"].addr, LUSD_USDC_POOL, 0);
+
+        // Withdraw LUSD from StabilityPool through the bridge
+        vm.expectRevert(ErrorLib.SwapFailed.selector);
+        vm.prank(address(rollupProcessor));
+        bridge.convert(
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            lusdAmount,
+            1,
+            0,
+            address(0)
+        );
     }
 
     function _deposit(uint256 _depositAmount) private {

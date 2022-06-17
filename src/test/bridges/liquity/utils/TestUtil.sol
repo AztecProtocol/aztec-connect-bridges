@@ -34,6 +34,10 @@ contract TestUtil is Test {
         tokens["LQTY"].addr = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
         tokens["LQTY"].erc = IERC20(tokens["LQTY"].addr);
         vm.label(tokens["LQTY"].addr, "LQTY");
+
+        tokens["USDC"].addr = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+        tokens["USDC"].erc = IERC20(tokens["USDC"].addr);
+        vm.label(tokens["USDC"].addr, "USDC");
     }
 
     function setLiquityPrice(uint256 _price) public {
