@@ -55,7 +55,7 @@ contract StakingBridgeTestInternal is TestUtil, StakingBridge(address(0)) {
         deal(USDC, LUSD_USDC_POOL, 0);
         deal(LUSD, address(this), 1e21);
 
-        // Call shouldn't revert even though swap 1 fails
+        // Call shouldn't revert even though the swap fails
         _swapRewardsToLQTYAndStake(true);
     }
 
@@ -64,7 +64,7 @@ contract StakingBridgeTestInternal is TestUtil, StakingBridge(address(0)) {
         deal(WETH, USDC_ETH_POOL, 0);
         deal(LUSD, address(this), 1e21);
 
-        // Call shouldn't revert even though swap 1 fails
+        // Call shouldn't revert even though the swap fails
         _swapRewardsToLQTYAndStake(true);
     }
 
@@ -73,7 +73,7 @@ contract StakingBridgeTestInternal is TestUtil, StakingBridge(address(0)) {
         deal(LQTY, LQTY_ETH_POOL, 0);
         deal(LUSD, address(this), 1e21);
 
-        // Call shouldn't revert even though swap 1 fails
+        // Call shouldn't revert even though the swap fails
         _swapRewardsToLQTYAndStake(true);
     }
 }

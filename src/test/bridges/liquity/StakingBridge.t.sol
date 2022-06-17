@@ -56,7 +56,7 @@ contract StakingBridgeTest is TestUtil {
         uint256 lqtyAmount = 1e24;
         _deposit(lqtyAmount);
 
-        // 7. Withdraw LQTY from the staking contract through the bridge
+        // Withdraw LQTY from the staking contract through the bridge
         rollupProcessor.convert(
             address(bridge),
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
@@ -68,10 +68,10 @@ contract StakingBridgeTest is TestUtil {
             0
         );
 
-        // 8. Check the total supply of SPB token is 0
+        // Check the total supply of SPB token is 0
         assertEq(bridge.totalSupply(), 0);
 
-        // 9. Check the LQTY balance of rollupProcessor is equal to the initial LQTY deposit
+        // Check the LQTY balance of rollupProcessor is equal to the initial LQTY deposit
         assertEq(tokens["LQTY"].erc.balanceOf(address(rollupProcessor)), lqtyAmount);
     }
 
