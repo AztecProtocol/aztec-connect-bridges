@@ -90,8 +90,16 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
      * @param _inputAssetA - LUSD (Deposit) or SPB (Withdrawal)
      * @param _outputAssetA - SPB (Deposit) or LUSD (Withdrawal)
      * @param _inputValue - the amount of LUSD to deposit or the amount of SPB to burn and exchange for LUSD
+     * @param _auxData - when set to 1 during withdrawals "urgent withdrawal mode" is set (see note bellow)
      * @return outputValueA - the amount of SPB (Deposit) or LUSD (Withdrawal) minted/transferred to
      * the RollupProcessor.sol
+     *
+     * @dev Note: When swapping rewards fails during withdrawals and "urgent withdrawal mode" is set, the method
+     *            doesn't revert and the withdrawer gives up on their claim on the rewards. This mode is present
+     *            in order to avoid a scenario when issues with Uniswap pools (lacking liquidity etc.) prevents users
+     *            from withdrawing their funds. This mode can't be set upon deposit because it would allow depositors
+     *            to steal value from previous bridge depositors. Also the deposit flow being bricked is much less
+     *            severe than for withdrawal flow.
      */
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
@@ -100,7 +108,7 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
         AztecTypes.AztecAsset calldata,
         uint256 _inputValue,
         uint256,
-        uint64,
+        uint64 _auxData,
         address
     )
         external
@@ -117,7 +125,7 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
             // Deposit
             // Provides LUSD to the pool and claim rewards.
             STABILITY_POOL.provideToSP(_inputValue, FRONTEND_TAG);
-            _swapRewardsToLUSDAndDeposit();
+            _swapRewardsToLUSDAndDeposit(_auxData == 1);
             uint256 totalLUSDOwnedBeforeDeposit = STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) - _inputValue;
             uint256 totalSupply = this.totalSupply();
             // outputValueA = how much SPB should be minted
@@ -134,7 +142,7 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
             // Withdrawal
             // Claim rewards and swap them to LUSD.
             STABILITY_POOL.withdrawFromSP(0);
-            _swapRewardsToLUSDAndDeposit();
+            _swapRewardsToLUSDAndDeposit(_auxData == 1);
 
             // stabilityPool.getCompoundedLUSDDeposit(address(this)) / this.totalSupply() = how much LUSD is one SPB
             // outputValueA = amount of LUSD to be withdrawn and sent to RollupProcessor.sol
@@ -155,26 +163,32 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
 
     /*
      * @notice Swaps any ETH and LQTY currently held by the contract to LUSD and deposits LUSD to the StabilityPool.sol.
-     *
+     * @param _isUrgentWithdrawalMode When set to true the function doesn't revert when the swaps fail.
      * @dev Note: The best route for LQTY -> LUSD is consistently LQTY -> WETH -> USDC -> LUSD. Since I want to swap
      * liquidations rewards (ETH) to LUSD as well, I will first swap LQTY to WETH and then swap it all through USDC to
      * LUSD.
      */
-    function _swapRewardsToLUSDAndDeposit() internal {
+    function _swapRewardsToLUSDAndDeposit(bool _isUrgentWithdrawalMode) internal {
         uint256 lqtyBalance = IERC20(LQTY).balanceOf(address(this));
         if (lqtyBalance > MIN_LQTY_SWAP_AMT) {
-            UNI_ROUTER.exactInputSingle(
-                ISwapRouter.ExactInputSingleParams(
-                    LQTY,
-                    WETH,
-                    3000,
-                    address(this),
-                    block.timestamp,
-                    lqtyBalance - DUST,
-                    0,
-                    0
+            try
+                UNI_ROUTER.exactInputSingle(
+                    ISwapRouter.ExactInputSingleParams(
+                        LQTY,
+                        WETH,
+                        3000,
+                        address(this),
+                        block.timestamp,
+                        lqtyBalance - DUST,
+                        0,
+                        0
+                    )
                 )
-            );
+            {} catch (bytes memory) {
+                if (!_isUrgentWithdrawalMode) {
+                    revert ErrorLib.SwapFailed();
+                }
+            }
         }
 
         uint256 ethBalance = address(this).balance;
@@ -185,18 +199,24 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
 
         uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
         if (wethBalance > MIN_ETH_SWAP_AMT) {
-            uint256 lusdBalance = UNI_ROUTER.exactInput(
-                ISwapRouter.ExactInputParams({
-                    path: abi.encodePacked(WETH, uint24(500), USDC, uint24(500), LUSD),
-                    recipient: address(this),
-                    deadline: block.timestamp,
-                    amountIn: wethBalance - DUST,
-                    amountOutMinimum: 0
-                })
-            );
-
-            if (lusdBalance != 0) {
-                STABILITY_POOL.provideToSP(lusdBalance, FRONTEND_TAG);
+            try
+                UNI_ROUTER.exactInput(
+                    ISwapRouter.ExactInputParams({
+                        path: abi.encodePacked(WETH, uint24(500), USDC, uint24(500), LUSD),
+                        recipient: address(this),
+                        deadline: block.timestamp,
+                        amountIn: wethBalance - DUST,
+                        amountOutMinimum: 0
+                    })
+                )
+            returns (uint256 lusdBalance) {
+                if (lusdBalance != 0) {
+                    STABILITY_POOL.provideToSP(lusdBalance, FRONTEND_TAG);
+                }
+            } catch (bytes memory) {
+                if (!_isUrgentWithdrawalMode) {
+                    revert ErrorLib.SwapFailed();
+                }
             }
         }
     }
