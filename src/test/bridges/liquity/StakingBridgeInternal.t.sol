@@ -3,11 +3,15 @@
 pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-import {TestUtil} from "./utils/TestUtil.sol";
+import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {StakingBridge} from "../../../bridges/liquity/StakingBridge.sol";
+import {TestUtil} from "./utils/TestUtil.sol";
 
 contract StakingBridgeTestInternal is TestUtil, StakingBridge(address(0)) {
+    address public constant LUSD_USDC_POOL = 0x4e0924d3a751bE199C426d52fb1f2337fa96f736; // 500 bps fee tier
+    address public constant USDC_ETH_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640; // 500 bps fee tier
+    address public constant LQTY_ETH_POOL = 0xD1D5A4c0eA98971894772Dcd6D2f1dc71083C44E; // 3000 bps fee tier
+
     function setUp() public {
         _aztecPreSetup();
         setUpTokens();
@@ -44,5 +48,32 @@ contract StakingBridgeTestInternal is TestUtil, StakingBridge(address(0)) {
         assertEq(tokens["LUSD"].erc.balanceOf(address(this)), DUST);
         assertEq(tokens["LQTY"].erc.balanceOf(address(this)), DUST);
         assertEq(address(this).balance, 0);
+    }
+
+    function testUrgentModeOnSwap1() public {
+        // Destroy the pools reserves in order for the swap to fail
+        deal(USDC, LUSD_USDC_POOL, 0);
+        deal(LUSD, address(this), 1e21);
+
+        // Call shouldn't revert even though swap 1 fails
+        _swapRewardsToLQTYAndStake(true);
+    }
+
+    function testUrgentModeOnSwap2() public {
+        // Destroy the pools reserves in order for the swap to fail
+        deal(WETH, USDC_ETH_POOL, 0);
+        deal(LUSD, address(this), 1e21);
+
+        // Call shouldn't revert even though swap 1 fails
+        _swapRewardsToLQTYAndStake(true);
+    }
+
+    function testUrgentModeOnSwap3() public {
+        // Destroy the pools reserves in order for the swap to fail
+        deal(LQTY, LQTY_ETH_POOL, 0);
+        deal(LUSD, address(this), 1e21);
+
+        // Call shouldn't revert even though swap 1 fails
+        _swapRewardsToLQTYAndStake(true);
     }
 }
