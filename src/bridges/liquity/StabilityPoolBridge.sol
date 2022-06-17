@@ -125,7 +125,7 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
             // Deposit
             // Provides LUSD to the pool and claim rewards.
             STABILITY_POOL.provideToSP(_inputValue, FRONTEND_TAG);
-            _swapRewardsToLUSDAndDeposit(_auxData == 1);
+            _swapRewardsToLUSDAndDeposit(false);
             uint256 totalLUSDOwnedBeforeDeposit = STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) - _inputValue;
             uint256 totalSupply = this.totalSupply();
             // outputValueA = how much SPB should be minted
