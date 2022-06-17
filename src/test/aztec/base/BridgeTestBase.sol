@@ -161,9 +161,9 @@ abstract contract BridgeTestBase is Test {
         encodedId = encodedId | (bitConfig << BITCONFIG_SHIFT);
     }
 
-    function sendDefiRollup(uint256 bridgeId, uint256 totalInputValue) public {
+    function sendDefiRollup(uint256 _bridgeId, uint256 _totalInputValue) public {
         _prepareRollup();
-        bytes memory proofData = _getProofData(bridgeId, totalInputValue);
+        bytes memory proofData = _getProofData(_bridgeId, _totalInputValue);
 
         vm.prank(ROLLUP_PROVIDER);
         ROLLUP_PROCESSOR.processRollup(proofData, "");
@@ -204,7 +204,7 @@ abstract contract BridgeTestBase is Test {
         vm.mockCall(ROLLUP_PROCESSOR.verifier(), "", abi.encode(true));
     }
 
-    function _getProofData(uint256 encodedBridgeId, uint256 totalInputValue) private returns (bytes memory res) {
+    function _getProofData(uint256 _encodedBridgeId, uint256 _totalInputValue) private view returns (bytes memory res) {
         uint256 nextRollupId_ = nextRollupId;
 
         assembly {
@@ -215,8 +215,8 @@ abstract contract BridgeTestBase is Test {
             mstore(res, length)
             mstore(add(res, 0x20), nextRollupId_)
             mstore(add(res, 0x60), mul(nextRollupId_, 2))
-            mstore(add(res, 0x180), encodedBridgeId)
-            mstore(add(res, 0x580), totalInputValue)
+            mstore(add(res, 0x180), _encodedBridgeId)
+            mstore(add(res, 0x580), _totalInputValue)
 
             // Mock values
             // mstore(add(res, 0x20), 0x0000000000000000000000000000000000000000000000000000000000000000)
