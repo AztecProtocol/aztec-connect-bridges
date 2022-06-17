@@ -1,12 +1,8 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2022 Spilsbury Holdings Ltd
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
-import {DefiBridgeProxy} from "../../../aztec/DefiBridgeProxy.sol";
-import {RollupProcessor} from "../../../aztec/RollupProcessor.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
-import {Test} from "forge-std/Test.sol";
-
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
 
 // Example-specific imports
