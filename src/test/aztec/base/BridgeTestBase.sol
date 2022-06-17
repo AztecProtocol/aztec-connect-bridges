@@ -167,14 +167,11 @@ abstract contract BridgeTestBase is Test {
             0x14e0f351ade4ba10438e9b15f66ab2e6389eea5ae870d6e8b2df1418b2e6fd5b
         );
 
-        //vm.expectEmit(false, false, false, true);
         vm.mockCall(ROLLUP_PROCESSOR.verifier(), "", abi.encode(true));
     }
 
     function _getProofData(uint256 encodedBridgeId, uint256 totalInputValue) private returns (bytes memory res) {
-        // TODO: Need to update the startIndex as well
-        // look at the interaction nonce. Im a messing that one up because of the stuff i pull
-        uint256 nextRollupId_ = nextRollupId; //rollupId;
+        uint256 nextRollupId_ = nextRollupId;
 
         assembly {
             res := mload(0x40)
