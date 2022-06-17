@@ -9,7 +9,7 @@ import {IWETH} from "../../interfaces/IWETH.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {IStabilityPool} from "../../interfaces/liquity/IStabilityPool.sol";
-import {ISwapRouter} from "../../interfaces/liquity/ISwapRouter.sol";
+import {ISwapRouter} from "../../interfaces/uniswapv3/ISwapRouter.sol";
 
 /**
  * @title Aztec Connect Bridge for Liquity's StabilityPool.sol
