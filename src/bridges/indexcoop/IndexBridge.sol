@@ -10,12 +10,10 @@ import {AztecTypes} from '../../aztec/AztecTypes.sol';
 import {TickMath} from "../../bridges/uniswapv3/libraries/TickMath.sol";
 import {FullMath} from "../../bridges/uniswapv3/libraries/FullMath.sol";
 import {ISwapRouter} from '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
-import {IQuoter} from '@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol';
 import {IUniswapV3Factory} from"@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
 import {IStethPriceFeed} from './interfaces/IStethPriceFeed.sol';
-import {ISupplyCapIssuanceHook} from './interfaces/ISupplyCapIssuanceHook.sol';
 import {IAaveLeverageModule} from './interfaces/IAaveLeverageModule.sol';
 import {ICurvePool} from './interfaces/ICurvePool.sol';
 import {IWeth} from './interfaces/IWeth.sol';
@@ -32,6 +30,11 @@ import '../../../lib/forge-std/src/Test.sol';
 
 contract IndexBridgeContract is IDefiBridge {
     using SafeMath for uint256;
+
+    error IncorrectInput();
+    error IncorrectFlowSelector();
+    error UnsafeStableSwapOracle();
+    error InputToSmall();
 
     address immutable ROLLUP_PROCESSOR;
     address immutable EXISSUE = 0xB7cc88A13586D862B97a677990de14A122b74598;
@@ -94,7 +97,7 @@ contract IndexBridgeContract is IDefiBridge {
         isAsync = false;
 
         // // ### INITIALIZATION AND SANITY CHECKS
-        require(msg.sender == ROLLUP_PROCESSOR, 'ExampleBridge: INVALID_CALLER');
+        require(msg.sender == ROLLUP_PROCESSOR, 'IndexBridge: INVALID_CALLER');
 
         if ( // To buy/issue
             inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
@@ -113,6 +116,9 @@ contract IndexBridgeContract is IDefiBridge {
 
             outputValueA = getEth(totalInputValue, auxData, interactionNonce);
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueB}(interactionNonce);
+
+        } else {
+            revert IncorrectInput();
         }
     }
 
@@ -143,7 +149,7 @@ contract IndexBridgeContract is IDefiBridge {
     *
     * @param totalInputValue - Total amount of icETH to be swapped/redeemed for ETH
     * @param interactionNonce - Globablly unique identifier for this bridge call
-    * @param auxData - Used to specific maximal difference between expected
+    * @param auxData - Used to specific maximal difference between expected.
     * amounts recevied based on Oracle data and the actual amount recevied. 
     * @return outputValueA - Amount of ETH to return to the Rollupprocessor
     */
@@ -156,11 +162,20 @@ contract IndexBridgeContract is IDefiBridge {
         internal 
         returns (uint256 outputValueA) 
     {
-        (uint64 flowSelector, uint64 maxSlip) = decodeAuxdata(auxData);
+        (uint64 flowSelector, uint64 maxSlip) = decodeAuxdata(auxData); 
 
         uint256 minAmountOut;  
-        if (flowSelector ==1) 
+        if (flowSelector ==1) // redeem icETH for ETH through the ExchangeIssuance contract
         { 
+             /**
+                Inputs that are to small will result in a loss of precision
+                in flashloan calculations. In getEthFromRedeem() debtOWned
+                and colInEth will lose precision. Dito in ExchangeIssuance.
+              */
+            if (totalInputValue < 1e8){ 
+                revert InputToSmall();
+            }
+
             minAmountOut = getEthFromRedeem(totalInputValue).mul(maxSlip).div(1e4);
     
             // Creating a SwapData structure used to specify a path in a DEX in the ExchangeIssuance contract
@@ -189,7 +204,7 @@ contract IndexBridgeContract is IDefiBridge {
             outputValueA = address(this).balance;
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(interactionNonce);
 
-        } else {
+        } else { // Sell icETH on univ3
 
             uint24 uniFee;
             if (flowSelector == 3) {
@@ -197,11 +212,11 @@ contract IndexBridgeContract is IDefiBridge {
             } else if (flowSelector == 5) {
                 uniFee = 500;
             } else {
-                revert("Unrecognized flowSelector");
+                revert IncorrectFlowSelector();
             }
 
             // Using univ3 TWAP Oracle to get a lower bound on returned ETH.
-            minAmountOut = getAmountBasedOnTwap(uint128(totalInputValue), ICETH, WETH).mul(maxSlip).div(1e4);
+            minAmountOut = getAmountBasedOnTwap(uint128(totalInputValue), ICETH, WETH, uniFee).mul(maxSlip).div(1e4);
             
             IERC20(ICETH).approve(UNIV3_ROUTER, totalInputValue);
             ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
@@ -242,14 +257,20 @@ contract IndexBridgeContract is IDefiBridge {
         internal 
         returns (uint256 outputValueA, uint256 outputValueB) 
     {
-        (uint64 flowSelector, uint64 maxSlip) = decodeAuxdata(auxData);
-        console2.log('flowSelector in  getIc', flowSelector);
+        (uint64 flowSelector, uint64 maxSlip) = decodeAuxdata(auxData); 
 
         if (flowSelector ==1) { 
 
-            (outputValueA, outputValueB) = issueIcEth(totalInputValue, maxSlip);
+             /**
+                Inputs that are to small will result in a loss of precision
+                in flashloan calculations. In getEthFromRedeem() debtOWned
+                and colInEth will lose precision. Dito in ExchangeIssuance.
+              */
+            if (totalInputValue < 1e8){ 
+                revert InputToSmall();
+            }
 
-            console2.log('outputvalueb', outputValueB);
+            (outputValueA, outputValueB) = issueIcEth(totalInputValue, maxSlip);
 
             ISetToken(ICETH).approve(ROLLUP_PROCESSOR, outputValueA);
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueB}(interactionNonce);
@@ -262,12 +283,11 @@ contract IndexBridgeContract is IDefiBridge {
             } else if (flowSelector == 5) {
                 uniFee = 500;
             } else {
-                console2.log('reverting due to flow');
-                revert('Unrecognized flowSelector');
+                revert IncorrectFlowSelector();
             }
 
             // Using univ3 TWAP Oracle to get a lower bound on returned ETH.
-            uint256 minAmountOut = getAmountBasedOnTwap(uint128(totalInputValue), WETH, ICETH).mul(maxSlip).div(1e4);
+            uint256 minAmountOut = getAmountBasedOnTwap(uint128(totalInputValue), WETH, ICETH, uniFee).mul(maxSlip).div(1e4);
             IWeth(WETH).deposit{value: totalInputValue}();
             IERC20(WETH).approve(UNIV3_ROUTER, totalInputValue);
 
@@ -298,14 +318,14 @@ contract IndexBridgeContract is IDefiBridge {
     * @return amountOut - Amount received of quoteToken
     */
     
-    function getAmountBasedOnTwap(uint128 amountIn, address baseToken, address quoteToken) //@todo pool set by aux
+    function getAmountBasedOnTwap(uint128 amountIn, address baseToken, address quoteToken, uint24 uniFee) 
         internal 
         returns (uint256 amountOut)
     { 
         address pool = IUniswapV3Factory(UNIV3_FACTORY).getPool(
             WETH,
             ICETH,
-            3000
+            uniFee
         );
 
         uint32 secondsAgo = 60*10; 
@@ -373,7 +393,9 @@ contract IndexBridgeContract is IDefiBridge {
     function getEthFromRedeem(uint256 setAmount) internal returns (uint256) {
 
         (uint256 price, bool safe) = IStethPriceFeed(STETH_PRICE_FEED).current_price(); 
-        require(safe, "IndexBridge: Lido oracle price is unsafe");
+        if (!safe) { 
+            revert UnsafeStableSwapOracle();
+        }
 
         IExchangeIssue.LeveragedTokenData memory issueInfo = IExchangeIssue(EXISSUE).getLeveragedTokenData(
             ISetToken(ICETH), 
@@ -408,7 +430,6 @@ contract IndexBridgeContract is IDefiBridge {
         returns (uint256 outputValueA, uint256 outputValueB)
     {
 
-
         uint24[] memory fee;
         address[] memory pathToSt = new address[](2);
         pathToSt[0] = ETH;
@@ -418,9 +439,13 @@ contract IndexBridgeContract is IDefiBridge {
         );
 
         uint256 costOfOneIc;
+
         {
             (uint256 price, bool safe) = IStethPriceFeed(STETH_PRICE_FEED).current_price(); 
-            require(safe, "IndexBridge: Lido oracle price is unsafe");
+
+            if (!safe) { 
+                revert UnsafeStableSwapOracle();
+            }
 
             IExchangeIssue.LeveragedTokenData memory data = IExchangeIssue(EXISSUE).getLeveragedTokenData(
                 ISetToken(ICETH),
@@ -451,8 +476,22 @@ contract IndexBridgeContract is IDefiBridge {
         outputValueB = address(this).balance;
     }
 
-    function decodeAuxdata(uint64 encoded) internal pure returns (uint64 a, uint64 b) {
-        b = encoded >> 32;
-        a = (encoded << 32) >> 32;
+    /**
+    * @dev decode auxData into two variables 
+    *
+    * @param encoded - encoded auxData the first 32 bytes represent flowSelector 
+    * @return flowSelector - Used to specify the flow of the bridge:
+    *           flowSelector = 1 -> use ExchangeIssue contract to issue/redeem
+    *           flowSelector = 3 -> use univ3 pool with a fee of 3000 to buy/sell
+    *           flowSelector = 5 -> use univ3 pool with a fee of 500 buy/sell
+    * @return maxSlip - Used to specific maximal difference between the expected return based
+    * on Oracle data and the received amount. maxSlip uses a decimal value of 4 e.g. to set the 
+    * minimum discrepency to 1%, maxSlip should be 9900.
+    *
+    */
+
+    function decodeAuxdata(uint64 encoded) internal pure returns (uint64 flowSelector, uint64 maxSlip) {
+        maxSlip = encoded >> 32;
+        flowSelector = (encoded << 32) >> 32;
     }
 }
