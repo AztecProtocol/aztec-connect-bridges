@@ -172,10 +172,8 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
                         amountOutMinimum: 0
                     })
                 )
-            {
-                // Method didn't throw or revert
-            } catch (bytes memory) {
-                if (_isUrgentWithdrawalMode) {
+            {} catch (bytes memory) {
+                if (!_isUrgentWithdrawalMode) {
                     revert ErrorLib.SwapFailed();
                 }
             }
@@ -203,12 +201,11 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
                     )
                 )
             returns (uint256 amountLQTYOut) {
-                // Method didn't throw or revert
                 if (amountLQTYOut != 0) {
                     STAKING_CONTRACT.stake(amountLQTYOut);
                 }
             } catch (bytes memory) {
-                if (_isUrgentWithdrawalMode) {
+                if (!_isUrgentWithdrawalMode) {
                     revert ErrorLib.SwapFailed();
                 }
             }
