@@ -7,20 +7,13 @@ import { RollupProcessor } from "./../../aztec/RollupProcessor.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IndexBridgeContract } from "./../../bridges/indexcoop/IndexBridge.sol";
 import { AztecTypes } from "./../../aztec/AztecTypes.sol";
-import "../../../lib/forge-std/src/Test.sol";
-
-import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-
 import { TickMath } from "../../bridges/uniswapv3/libraries/TickMath.sol";
 import { FullMath } from "../../bridges/uniswapv3/libraries/FullMath.sol";
-
-
 import {ISwapRouter} from '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import {IQuoter} from '@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol';
 import {IUniswapV3Factory} from"@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-
 import {IStethPriceFeed} from '../../bridges/indexcoop/interfaces/IStethPriceFeed.sol';
 import {ISupplyCapIssuanceHook} from '../../bridges/indexcoop/interfaces/ISupplyCapIssuanceHook.sol';
 import {IAaveLeverageModule} from '../../bridges/indexcoop/interfaces/IAaveLeverageModule.sol';
@@ -28,9 +21,13 @@ import {ICurvePool} from '../../bridges/indexcoop/interfaces/ICurvePool.sol';
 import {IWeth} from '../../bridges/indexcoop/interfaces/IWeth.sol';
 import {IExchangeIssue} from '../../bridges/indexcoop/interfaces/IExchangeIssue.sol';
 import {ISetToken} from '../../bridges/indexcoop/interfaces/ISetToken.sol';
+import {IStableSwapOracle} from '../../bridges/indexcoop/interfaces/IStableSwapOracle.sol';
+
+import "../../../lib/forge-std/src/Test.sol";
 
 contract IndexTest is Test {
     using SafeMath for uint256;
+    using stdStorage for StdStorage;
 
     DefiBridgeProxy defiBridgeProxy;
     RollupProcessor rollupProcessor;
@@ -41,16 +38,28 @@ contract IndexTest is Test {
     address immutable CURVE = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
     address immutable WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address immutable STETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
-    address immutable ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-    address immutable ICETH = 0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84;
+    address constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    address constant ICETH = 0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84;
     address immutable STETH_PRICE_FEED = 0xAb55Bf4DfBf469ebfe082b7872557D1F87692Fe6;
     address immutable AAVE_LEVERAGE_MODULE = 0x251Bd1D42Df1f153D86a5BA2305FaADE4D5f51DC;
     address immutable ICETH_SUPPLY_CAP = 0x2622c4BB67992356B3826b5034bB2C7e949ab12B; 
+    address immutable STABLE_SWAP_ORACLE = 0x3A6Bd15abf19581e411621D669B6a2bbe741ffD6;
 
     address immutable UNIV3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
     address immutable UNIV3_QUOTER = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
     address immutable UNIV3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984; 
 
+    AztecTypes.AztecAsset empty;
+    AztecTypes.AztecAsset ethAztecAsset = AztecTypes.AztecAsset({
+        id: 1,
+        erc20Address: ETH ,
+        assetType: AztecTypes.AztecAssetType.ETH
+    });
+    AztecTypes.AztecAsset icethAztecAssetA = AztecTypes.AztecAsset({
+        id: 2,
+        erc20Address: address(ICETH),
+        assetType: AztecTypes.AztecAssetType.ERC20
+    });
 
     function _aztecPreSetup() internal {
         defiBridgeProxy = new DefiBridgeProxy();
@@ -65,112 +74,299 @@ contract IndexTest is Test {
             address(rollupProcessor)
         );
         ROLLUP_PROCESSOR = address(rollupProcessor);
-
     }
 
     function testIssueSet(uint256 inputValue) public {
-        vm.assume(inputValue < 500 ether);
-        vm.assume(inputValue > 1e4);
-        //uint256 inputValue = 20 ether;
+        inputValue = bound(inputValue, 1e8, 500 ether);
 
         uint64 flowSelector = 1;
         uint64 maxSlipAux = 9900; //maxSlip is has 4 decimals
-
         uint64 auxData = encodeAuxdata(flowSelector, maxSlipAux);
 
-        (uint256 newICETH, uint256 returnedEth) = issueSet(inputValue, auxData);
-        console2.log('ETH/icETH issuing', 10000*(inputValue-returnedEth)/newICETH);
-
-        uint256 minimumReceivedIssue = getMinIceth(inputValue-returnedEth, maxSlipAux); 
-
-        (uint256 price, bool safe) = IStethPriceFeed(STETH_PRICE_FEED).current_price(); 
-        assertTrue(safe, "Swapped on Curve stETH pool with unsafe Lido Oracle");
-        assertGe(newICETH, minimumReceivedIssue, "A smaller amount than expected was returned when Issuing icETH");
+        deal(address(rollupProcessor), inputValue);
+        (uint256 newICETH, uint256 returnedEth, bool isAsync) =
+             rollupProcessor.convert(
+                address(indexBridge),
+                ethAztecAsset,
+                empty,
+                icethAztecAssetA,
+                ethAztecAsset,
+                inputValue,
+                1,
+                auxData
+        );
+        
     }
 
     function testBuySet(uint256 inputValue) public {
-        vm.assume(inputValue < 5 ether);
-        vm.assume(inputValue > 1);
-        //uint256 inputValue = 5 ether;
+        inputValue = bound(inputValue, 1, 500 ether);
+        
+        uint256 inputValue = 200 ether;
 
         uint64 flowSelector = 3;
         uint64 maxSlipAux = 9900; //maxSlip is has 4 decimals
-
         uint64 auxData = encodeAuxdata(flowSelector, maxSlipAux);
 
-        //uint128 inputValue = 5 ether;
-        uint256 minimumReceivedDex = getAmountBasedOnTwap(uint128(inputValue), WETH, ICETH).mul(maxSlipAux).div(1e4);
+        uint24 uniFee = 3000;
+        bytes memory path = abi.encodePacked(WETH, uniFee);
+        path = abi.encodePacked(path, ICETH);
+        uint256 icethFromQuoter = IQuoter(UNIV3_QUOTER).quoteExactInput(path, inputValue);
+        uint256 minimumReceivedDex = getAmountBasedOnTwap(uint128(inputValue), WETH, ICETH, uniFee).mul(maxSlipAux).div(1e4);
 
-        (uint256 newICETH,) = issueSet(inputValue, auxData);
-        console2.log('ETH/icETH buying', 10000*(inputValue)/newICETH);
+        if (icethFromQuoter < minimumReceivedDex){
 
-        assertGe(newICETH, minimumReceivedDex, "A smaller amount than expected was returned when buying icETH from univ3");
+            deal(address(indexBridge), inputValue);
+            hoax(ROLLUP_PROCESSOR);
+            vm.expectRevert(bytes("Too little received"));
+            indexBridge.convert(
+                ethAztecAsset,
+                empty,
+                icethAztecAssetA,
+                ethAztecAsset,
+                inputValue,
+                1,
+                auxData,
+                address(0)
+            );
+
+        } else {
+
+            deal(ROLLUP_PROCESSOR, inputValue);
+            console2.log('Attempt Buy');
+            (uint256 newICETH, ,) =
+                rollupProcessor.convert(
+                    address(indexBridge),
+                    ethAztecAsset,
+                    empty,
+                    icethAztecAssetA,
+                    ethAztecAsset,
+                    inputValue,
+                    1,
+                    auxData
+            );
+            assertGe(newICETH, minimumReceivedDex, "A smaller amount than expected was returned when buying icETH from univ3");
+        }
     }
 
-    function testRedeem(uint256 inputValue) public{
-        vm.assume(inputValue < 500 ether);
-        vm.assume(inputValue > 1e4);
-        //uint256 inputValue = 20 ether;
+    function testRedeemSet(uint256 inputValue) public{
+        inputValue = bound(inputValue, 1e8, 500 ether);
 
         uint64 maxSlipAux = 9900; //maxSlip is has 4 decimals
         uint64 flowSelector = 1;
-
         uint64 auxData = encodeAuxdata(flowSelector, maxSlipAux);
-
         uint256 minimumReceivedRedeem = getMinEth(inputValue, maxSlipAux);
 
         address hoaxAddress = 0xA400f843f0E577716493a3B0b8bC654C6EE8a8A3;
         hoax(hoaxAddress, 20);
 
         IERC20(ICETH).transfer(address(rollupProcessor), inputValue);
-        uint256 newEth = redeemSet(inputValue, auxData);  
-
-        console2.log('ETH/icETH when redeeming', 10000*newEth/inputValue);
+        (uint256 newEth, , ) =
+             rollupProcessor.convert(
+                address(indexBridge),
+                icethAztecAssetA,
+                empty,
+                ethAztecAsset,
+                empty,
+                inputValue,
+                2,
+                auxData
+        );
 
         (uint256 price, bool safe) = IStethPriceFeed(STETH_PRICE_FEED).current_price(); 
         assertTrue(safe, "Swapped on Curve stETH pool with unsafe Lido Oracle");
         assertGe(newEth, minimumReceivedRedeem, "Received to little ETH from redeem");
    } 
 
-    function testSelling(uint256 inputValue) public{
-        vm.assume(inputValue < 5 ether);
-        vm.assume(inputValue > 1);
-        //uint256 inputValue = 20 ether;
+    function testSellSet(uint256 inputValue) public{
+        inputValue = bound(inputValue, 1, 500 ether);
         
         uint64 flowSelector = 3;
         uint64 maxSlipAux = 9900; //maxSlip is has 4 decimals
         uint64 auxData = encodeAuxdata(flowSelector, maxSlipAux);
 
-        uint256 minimumReceivedDex = getAmountBasedOnTwap(uint128(inputValue), ICETH, WETH).mul(maxSlipAux).div(1e4);
-
         address hoaxAddress = 0xA400f843f0E577716493a3B0b8bC654C6EE8a8A3;
-        hoax(hoaxAddress, 20);
 
-        IERC20(ICETH).transfer(address(rollupProcessor), inputValue);
-        uint256 newEth = redeemSet(inputValue, auxData);  
+        uint256 ethFromQuoter; uint256 minimumReceivedDex;
+        {
+            uint24 uniFee = 3000;
+            bytes memory path = abi.encodePacked(ICETH, uniFee);
+            path = abi.encodePacked(path, WETH);
+            ethFromQuoter = IQuoter(UNIV3_QUOTER).quoteExactInput(path, inputValue);
+            minimumReceivedDex = getAmountBasedOnTwap(uint128(inputValue), ICETH, WETH, uniFee).
+                mul(maxSlipAux).
+                div(1e4)
+            ;
+        }
 
-        console2.log('ETH/icETH when selling', 10000*newEth/inputValue);
+        if (ethFromQuoter < minimumReceivedDex){ //If price impact is to large revert when swapping
+            console2.log('Expect Revert');
+            hoax(hoaxAddress, 20);
+            IERC20(ICETH).transfer(address(indexBridge), inputValue);
+            hoax(ROLLUP_PROCESSOR);
+            vm.expectRevert(bytes('Too little received'));
+            indexBridge.convert(
+                icethAztecAssetA,
+                empty,
+                ethAztecAsset,
+                empty,
+                inputValue,
+                2,
+                auxData,
+                address(0)
+            );
 
-        assertGe(newEth, minimumReceivedDex, "Received to little ETH from dex");
+        } else { //If price impact is not to large swap and receive more or equal to the minimum
 
+            console2.log('Selling');
+            hoax(hoaxAddress, 20);
+            IERC20(ICETH).transfer(address(rollupProcessor), inputValue);
+
+            (uint256 newEth, ,) =
+                rollupProcessor.convert(
+                    address(indexBridge),
+                    icethAztecAssetA,
+                    empty,
+                    ethAztecAsset,
+                    empty,
+                    inputValue,
+                    2,
+                    auxData
+            );
+            assertGe(newEth, minimumReceivedDex, "Received to little ETH from dex");
+        }
    } 
 
-    function testCannotUseFaultyFlowSelector() public {
-
+    function testIncorrectFlowSelector() public {
         uint256 inputValue = 5 ether;
         uint64 flowSelector = 10;
         uint64 maxSlipAux = 9900; //maxSlip is has 4 decimals
         uint64 auxData = encodeAuxdata(flowSelector, maxSlipAux);
 
-        address hoaxAddress = 0xA400f843f0E577716493a3B0b8bC654C6EE8a8A3;
-        hoax(hoaxAddress, 20);
-        IERC20(ICETH).transfer(address(rollupProcessor), inputValue);
+        startHoax(ROLLUP_PROCESSOR);
+        vm.expectRevert(IndexBridgeContract.IncorrectFlowSelector.selector);
 
-        vm.expectRevert('Interaction Failed');
-        uint256 newEth = redeemSet(inputValue, auxData);  
+        // Test on redeem/sell flow
+        indexBridge.convert(
+            icethAztecAssetA,
+            empty,
+            ethAztecAsset,
+            empty,
+            inputValue,
+            2,
+            auxData,
+            address(0)
+        );
 
+        // Test on redeem/sell flow
+        vm.expectRevert(IndexBridgeContract.IncorrectFlowSelector.selector);
+        indexBridge.convert(
+            ethAztecAsset,
+            empty,
+            icethAztecAssetA,
+            ethAztecAsset,
+            inputValue,
+            1,
+            auxData,
+            address(0)
+        );
     }
 
+    function testIncorrectInput() public {
+
+        vm.prank(ROLLUP_PROCESSOR);
+        vm.expectRevert(IndexBridgeContract.IncorrectInput.selector);
+        indexBridge.convert(
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            0,
+            0,
+            0,
+            address(0)
+        );
+    }
+
+    function testUnsafeLidoOracle(uint256 inputValue) public {
+        inputValue = bound(inputValue, 1e8, 500 ether);
+
+        // Make Lido's Oracle unsafe
+        stdstore
+            .target(STABLE_SWAP_ORACLE)
+            .sig(IStableSwapOracle.stethPrice.selector)
+            .checked_write(7777)
+        ;
+
+        uint64 flowSelector = 1;
+        uint64 maxSlipAux = 9900; //maxSlip is has 4 decimals
+        uint64 auxData = encodeAuxdata(flowSelector, maxSlipAux);
+
+        startHoax(ROLLUP_PROCESSOR);
+        vm.expectRevert(IndexBridgeContract.UnsafeStableSwapOracle.selector);
+
+        // Test on redeem 
+        indexBridge.convert(
+            icethAztecAssetA,
+            empty,
+            ethAztecAsset,
+            empty,
+            inputValue,
+            2,
+            auxData,
+            address(0)
+        );
+
+        // Test on buy 
+        vm.expectRevert(IndexBridgeContract.UnsafeStableSwapOracle.selector);
+        indexBridge.convert(
+            ethAztecAsset,
+            empty,
+            icethAztecAssetA,
+            ethAztecAsset,
+            inputValue,
+            1,
+            auxData,
+            address(0)
+        );
+    }
+
+    function testToSmallInput(uint256 inputValue) public {
+        vm.assume(inputValue < 1e8);
+        vm.assume(inputValue > 1);
+
+        uint64 flowSelector = 1;
+        uint64 maxSlipAux = 9900; //maxSlip is has 4 decimals
+        uint64 auxData = encodeAuxdata(flowSelector, maxSlipAux);
+
+        startHoax(ROLLUP_PROCESSOR);
+        vm.expectRevert(IndexBridgeContract.InputToSmall.selector);
+
+        // Test on redeem 
+        indexBridge.convert(
+            icethAztecAssetA,
+            empty,
+            ethAztecAsset,
+            empty,
+            inputValue,
+            2,
+            auxData,
+            address(0)
+        );
+
+        // Test on buy 
+        vm.expectRevert(IndexBridgeContract.InputToSmall.selector);
+        indexBridge.convert(
+            ethAztecAsset,
+            empty,
+            icethAztecAssetA,
+            ethAztecAsset,
+            inputValue,
+            1,
+            auxData,
+            address(0)
+        );
+    }
+    
     function encodeAuxdata(uint64 a, uint64 b) internal view returns(uint64 encoded) {
         encoded |= (b << 32);
         encoded |= (a);
@@ -180,75 +376,6 @@ contract IndexTest is Test {
     function decodeAuxdata(uint64 encoded) internal view returns (uint64 a, uint64 b) {
         b = encoded >> 32;
         a = (encoded << 32) >> 32;
-    }
-
-    function redeemSet(uint256 inputValue, uint256 maxPrice) internal returns (uint256) {
-        AztecTypes.AztecAsset memory empty;
-
-        AztecTypes.AztecAsset memory ethAztecAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: ETH ,
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
-
-        AztecTypes.AztecAsset memory icethAztecAssetA = AztecTypes.AztecAsset({
-            id: 2,
-            erc20Address: address(ICETH),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-
-        uint256 _maxPrice = maxPrice;
-        uint256 _inputValue = inputValue;
-
-        ( uint256 outputValueA, uint256 outputValueB, bool isAsync) =
-             rollupProcessor.convert(
-                address(indexBridge),
-                icethAztecAssetA,
-                empty,
-                ethAztecAsset,
-                empty,
-                _inputValue,
-                2,
-                _maxPrice
-        );
-
-        return address(rollupProcessor).balance;
-
-    }
-
-
-    function issueSet(uint256 inputValue, uint64 auxData) internal returns (uint256, uint256){
-        deal(address(rollupProcessor), inputValue);
-
-        AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory ethAztecAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: ETH ,
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
-
-        AztecTypes.AztecAsset memory icethAztecAssetA = AztecTypes.AztecAsset({
-            id: 2,
-            erc20Address: address(ICETH),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-
-        uint256 _inputValue = inputValue;
-        uint64 _auxData = auxData;
-
-        ( uint256 outputValueA, uint256 outputValueB, bool isAsync) =
-             rollupProcessor.convert(
-                address(indexBridge),
-                ethAztecAsset,
-                empty,
-                icethAztecAssetA,
-                ethAztecAsset,
-                _inputValue,
-                1,
-                _auxData
-        );
-
-        return (outputValueA, outputValueB);
     }
 
     function getMinEth(uint256 setAmount, uint256 maxSlipAux) internal returns (uint256) {
@@ -296,14 +423,19 @@ contract IndexTest is Test {
         minIcToReceive = totalInputValue.mul(maxSlipAux).mul(1e12).div(costOfOneIc);
     }
 
-    function getAmountBasedOnTwap(uint128 amountIn, address baseToken, address quoteToken) 
+    function getAmountBasedOnTwap(
+        uint128 amountIn, 
+        address baseToken, 
+        address quoteToken, 
+        uint24 uniFee
+        ) 
         internal 
         returns (uint256 amountOut)
     { 
         address pool = IUniswapV3Factory(UNIV3_FACTORY).getPool(
             WETH,
             ICETH,
-            3000
+            uniFee
         );
 
         uint32 secondsAgo = 60*10; 
