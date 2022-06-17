@@ -5,10 +5,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 // Aztec specific imports
-import {DefiBridgeProxy} from "../../../aztec/DefiBridgeProxy.sol";
-import {RollupProcessor} from "../../../aztec/RollupProcessor.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {IDefiBridge} from "../../../aztec/interfaces/IDefiBridge.sol";
+import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
 
 // Aave-specific imports
 import {IWETH} from "../../../interfaces/IWETH.sol";
@@ -28,7 +27,6 @@ import {AaveLendingBridgeConfigurator} from "../../../bridges/aave/lending/AaveL
 
 // Test specific imports
 import {AaveV3StorageEmulator} from "./helpers/AaveV3StorageEmulator.sol";
-import {TestHelper} from "./helpers/TestHelper.sol";
 
 library RoundingMath {
     function mulDiv(
@@ -46,28 +44,9 @@ library RoundingMath {
  * Be aware, that test may fail if the node used is not of good quality, if tests fail, try a less "pressured" RPC
  * @author Lasse Herskind
  */
-contract AaveLendingTest is TestHelper {
+contract AaveLendingTest is BridgeTestBase {
     using RoundingMath for uint256;
     using WadRayMath for uint256;
-
-    error InvalidCaller();
-    error InputAssetAAndOutputAssetAIsEth();
-    error InputAssetANotERC20OrEth();
-    error OutputAssetANotERC20OrEth();
-    error InputAssetBNotEmpty();
-    error OutputAssetBNotEmpty();
-    error InputAssetInvalid();
-    error OutputAssetInvalid();
-    error InputAssetNotEqZkAToken();
-    error InvalidAToken();
-    error ZkTokenAlreadyExists();
-    error ZkTokenDontExist();
-    error ZeroValue();
-    error AsyncDisabled();
-
-    // Aztec defi bridge specific storage
-    DefiBridgeProxy internal defiBridgeProxy;
-    RollupProcessor internal rollupProcessor;
 
     // Aave lending bridge specific storage
     ILendingPoolAddressesProvider internal constant ADDRESSES_PROVIDER =
@@ -80,6 +59,7 @@ contract AaveLendingTest is TestHelper {
     ILendingPool internal pool = ILendingPool(ADDRESSES_PROVIDER.getLendingPool());
 
     IAaveLendingBridge internal aaveLendingBridge;
+    uint256 internal id;
     IAaveLendingBridgeConfigurator internal configurator;
     bytes32 private constant LENDING_POOL = "LENDING_POOL";
 
@@ -98,11 +78,6 @@ contract AaveLendingTest is TestHelper {
     uint256 internal divisor;
     uint256 internal minValue;
     uint256 internal maxValue;
-
-    function _aztecPreSetup() internal {
-        defiBridgeProxy = new DefiBridgeProxy();
-        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
-    }
 
     function _setupLabels() internal {
         vm.label(address(DAI), "DAI");
@@ -124,14 +99,17 @@ contract AaveLendingTest is TestHelper {
     }
 
     function setUp() public {
-        _aztecPreSetup();
         _setupLabels();
 
         configurator = IAaveLendingBridgeConfigurator(new AaveLendingBridgeConfigurator());
 
         aaveLendingBridge = IAaveLendingBridge(
-            new AaveLendingBridge(address(rollupProcessor), address(ADDRESSES_PROVIDER), address(configurator))
+            new AaveLendingBridge(address(ROLLUP_PROCESSOR), address(ADDRESSES_PROVIDER), address(configurator))
         );
+        vm.prank(MULTI_SIG);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(aaveLendingBridge), 500000);
+
+        id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
     }
 
     function testReApproval() public {
@@ -177,24 +155,11 @@ contract AaveLendingTest is TestHelper {
 
     function testSanityConvert() public {
         _tokenSetup(WETH);
-        AztecTypes.AztecAsset memory emptyAsset = AztecTypes.AztecAsset({
+        AztecTypes.AztecAsset memory ethAsset = getRealAztecAsset(address(0));
+        AztecTypes.AztecAsset memory daiAsset = getRealAztecAsset(address(DAI));
+        AztecTypes.AztecAsset memory virtualAsset = AztecTypes.AztecAsset({
             id: 0,
             erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.NOT_USED
-        });
-        AztecTypes.AztecAsset memory ethAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
-        AztecTypes.AztecAsset memory daiAsset = AztecTypes.AztecAsset({
-            id: 2,
-            erc20Address: address(DAI),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-        AztecTypes.AztecAsset memory virtualAsset = AztecTypes.AztecAsset({
-            id: 3,
-            erc20Address: address(0xda),
             assetType: AztecTypes.AztecAssetType.VIRTUAL
         });
 
@@ -211,7 +176,7 @@ contract AaveLendingTest is TestHelper {
             BENEFICIARY
         );
 
-        vm.startPrank(address(rollupProcessor));
+        vm.startPrank(address(ROLLUP_PROCESSOR));
 
         // Eth as input and output //
         vm.expectRevert(InputAssetAAndOutputAssetAIsEth.selector);
@@ -658,6 +623,17 @@ contract AaveLendingTest is TestHelper {
 
     function _addTokenPool() internal {
         configurator.addPoolFromV2(address(aaveLendingBridge), address(token));
+
+        // Add tokens if not supported already
+        if (!isSupportedAsset(address(token))) {
+            vm.prank(MULTI_SIG);
+            ROLLUP_PROCESSOR.setSupportedAsset(address(token), 100000);
+        }
+        address zkToken = aaveLendingBridge.underlyingToZkAToken(address(token));
+        if (!isSupportedAsset(address(zkToken))) {
+            vm.prank(MULTI_SIG);
+            ROLLUP_PROCESSOR.setSupportedAsset(address(zkToken), 100000);
+        }
     }
 
     struct Balances {
@@ -672,7 +648,7 @@ contract AaveLendingTest is TestHelper {
 
     function _getBalances() internal view returns (Balances memory) {
         IERC20 zkToken = IERC20(aaveLendingBridge.underlyingToZkAToken(address(token)));
-        address rp = address(rollupProcessor);
+        address rp = address(ROLLUP_PROCESSOR);
         address dbp = address(aaveLendingBridge);
         return
             Balances({
@@ -714,52 +690,30 @@ contract AaveLendingTest is TestHelper {
         IERC20 zkAToken = IERC20(aaveLendingBridge.underlyingToZkAToken(address(token)));
 
         uint256 depositAmount = amount;
-        deal(address(token), address(rollupProcessor), depositAmount);
+        deal(address(token), address(ROLLUP_PROCESSOR), depositAmount);
 
         Balances memory balanceBefore = _getBalances();
 
-        AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(token),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
-            id: 2,
-            erc20Address: address(zkAToken),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        AztecTypes.AztecAsset memory inputAsset = getRealAztecAsset(address(token));
+        AztecTypes.AztecAsset memory outputAsset = getRealAztecAsset(address(zkAToken));
 
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
-            address(aaveLendingBridge),
-            inputAsset,
-            empty,
-            outputAsset,
-            empty,
-            depositAmount,
-            1,
-            0
-        );
+        uint256 index = pool.getReserveNormalizedIncome(address(token));
+        uint256 scaledDiffZk = depositAmount.mulDiv(1e27, index);
+        uint256 expectedScaledBalanceAfter = balanceBefore.rollupZk + scaledDiffZk;
 
-        assertFalse(isAsync, "Convert is async");
-        assertEq(outputValueB, 0, "OutputValue B not zero");
+        uint256 bridgeId = encodeBridgeId(id, inputAsset, emptyAsset, outputAsset, emptyAsset, 0);
+        vm.expectEmit(true, true, false, true);
+        emit DefiBridgeProcessed(bridgeId, getNextNonce(), depositAmount, scaledDiffZk, 0, true, "");
+        sendDefiRollup(bridgeId, depositAmount);
 
         Balances memory balanceAfter = _getBalances();
 
-        uint256 index = pool.getReserveNormalizedIncome(address(token));
-        {
-            uint256 scaledDiffZk = depositAmount.mulDiv(1e27, index);
-            assertEq(scaledDiffZk, outputValueA, "Output value and zk balance not matching");
-
-            assertEq(
-                balanceAfter.rollupZk - balanceBefore.rollupZk,
-                scaledDiffZk,
-                "Scaled zkbalance balance change not matching"
-            );
-
-            uint256 expectedScaledBalanceAfter = balanceBefore.rollupZk + scaledDiffZk;
-            assertEq(expectedScaledBalanceAfter, balanceAfter.rollupZk, "aToken balance not matching");
-        }
+        assertEq(
+            balanceAfter.rollupZk - balanceBefore.rollupZk,
+            scaledDiffZk,
+            "Scaled zkbalance balance change not matching"
+        );
+        assertEq(expectedScaledBalanceAfter, balanceAfter.rollupZk, "aToken balance not matching");
 
         {
             uint256 scaledDiffAToken = depositAmount.rayDiv(index);
@@ -792,42 +746,25 @@ contract AaveLendingTest is TestHelper {
 
         uint256 depositAmount = amount;
 
-        vm.deal(address(rollupProcessor), depositAmount);
+        vm.deal(address(ROLLUP_PROCESSOR), depositAmount);
 
         Balances memory balanceBefore = _getBalances();
 
-        AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
-        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
-            id: 2,
-            erc20Address: address(zkAToken),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        AztecTypes.AztecAsset memory inputAsset = getRealAztecAsset(address(0));
+        AztecTypes.AztecAsset memory outputAsset = getRealAztecAsset(address(zkAToken));
 
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
-            address(aaveLendingBridge),
-            inputAsset,
-            empty,
-            outputAsset,
-            empty,
-            depositAmount,
-            1,
-            0
-        );
-        assertFalse(isAsync, "Convert is async");
-        assertEq(outputValueB, 0, "OutputValue B not zero");
+        uint256 index = pool.getReserveNormalizedIncome(address(token));
+        uint256 scaledDiffZk = depositAmount.mulDiv(1e27, index);
+        uint256 expectedScaledBalanceAfter = balanceBefore.rollupZk + scaledDiffZk;
+
+        uint256 bridgeId = encodeBridgeId(id, inputAsset, emptyAsset, outputAsset, emptyAsset, 0);
+        vm.expectEmit(true, true, false, true);
+        emit DefiBridgeProcessed(bridgeId, getNextNonce(), depositAmount, scaledDiffZk, 0, true, "");
+        sendDefiRollup(bridgeId, depositAmount);
 
         Balances memory balanceAfter = _getBalances();
 
-        uint256 index = pool.getReserveNormalizedIncome(address(token));
         {
-            uint256 scaledDiffZk = depositAmount.mulDiv(1e27, index);
-            assertEq(scaledDiffZk, outputValueA, "Output value and zk balance not matching");
-
             assertEq(
                 balanceAfter.rollupZk - balanceBefore.rollupZk,
                 scaledDiffZk,
@@ -882,41 +819,24 @@ contract AaveLendingTest is TestHelper {
 
         Balances memory balanceBefore = _getBalances();
 
-        AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
-            id: 2,
-            erc20Address: address(zkAToken),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(token),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
-            address(aaveLendingBridge),
-            inputAsset,
-            empty,
-            outputAsset,
-            empty,
-            withdrawAmount,
-            2,
-            0
-        );
-        assertFalse(isAsync, "Convert is async");
-        assertEq(outputValueB, 0, "OutputValue B not zero");
-
-        Balances memory balanceAfter = _getBalances();
+        AztecTypes.AztecAsset memory inputAsset = getRealAztecAsset(address(zkAToken));
+        AztecTypes.AztecAsset memory outputAsset = getRealAztecAsset(address(token));
 
         vars.index = pool.getReserveNormalizedIncome(address(token));
         vars.innerATokenWithdraw = withdrawAmount.mulDiv(vars.index, 1e27);
-        vars.aaveInnerScaledChange = vars.innerATokenWithdraw.rayDiv(vars.index);
         vars.expectedScaledBalanceAfter = balanceBefore.rollupZk - withdrawAmount;
+
+        uint256 bridgeId = encodeBridgeId(id, inputAsset, emptyAsset, outputAsset, emptyAsset, 0);
+        vm.expectEmit(true, true, false, true);
+        emit DefiBridgeProcessed(bridgeId, getNextNonce(), withdrawAmount, vars.innerATokenWithdraw, 0, true, "");
+        sendDefiRollup(bridgeId, withdrawAmount);
+
+        Balances memory balanceAfter = _getBalances();
+
+        vars.aaveInnerScaledChange = vars.innerATokenWithdraw.rayDiv(vars.index);
         vars.expectedScaledATokenBalanceAfter = balanceBefore.bridgeScaledAToken - vars.aaveInnerScaledChange;
         vars.expectedATokenBalanceAfter = vars.expectedScaledATokenBalanceAfter.rayMul(vars.index);
 
-        assertEq(vars.innerATokenWithdraw, outputValueA, "Output token does not match expected output");
         // Ensure that there are at least as much scaled aToken as zkAToken.
         assertLe(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, "Scaled balances before not matching");
         assertLe(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, "Scaled balances after not matching");
@@ -953,42 +873,25 @@ contract AaveLendingTest is TestHelper {
 
         Balances memory balanceBefore = _getBalances();
 
-        AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
-            id: 2,
-            erc20Address: address(zkAToken),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
-
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
-            address(aaveLendingBridge),
-            inputAsset,
-            empty,
-            outputAsset,
-            empty,
-            withdrawAmount,
-            2,
-            0
-        );
-        assertFalse(isAsync, "Convert is async");
-        assertEq(outputValueB, 0, "OutputValue B not zero");
-
-        Balances memory balanceAfter = _getBalances();
+        AztecTypes.AztecAsset memory inputAsset = getRealAztecAsset(address(zkAToken));
+        AztecTypes.AztecAsset memory outputAsset = getRealAztecAsset(address(0));
 
         vars.index = pool.getReserveNormalizedIncome(address(token));
         vars.innerATokenWithdraw = withdrawAmount.mulDiv(vars.index, 1e27);
-        vars.aaveInnerScaledChange = vars.innerATokenWithdraw.rayDiv(vars.index);
+        vars.expectedScaledBalanceAfter = balanceBefore.rollupZk - withdrawAmount;
 
+        uint256 bridgeId = encodeBridgeId(id, inputAsset, emptyAsset, outputAsset, emptyAsset, 0);
+        vm.expectEmit(true, true, false, true);
+        emit DefiBridgeProcessed(bridgeId, getNextNonce(), withdrawAmount, vars.innerATokenWithdraw, 0, true, "");
+        sendDefiRollup(bridgeId, withdrawAmount);
+
+        Balances memory balanceAfter = _getBalances();
+
+        vars.aaveInnerScaledChange = vars.innerATokenWithdraw.rayDiv(vars.index);
         vars.expectedScaledBalanceAfter = balanceBefore.rollupZk - withdrawAmount;
         vars.expectedScaledATokenBalanceAfter = balanceBefore.bridgeScaledAToken - vars.aaveInnerScaledChange;
         vars.expectedATokenBalanceAfter = vars.expectedScaledATokenBalanceAfter.rayMul(vars.index);
 
-        assertEq(vars.innerATokenWithdraw, outputValueA, "Output token does not match expected output");
         // Ensure that there are at least as much scaled aToken as zkAToken.
         assertLe(balanceBefore.rollupZk, balanceBefore.bridgeScaledAToken, "Scaled balances before not matching");
         assertLe(balanceAfter.rollupZk, balanceAfter.bridgeScaledAToken, "Scaled balances after not matching");
@@ -1102,5 +1005,14 @@ contract AaveLendingTest is TestHelper {
         vm.prank(ADDRESSES_PROVIDER.owner());
         ADDRESSES_PROVIDER.setAddress(LENDING_POOL, oldPool);
         assertEq(ADDRESSES_PROVIDER.getLendingPool(), oldPool, "Pool not reset");
+    }
+
+    function assertNotEq(address a, address b) internal {
+        if (a == b) {
+            emit log("Error: a != b not satisfied [address]");
+            emit log_named_address("  Expected", b);
+            emit log_named_address("    Actual", a);
+            fail();
+        }
     }
 }

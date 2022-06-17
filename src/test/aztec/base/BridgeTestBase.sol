@@ -48,6 +48,22 @@ abstract contract BridgeTestBase is Test {
 
     error UnsupportedAsset(address);
 
+    // error lib errors
+    error InvalidCaller();
+    error InputAssetAAndOutputAssetAIsEth();
+    error InputAssetANotERC20OrEth();
+    error OutputAssetANotERC20OrEth();
+    error InputAssetBNotEmpty();
+    error OutputAssetBNotEmpty();
+    error InputAssetInvalid();
+    error OutputAssetInvalid();
+    error InputAssetNotEqZkAToken();
+    error InvalidAToken();
+    error ZkTokenAlreadyExists();
+    error ZkTokenDontExist();
+    error ZeroValue();
+    error AsyncDisabled();
+
     event OffchainData(uint256 indexed rollupId, uint256 chunk, uint256 totalChunks, address sender);
     event RollupProcessed(uint256 indexed rollupId, bytes32[] nextExpectedDefiHashes, address sender);
     event DefiBridgeProcessed(
@@ -134,6 +150,20 @@ abstract contract BridgeTestBase is Test {
             }
         }
         revert UnsupportedAsset(_asset);
+    }
+
+    function isSupportedAsset(address _asset) public view returns (bool) {
+        if (_asset == address(0)) {
+            return true;
+        }
+        uint256 length = ROLLUP_PROCESSOR.getSupportedAssetsLength();
+        for (uint256 i = 1; i <= length; i++) {
+            address fetched = ROLLUP_PROCESSOR.getSupportedAsset(i);
+            if (fetched == _asset) {
+                return true;
+            }
+        }
+        return false;
     }
 
     function encodeBridgeId(
