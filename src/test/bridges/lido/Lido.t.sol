@@ -73,6 +73,10 @@ contract LidoTest is BridgeTestBase {
         validateLidoBridge(50000e18, 40000e18);
     }
 
+    function testDepositLidoAllFixed() public {
+        testLidoDepositAll(39429182028115016715909199428625);
+    }
+
     function testLidoDepositAll(uint128 _depositAmount) public {
         uint256 depositAmount = bound(_depositAmount, 1000, 10000 ether);
         validateLidoBridge(depositAmount, depositAmount);
@@ -164,11 +168,23 @@ contract LidoTest is BridgeTestBase {
         assertGt(WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)), 0, "No WST eth in rollup");
     }
 
-    function _computeEthToWST(uint256 _amount) internal view returns (uint256) {
+    function _computeEthToWST(uint256 _amount) internal returns (uint256) {
         uint256 DUST = 1;
-        uint256 shares = LIDO.sharesOf(address(bridge)) + LIDO.getSharesByPooledEth(_amount);
-        uint256 totalStEth = LIDO.getPooledEthByShares(shares);
-        uint256 wstEth = LIDO.getSharesByPooledEth(totalStEth - DUST) - DUST;
+        uint256 totalShares = LIDO.getTotalShares();
+        uint256 totalSupply = LIDO.totalSupply();
+
+        // Compute the number of minted shares and increase internal accounting
+        uint256 mintShares = (_amount * totalShares) / totalSupply;
+        totalShares += mintShares;
+        totalSupply += _amount;
+
+        // Compute the stEth balance of the bridge
+        uint256 bridgeShares = LIDO.sharesOf(address(bridge)) + mintShares;
+        uint256 stEthBal = (bridgeShares * totalSupply) / totalShares;
+
+        // Compute the amount of wrapped token
+        uint256 wstEth = ((stEthBal - DUST) * totalShares) / totalSupply - DUST;
+
         return wstEth;
     }
 
