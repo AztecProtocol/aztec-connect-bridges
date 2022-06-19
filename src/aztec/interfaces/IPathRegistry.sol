@@ -22,48 +22,48 @@ interface IPathRegistry {
         bytes path;
     }
 
-    struct Path {
-        uint256 amount; // Amount at which the path starts being valid
-        uint256 next; // Index of the next path
-        SubPath[] subPaths;
-    }
-
     /**
      * @notice Verifies and registers a new path
-     * @param newPath A path to register (newPath.next parameter is irrelevant because it's computed later on)
+     * @param _subPaths An array of subpaths
+     * @param _amount Amount at which the path gets used
+     * @param _feeTier A Fee tier identifying which ETH-tokenOut pool to use for gas cost conversion
      * @dev Reverts when the new path doesn't have a better quote than the previous path at newPath.amount or when
      *      Uniswap v3 ETH-tokenOut 3000 BIPS fee pool doesn't exist (this pool is needed for gas intensity evaluation).
      */
-    function registerPath(Path calldata newPath) external;
+    function registerPath(
+        SubPath[] calldata _subPaths,
+        uint248 _amount,
+        uint24 _feeTier
+    ) external;
 
     /**
      * @notice Selects a path based on `tokenIn`, `tokenOut` and `amountIn` and swaps `amountIn` of `tokenIn` for
      * as much as possible of `tokenOut` along the selected path
-     * @param tokenIn An address of a token to sell
-     * @param tokenOut An address of a token to buy
-     * @param amountIn An amount of `tokenIn` to swap
-     * @param amountOutMin Minimum amount of tokenOut to receive (inactive when set to 0)
+     * @param _tokenIn An address of a token to sell
+     * @param _tokenOut An address of a token to buy
+     * @param _amountIn An amount of `tokenIn` to swap
+     * @param _amountOutMin Minimum amount of tokenOut to receive (inactive when set to 0)
      * @return amountOut An amount of token received
      * @dev Reverts when a path is not found
      */
     function swap(
-        address tokenIn,
-        address tokenOut,
-        uint256 amountIn,
-        uint256 amountOutMin
+        address _tokenIn,
+        address _tokenOut,
+        uint256 _amountIn,
+        uint256 _amountOutMin
     ) external payable returns (uint256 amountOut);
 
     /**
      * @notice Selects a path based on `tokenIn`, `tokenOut` and `amountIn` and computes a quote for `amountIn`
-     * @param tokenIn An address of a token to sell
-     * @param tokenOut An address of a token to buy
-     * @param amountIn An amount of `tokenIn` to get a quote for
+     * @param _tokenIn An address of a token to sell
+     * @param _tokenOut An address of a token to buy
+     * @param _amountIn An amount of `tokenIn` to get a quote for
      * @return amountOut An amount of token received
      * @dev Reverts when a path is not found. Not marked as view because Uni v3 quoter modifies states and then reverts.
      */
     function quote(
-        address tokenIn,
-        address tokenOut,
-        uint256 amountIn
+        address _tokenIn,
+        address _tokenOut,
+        uint256 _amountIn
     ) external returns (uint256 amountOut);
 }
