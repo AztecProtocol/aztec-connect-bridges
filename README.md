@@ -1,12 +1,13 @@
+# Aztec Connect Bridges
+
 [![CircleCI](https://circleci.com/gh/AztecProtocol/aztec-connect-bridges/tree/master.svg?style=shield)](https://circleci.com/gh/AztecProtocol/aztec-connect-bridges/tree/master)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md)
 
-# Uniswap V3 Bridge for Liquidity Provision
-
-# How to contribute
+## How to contribute
 
 This repo has been built with Foundry. Given the inter-connected nature of Aztec Connect Bridges with existing mainnet protocols, we decided Foundry / forge offered the best support for testing. This repo should make debugging, mainnet-forking, impersonation and gas profiling simple. It makes sense to test Solidity contracts with Solidty not with the added complication of Ethers / Typescript.
 
-# Writing a bridge
+## Writing a bridge
 
 Developing a bridge is simple and permissionless. It is done entirely in Solidity and without any knowledge of the underlying cryptography Aztec uses. Users of your bridge will get the full benefits of ironclad privacy and 10-30x gas savings. Simply follow the steps below to get started.
 
@@ -134,7 +135,9 @@ AsyncYieldBridgeData
 
 You should pick the class that describes the functionality of your bridge and implement the functions to fetch data from your bridge / L1.
 
-# Aztec Connect Background
+## Aztec Connect Background
+
+You can also find more information on the [Aztec docs site](https://docs.aztec.network).
 
 ### What is Aztec?
 
@@ -283,3 +286,5 @@ At a later date, this interaction can be finalised by prodding the rollup contra
 #### finalise()
 
 This function will be called from the Azte Rollup contract. The Aztec Rollup contract will check that it received the correct amount of ETH and tokens specified by the return values and trigger the settlement step on Aztec.
+
+Please reach out on Discord with any questions. You can join our Discord [here](https://discord.gg/ctGpCgkBFt).
