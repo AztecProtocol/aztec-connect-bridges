@@ -46,9 +46,9 @@ contract CompoundTest is BridgeTestBase {
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
     }
 
-    function testERC20DepositAndWithdrawal(uint88 _depositAmount) public {
+    function testERC20DepositAndWithdrawal(uint88 _depositAmount, uint88 _redeemAmount) public {
         for (uint256 i; i < cTokens.length; ++i) {
-            _depositAndWithdrawERC20(cTokens[i], _depositAmount);
+            _depositAndWithdrawERC20(cTokens[i], _depositAmount, _redeemAmount);
         }
     }
 
@@ -96,11 +96,7 @@ contract CompoundTest is BridgeTestBase {
         uint256 cEnd;
     }
 
-    function testETHDepositAndWithdrawalFixed() public {
-        testETHDepositAndWithdrawal(0);
-    }
-
-    function testETHDepositAndWithdrawal(uint88 _depositAmount) public {
+    function testETHDepositAndWithdrawal(uint256 _depositAmount, uint256 _redeemAmount) public {
         _addSupportedIfNotAdded(cETH);
 
         Balances memory bals;
@@ -119,8 +115,8 @@ contract CompoundTest is BridgeTestBase {
         emit DefiBridgeProcessed(inBridgeId, getNextNonce(), depositAmount, mintAmount, 0, true, "");
         sendDefiRollup(inBridgeId, depositAmount);
 
-        uint256 redeemAmount = mintAmount;
-        uint256 redeemedAmount = _getRedeemedAmount(cETH, mintAmount);
+        uint256 redeemAmount = bound(_redeemAmount, 1, mintAmount);
+        uint256 redeemedAmount = _getRedeemedAmount(cETH, redeemAmount);
         bals.underlyingMid = address(ROLLUP_PROCESSOR).balance;
         bals.cMid = IERC20(cETH).balanceOf(address(ROLLUP_PROCESSOR));
 
@@ -138,7 +134,11 @@ contract CompoundTest is BridgeTestBase {
         assertEq(bals.cEnd, bals.cMid - redeemAmount, "cEther bal dont match after withdrawal");
     }
 
-    function _depositAndWithdrawERC20(address _cToken, uint256 _depositAmount) private {
+    function _depositAndWithdrawERC20(
+        address _cToken,
+        uint256 _depositAmount,
+        uint256 _redeemAmount
+    ) private {
         address underlyingToken = ICERC20(_cToken).underlying();
         _addSupportedIfNotAdded(underlyingToken);
         _addSupportedIfNotAdded(_cToken);
@@ -160,7 +160,7 @@ contract CompoundTest is BridgeTestBase {
         emit DefiBridgeProcessed(inBridgeId, getNextNonce(), depositAmount, mintAmount, 0, true, "");
         sendDefiRollup(inBridgeId, depositAmount);
 
-        uint256 redeemAmount = IERC20(_cToken).balanceOf(address(ROLLUP_PROCESSOR));
+        uint256 redeemAmount = bound(_redeemAmount, 1, mintAmount);
         uint256 redeemedAmount = _getRedeemedAmount(_cToken, redeemAmount);
         bals.underlyingMid = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
         bals.cMid = IERC20(_cToken).balanceOf(address(ROLLUP_PROCESSOR));
