@@ -46,6 +46,7 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
     uint256 internal constant DUST = 1;
 
     // Smallest amounts of rewards to swap (gas optimizations)
+    // Note: these amounts have to be higher than DUST
     uint256 private constant MIN_LQTY_SWAP_AMT = 1e20; // 100 LQTY tokens
     uint256 private constant MIN_ETH_SWAP_AMT = 1e17; // 0.1 ETH
 
@@ -129,7 +130,7 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
             STABILITY_POOL.provideToSP(_inputValue, FRONTEND_TAG);
             _swapRewardsToLUSDAndDeposit(false);
             uint256 totalLUSDOwnedBeforeDeposit = STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) - _inputValue;
-            uint256 totalSupply = this.totalSupply();
+            uint256 totalSupply = totalSupply();
             // outputValueA = how much SPB should be minted
             if (totalSupply == 0) {
                 // When the totalSupply is 0, I set the SPB/LUSD ratio to be 1.
@@ -146,9 +147,9 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
             STABILITY_POOL.withdrawFromSP(0);
             _swapRewardsToLUSDAndDeposit(_auxData == 1);
 
-            // stabilityPool.getCompoundedLUSDDeposit(address(this)) / this.totalSupply() = how much LUSD is one SPB
+            // stabilityPool.getCompoundedLUSDDeposit(address(this)) / totalSupply() = how much LUSD is one SPB
             // outputValueA = amount of LUSD to be withdrawn and sent to RollupProcessor.sol
-            outputValueA = (STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) * _inputValue) / this.totalSupply();
+            outputValueA = (STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) * _inputValue) / totalSupply();
             STABILITY_POOL.withdrawFromSP(outputValueA);
             _burn(address(this), _inputValue);
         } else {

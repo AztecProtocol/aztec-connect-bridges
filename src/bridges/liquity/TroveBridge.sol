@@ -126,7 +126,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         uint256 _maxFee
     ) external payable onlyOwner {
         // Checks whether the trove can be safely opened/reopened
-        if (this.totalSupply() != 0) revert NonZeroTotalSupply();
+        if (totalSupply() != 0) revert NonZeroTotalSupply();
 
         if (!IERC20(LUSD).approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ErrorLib.ApproveFailed(LUSD);
         if (!this.approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ErrorLib.ApproveFailed(address(this));
@@ -350,7 +350,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         // and debt_increase amount of TB is minted.
         // In case there was redistribution, 1 TB corresponds to more than 1 LUSD and the amount of TB minted
         // will be lower than the amount of LUSD borrowed.
-        tbMinted = ((debtAfter - debtBefore) * this.totalSupply()) / debtBefore;
+        tbMinted = ((debtAfter - debtBefore) * totalSupply()) / debtBefore;
         _mint(address(this), tbMinted);
     }
 
@@ -367,7 +367,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     {
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
         // Compute how much debt to be repay
-        uint256 tbTotalSupply = this.totalSupply(); // SLOAD optimization
+        uint256 tbTotalSupply = totalSupply(); // SLOAD optimization
         uint256 debtToRepay = (_tbAmount * debtBefore) / tbTotalSupply;
         if (debtToRepay > _tbAmount) revert ErrorLib.InvalidOutputB();
 
@@ -412,7 +412,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     {
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
         // Compute how much debt to be repay
-        uint256 tbTotalSupply = this.totalSupply(); // SLOAD optimization
+        uint256 tbTotalSupply = totalSupply(); // SLOAD optimization
         uint256 debtToRepay = (_tbAmount * debtBefore) / tbTotalSupply;
         if (debtToRepay <= _tbAmount) revert ErrorLib.InvalidOutputB();
         // Compute how much collateral to withdraw
@@ -456,7 +456,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             BORROWER_OPERATIONS.claimCollateral();
             collateralClaimed = true;
         }
-        collateral = (address(this).balance * _tbAmount) / this.totalSupply();
+        collateral = (address(this).balance * _tbAmount) / totalSupply();
         _burn(address(this), _tbAmount);
         IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: collateral}(_interactionNonce);
     }

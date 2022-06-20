@@ -44,6 +44,7 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
     uint256 internal constant DUST = 1;
 
     // Smallest amounts of rewards to swap (gas optimizations)
+    // Note: these amounts have to be higher than DUST
     uint256 private constant MIN_LUSD_SWAP_AMT = 1e20; // 100 LUSD
     uint256 private constant MIN_ETH_SWAP_AMT = 1e17; // 0.1 ETH
 
@@ -119,7 +120,7 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
             // Stake and claim rewards
             STAKING_CONTRACT.stake(_inputValue);
             _swapRewardsToLQTYAndStake(false);
-            uint256 totalSupply = this.totalSupply();
+            uint256 totalSupply = totalSupply();
             // outputValueA = how much SB should be minted
             if (totalSupply == 0) {
                 // When the totalSupply is 0, I set the SB/LQTY ratio to be 1.
@@ -137,9 +138,9 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
             STAKING_CONTRACT.unstake(0);
             _swapRewardsToLQTYAndStake(_auxData == 1);
 
-            // STAKING_CONTRACT.stakes(address(this)) / this.totalSupply() = how much LQTY is one SB
+            // STAKING_CONTRACT.stakes(address(this)) / totalSupply() = how much LQTY is one SB
             // outputValueA = amount of LQTY to be withdrawn and sent to rollupProcessor
-            outputValueA = (STAKING_CONTRACT.stakes(address(this)) * _inputValue) / this.totalSupply();
+            outputValueA = (STAKING_CONTRACT.stakes(address(this)) * _inputValue) / totalSupply();
             STAKING_CONTRACT.unstake(outputValueA);
             _burn(address(this), _inputValue);
         } else {
