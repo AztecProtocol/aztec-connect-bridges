@@ -11,6 +11,15 @@ import {CompoundBridge} from "../../../bridges/compound/CompoundBridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
 contract CompoundTest is BridgeTestBase {
+    struct Balances {
+        uint256 underlyingBefore;
+        uint256 underlyingMid;
+        uint256 underlyingEnd;
+        uint256 cBefore;
+        uint256 cMid;
+        uint256 cEnd;
+    }
+
     // solhint-disable-next-line
     address public constant cETH = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
 
@@ -85,15 +94,6 @@ contract CompoundTest is BridgeTestBase {
         vm.prank(address(ROLLUP_PROCESSOR));
         vm.expectRevert(ErrorLib.AsyncDisabled.selector);
         compoundBridge.finalise(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0);
-    }
-
-    struct Balances {
-        uint256 underlyingBefore;
-        uint256 underlyingMid;
-        uint256 underlyingEnd;
-        uint256 cBefore;
-        uint256 cMid;
-        uint256 cEnd;
     }
 
     function testETHDepositAndWithdrawal(uint256 _depositAmount, uint256 _redeemAmount) public {
