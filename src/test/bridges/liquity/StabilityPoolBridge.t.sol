@@ -139,7 +139,7 @@ contract StabilityPoolBridgeTest is TestUtil {
         deal(tokens["WETH"].addr, LQTY_ETH_POOL, 0);
 
         // Withdraw LUSD from StabilityPool through the bridge
-        vm.expectRevert(ErrorLib.SwapFailed.selector);
+        vm.expectRevert(StabilityPoolBridge.SwapFailed.selector);
         vm.prank(address(rollupProcessor));
         bridge.convert(
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
@@ -166,7 +166,7 @@ contract StabilityPoolBridgeTest is TestUtil {
         deal(tokens["USDC"].addr, USDC_ETH_POOL, 0);
 
         // Withdraw LUSD from StabilityPool through the bridge
-        vm.expectRevert(ErrorLib.SwapFailed.selector);
+        vm.expectRevert(StabilityPoolBridge.SwapFailed.selector);
         vm.prank(address(rollupProcessor));
         bridge.convert(
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
@@ -193,7 +193,7 @@ contract StabilityPoolBridgeTest is TestUtil {
         deal(tokens["LUSD"].addr, LUSD_USDC_POOL, 0);
 
         // Withdraw LUSD from StabilityPool through the bridge
-        vm.expectRevert(ErrorLib.SwapFailed.selector);
+        vm.expectRevert(StabilityPoolBridge.SwapFailed.selector);
         vm.prank(address(rollupProcessor));
         bridge.convert(
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),

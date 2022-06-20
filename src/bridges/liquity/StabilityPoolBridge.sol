@@ -31,6 +31,8 @@ import {ISwapRouter} from "../../interfaces/uniswapv3/ISwapRouter.sol";
  * Note: StabilityPoolBridge.sol is very similar to StakingBridge.sol.
  */
 contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") {
+    error SwapFailed();
+
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant LQTY = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
@@ -186,7 +188,7 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
                 )
             {} catch (bytes memory) {
                 if (!_isUrgentWithdrawalMode) {
-                    revert ErrorLib.SwapFailed();
+                    revert SwapFailed();
                 }
             }
         }
@@ -215,7 +217,7 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
                 }
             } catch (bytes memory) {
                 if (!_isUrgentWithdrawalMode) {
-                    revert ErrorLib.SwapFailed();
+                    revert SwapFailed();
                 }
             }
         }

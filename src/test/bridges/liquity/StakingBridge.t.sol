@@ -138,7 +138,7 @@ contract StakingBridgeTest is TestUtil {
         deal(bridge.USDC(), LUSD_USDC_POOL, 0);
 
         // Withdraw LQTY from the staking contract through the bridge
-        vm.expectRevert(ErrorLib.SwapFailed.selector);
+        vm.expectRevert(StakingBridge.SwapFailed.selector);
         vm.prank(address(rollupProcessor));
         bridge.convert(
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
@@ -165,7 +165,7 @@ contract StakingBridgeTest is TestUtil {
         deal(tokens["WETH"].addr, USDC_ETH_POOL, 0);
 
         // Withdraw LQTY from the staking contract through the bridge
-        vm.expectRevert(ErrorLib.SwapFailed.selector);
+        vm.expectRevert(StakingBridge.SwapFailed.selector);
         vm.prank(address(rollupProcessor));
         bridge.convert(
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
@@ -192,7 +192,7 @@ contract StakingBridgeTest is TestUtil {
         deal(tokens["LQTY"].addr, LQTY_ETH_POOL, 0);
 
         // Withdraw LQTY from the staking contract through the bridge
-        vm.expectRevert(ErrorLib.SwapFailed.selector);
+        vm.expectRevert(StakingBridge.SwapFailed.selector);
         vm.prank(address(rollupProcessor));
         bridge.convert(
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
