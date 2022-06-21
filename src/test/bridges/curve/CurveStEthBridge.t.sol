@@ -163,7 +163,7 @@ contract CurveStEthBridgeTest is BridgeTestBase {
         assertGt(WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)), 0, "No WST eth in rollup");
     }
 
-    function _computeEthToWST(uint256 _amount) internal returns (uint256) {
+    function _computeEthToWST(uint256 _amount) internal view returns (uint256) {
         uint256 stEthBal = CURVE_POOL.get_dy(0, 1, _amount);
         uint256 wstEth = LIDO.getSharesByPooledEth(stEthBal);
         return wstEth;

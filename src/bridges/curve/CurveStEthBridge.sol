@@ -42,12 +42,12 @@ contract CurveStEthBridge is BridgeBase {
     receive() external payable {}
 
     function convert(
-        AztecTypes.AztecAsset calldata inputAssetA,
+        AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata outputAssetA,
+        AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
-        uint256 inputValue,
-        uint256 interactionNonce,
+        uint256 _inputValue,
+        uint256 _interactionNonce,
         uint64,
         address
     )
@@ -61,9 +61,9 @@ contract CurveStEthBridge is BridgeBase {
             bool isAsync
         )
     {
-        bool isETHInput = inputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
-        bool isWstETHInput = inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 &&
-            inputAssetA.erc20Address == address(WRAPPED_STETH);
+        bool isETHInput = _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
+        bool isWstETHInput = _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 &&
+            _inputAssetA.erc20Address == address(WRAPPED_STETH);
 
         if (!(isETHInput || isWstETHInput)) {
             revert ErrorLib.InvalidInputA();
@@ -71,26 +71,26 @@ contract CurveStEthBridge is BridgeBase {
 
         isAsync = false;
         outputValueA = isETHInput
-            ? wrapETH(inputValue, outputAssetA)
-            : unwrapETH(inputValue, outputAssetA, interactionNonce);
+            ? _wrapETH(_inputValue, _outputAssetA)
+            : _unwrapETH(_inputValue, _outputAssetA, _interactionNonce);
     }
 
     /**
         Convert ETH -> wstETH
      */
-    function wrapETH(uint256 inputValue, AztecTypes.AztecAsset calldata outputAsset)
+    function _wrapETH(uint256 _inputValue, AztecTypes.AztecAsset calldata _outputAsset)
         private
         returns (uint256 outputValue)
     {
         if (
-            outputAsset.assetType != AztecTypes.AztecAssetType.ERC20 ||
-            outputAsset.erc20Address != address(WRAPPED_STETH)
+            _outputAsset.assetType != AztecTypes.AztecAssetType.ERC20 ||
+            _outputAsset.erc20Address != address(WRAPPED_STETH)
         ) {
             revert ErrorLib.InvalidOutputA();
         }
 
         // Swap eth -> stEth on curve
-        uint256 dy = CURVE_POOL.exchange{value: inputValue}(CURVE_ETH_INDEX, CURVE_STETH_INDEX, inputValue, 0);
+        uint256 dy = CURVE_POOL.exchange{value: _inputValue}(CURVE_ETH_INDEX, CURVE_STETH_INDEX, _inputValue, 0);
 
         // wrap stEth
         outputValue = WRAPPED_STETH.wrap(dy);
@@ -99,17 +99,17 @@ contract CurveStEthBridge is BridgeBase {
     /**
         Convert wstETH to ETH
      */
-    function unwrapETH(
-        uint256 inputValue,
-        AztecTypes.AztecAsset calldata outputAsset,
-        uint256 interactionNonce
+    function _unwrapETH(
+        uint256 _inputValue,
+        AztecTypes.AztecAsset calldata _outputAsset,
+        uint256 _interactionNonce
     ) private returns (uint256 outputValue) {
-        if (outputAsset.assetType != AztecTypes.AztecAssetType.ETH) {
+        if (_outputAsset.assetType != AztecTypes.AztecAssetType.ETH) {
             revert ErrorLib.InvalidOutputA();
         }
 
         // Convert wstETH to stETH so we can exchange it on curve
-        uint256 stETH = WRAPPED_STETH.unwrap(inputValue);
+        uint256 stETH = WRAPPED_STETH.unwrap(_inputValue);
 
         // Exchange stETH to ETH via curve
         uint256 dy = CURVE_POOL.exchange(CURVE_STETH_INDEX, CURVE_ETH_INDEX, stETH, 0);
@@ -120,6 +120,6 @@ contract CurveStEthBridge is BridgeBase {
         }
 
         // Send ETH to rollup processor
-        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValue}(interactionNonce);
+        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValue}(_interactionNonce);
     }
 }
