@@ -7,7 +7,8 @@ import {AztecTypes} from "./../../../aztec/libraries/AztecTypes.sol";
 import {IRollupProcessor} from "./../../../aztec/interfaces/IRollupProcessor.sol";
 
 /**
- * @notice Helper contract for sending mock rollups with defi interactions
+ * @notice Helper contract that allow us to test bridges against the live rollup by sending mock rollups with defi interactions
+ *         The helper will setup the state and impersonate parties to allow easy interaction with the rollup
  * @author Lasse Herskind
  */
 abstract contract BridgeTestBase is Test {
@@ -106,7 +107,7 @@ abstract contract BridgeTestBase is Test {
 
     AztecTypes.AztecAsset internal emptyAsset;
 
-    uint256 private nextRollupId = 0;
+    uint256 public nextRollupId = 0;
 
     constructor() {
         vm.label(address(ROLLUP_PROCESSOR), "Rollup");
@@ -117,16 +118,20 @@ abstract contract BridgeTestBase is Test {
         vm.label(ROLLUP_PROCESSOR.defiBridgeProxy(), "DefiBridgeProxy");
     }
 
+    /**
+     * @notice Helper function to fetch nonce for the next interaction
+     * @return The nonce of the next defi interaction
+     */
     function getNextNonce() public view returns (uint256) {
         return nextRollupId * 32;
     }
 
-    function checkValidAsset(AztecTypes.AztecAsset memory _asset) public {
-        address asset = ROLLUP_PROCESSOR.getSupportedAsset(_asset.id);
-        assertEq(asset, _asset.erc20Address, "ERC20 address do not match");
-        // TODO: Finish
-    }
-
+    /**
+     * @notice Helper function to get an `AztecAsset` object for the supported `_asset`
+     * @dev if `_asset` is not supported will revert with `UnsupportedAsset(_asset)`.
+     * @param _asset The address of the asset to fetch
+     * @return res - A populated supported `AztecAsset`
+     */
     function getRealAztecAsset(address _asset) public view returns (AztecTypes.AztecAsset memory res) {
         if (_asset == address(0)) {
             res = AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
@@ -139,6 +144,12 @@ abstract contract BridgeTestBase is Test {
         }
     }
 
+    /**
+     * @notice Helper function to get the id a given `_asset`
+     * @dev if `_asset` is not supported will revert with `UnsupportedAsset(_asset)`
+     * @param _asset The address of the asset to fetch id for
+     * @return The id matching `_asset`
+     */
     function tokenToId(address _asset) public view returns (uint256) {
         if (_asset == address(0)) {
             return 0;
@@ -153,6 +164,11 @@ abstract contract BridgeTestBase is Test {
         revert UnsupportedAsset(_asset);
     }
 
+    /**
+     * @notice Helper function to check if `_asset` is supported or not
+     * @param _asset The address of the asset
+     * @return True if the asset is supported, false otherwise
+     */
     function isSupportedAsset(address _asset) public view returns (bool) {
         if (_asset == address(0)) {
             return true;
@@ -167,6 +183,17 @@ abstract contract BridgeTestBase is Test {
         return false;
     }
 
+    /**
+     * @notice Helper function to encode datapoints into a bridge Id
+     * @dev For more info see the rollup implementatin at "rollup.aztec.eth" that decodes
+     * @param _bridgeId id of the specific bridge (index in supportedBridge + 1)
+     * @param _inputAssetA The first input asset
+     * @param _inputAssetB The second input asset
+     * @param _outputAssetA The first output asset
+     * @param _outputAssetB The second output asset
+     * @param _auxData Auxiliary data that is passed to the bridge
+     * @return encodedId - The encoded bitmap containing it and other relevant data
+     */
     function encodeBridgeId(
         uint256 _bridgeId,
         AztecTypes.AztecAsset memory _inputAssetA,
@@ -192,15 +219,27 @@ abstract contract BridgeTestBase is Test {
         encodedId = encodedId | (bitConfig << BITCONFIG_SHIFT);
     }
 
-    function sendDefiRollup(uint256 _bridgeId, uint256 _totalInputValue) public {
+    /**
+     * @notice Helper function for processing a rollup with a specific bridge and `_inputValue`
+     * @dev will impersonate the rollup processor and update rollup state
+     * @param _encodedBridgeId The encoded bridge id for the action, e.g., output from `encodeBridgeId()`
+     * @param _inputValue The value of inputAssetA and inputAssetB to transfer to the bridge
+     */
+    function sendDefiRollup(uint256 _encodedBridgeId, uint256 _inputValue) public {
         _prepareRollup();
-        bytes memory proofData = _getProofData(_bridgeId, _totalInputValue);
+        bytes memory proofData = _getProofData(_encodedBridgeId, _inputValue);
 
         vm.prank(ROLLUP_PROVIDER);
         ROLLUP_PROCESSOR.processRollup(proofData, "");
         nextRollupId++;
     }
 
+    /**
+     * @notice Helper function that will overwrite the rollup state to let us mock the rollup proof
+     * @dev Resets Overwrites the rollupState with the initial state
+     * @dev if first run, also resets the data size and start index of the rollup
+     * @dev Mock any verifier call to return true to let builder focus on contract side of things
+     */
     function _prepareRollup() private {
         // Overwrite the rollup state hash
         {
@@ -225,7 +264,7 @@ abstract contract BridgeTestBase is Test {
             );
         }
 
-        // Overwrite the previus defi interaction hash
+        // Overwrite the previous defi interaction hash
         vm.store(
             address(ROLLUP_PROCESSOR),
             bytes32(uint256(16)),
@@ -235,7 +274,13 @@ abstract contract BridgeTestBase is Test {
         vm.mockCall(ROLLUP_PROCESSOR.verifier(), "", abi.encode(true));
     }
 
-    function _getProofData(uint256 _encodedBridgeId, uint256 _totalInputValue) private view returns (bytes memory res) {
+    /**
+     * @notice Helper function to generate a mock rollup proof that calls a specific bridge with `_inputValue`
+     * @param _encodedBridgeId The encoded call, e.g., output from `encodeBridgeId()`
+     * @param _inputValue The amount of inputAssetA and inputAssetB to transfer to the defi bridge.
+     * @return res The bytes of the encoded mock proof.
+     */
+    function _getProofData(uint256 _encodedBridgeId, uint256 _inputValue) private view returns (bytes memory res) {
         uint256 nextRollupId_ = nextRollupId;
 
         /* solhint-disable no-inline-assembly */
@@ -248,7 +293,7 @@ abstract contract BridgeTestBase is Test {
             mstore(add(res, 0x20), nextRollupId_)
             mstore(add(res, 0x60), mul(nextRollupId_, 2))
             mstore(add(res, 0x180), _encodedBridgeId)
-            mstore(add(res, 0x580), _totalInputValue)
+            mstore(add(res, 0x580), _inputValue)
 
             // Mock values
             // mstore(add(res, 0x20), 0x0000000000000000000000000000000000000000000000000000000000000000)
