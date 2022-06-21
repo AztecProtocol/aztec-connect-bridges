@@ -18,6 +18,7 @@ contract LidoTest is BridgeTestBase {
     ILido public constant LIDO = ILido(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH public constant WRAPPED_STETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
     ICurvePool public constant CURVE_POOL = ICurvePool(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022);
+    uint256 private constant DUST = 1;
 
     AztecTypes.AztecAsset private ethAsset;
     AztecTypes.AztecAsset private wstETHAsset;
@@ -169,7 +170,6 @@ contract LidoTest is BridgeTestBase {
     }
 
     function _computeEthToWST(uint256 _amount) internal returns (uint256) {
-        uint256 DUST = 1;
         uint256 totalShares = LIDO.getTotalShares();
         uint256 totalSupply = LIDO.totalSupply();
 

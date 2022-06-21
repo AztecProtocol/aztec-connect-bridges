@@ -8,9 +8,9 @@ import {WadRayMath} from "../../../libraries/aave/WadRayMath.sol";
 contract AaveRoundingTest is Test {
     using WadRayMath for uint256;
 
-    function testRoundingMulDiv(uint128 amountIn, uint104 indexAdd) public {
-        uint256 amount = amountIn;
-        uint256 index = uint256(1e27) + indexAdd;
+    function testRoundingMulDiv(uint128 _amountIn, uint104 _indexAdd) public {
+        uint256 amount = _amountIn;
+        uint256 index = uint256(1e27) + _indexAdd;
 
         uint256 intermediateVal = amount.rayMul(index);
         uint256 output = intermediateVal.rayDiv(index);
