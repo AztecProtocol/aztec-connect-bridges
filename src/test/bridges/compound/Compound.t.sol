@@ -139,7 +139,7 @@ contract CompoundTest is BridgeTestBase {
         address _cToken,
         uint256 _depositAmount,
         uint256 _redeemAmount
-    ) private {
+    ) internal {
         address underlyingToken = ICERC20(_cToken).underlying();
         _addSupportedIfNotAdded(underlyingToken);
         _addSupportedIfNotAdded(_cToken);
