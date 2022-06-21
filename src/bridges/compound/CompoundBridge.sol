@@ -143,12 +143,16 @@ contract CompoundBridge is BridgeBase {
             IERC20 underlying = IERC20(_cToken.underlying());
             // Using safeIncreaseAllowance(...) instead of approve(...) here because underlying can be Tether;
             allowance = underlying.allowance(address(this), address(_cToken));
-            if (allowance < type(uint256).max) {
-                underlying.safeIncreaseAllowance(address(_cToken), type(uint256).max - allowance);
+            if (allowance != type(uint256).max) {
+                // Resetting allowance to 0 in order to avoid issues with USDT
+                underlying.safeApprove(address(_cToken), 0);
+                underlying.safeApprove(address(_cToken), type(uint256).max);
             }
             allowance = underlying.allowance(address(this), ROLLUP_PROCESSOR);
-            if (allowance < type(uint256).max) {
-                underlying.safeIncreaseAllowance(ROLLUP_PROCESSOR, type(uint256).max - allowance);
+            if (allowance != type(uint256).max) {
+                // Resetting allowance to 0 in order to avoid issues with USDT
+                underlying.safeApprove(ROLLUP_PROCESSOR, 0);
+                underlying.safeApprove(ROLLUP_PROCESSOR, type(uint256).max);
             }
         }
     }
