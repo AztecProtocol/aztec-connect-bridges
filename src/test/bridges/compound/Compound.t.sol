@@ -45,6 +45,7 @@ contract CompoundTest is BridgeTestBase {
     uint256 internal id;
 
     function setUp() public {
+        emit log_named_uint("block number", block.number);
         compoundBridge = new CompoundBridge(address(ROLLUP_PROCESSOR));
         vm.label(address(compoundBridge), "COMPOUND_BRIDGE");
         vm.deal(address(compoundBridge), 0);
