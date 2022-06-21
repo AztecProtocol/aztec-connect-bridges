@@ -55,7 +55,7 @@ contract ExampleTest is BridgeTestBase {
         // Computes the encoded data for the specific bridge interaction
         uint256 bridgeId = encodeBridgeId(id, daiAsset, emptyAsset, daiAsset, emptyAsset, 0);
 
-        // Use cheatcodes to look for event matching 2 first events and data
+        // Use cheatcodes to look for event matching 2 first indexed values and data
         vm.expectEmit(true, true, false, true);
         // Second part of cheatcode, emit the event that we are to match against.
         emit DefiBridgeProcessed(bridgeId, getNextNonce(), depositAmount, depositAmount, 0, true, "");
@@ -68,10 +68,15 @@ contract ExampleTest is BridgeTestBase {
 
         // Perform a second rollup with half the deposit, perform similar checks.
         uint256 secondDeposit = depositAmount / 2;
+        // Use cheatcodes to look for event matching 2 first indexed values and data
         vm.expectEmit(true, true, false, true);
+        // Second part of cheatcode, emit the event that we are to match against.
         emit DefiBridgeProcessed(bridgeId, getNextNonce(), secondDeposit, secondDeposit, 0, true, "");
+
+        // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
         sendDefiRollup(bridgeId, secondDeposit);
 
+        // Check that the balance of the rollup is same as before interaction (bridge just sends funds back)
         assertEq(depositAmount, DAI.balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
     }
 }

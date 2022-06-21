@@ -236,7 +236,7 @@ abstract contract BridgeTestBase is Test {
 
     /**
      * @notice Helper function that will overwrite the rollup state to let us mock the rollup proof
-     * @dev Resets Overwrites the rollupState with the initial state
+     * @dev Resets the rollupState to the initial state
      * @dev if first run, also resets the data size and start index of the rollup
      * @dev Mock any verifier call to return true to let builder focus on contract side of things
      */
