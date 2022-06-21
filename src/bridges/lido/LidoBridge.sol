@@ -49,12 +49,12 @@ contract LidoBridge is BridgeBase {
     receive() external payable {}
 
     function convert(
-        AztecTypes.AztecAsset calldata inputAssetA,
+        AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata outputAssetA,
+        AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
-        uint256 inputValue,
-        uint256 interactionNonce,
+        uint256 _inputValue,
+        uint256 _interactionNonce,
         uint64,
         address
     )
@@ -68,9 +68,9 @@ contract LidoBridge is BridgeBase {
             bool isAsync
         )
     {
-        bool isETHInput = inputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
-        bool isWstETHInput = inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 &&
-            inputAssetA.erc20Address == address(WRAPPED_STETH);
+        bool isETHInput = _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
+        bool isWstETHInput = _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 &&
+            _inputAssetA.erc20Address == address(WRAPPED_STETH);
 
         if (!(isETHInput || isWstETHInput)) {
             revert ErrorLib.InvalidInputA();
@@ -78,33 +78,33 @@ contract LidoBridge is BridgeBase {
 
         isAsync = false;
         outputValueA = isETHInput
-            ? wrapETH(inputValue, outputAssetA)
-            : unwrapETH(inputValue, outputAssetA, interactionNonce);
+            ? _wrapETH(_inputValue, _outputAssetA)
+            : _unwrapETH(_inputValue, _outputAssetA, _interactionNonce);
     }
 
     /**
         Convert ETH -> wstETH
      */
-    function wrapETH(uint256 inputValue, AztecTypes.AztecAsset calldata outputAsset)
+    function _wrapETH(uint256 _inputValue, AztecTypes.AztecAsset calldata _outputAsset)
         private
         returns (uint256 outputValue)
     {
         if (
-            outputAsset.assetType != AztecTypes.AztecAssetType.ERC20 ||
-            outputAsset.erc20Address != address(WRAPPED_STETH)
+            _outputAsset.assetType != AztecTypes.AztecAssetType.ERC20 ||
+            _outputAsset.erc20Address != address(WRAPPED_STETH)
         ) {
             revert ErrorLib.InvalidOutputA();
         }
 
         // deposit into lido (return value is shares NOT stETH)
-        LIDO.submit{value: inputValue}(REFERRAL);
+        LIDO.submit{value: _inputValue}(REFERRAL);
 
         // Leave `DUST` in the stEth balance to save gas on future runs
         uint256 outputStETHBalance = LIDO.balanceOf(address(this)) - DUST;
 
         // Lido balance can be <=2 wei off, 1 from the submit where our shares is computed rounding down,
         // and then again when the balance is computed from the shares, rounding down again.
-        if (outputStETHBalance + 2 + DUST < inputValue) {
+        if (outputStETHBalance + 2 + DUST < _inputValue) {
             revert InvalidWrapReturnValue();
         }
 
@@ -116,17 +116,17 @@ contract LidoBridge is BridgeBase {
     /**
         Convert wstETH to ETH
      */
-    function unwrapETH(
-        uint256 inputValue,
-        AztecTypes.AztecAsset calldata outputAsset,
-        uint256 interactionNonce
+    function _unwrapETH(
+        uint256 _inputValue,
+        AztecTypes.AztecAsset calldata _outputAsset,
+        uint256 _interactionNonce
     ) private returns (uint256 outputValue) {
-        if (outputAsset.assetType != AztecTypes.AztecAssetType.ETH) {
+        if (_outputAsset.assetType != AztecTypes.AztecAssetType.ETH) {
             revert ErrorLib.InvalidOutputA();
         }
 
         // Convert wstETH to stETH so we can exchange it on curve
-        uint256 stETH = WRAPPED_STETH.unwrap(inputValue);
+        uint256 stETH = WRAPPED_STETH.unwrap(_inputValue);
 
         // Exchange stETH to ETH via curve
         uint256 dy = CURVE_POOL.exchange(CURVE_STETH_INDEX, CURVE_ETH_INDEX, stETH, 0);
@@ -137,6 +137,6 @@ contract LidoBridge is BridgeBase {
         }
 
         // Send ETH to rollup processor
-        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValue}(interactionNonce);
+        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValue}(_interactionNonce);
     }
 }

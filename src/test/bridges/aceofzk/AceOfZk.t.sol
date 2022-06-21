@@ -1,76 +1,58 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.4;
 
-import {Test} from "forge-std/Test.sol";
-
-import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-
-import {DefiBridgeProxy} from "../../../aztec/DefiBridgeProxy.sol";
-import {RollupProcessor} from "../../../aztec/RollupProcessor.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
+import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
+import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
 import {AceOfZkBridge} from "../../../bridges/aceofzk/AceOfZkBridge.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-contract AceOfZkTest is Test {
-    error InvalidCaller();
-    error AsyncDisabled();
-
+contract AceOfZkTest is BridgeTestBase {
     IERC721 public constant ACE_OF_ZK_NFT = IERC721(0xE56B526E532804054411A470C49715c531CFd485);
     address public constant NFT_HOLDER = 0xE298a76986336686CC3566469e3520d23D1a8aaD;
     uint256 public constant NFT_ID = 16;
 
     AceOfZkBridge internal bridge;
-    DefiBridgeProxy internal defiBridgeProxy;
-    RollupProcessor internal rollupProcessor;
 
-    AztecTypes.AztecAsset private empty;
-    AztecTypes.AztecAsset private ethAsset =
-        AztecTypes.AztecAsset({id: 1, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
+    AztecTypes.AztecAsset private ethAsset;
 
     function setUp() public {
-        defiBridgeProxy = new DefiBridgeProxy();
-        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
+        bridge = new AceOfZkBridge(address(ROLLUP_PROCESSOR));
 
-        bridge = new AceOfZkBridge(address(rollupProcessor));
+        vm.prank(MULTI_SIG);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 200000);
 
         vm.prank(NFT_HOLDER);
         ACE_OF_ZK_NFT.approve(address(bridge), NFT_ID);
+
+        ethAsset = getRealAztecAsset(address(0));
     }
 
     function testHappyPath() public {
         // Fund rollup processor
-        vm.deal(address(rollupProcessor), 1);
+        vm.deal(address(ROLLUP_PROCESSOR), 1);
+        assertTrue(ACE_OF_ZK_NFT.ownerOf(NFT_ID) != address(ROLLUP_PROCESSOR), "The rollup processor owns the nft");
 
-        assertTrue(ACE_OF_ZK_NFT.ownerOf(NFT_ID) != address(rollupProcessor), "The rollup processor owns the nft");
+        uint256 bId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
+        uint256 bridgeId = encodeBridgeId(bId, ethAsset, emptyAsset, ethAsset, emptyAsset, 0);
 
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
-            address(bridge),
-            ethAsset,
-            empty,
-            ethAsset,
-            empty,
-            1,
-            0,
-            0
-        );
+        vm.expectEmit(true, true, false, true);
+        emit DefiBridgeProcessed(bridgeId, getNextNonce(), 1, 0, 0, true, "");
+        sendDefiRollup(bridgeId, 1);
 
-        assertEq(outputValueA, 0, "Non zero return a");
-        assertEq(outputValueB, 0, "Non zero return b");
-        assertFalse(isAsync, "The convert was async");
-        assertEq(ACE_OF_ZK_NFT.ownerOf(NFT_ID), address(rollupProcessor), "The rollup processor does not own the nft");
+        assertEq(ACE_OF_ZK_NFT.ownerOf(NFT_ID), address(ROLLUP_PROCESSOR), "The rollup processor does not own the nft");
     }
 
     function testWrongCaller(address _caller) public {
-        vm.assume(_caller != address(rollupProcessor));
-
+        vm.assume(_caller != address(ROLLUP_PROCESSOR));
         vm.prank(_caller);
-
-        vm.expectRevert(InvalidCaller.selector);
-        bridge.convert(ethAsset, empty, ethAsset, empty, 0, 0, 0, _caller);
+        vm.expectRevert(ErrorLib.InvalidCaller.selector);
+        bridge.convert(ethAsset, emptyAsset, ethAsset, emptyAsset, 0, 0, 0, _caller);
     }
 
     function testAsyncDisabled() public {
-        vm.expectRevert(AsyncDisabled.selector);
-        bridge.finalise(ethAsset, empty, ethAsset, empty, 0, 0);
+        vm.expectRevert(ErrorLib.AsyncDisabled.selector);
+        bridge.finalise(ethAsset, emptyAsset, ethAsset, emptyAsset, 0, 0);
     }
 }

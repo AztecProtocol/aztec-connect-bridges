@@ -1,56 +1,70 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.4;
 
-import {Test} from "forge-std/Test.sol";
-
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {DefiBridgeProxy} from "../../../aztec/DefiBridgeProxy.sol";
-import {RollupProcessor} from "../../../aztec/RollupProcessor.sol";
+import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
+
+import {ICurvePool} from "../../../interfaces/curve/ICurvePool.sol";
+import {ILido} from "../../../interfaces/lido/ILido.sol";
+import {IWstETH} from "../../../interfaces/lido/IWstETH.sol";
 
 import {LidoBridge} from "../../../bridges/lido/LidoBridge.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
-contract LidoTest is Test {
+contract LidoTest is BridgeTestBase {
     // solhint-disable-next-line
-    IERC20 private constant wstETH = IERC20(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+    ILido public constant LIDO = ILido(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
+    IWstETH public constant WRAPPED_STETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+    ICurvePool public constant CURVE_POOL = ICurvePool(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022);
+    uint256 private constant DUST = 1;
 
-    AztecTypes.AztecAsset private empty;
-    AztecTypes.AztecAsset private ethAsset =
-        AztecTypes.AztecAsset({id: 1, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
-    AztecTypes.AztecAsset private wstETHAsset =
-        AztecTypes.AztecAsset({id: 2, erc20Address: address(wstETH), assetType: AztecTypes.AztecAssetType.ERC20});
-
-    RollupProcessor private rollupProcessor;
-    DefiBridgeProxy private defiBridgeProxy;
+    AztecTypes.AztecAsset private ethAsset;
+    AztecTypes.AztecAsset private wstETHAsset;
 
     LidoBridge private bridge;
+    uint256 private idIn;
+    uint256 private idOut;
 
     function setUp() public {
-        defiBridgeProxy = new DefiBridgeProxy();
-        rollupProcessor = new RollupProcessor(address(defiBridgeProxy));
+        bridge = new LidoBridge(address(ROLLUP_PROCESSOR), address(ROLLUP_PROCESSOR));
+        vm.deal(address(bridge), 0);
+        vm.prank(MULTI_SIG);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 500000);
+        idIn = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
-        bridge = new LidoBridge(address(rollupProcessor), address(rollupProcessor));
+        vm.prank(MULTI_SIG);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 500000);
+        idOut = ROLLUP_PROCESSOR.getSupportedBridgesLength();
+
+        ethAsset = getRealAztecAsset(address(0));
+        wstETHAsset = getRealAztecAsset(address(WRAPPED_STETH));
+
+        // Prefund to save gas
+        deal(address(WRAPPED_STETH), address(ROLLUP_PROCESSOR), WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)) + 1);
+        deal(address(WRAPPED_STETH), address(bridge), 1);
+        LIDO.submit{value: 10}(address(0));
+        LIDO.transfer(address(bridge), 10);
     }
 
     function testErrorCodes() public {
         vm.expectRevert(ErrorLib.InvalidCaller.selector);
-        bridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
 
-        vm.startPrank(address(rollupProcessor));
+        vm.startPrank(address(ROLLUP_PROCESSOR));
 
         vm.expectRevert(ErrorLib.InvalidInputA.selector);
-        bridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
 
         vm.expectRevert(ErrorLib.InvalidOutputA.selector);
-        bridge.convert(ethAsset, empty, empty, empty, 0, 0, 0, address(0));
+        bridge.convert(ethAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
 
         vm.expectRevert(ErrorLib.InvalidOutputA.selector);
-        bridge.convert(wstETHAsset, empty, empty, empty, 0, 0, 0, address(0));
+        bridge.convert(wstETHAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
 
         vm.expectRevert(ErrorLib.AsyncDisabled.selector);
-        bridge.finalise(wstETHAsset, empty, empty, empty, 0, 0);
+        bridge.finalise(wstETHAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0);
 
         vm.stopPrank();
     }
@@ -58,6 +72,10 @@ contract LidoTest is Test {
     function testLidoBridge() public {
         validateLidoBridge(100e18, 50e18);
         validateLidoBridge(50000e18, 40000e18);
+    }
+
+    function testDepositLidoAllFixed() public {
+        testLidoDepositAll(39429182028115016715909199428625);
     }
 
     function testLidoDepositAll(uint128 _depositAmount) public {
@@ -74,20 +92,20 @@ contract LidoTest is Test {
         uint256 a = bound(_a, 1000, 10000 ether);
         uint256 b = bound(_b, 1000, 10000 ether);
 
-        vm.deal(address(rollupProcessor), uint256(a) + b);
+        vm.deal(address(ROLLUP_PROCESSOR), uint256(a) + b);
 
         // Convert ETH to wstETH
-        validateETHToWstETH(a);
-        validateETHToWstETH(b);
+        validateWrap(a);
+        validateWrap(b);
     }
 
     function testDepositThenPartialWithdraw(uint80 _a) public {
         uint256 a = bound(_a, 1000, 10000 ether);
-        vm.deal(address(rollupProcessor), a);
+        vm.deal(address(ROLLUP_PROCESSOR), a);
 
-        validateETHToWstETH(a);
+        validateWrap(a);
 
-        validateWstETHToETH(wstETH.balanceOf(address(rollupProcessor)) / 2);
+        validateUnwrap(WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)) / 2);
     }
 
     /**
@@ -100,71 +118,79 @@ contract LidoTest is Test {
     function validateLidoBridge(uint256 _balance, uint256 _depositAmount) public {
         // Send ETH to bridge
 
-        vm.deal(address(rollupProcessor), _balance);
+        vm.deal(address(ROLLUP_PROCESSOR), _balance);
 
         // Convert ETH to wstETH
-        validateETHToWstETH(_depositAmount);
+        validateWrap(_depositAmount);
 
         // convert wstETH back to ETH using the same bridge
-        validateWstETHToETH(wstETH.balanceOf(address(rollupProcessor)));
+        validateUnwrap(WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)) - 1);
     }
 
-    function validateWstETHToETH(uint256 _depositAmount) public {
-        uint256 beforeETHBalance = address(rollupProcessor).balance;
-        uint256 beforeWstEthBalance = wstETH.balanceOf(address(rollupProcessor));
+    function validateWrap(uint256 _depositAmount) public {
+        uint256 beforeETHBalance = address(ROLLUP_PROCESSOR).balance;
+        uint256 beforeWstETHBalance = WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
 
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
-            address(bridge),
-            wstETHAsset,
-            empty,
-            ethAsset,
-            empty,
-            _depositAmount,
-            2,
-            0
+        uint256 wstEthIncrease = _computeEthToWST(_depositAmount);
+
+        uint256 bridgeId = encodeBridgeId(idIn, ethAsset, emptyAsset, wstETHAsset, emptyAsset, 0);
+        vm.expectEmit(true, true, false, true);
+        emit DefiBridgeProcessed(bridgeId, getNextNonce(), _depositAmount, wstEthIncrease, 0, true, "");
+        sendDefiRollup(bridgeId, _depositAmount);
+
+        assertEq(address(ROLLUP_PROCESSOR).balance, beforeETHBalance - _depositAmount, "ETH balance not matching");
+        assertEq(
+            WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)),
+            beforeWstETHBalance + wstEthIncrease,
+            "WST ETH balance not matching"
         );
-
-        uint256 afterETHBalance = address(rollupProcessor).balance;
-        uint256 afterWstETHBalance = wstETH.balanceOf(address(rollupProcessor));
-
-        emit log_named_uint("After Exit ETH Balance ", afterETHBalance);
-        emit log_named_uint("After Exit WstETH Balance", afterWstETHBalance);
-
-        assertFalse(isAsync, "Async interaction");
-        assertEq(outputValueB, 0, "OutputValueB not 0");
-        assertGt(outputValueA, 0, "No Eth received");
-        assertEq(afterETHBalance, beforeETHBalance + outputValueA, "ETH balance not maching");
-        assertEq(afterWstETHBalance, beforeWstEthBalance - _depositAmount, "WST ETH balance not matching");
+        assertGt(WRAPPED_STETH.balanceOf(address(bridge)), 0, "No WST eth in bridge");
+        assertGt(WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)), 0, "No WST eth in rollup");
     }
 
-    function validateETHToWstETH(uint256 _depositAmount) public {
-        uint256 beforeETHBalance = address(rollupProcessor).balance;
-        uint256 beforeWstETHBalance = wstETH.balanceOf(address(rollupProcessor));
+    function validateUnwrap(uint256 _depositAmount) public {
+        uint256 beforeETHBalance = address(ROLLUP_PROCESSOR).balance;
+        uint256 beforeWstEthBalance = WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
 
-        emit log_named_uint("Before ETH Balance", beforeETHBalance);
-        emit log_named_uint("Before WstETHBalance", beforeWstETHBalance);
+        uint256 expectedEth = _computeWSTHToEth(_depositAmount);
 
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = rollupProcessor.convert(
-            address(bridge),
-            ethAsset,
-            empty,
-            wstETHAsset,
-            empty,
-            _depositAmount,
-            1,
-            0
+        uint256 bridgeId = encodeBridgeId(idOut, wstETHAsset, emptyAsset, ethAsset, emptyAsset, 0);
+        vm.expectEmit(true, true, false, true);
+        emit DefiBridgeProcessed(bridgeId, getNextNonce(), _depositAmount, expectedEth, 0, true, "");
+        sendDefiRollup(bridgeId, _depositAmount);
+
+        assertEq(address(ROLLUP_PROCESSOR).balance, beforeETHBalance + expectedEth, "ETH balance not maching");
+        assertEq(
+            WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)),
+            beforeWstEthBalance - _depositAmount,
+            "WST ETH balance not matching"
         );
+        assertGt(WRAPPED_STETH.balanceOf(address(bridge)), 0, "No WST eth in bridge");
+        assertGt(WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)), 0, "No WST eth in rollup");
+    }
 
-        uint256 afterETHBalance = address(rollupProcessor).balance;
-        uint256 afterWstETHBalance = wstETH.balanceOf(address(rollupProcessor));
+    function _computeEthToWST(uint256 _amount) internal returns (uint256) {
+        uint256 totalShares = LIDO.getTotalShares();
+        uint256 totalSupply = LIDO.totalSupply();
 
-        emit log_named_uint("After ETH Balance", afterETHBalance);
-        emit log_named_uint("After WstETHBalance", afterWstETHBalance);
+        // Compute the number of minted shares and increase internal accounting
+        uint256 mintShares = (_amount * totalShares) / totalSupply;
+        totalShares += mintShares;
+        totalSupply += _amount;
 
-        assertFalse(isAsync, "Async interaction");
-        assertEq(outputValueB, 0, "OutputValueB not 0");
-        assertEq(afterETHBalance, beforeETHBalance - _depositAmount, "ETH balance not matching");
-        assertGt(outputValueA, 0, "No WST ETH received");
-        assertEq(afterWstETHBalance, beforeWstETHBalance + outputValueA, "WST ETH balance not matching");
+        // Compute the stEth balance of the bridge
+        uint256 bridgeShares = LIDO.sharesOf(address(bridge)) + mintShares;
+        uint256 stEthBal = (bridgeShares * totalSupply) / totalShares;
+
+        // Compute the amount of wrapped token
+        uint256 wstEth = ((stEthBal - DUST) * totalShares) / totalSupply - DUST;
+
+        return wstEth;
+    }
+
+    function _computeWSTHToEth(uint256 _amount) internal view returns (uint256) {
+        uint256 stETH = LIDO.getPooledEthByShares(_amount);
+        uint256 dy = CURVE_POOL.get_dy(1, 0, stETH);
+        return dy + address(bridge).balance;
     }
 }

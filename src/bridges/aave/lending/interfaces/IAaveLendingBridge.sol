@@ -14,8 +14,10 @@ interface IAaveLendingBridge {
         address _beneficiary
     ) external returns (uint256);
 
+    //solhint-disable-next-line
     function ADDRESSES_PROVIDER() external view returns (ILendingPoolAddressesProvider);
 
+    //solhint-disable-next-line
     function CONFIGURATOR() external view returns (address);
 
     /// Mapping underlying assets to the zk atoken used for accounting

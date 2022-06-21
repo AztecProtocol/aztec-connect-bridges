@@ -6,14 +6,14 @@ import {IPool} from "../../../../interfaces/aave/IPool.sol";
 import {DataTypes} from "../../../../libraries/aave/DataTypes.sol";
 
 contract AaveV3StorageEmulator is IPool {
-    ILendingPool immutable POOL;
+    ILendingPool public immutable POOL;
 
-    constructor(address lendingPool) {
-        POOL = ILendingPool(lendingPool);
+    constructor(address _lendingPool) {
+        POOL = ILendingPool(_lendingPool);
     }
 
-    function getReserveData(address asset) external view returns (DataTypes.ReserveDataV3 memory) {
-        DataTypes.ReserveData memory v2Data = POOL.getReserveData(asset);
+    function getReserveData(address _asset) external view returns (DataTypes.ReserveDataV3 memory) {
+        DataTypes.ReserveData memory v2Data = POOL.getReserveData(_asset);
 
         DataTypes.ReserveDataV3 memory data = DataTypes.ReserveDataV3({
             configuration: v2Data.configuration,
