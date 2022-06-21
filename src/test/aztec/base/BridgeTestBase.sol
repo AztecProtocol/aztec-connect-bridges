@@ -11,6 +11,7 @@ import {IRollupProcessor} from "./../../../aztec/interfaces/IRollupProcessor.sol
  * @author Lasse Herskind
  */
 abstract contract BridgeTestBase is Test {
+    /* solhint-disable error-name-mixedcase */
     error PAUSED();
     error NOT_PAUSED();
     error LOCKED_NO_REENTER();
@@ -45,7 +46,7 @@ abstract contract BridgeTestBase is Test {
     error ASYNC_NONZERO_OUTPUT_VALUES(uint256 outputValueA, uint256 outputValueB);
     error OUTPUT_A_EXCEEDS_252_BITS(uint256 outputValueA);
     error OUTPUT_B_EXCEEDS_252_BITS(uint256 outputValueb);
-
+    /* solhint-enable error-name-mixedcase */
     error UnsupportedAsset(address);
 
     // error lib errors
@@ -237,6 +238,7 @@ abstract contract BridgeTestBase is Test {
     function _getProofData(uint256 _encodedBridgeId, uint256 _totalInputValue) private view returns (bytes memory res) {
         uint256 nextRollupId_ = nextRollupId;
 
+        /* solhint-disable no-inline-assembly */
         assembly {
             res := mload(0x40)
             let length := 0x12c0
@@ -400,5 +402,6 @@ abstract contract BridgeTestBase is Test {
             mstore(add(res, 0x12a0), 0x0000000000000000000000000000000000000000000000000000000000000000)
             mstore(add(res, 0x12c0), 0x0000000000000000000000000000000000000000000000000000000000000000)
         }
+        /* solhint-enable no-inline-assembly */
     }
 }
