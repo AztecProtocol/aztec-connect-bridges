@@ -28,6 +28,7 @@ contract CompoundTest is BridgeTestBase {
 
     CompoundBridge internal bridge;
     uint256 internal id;
+    mapping(address => bool) internal isDeprecated;
 
     function setUp() public {
         emit log_named_uint("block number", block.number);
@@ -40,6 +41,10 @@ contract CompoundTest is BridgeTestBase {
         ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 5000000);
 
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
+
+        isDeprecated[0x158079Ee67Fce2f58472A96584A73C7Ab9AC95c1] = true; // cREP - Augur v1
+        isDeprecated[0xC11b1268C1A384e55C48c2391d8d480264A3A7F4] = true; // legacy cWBTC token
+        isDeprecated[0xF5DCe57282A584D2746FaF1593d3121Fcac444dC] = true; // cSAI
     }
 
     function testPreApprove() public {
@@ -92,7 +97,7 @@ contract CompoundTest is BridgeTestBase {
         address[] memory cTokens = bridge.COMPTROLLER().getAllMarkets();
         for (uint256 i; i < cTokens.length; ++i) {
             address cToken = cTokens[i];
-            if (cToken != cETH) {
+            if (!isDeprecated[cToken] && cToken != cETH) {
                 _depositAndWithdrawERC20(cToken, _depositAmount, _redeemAmount);
             }
         }
