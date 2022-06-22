@@ -91,7 +91,10 @@ contract CompoundTest is BridgeTestBase {
     function testERC20DepositAndWithdrawal(uint88 _depositAmount, uint88 _redeemAmount) public {
         address[] memory cTokens = bridge.COMPTROLLER().getAllMarkets();
         for (uint256 i; i < cTokens.length; ++i) {
-            _depositAndWithdrawERC20(cTokens[i], _depositAmount, _redeemAmount);
+            address cToken = cTokens[i];
+            if (cToken != cETH) {
+                _depositAndWithdrawERC20(cToken, _depositAmount, _redeemAmount);
+            }
         }
     }
 
