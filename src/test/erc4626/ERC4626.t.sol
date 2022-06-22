@@ -70,7 +70,7 @@ contract ERC4626 is Test {
 
         uint256 rollupMapleShares = vault.balanceOf(address(rollupProcessor));
         console.log(rollupMapleShares, "ouput amount");
-
+        assertEq(0, outputValueB);
         assertEq(rollupMapleShares, outputValueA);
         (outputValueA, outputValueB, isAsync) = rollupProcessor.convert(
             address(vaultbridge),
@@ -86,6 +86,7 @@ contract ERC4626 is Test {
         uint256 rollupMapleToken = maple.balanceOf(address(rollupProcessor));
         console.log(rollupMapleToken, "withdraw amount");
         assertEq(outputValueA, rollupMapleToken);
+        assertEq(0, outputValueB);
     }
 
     /*function testVaultBridge2() public {
