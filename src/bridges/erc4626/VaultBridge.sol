@@ -23,7 +23,7 @@ contract VaultBridge is IDefiBridge, Ownable {
     using SafeMath for uint256;
     error Unauthorized();
     error InvalidTokenPair();
-    error AssetMustEmpty();
+    error AssetMustBeEmpty();
     address public immutable rollupProcessor;
 
     constructor(address _rollupProcessor) public {
@@ -66,7 +66,8 @@ contract VaultBridge is IDefiBridge, Ownable {
         if (
             outputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED ||
             inputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED
-        ) revert AssetMustEmpty();
+        ) revert AssetMustBeEmpty();
+
         if (msg.sender != rollupProcessor) revert Unauthorized();
 
         if (testPair(outputAssetA.erc20Address, inputAssetA.erc20Address)) {
