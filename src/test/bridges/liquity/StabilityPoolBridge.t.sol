@@ -3,11 +3,15 @@
 pragma solidity >=0.8.4;
 
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
-
+import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {TestUtil} from "./utils/TestUtil.sol";
 import {StabilityPoolBridge} from "../../../bridges/liquity/StabilityPoolBridge.sol";
 
 contract StabilityPoolBridgeTest is TestUtil {
+    address public constant LQTY_ETH_POOL = 0xD1D5A4c0eA98971894772Dcd6D2f1dc71083C44E; // 3000 bps fee tier
+    address public constant USDC_ETH_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640; // 500 bps fee tier
+    address public constant LUSD_USDC_POOL = 0x4e0924d3a751bE199C426d52fb1f2337fa96f736; // 500 bps fee tier
+
     StabilityPoolBridge private bridge;
 
     function setUp() public {
@@ -35,7 +39,7 @@ contract StabilityPoolBridgeTest is TestUtil {
     function testIncorrectInput() public {
         // Call convert with incorrect input
         vm.prank(address(rollupProcessor));
-        vm.expectRevert(StabilityPoolBridge.IncorrectInput.selector);
+        vm.expectRevert(ErrorLib.InvalidInput.selector);
         bridge.convert(
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
@@ -50,53 +54,26 @@ contract StabilityPoolBridgeTest is TestUtil {
 
     function testFullDepositWithdrawalFlow() public {
         // I will deposit and withdraw 1 million LUSD
-        uint256 depositAmount = 1e24;
+        uint256 lusdAmount = 1e24;
+        _deposit(lusdAmount);
 
-        // 1. Mint the deposit amount of LUSD to the bridge
-        deal(tokens["LUSD"].addr, address(rollupProcessor), depositAmount);
-
-        // 2. Deposit LUSD to the StabilityPool contract through the bridge
-        rollupProcessor.convert(
-            address(bridge),
-            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-            depositAmount,
-            0,
-            0
-        );
-
-        // 3. Check the total supply of SPB token is equal to the amount of LUSD deposited
-        assertEq(bridge.totalSupply(), depositAmount);
-
-        // 4. Check the SPB balance of rollupProcessor is equal to the amount of LUSD deposited
-        assertEq(bridge.balanceOf(address(rollupProcessor)), depositAmount);
-
-        // 5. Check the LUSD balance of the StabilityPoolBridge in the StabilityPool contract is equal to the amount
-        // of LUSD deposited
-        assertEq(bridge.STABILITY_POOL().getCompoundedLUSDDeposit(address(bridge)), depositAmount);
-
-        // 6. withdrawAmount is equal to depositAmount because there were no rewards claimed -> LUSD/SPB ratio stayed 1
-        uint256 withdrawAmount = depositAmount;
-
-        // 8. Withdraw LUSD from StabilityPool through the bridge
+        // Withdraw LUSD from StabilityPool through the bridge
         rollupProcessor.convert(
             address(bridge),
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
             AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-            withdrawAmount,
+            lusdAmount,
             1,
             0
         );
 
-        // 9. Check the total supply of SPB token is 0
+        // Check the total supply of SPB token is 0
         assertEq(bridge.totalSupply(), 0);
 
-        // 10. Check the LUSD balance of rollupProcessor is equal to the initial LUSD deposit
-        assertEq(tokens["LUSD"].erc.balanceOf(address(rollupProcessor)), depositAmount);
+        // Check the LUSD balance of rollupProcessor is equal to the initial LUSD deposit
+        assertEq(tokens["LUSD"].erc.balanceOf(address(rollupProcessor)), lusdAmount);
     }
 
     function testMultipleDepositsWithdrawals() public {
@@ -147,5 +124,113 @@ contract StabilityPoolBridgeTest is TestUtil {
 
         // 5. Check the total supply of SPB token is 0
         assertEq(bridge.totalSupply(), 0);
+    }
+
+    function testUrgentModeOffSwap1() public {
+        // I will deposit and withdraw 1 million LUSD
+        uint256 lusdAmount = 1e24;
+        _deposit(lusdAmount);
+
+        // Mint rewards to the bridge
+        deal(tokens["LQTY"].addr, address(bridge), 1e21);
+        deal(tokens["WETH"].addr, address(bridge), 1e18);
+
+        // Destroy the pools reserves in order for the swap to fail
+        deal(tokens["WETH"].addr, LQTY_ETH_POOL, 0);
+
+        // Withdraw LUSD from StabilityPool through the bridge
+        vm.expectRevert(StabilityPoolBridge.SwapFailed.selector);
+        vm.prank(address(rollupProcessor));
+        bridge.convert(
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            lusdAmount,
+            1,
+            0,
+            address(0)
+        );
+    }
+
+    function testUrgentModeOffSwap2Q() public {
+        // I will deposit and withdraw 1 million LUSD
+        uint256 lusdAmount = 1e24;
+        _deposit(lusdAmount);
+
+        // Mint rewards to the bridge
+        deal(tokens["LQTY"].addr, address(bridge), 1e21);
+        deal(tokens["WETH"].addr, address(bridge), 1e18);
+
+        // Destroy the pools reserves in order for the swap to fail
+        deal(tokens["USDC"].addr, USDC_ETH_POOL, 0);
+
+        // Withdraw LUSD from StabilityPool through the bridge
+        vm.expectRevert(StabilityPoolBridge.SwapFailed.selector);
+        vm.prank(address(rollupProcessor));
+        bridge.convert(
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            lusdAmount,
+            1,
+            0,
+            address(0)
+        );
+    }
+
+    function testUrgentModeOffSwap3() public {
+        // I will deposit and withdraw 1 million LUSD
+        uint256 lusdAmount = 1e24;
+        _deposit(lusdAmount);
+
+        // Mint rewards to the bridge
+        deal(tokens["LQTY"].addr, address(bridge), 1e21);
+        deal(tokens["WETH"].addr, address(bridge), 1e18);
+
+        // Destroy the pools reserves in order for the swap to fail
+        deal(tokens["LUSD"].addr, LUSD_USDC_POOL, 0);
+
+        // Withdraw LUSD from StabilityPool through the bridge
+        vm.expectRevert(StabilityPoolBridge.SwapFailed.selector);
+        vm.prank(address(rollupProcessor));
+        bridge.convert(
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            lusdAmount,
+            1,
+            0,
+            address(0)
+        );
+    }
+
+    function _deposit(uint256 _depositAmount) private {
+        // 1. Mint the deposit amount of LUSD to the bridge
+        deal(tokens["LUSD"].addr, address(rollupProcessor), _depositAmount);
+
+        // 2. Deposit LUSD to the StabilityPool contract through the bridge
+        rollupProcessor.convert(
+            address(bridge),
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
+            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            _depositAmount,
+            0,
+            0
+        );
+
+        // 3. Check the total supply of SPB token is equal to the amount of LUSD deposited
+        assertEq(bridge.totalSupply(), _depositAmount);
+
+        // 4. Check the SPB balance of rollupProcessor is equal to the amount of LUSD deposited
+        assertEq(bridge.balanceOf(address(rollupProcessor)), _depositAmount);
+
+        // 5. Check the LUSD balance of the StabilityPoolBridge in the StabilityPool contract is equal to the amount
+        // of LUSD deposited
+        assertEq(bridge.STABILITY_POOL().getCompoundedLUSDDeposit(address(bridge)), _depositAmount);
     }
 }
