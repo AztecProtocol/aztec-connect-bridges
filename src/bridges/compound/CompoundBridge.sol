@@ -104,7 +104,6 @@ contract CompoundBridge is BridgeBase {
                 cToken.mint{value: msg.value}();
                 outputValueA = cToken.balanceOf(address(this));
             } else if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
-                IERC20 tokenIn = IERC20(_inputAssetA.erc20Address);
                 ICERC20 tokenOut = ICERC20(_outputAssetA.erc20Address);
                 tokenOut.mint(_inputValue);
                 outputValueA = tokenOut.balanceOf(address(this));
