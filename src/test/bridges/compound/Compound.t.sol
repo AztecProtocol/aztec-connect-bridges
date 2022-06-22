@@ -74,7 +74,7 @@ contract CompoundTest is BridgeTestBase {
             }
             if (address(cToken) != cETH) {
                 IERC20 underlying = IERC20(cToken.underlying());
-                // Using safeIncreaseAllowance(...) instead of approve(...) here because underlying can be Tether;
+                // Using safeApprove(...) instead of approve(...) here because underlying can be Tether;
                 allowance = underlying.allowance(address(this), address(cToken));
                 if (allowance != type(uint256).max) {
                     underlying.safeApprove(address(cToken), 0);

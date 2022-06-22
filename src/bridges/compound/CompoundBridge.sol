@@ -38,7 +38,7 @@ contract CompoundBridge is BridgeBase {
     receive() external payable {}
 
     /**
-     * @notice Set all the necessary approvals for a given cToken and its underlying
+     * @notice Set all the necessary approvals for a given cToken and its underlying.
      * @param _cToken - cToken address
      */
     function preApprove(address _cToken) external {
@@ -49,8 +49,6 @@ contract CompoundBridge is BridgeBase {
 
     /**
      * @notice Set all the necessary approvals for all the cTokens registered in Comptroller.
-     * @dev Note: It could happen that this function would revert in case some of the allowances were not 0. If this
-     *      happens call the preApprove(...) function for the given tokens individually.
      */
     function preApproveAll() external {
         address[] memory cTokens = COMPTROLLER.getAllMarkets();
@@ -140,7 +138,7 @@ contract CompoundBridge is BridgeBase {
         }
         if (address(_cToken) != cETH) {
             IERC20 underlying = IERC20(_cToken.underlying());
-            // Using safeIncreaseAllowance(...) instead of approve(...) here because underlying can be Tether;
+            // Using safeApprove(...) instead of approve(...) here because underlying can be Tether;
             allowance = underlying.allowance(address(this), address(_cToken));
             if (allowance != type(uint256).max) {
                 // Resetting allowance to 0 in order to avoid issues with USDT
