@@ -104,6 +104,7 @@ contract ERC4626 is Test {
         console.log(rollupMapleToken, 'withdraw amount');
 =======
         console.log(rollupMapleShares, "ouput amount");
+<<<<<<< HEAD
         assertEq(rollupMapleShares, 4996);
         rollupProcessor.convert(address(vaultbridge), outputAsset, empty, inputAsset, empty, rollupMapleShares, 1, 0);
         uint256 rollupMapleToken = maple.balanceOf(address(rollupProcessor));
@@ -111,6 +112,25 @@ contract ERC4626 is Test {
 >>>>>>> c5027841... update vault and tes
         assertEq(rollupMapleToken, 4999);
         //assertEq(depositAmount, rollupBeefy, 'Balances must match');
+=======
+        assertEq(0, outputValueB);
+        assertEq(rollupMapleShares, outputValueA);
+        (outputValueA, outputValueB, isAsync) = rollupProcessor.convert(
+            address(vaultbridge),
+            outputAsset,
+            empty,
+            inputAsset,
+            empty,
+            outputValueA,
+            2,
+            0
+        );
+
+        uint256 rollupMapleToken = maple.balanceOf(address(rollupProcessor));
+        console.log(rollupMapleToken, "withdraw amount");
+        assertEq(outputValueA, rollupMapleToken);
+        assertEq(0, outputValueB);
+>>>>>>> 1da577a8... test output b
     }
 
     function testVaultBridge2() public {
