@@ -1,16 +1,19 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2022 Spilsbury Holdings Ltd
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ICERC20} from "../../../interfaces/compound/ICERC20.sol";
 import {CompoundBridge} from "../../../bridges/compound/CompoundBridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
 contract CompoundTest is BridgeTestBase {
+    using SafeERC20 for IERC20;
+
     struct Balances {
         uint256 underlyingBefore;
         uint256 underlyingMid;
@@ -23,40 +26,70 @@ contract CompoundTest is BridgeTestBase {
     // solhint-disable-next-line
     address public constant cETH = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
 
-    address[] public cTokens = [
-        0xe65cdB6479BaC1e22340E4E755fAE7E509EcD06c, // cAAve
-        0x6C8c6b02E7b2BE14d4fA6022Dfd6d75921D90E4E, // cBAT
-        0x70e36f6BF80a52b3B46b3aF8e106CC0ed743E8e4, // cCOMP
-        0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643, // cDAI
-        0xFAce851a4921ce59e912d19329929CE6da6EB0c7, // cLINK
-        0x95b4eF2869eBD94BEb4eEE400a99824BF5DC325b, // cMKR
-        0x4B0181102A0112A2ef11AbEE5563bb4a3176c9d7, // cSUSHI
-        0x12392F67bdf24faE0AF363c24aC620a2f67DAd86, // cTUSD
-        0x35A18000230DA775CAc24873d00Ff85BccdeD550, // cUNI
-        0x39AA39c021dfbaE8faC545936693aC917d5E7563, // cUSDC
-        0x041171993284df560249B57358F931D9eB7b925D, // cUSDP
-        0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9, // cUSDT
-        0xccF4429DB6322D5C611ee964527D42E5d685DD6a, // cWBTC2
-        0x80a2AE356fc9ef4305676f7a3E2Ed04e12C33946, // cYFI
-        0xB3319f5D18Bc0D84dD1b4825Dcde5d5f7266d407 // cZRX
-    ];
-
-    CompoundBridge internal compoundBridge;
+    CompoundBridge internal bridge;
     uint256 internal id;
 
     function setUp() public {
         emit log_named_uint("block number", block.number);
-        compoundBridge = new CompoundBridge(address(ROLLUP_PROCESSOR));
-        vm.label(address(compoundBridge), "COMPOUND_BRIDGE");
-        vm.deal(address(compoundBridge), 0);
+        bridge = new CompoundBridge(address(ROLLUP_PROCESSOR));
+        bridge.preApproveAll();
+        vm.label(address(bridge), "COMPOUND_BRIDGE");
+        vm.deal(address(bridge), 0);
 
         vm.prank(MULTI_SIG);
-        ROLLUP_PROCESSOR.setSupportedBridge(address(compoundBridge), 5000000);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 5000000);
 
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
     }
 
+    function testPreApprove() public {
+        address[] memory cTokens = bridge.COMPTROLLER().getAllMarkets();
+        for (uint256 i; i < cTokens.length; ++i) {
+            bridge.preApprove(cTokens[i]);
+        }
+    }
+
+    function testPreApproveReverts() public {
+        address nonCTokenAddress = 0x3cD751E6b0078Be393132286c442345e5DC49699;
+
+        vm.expectRevert(CompoundBridge.MarketNotListed.selector);
+        bridge.preApprove(nonCTokenAddress);
+    }
+
+    function testPreApproveWhenAllowanceNotZero(uint256 _currentAllowance) public {
+        vm.assume(_currentAllowance > 0); // not using bound(...) here because the constraint is not strict
+        // Set allowances to _currentAllowance for all the cTokens and its underlying
+        address[] memory cTokens = bridge.COMPTROLLER().getAllMarkets();
+        vm.startPrank(address(bridge));
+        for (uint256 i; i < cTokens.length; ++i) {
+            ICERC20 cToken = ICERC20(cTokens[i]);
+            uint256 allowance = cToken.allowance(address(this), address(ROLLUP_PROCESSOR));
+            if (allowance < _currentAllowance) {
+                cToken.approve(address(ROLLUP_PROCESSOR), _currentAllowance - allowance);
+            }
+            if (address(cToken) != cETH) {
+                IERC20 underlying = IERC20(cToken.underlying());
+                // Using safeIncreaseAllowance(...) instead of approve(...) here because underlying can be Tether;
+                allowance = underlying.allowance(address(this), address(cToken));
+                if (allowance != type(uint256).max) {
+                    underlying.safeApprove(address(cToken), 0);
+                    underlying.safeApprove(address(cToken), type(uint256).max);
+                }
+                allowance = underlying.allowance(address(this), address(ROLLUP_PROCESSOR));
+                if (allowance != type(uint256).max) {
+                    underlying.safeApprove(address(ROLLUP_PROCESSOR), 0);
+                    underlying.safeApprove(address(ROLLUP_PROCESSOR), type(uint256).max);
+                }
+            }
+        }
+        vm.stopPrank();
+
+        // Verify that preApproveAll() doesn't fail
+        bridge.preApproveAll();
+    }
+
     function testERC20DepositAndWithdrawal(uint88 _depositAmount, uint88 _redeemAmount) public {
+        address[] memory cTokens = bridge.COMPTROLLER().getAllMarkets();
         for (uint256 i; i < cTokens.length; ++i) {
             _depositAndWithdrawERC20(cTokens[i], _depositAmount, _redeemAmount);
         }
@@ -64,7 +97,7 @@ contract CompoundTest is BridgeTestBase {
 
     function testInvalidCaller() public {
         vm.expectRevert(ErrorLib.InvalidCaller.selector);
-        compoundBridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
     function testInvalidInputAsset() public {
@@ -76,25 +109,25 @@ contract CompoundTest is BridgeTestBase {
 
         vm.prank(address(ROLLUP_PROCESSOR));
         vm.expectRevert(ErrorLib.InvalidInputA.selector);
-        compoundBridge.convert(ethAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 1, address(0));
+        bridge.convert(ethAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 1, address(0));
     }
 
     function testInvalidOutputAsset() public {
         vm.prank(address(ROLLUP_PROCESSOR));
         vm.expectRevert(ErrorLib.InvalidOutputA.selector);
-        compoundBridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
     function testIncorrectAuxData() public {
         vm.prank(address(ROLLUP_PROCESSOR));
         vm.expectRevert(ErrorLib.InvalidAuxData.selector);
-        compoundBridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 2, address(0));
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 2, address(0));
     }
 
     function testFinalise() public {
         vm.prank(address(ROLLUP_PROCESSOR));
         vm.expectRevert(ErrorLib.AsyncDisabled.selector);
-        compoundBridge.finalise(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0);
+        bridge.finalise(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0);
     }
 
     function testETHDepositAndWithdrawal(uint256 _depositAmount, uint256 _redeemAmount) public {
