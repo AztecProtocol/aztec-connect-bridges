@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: GPLv2
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ICurvePool} from "../../interfaces/curve/ICurvePool.sol";
 import {ILido} from "../../interfaces/lido/ILido.sol";
 import {IWstETH} from "../../interfaces/lido/IWstETH.sol";
@@ -13,34 +13,52 @@ import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+/**
+ * @notice A DeFiBridge for trading between Eth and wstEth using curve and the stEth wrapper.
+ * @dev Synchronous and stateless bridge that will hold no funds beyond dust for gas-savings.
+ * @author Aztec Team
+ */
 contract CurveStEthBridge is BridgeBase {
     using SafeERC20 for ILido;
     using SafeERC20 for IWstETH;
 
     error InvalidConfiguration();
-    error InvalidWrapReturnValue();
     error InvalidUnwrapReturnValue();
 
     ILido public constant LIDO = ILido(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH public constant WRAPPED_STETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
     ICurvePool public constant CURVE_POOL = ICurvePool(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022);
 
+    // Indexes of the assets in the curve pool
     int128 private constant CURVE_ETH_INDEX = 0;
     int128 private constant CURVE_STETH_INDEX = 1;
 
+    /**
+     * @notice Sets the address of the RollupProcessor and pre-approve tokens
+     * @dev As the contract will not be holding state nor tokens, it can be approved safely.
+     * @param _rollupProcessor The address of the RollupProcessor to use
+     */
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {
         if (CURVE_POOL.coins(uint256(uint128(CURVE_STETH_INDEX))) != address(LIDO)) {
             revert InvalidConfiguration();
         }
 
-        // As the contract is not supposed to hold any funds, we can pre-approve
         LIDO.safeIncreaseAllowance(address(WRAPPED_STETH), type(uint256).max);
         LIDO.safeIncreaseAllowance(address(CURVE_POOL), type(uint256).max);
         WRAPPED_STETH.safeIncreaseAllowance(ROLLUP_PROCESSOR, type(uint256).max);
     }
 
+    // Empty receive function for the contract to be able to receive Eth
     receive() external payable {}
 
+    /**
+     * @notice Swaps between the eth<->wstEth tokens through the curve eth/stEth pool and wrapping stEth
+     * @param _inputAssetA The inputAsset (eth or wstEth)
+     * @param _outputAssetA The output asset (eth or wstEth) opposite `_inputAssetB`
+     * @param _inputValue The amount of token deposited
+     * @param _interactionNonce The nonce of the DeFi interaction, used when swapping wstEth -> eth
+     * @return outputValueA The amount of `_outputAssetA` that the RollupProcessor should pull
+     */
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata,
@@ -58,7 +76,7 @@ contract CurveStEthBridge is BridgeBase {
         returns (
             uint256 outputValueA,
             uint256,
-            bool isAsync
+            bool
         )
     {
         bool isETHInput = _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
@@ -69,14 +87,17 @@ contract CurveStEthBridge is BridgeBase {
             revert ErrorLib.InvalidInputA();
         }
 
-        isAsync = false;
         outputValueA = isETHInput
             ? _wrapETH(_inputValue, _outputAssetA)
             : _unwrapETH(_inputValue, _outputAssetA, _interactionNonce);
     }
 
     /**
-        Convert ETH -> wstETH
+     * @notice Swaps eth to stEth through curve and wrap the stEth into wstEth
+     * @dev Reverts if `_outputAsset` is not wstEth
+     * @param _inputValue The amount of token that is deposited
+     * @param _outputAsset The asset that the DeFi interaction specify as output, must be wstEth
+     * @return outputValue The amount of wstEth received from the interaction
      */
     function _wrapETH(uint256 _inputValue, AztecTypes.AztecAsset calldata _outputAsset)
         private
@@ -97,7 +118,11 @@ contract CurveStEthBridge is BridgeBase {
     }
 
     /**
-        Convert wstETH to ETH
+     * @notice Unwraps wstEth and swap stEth to eth through curve
+     * @dev Reverts if `_outputAsset` is not eth
+     * @param _inputValue The amount of token that is deposited
+     * @param _outputAsset The asset that the DeFi interaction specify as output, must be eth
+     * @return outputValue The amount of eth received from the interaction
      */
     function _unwrapETH(
         uint256 _inputValue,
