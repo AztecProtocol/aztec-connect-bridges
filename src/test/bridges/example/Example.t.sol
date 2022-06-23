@@ -59,6 +59,8 @@ contract ExampleTest is BridgeTestBase {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
+        AztecTypes.AztecAsset memory outputAssetA = inputAssetA;
+
         // Rollup processor transfers ERC20 tokens to the bridge before calling convert. Since we are calling
         // bridge.convert(...) function directly we have to transfer the funds in the test on our own. In this case
         // we'll solve it by directly minting the _depositAmount of Dai to the bridge.
@@ -70,12 +72,10 @@ contract ExampleTest is BridgeTestBase {
         // Impersonate rollup processor
         vm.startPrank(address(ROLLUP_PROCESSOR));
 
-        // Disabling linting errors here to show return variables
-        // solhint-disable-next-line
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
             inputAssetA, // _inputAssetA - definition of an input asset
             emptyAsset, // _inputAssetB - not used so can be left empty
-            emptyAsset, // _outputAssetA - not used so can be left empty
+            outputAssetA, // _outputAssetA - in this example equal to input asset
             emptyAsset, // _outputAssetB - not used so can be left empty
             _depositAmount, // _inputValue - an amount of input asset A sent to the bridge
             0, // _interactionNonce
@@ -89,6 +89,10 @@ contract ExampleTest is BridgeTestBase {
         IERC20(inputAssetA.erc20Address).transferFrom(address(bridge), address(ROLLUP_PROCESSOR), outputValueA);
 
         vm.stopPrank();
+
+        assertEq(outputValueA, _depositAmount, "Output value A doesn't equal deposit amount");
+        assertEq(outputValueB, 0, "Output value B is not 0");
+        assertTrue(!isAsync, "Bridge is incorrectly in an async mode");
 
         uint256 daiBalanceAfter = DAI.balanceOf(address(ROLLUP_PROCESSOR));
 
