@@ -14,18 +14,21 @@ import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract SimplerDCABridge is BridgeBase, Test {
+    using SafeERC20 for IERC20;
     struct DCA {
-        uint256 total;
-        uint256 start;
-        uint256 end;
+        uint128 total;
+        uint32 start;
+        uint32 end;
     }
 
     struct Tick {
         uint240 available;
         uint16 poke;
-        uint256 sold;
-        uint256 bought;
+        uint128 sold;
+        uint128 bought;
     }
+
+    IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
 
     uint256 public constant TICK_SIZE = 1 days;
 
@@ -38,6 +41,10 @@ contract SimplerDCABridge is BridgeBase, Test {
 
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
+    function getTick(uint256 _day) public view returns (Tick memory) {
+        return ticks[_day];
+    }
+
     function pokeNextTicks(uint256 _ticks) public {
         uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
         pokeTicks(nextTick, _ticks);
@@ -45,9 +52,7 @@ contract SimplerDCABridge is BridgeBase, Test {
 
     function pokeTicks(uint256 _startTick, uint256 _ticks) public {
         for (uint256 i = _startTick; i < _startTick + _ticks; i++) {
-            unchecked {
-                ticks[i].poke++;
-            }
+            ticks[i].poke++;
         }
     }
 
@@ -57,58 +62,99 @@ contract SimplerDCABridge is BridgeBase, Test {
         uint256 _ticks
     ) public {
         uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
-
-        uint240 tickAmount = uint240(_amount / _ticks);
-
+        if (lastTickBought == 0) {
+            // Just for the first update
+            lastTickBought = nextTick;
+        }
+        uint240 tickAmount = _toU240(_amount / _ticks);
         for (uint256 i = nextTick; i < nextTick + _ticks; i++) {
             ticks[i].available += tickAmount;
         }
-
-        dcas[_nonce] = DCA({total: _amount, start: nextTick, end: nextTick + _ticks});
+        dcas[_nonce] = DCA({total: _toU128(_amount), start: _toU32(nextTick), end: _toU32(nextTick + _ticks)});
     }
 
     function getPrice() public view returns (uint256) {
         return 900017768410818; // 1111 usd per eth
     }
 
-    function available() public returns (uint256) {
-        uint256 available = 0;
+    function available() public view returns (uint256 availableAsset) {
         uint256 lastTick = block.timestamp / TICK_SIZE;
-
         for (uint256 i = lastTickBought; i <= lastTick; i++) {
-            available += ticks[i].available;
+            availableAsset += ticks[i].available;
         }
-
-        return available;
     }
 
-    function trade(uint256 _maxEthInput) public returns (uint256, uint256) {
+    function trade(uint256 _maxEthInput)
+        public
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
         uint256 price = getPrice();
-        uint256 maxDaiToBuy = (_maxEthInput * 1e18) / price; // dai to buy from eth
+        uint256 maxDaiToBuy = (_maxEthInput * 1e18) / price; // max dai to buy with eth
         uint256 lastTick = block.timestamp / TICK_SIZE;
+        uint256 sold = 0;
+        uint256 newLastBought = lastTickBought;
 
-        uint256 bought = 0;
-
+        // Fill the orders chronologically.
         for (uint256 i = lastTickBought; i <= lastTick; i++) {
             Tick storage tick = ticks[i];
-            uint256 forSale = tick.forSale;
-            uint256 buy = forSale;
+            uint256 available = tick.available;
 
-            if (bought + forSale > maxDaiToBuy) {
-                buy = maxDaiToBuy - bought;
+            if (available == 0) {
+                continue;
             }
 
-            tick.available -= buy;
-            tick.sold += buy;
-            tick.bought += (buy * price) / 1e18;
-            bought += buy;
+            uint256 buy = available;
 
-            if (bought == maxDaiToBuy) {
+            if (sold + available > maxDaiToBuy) {
+                buy = maxDaiToBuy - sold;
+            }
+
+            tick.available -= _toU240(buy);
+            tick.sold += _toU128(buy);
+            tick.bought += _toU128((buy * price) / 1e18);
+            sold += buy;
+
+            newLastBought = i;
+
+            if (sold == maxDaiToBuy) {
                 break;
             }
         }
 
-        return (0, 0);
+        lastTickBought = newLastBought;
+
+        uint256 bought = (sold * price) / 1e18;
+        uint256 refund = _maxEthInput - bought;
+
+        if (refund > 0) {
+            // Transfer
+        }
+        //
+
+        return (bought, sold, refund);
+    }
+
+    function getAccumulated(uint256 _nonce) public view returns (uint256 accumulated, bool ready) {
+        DCA storage dca = dcas[_nonce];
+        uint256 start = dca.start;
+        uint256 end = dca.end;
+        uint240 tickAmount = _toU240(dca.total / (end - start));
+
+        for (uint256 i = start; i < end; i++) {
+            Tick storage tick = ticks[i];
+            if (tick.sold == 0) {
+                break;
+            }
+            accumulated += (tick.bought * uint256(tickAmount)) / uint256(tick.sold);
+            if (tick.available > 0) {
+                ready = false;
+                break;
+            }
+        }
     }
 
     function convert(
@@ -118,7 +164,7 @@ contract SimplerDCABridge is BridgeBase, Test {
         AztecTypes.AztecAsset calldata,
         uint256 _inputValue,
         uint256 _interactionNonce,
-        uint64,
+        uint64 _ticks,
         address
     )
         external
@@ -126,9 +172,64 @@ contract SimplerDCABridge is BridgeBase, Test {
         override(BridgeBase)
         onlyRollup
         returns (
-            uint256 outputValueA,
+            uint256,
             uint256,
             bool
         )
-    {}
+    {
+        // TODO: A bit of validation
+        deposit(_interactionNonce, _inputValue, _ticks);
+        return (0, 0, true);
+    }
+
+    function finalise(
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        uint256 _nonce,
+        uint64
+    )
+        external
+        payable
+        virtual
+        override(BridgeBase)
+        onlyRollup
+        returns (
+            uint256 outputValueA,
+            uint256,
+            bool interactionComplete
+        )
+    {
+        // TODO: A bit of validation
+        uint256 accumulated;
+        (accumulated, interactionComplete) = getAccumulated(_nonce);
+
+        if (interactionComplete) {
+            outputValueA = accumulated;
+            delete dcas[_nonce];
+            // Do a transfer of ether to the rollup
+        }
+    }
+
+    function _toU128(uint256 _a) internal pure returns (uint128) {
+        if (_a > type(uint128).max) {
+            revert("Overflow");
+        }
+        return uint128(_a);
+    }
+
+    function _toU240(uint256 _a) internal pure returns (uint240) {
+        if (_a > type(uint240).max) {
+            revert("Overflow");
+        }
+        return uint240(_a);
+    }
+
+    function _toU32(uint256 _a) internal pure returns (uint32) {
+        if (_a > type(uint32).max) {
+            revert("Overflow");
+        }
+        return uint32(_a);
+    }
 }
