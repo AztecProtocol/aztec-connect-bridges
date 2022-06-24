@@ -73,7 +73,7 @@ contract SimplerDCATest is Test {
                 emit log_named_decimal_uint("bought ", tick.bought, 18);
             }
         }
-        for (uint256 i = 0; i < 2; i++) {
+        for (uint256 i = 0; i < 3; i++) {
             (uint256 accumulated, bool ready) = bridge.getAccumulated(i);
             emit log_named_decimal_uint("accumulated", accumulated, 18);
             if (ready) {
@@ -82,6 +82,7 @@ contract SimplerDCATest is Test {
                 emit log("Not ready");
             }
         }
+        emit log("---");
         vm.warp(block.timestamp + 10 days);
         (uint256 bought, uint256 sold, uint256 refund) = bridge.trade(30 ether);
 
