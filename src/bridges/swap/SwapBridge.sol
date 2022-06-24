@@ -25,6 +25,11 @@ contract SwapBridge is BridgeBase {
     // Binary number 1111111111111111111111111100000000000000000000000000000000000000
     uint64 private constant PRICE_MASK = 0xFFFFFFC000000000;
 
+    // Binary number 11
+    uint64 private constant FEE_MASK = 0x3;
+    // Binary number 111
+    uint64 private constant TOKEN_MASK = 0x7;
+
     /**
      * @notice Set the address of RollupProcessor.sol.
      * @param _rollupProcessor Address of the RollupProcessor.sol
@@ -74,23 +79,53 @@ contract SwapBridge is BridgeBase {
         address _tokenOut
     )
         internal
-        view
         returns (
+            uint256 percentage1,
             bytes memory splitPath1,
+            uint256 percentage2,
             bytes memory splitPath2,
             uint256 minAmountOut
         )
     {
-        splitPath1 = _decodeSplitPath(_tokenIn, _encodedPath & PATH1_MASK, _tokenOut);
+        (percentage1, splitPath1) = _decodeSplitPath(_tokenIn, _encodedPath & PATH1_MASK, _tokenOut);
     }
 
     function _decodeSplitPath(
         address _tokenIn,
         uint64 _encodedSplitPath,
         address _tokenOut
-    ) internal view returns (bytes memory path) {}
+    ) internal view returns (uint256 percentage, bytes memory path) {
+        uint64 fee3 = _encodedSplitPath & FEE_MASK;
+        uint64 middleToken2 = (_encodedSplitPath >> 2) & TOKEN_MASK;
+        uint64 fee2 = (_encodedSplitPath >> 5) & FEE_MASK;
+        uint64 middleToken1 = (_encodedSplitPath >> 7) & TOKEN_MASK;
+        uint64 fee1 = (_encodedSplitPath >> 10) & FEE_MASK;
+        percentage = _encodedSplitPath >> 12;
 
-    function _getFeeTier(uint256 _encodedFeeTier) private pure returns (uint24 feeTier) {
+        if (middleToken1 != 0 && middleToken2 != 0) {
+            path = abi.encodePacked(
+                _tokenIn,
+                _getFeeTier(fee1),
+                _getMiddleToken(middleToken1),
+                _getFeeTier(fee2),
+                _getMiddleToken(middleToken2),
+                _getFeeTier(fee3),
+                _tokenOut
+            );
+        } else if (middleToken1 != 0) {
+            path = abi.encodePacked(
+                _tokenIn,
+                _getFeeTier(fee1),
+                _getMiddleToken(middleToken1),
+                _getFeeTier(fee3),
+                _tokenOut
+            );
+        } else {
+            path = abi.encodePacked(_tokenIn, _getFeeTier(fee3), _tokenOut);
+        }
+    }
+
+    function _getFeeTier(uint64 _encodedFeeTier) private pure returns (uint24 feeTier) {
         if (_encodedFeeTier == 0) {
             return uint24(100);
         }
