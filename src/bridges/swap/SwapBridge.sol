@@ -10,6 +10,17 @@ import {ISwapRouter} from "../../interfaces/uniswapv3/ISwapRouter.sol";
 contract SwapBridge is BridgeBase {
     error InvalidFeeTierEncoding();
     error InvalidTokenEncoding();
+    error InvalidPercentageAmounts();
+    error InsufficientAmountOut();
+
+    // TODO: consider packing
+    struct Path {
+        uint256 percentage1;
+        bytes splitPath1;
+        uint256 percentage2;
+        bytes splitPath2;
+        uint256 amountOutMinimum;
+    }
 
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
@@ -18,12 +29,14 @@ contract SwapBridge is BridgeBase {
     //      1 path consists of |2 bits fee| |3 bits middle token| |2 bits fee| |3 bits middle token| |2 bits fee|
     //      Fee bits are mapped to specific fee tiers as follows: 00 is 0.01%, 01 is 0.05%, 10 is 0.3%, 11 is 1%
     //      Slippage is also mapped to predefined values: TODO
-    // Binary number 0000000000000000000000000000000000000000000001111111111111111111
-    uint64 private constant PATH1_MASK = 0x7FFFF;
-    // Binary number 0000000000000000000000000011111111111111111110000000000000000000
-    uint64 private constant PATH2_MASK = 0x3FFFF80000;
-    // Binary number 1111111111111111111111111100000000000000000000000000000000000000
-    uint64 private constant PRICE_MASK = 0xFFFFFFC000000000;
+    uint64 private constant PATH_BIT_LENGTH = 19;
+    uint64 private constant PATHS_BIT_LENGTH = 38;
+    // Binary number 0000000000000000000000000000000000000000000001111111111111111111 (last 19 bits)
+    uint64 private constant PATH_MASK = 0x7FFFF;
+
+    uint64 private constant PRICE_BIT_LENGTH = 26;
+    // Binary number 0000000000000000000000000000000000000011111111111111111111111111 (last 26 bits)
+    uint64 private constant PRICE_MASK = 0x3FFFFFF;
 
     // Binary number 11
     uint64 private constant FEE_MASK = 0x3;
@@ -57,37 +70,58 @@ contract SwapBridge is BridgeBase {
     {
         if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidInputA();
         if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
-        (bytes memory splitPath1, bytes memory splitPath2, uint256 minAmountOut) = _decodePath(
-            _inputAssetA.erc20Address,
-            _auxData,
-            _outputAssetA.erc20Address
-        );
-        UNI_ROUTER.exactInput(
+
+        Path memory path = _decodePath(_inputAssetA.erc20Address, _auxData, _outputAssetA.erc20Address);
+
+        uint256 amountOut = UNI_ROUTER.exactInput(
             ISwapRouter.ExactInputParams({
-                path: splitPath1,
+                path: path.splitPath1,
                 recipient: address(this),
                 deadline: block.timestamp,
                 amountIn: _inputValue,
                 amountOutMinimum: 0
             })
         );
+
+        if (path.percentage2 != 0) {
+            amountOut += UNI_ROUTER.exactInput(
+                ISwapRouter.ExactInputParams({
+                    path: path.splitPath2,
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: _inputValue,
+                    amountOutMinimum: 0
+                })
+            );
+        }
+
+        if (amountOut < path.amountOutMinimum) revert InsufficientAmountOut();
     }
 
     function _decodePath(
         address _tokenIn,
         uint64 _encodedPath,
         address _tokenOut
-    )
-        internal
-        returns (
-            uint256 percentage1,
-            bytes memory splitPath1,
-            uint256 percentage2,
-            bytes memory splitPath2,
-            uint256 minAmountOut
-        )
-    {
-        (percentage1, splitPath1) = _decodeSplitPath(_tokenIn, _encodedPath & PATH1_MASK, _tokenOut);
+    ) internal view returns (Path memory path) {
+        (uint256 percentage1, bytes memory splitPath1) = _decodeSplitPath(
+            _tokenIn,
+            _encodedPath & PATH_MASK,
+            _tokenOut
+        );
+        path.percentage1 = percentage1;
+        path.splitPath1 = splitPath1;
+
+        (uint256 percentage2, bytes memory splitPath2) = _decodeSplitPath(
+            _tokenIn,
+            (_encodedPath >> PATH_BIT_LENGTH) & PATH_MASK,
+            _tokenOut
+        );
+
+        if (percentage1 + percentage2 != 100) revert InvalidPercentageAmounts();
+
+        path.percentage2 = percentage2;
+        path.splitPath2 = splitPath2;
+        path.amountOutMinimum = _decodeAmountOutMinimum(_encodedPath >> PATHS_BIT_LENGTH);
     }
 
     function _decodeSplitPath(
@@ -123,6 +157,11 @@ contract SwapBridge is BridgeBase {
         } else {
             path = abi.encodePacked(_tokenIn, _getFeeTier(fee3), _tokenOut);
         }
+    }
+
+    function _decodeAmountOutMinimum(uint64 _encodedSlippage) internal pure returns (uint256 amountOutMinimum) {
+        // TODO
+        return _encodedSlippage;
     }
 
     function _getFeeTier(uint64 _encodedFeeTier) private pure returns (uint24 feeTier) {

@@ -14,12 +14,14 @@ contract SwapBridgeInternalTest is DSTest, SwapBridge(address(0)) {
     function setUp() public {}
 
     function testDecodePath() public {
-        //            500      3000      3000
-        // PATH LUSD  ->  USDC  ->  WETH  ->  LQTY
+        //            500    3000    3000
+        // PATH1 LUSD -> DAI -> WETH -> LQTY    30% of input 0011110 01 100 10 001 10
+        //            500     3000    3000
+        // PATH2 LUSD -> USDC -> WETH -> LQTY   70% of input 1000110 01 010 10 001 10
         // 0000000000000000000000000000000000000000000001111111 111111111111
-        // 000000000000000000000000000000000000000000000 1000110 01 010 10 001 10
-        uint64 encodedPath = 0x46546;
-        _decodePath(LUSD, encodedPath, LQTY);
+        // 00000000000000000000000000 | 0011110 01 100 10 001 10 | 1000110 01 010 10 001 10
+        uint64 encodedPath = 0xF32346546;
+        SwapBridge.Path memory path = _decodePath(LUSD, encodedPath, LQTY);
     }
 
     function testDecodeSplitPathAllMiddleTokensUsed() public {
