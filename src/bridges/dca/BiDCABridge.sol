@@ -9,6 +9,8 @@ import {BridgeBase} from "../base/BridgeBase.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 
+import {IWETH} from "../../interfaces/IWETH.sol";
+
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
@@ -18,6 +20,8 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 contract BiDCABridge is BridgeBase {
     using SafeERC20 for IERC20;
+
+    error PositionAlreadyExists();
 
     struct RebalanceValues {
         uint256 currentPrice;
@@ -53,8 +57,11 @@ contract BiDCABridge is BridgeBase {
         uint256 priceUpdated;
     }
 
+    IWETH internal constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+
     IERC20 public immutable ASSET_A;
     IERC20 public immutable ASSET_B;
+
     uint256 public immutable TICK_SIZE;
 
     uint256 public oldestTickAvailableA;
@@ -75,9 +82,16 @@ contract BiDCABridge is BridgeBase {
         ASSET_B = IERC20(_assetB);
         TICK_SIZE = _tickSize;
 
-        IERC20(_assetA).safeApprove(_rollupProcessor, type(uint256).max);
-        IERC20(_assetB).safeApprove(_rollupProcessor, type(uint256).max);
+        if (_assetA != address(WETH)) {
+            IERC20(_assetA).safeApprove(_rollupProcessor, type(uint256).max);
+        }
+
+        if (_assetB != address(WETH)) {
+            IERC20(_assetB).safeApprove(_rollupProcessor, type(uint256).max);
+        }
     }
+
+    receive() external payable {}
 
     function pokeNextTicks(uint256 _ticks) public {
         uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
@@ -88,62 +102,6 @@ contract BiDCABridge is BridgeBase {
         for (uint256 i = _startTick; i < _startTick + _ticks; i++) {
             ticks[i].poke++;
         }
-    }
-
-    function deposit(
-        uint256 _nonce,
-        uint256 _amount,
-        uint256 _ticks,
-        bool _assetA
-    ) public {
-        uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
-        if (_assetA && oldestTickAvailableA == 0) {
-            // Just for the first update
-            oldestTickAvailableA = nextTick;
-        }
-        if (!_assetA && lastTickAvailableB == 0) {
-            lastTickAvailableB = nextTick;
-        }
-        ticks[nextTick - 1].priceAToB = getPrice();
-        ticks[nextTick - 1].priceUpdated = block.timestamp;
-        uint240 tickAmount = _toU240(_amount / _ticks);
-        for (uint256 i = nextTick; i < nextTick + _ticks; i++) {
-            if (_assetA) {
-                ticks[i].availableA += tickAmount;
-            } else {
-                ticks[i].availableB += tickAmount;
-            }
-        }
-        dcas[_nonce] = DCA({
-            total: _toU128(_amount),
-            start: _toU32(nextTick),
-            end: _toU32(nextTick + _ticks),
-            assetA: _assetA
-        });
-
-        // Don't need to pull funds as we are getting them directly from the rollup
-    }
-
-    function getPrice() public view returns (uint256) {
-        return 0.001e18; // 900017768410818; // 1111 usd per eth
-    }
-
-    function available() public view returns (uint256 availableA, uint256 availableB) {
-        uint256 start = _lastUsedTick(oldestTickAvailableA, lastTickAvailableB);
-        // Loop over both to get it done properly
-        uint256 lastTick = block.timestamp / TICK_SIZE;
-        for (uint256 i = start; i <= lastTick; i++) {
-            availableA += ticks[i].availableA;
-            availableB += ticks[i].availableB;
-        }
-    }
-
-    function assetAInAssetB(uint256 _amount, uint256 _priceAToB) public pure returns (uint256) {
-        return (_amount * _priceAToB) / 1e18;
-    }
-
-    function assetBInAssetA(uint256 _amount, uint256 _priceAToB) public pure returns (uint256) {
-        return (_amount * 1e18) / _priceAToB;
     }
 
     function rebalanceAndfill(uint256 _offerA, uint256 _offerB) public returns (int256, int256) {
@@ -171,6 +129,179 @@ contract BiDCABridge is BridgeBase {
         // Flash swap these assets from uniswap
         // run rebalance again with the values, and we need to compute the price we got from uniswap.
         // Practically, we want to borrow both assets from uniswap, and then return them both. Its a bit ugly, but might be doable
+
+        return (0, 0);
+    }
+
+    function convert(
+        AztecTypes.AztecAsset calldata _inputAssetA,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata _outputAssetA,
+        AztecTypes.AztecAsset calldata,
+        uint256 _inputValue,
+        uint256 _interactionNonce,
+        uint64 _ticks,
+        address
+    )
+        external
+        payable
+        override(BridgeBase)
+        onlyRollup
+        returns (
+            uint256,
+            uint256,
+            bool
+        )
+    {
+        address inputAssetAddress = _inputAssetA.erc20Address;
+        address outputAssetAddress = _outputAssetA.erc20Address;
+
+        if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+            WETH.deposit{value: _inputValue}();
+            inputAssetAddress = address(WETH);
+        }
+        if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+            outputAssetAddress = address(WETH);
+        }
+
+        if (inputAssetAddress != address(ASSET_A) && inputAssetAddress != address(ASSET_B)) {
+            revert ErrorLib.InvalidInputA();
+        }
+        bool assetA = inputAssetAddress == address(ASSET_A);
+
+        if (outputAssetAddress != (assetA ? address(ASSET_B) : address(ASSET_A))) {
+            revert ErrorLib.InvalidOutputA();
+        }
+        if (dcas[_interactionNonce].start != 0) {
+            revert PositionAlreadyExists();
+        }
+
+        _deposit(_interactionNonce, _inputValue, _ticks, assetA);
+        return (0, 0, true);
+    }
+
+    function finalise(
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata _outputAssetA,
+        AztecTypes.AztecAsset calldata,
+        uint256 _interactionNonce,
+        uint64
+    )
+        external
+        payable
+        virtual
+        override(BridgeBase)
+        onlyRollup
+        returns (
+            uint256 outputValueA,
+            uint256,
+            bool interactionComplete
+        )
+    {
+        uint256 accumulated;
+        (accumulated, interactionComplete) = getAccumulated(_interactionNonce);
+
+        if (interactionComplete) {
+            bool toEth;
+
+            address outputAssetAddress = _outputAssetA.erc20Address;
+            if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+                toEth = true;
+                outputAssetAddress = address(WETH);
+            }
+
+            if (outputAssetAddress != (dcas[_interactionNonce].assetA ? address(ASSET_B) : address(ASSET_A))) {
+                revert ErrorLib.InvalidOutputA();
+            }
+
+            outputValueA = accumulated;
+            delete dcas[_interactionNonce];
+
+            if (toEth) {
+                WETH.withdraw(accumulated);
+                IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
+            }
+        }
+    }
+
+    function getPrice() public view returns (uint256) {
+        return 0.001e18; // 900017768410818; // 1111 usd per eth
+    }
+
+    function assetAInAssetB(uint256 _amount, uint256 _priceAToB) public pure returns (uint256) {
+        return (_amount * _priceAToB) / 1e18;
+    }
+
+    function assetBInAssetA(uint256 _amount, uint256 _priceAToB) public pure returns (uint256) {
+        return (_amount * 1e18) / _priceAToB;
+    }
+
+    function getTick(uint256 _day) public view returns (Tick memory) {
+        return ticks[_day];
+    }
+
+    function getDCA(uint256 _nonce) public view returns (DCA memory) {
+        return dcas[_nonce];
+    }
+
+    function getAvailable() public view returns (uint256 availableA, uint256 availableB) {
+        uint256 start = _lastUsedTick(oldestTickAvailableA, lastTickAvailableB);
+        uint256 lastTick = block.timestamp / TICK_SIZE;
+        for (uint256 i = start; i <= lastTick; i++) {
+            availableA += ticks[i].availableA;
+            availableB += ticks[i].availableB;
+        }
+    }
+
+    function getAccumulated(uint256 _nonce) public view returns (uint256 accumulated, bool ready) {
+        DCA storage dca = dcas[_nonce];
+        uint256 start = dca.start;
+        uint256 end = dca.end;
+        uint256 tickAmount = dca.total / (end - start);
+        bool assetA = dca.assetA;
+
+        ready = true;
+
+        for (uint256 i = start; i < end; i++) {
+            Tick storage tick = ticks[i];
+            (uint256 available, uint256 sold, uint256 bought) = assetA
+                ? (tick.availableA, tick.assetAToB.sold, tick.assetAToB.bought)
+                : (tick.availableB, tick.assetBToA.sold, tick.assetBToA.bought);
+            ready = ready && available == 0 && sold > 0;
+            accumulated += sold == 0 ? 0 : (bought * tickAmount) / (sold + available);
+        }
+    }
+
+    function _deposit(
+        uint256 _nonce,
+        uint256 _amount,
+        uint256 _ticks,
+        bool _assetA
+    ) internal {
+        uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
+        if (_assetA && oldestTickAvailableA == 0) {
+            oldestTickAvailableA = nextTick;
+        }
+        if (!_assetA && lastTickAvailableB == 0) {
+            lastTickAvailableB = nextTick;
+        }
+        ticks[nextTick - 1].priceAToB = getPrice();
+        ticks[nextTick - 1].priceUpdated = block.timestamp;
+        uint240 tickAmount = _toU240(_amount / _ticks);
+        for (uint256 i = nextTick; i < nextTick + _ticks; i++) {
+            if (_assetA) {
+                ticks[i].availableA += tickAmount;
+            } else {
+                ticks[i].availableB += tickAmount;
+            }
+        }
+        dcas[_nonce] = DCA({
+            total: _toU128(_amount),
+            start: _toU32(nextTick),
+            end: _toU32(nextTick + _ticks),
+            assetA: _assetA
+        });
     }
 
     /**
@@ -183,15 +314,16 @@ contract BiDCABridge is BridgeBase {
         uint256 _currentPrice
     ) internal returns (int256, int256) {
         RebalanceValues memory vars;
+        vars.currentPrice = _currentPrice;
 
+        // Cache the oldest ticks, and compute earliest tick for the loop
         uint256 oldestTickA = vars.oldestTickAvailableA = oldestTickAvailableA;
         uint256 oldestTickB = vars.oldestTickAvailableB = lastTickAvailableB;
         uint256 oldestTick = _lastUsedTick(oldestTickA, oldestTickB);
 
-        vars.currentPrice = _currentPrice;
+        // Cache last used price for use in case we don't have a fresh price.
         uint256 lastUsedPrice = ticks[oldestTick].priceAToB;
         uint256 lastUsedPriceTs = ticks[oldestTick].priceUpdated;
-
         if (lastUsedPrice == 0) {
             uint256 lookBack = oldestTick;
             while (lastUsedPrice == 0) {
@@ -201,8 +333,11 @@ contract BiDCABridge is BridgeBase {
             }
         }
 
+        // Compute values in opposite asset, for easier comparisons
         vars.offerAInB = assetAInAssetB(_offerA, vars.currentPrice);
         vars.offerBInA = assetBInAssetA(_offerB, vars.currentPrice);
+
+        //
 
         uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
         for (uint256 i = oldestTick; i < nextTick; i++) {
@@ -211,9 +346,13 @@ contract BiDCABridge is BridgeBase {
 
             // Rebalance the tick using available balances
             if (tick.availableA > 0 && tick.availableB > 0) {
-                // If we got matching, then we can try to match these based on the prices we have stored.
                 uint256 price = tick.priceAToB;
-                if (price == 0) {
+
+                // If a price is stored, update the last used price and timestamp. Otherwise intrapolate.
+                if (price > 0) {
+                    lastUsedPrice = price;
+                    lastUsedPriceTs = tick.priceUpdated;
+                } else {
                     int256 slope = (int256(vars.currentPrice) - int256(lastUsedPrice)) /
                         int256(block.timestamp - lastUsedPriceTs);
                     uint256 dt = i * TICK_SIZE + TICK_SIZE / 2 - lastUsedPriceTs;
@@ -225,12 +364,12 @@ contract BiDCABridge is BridgeBase {
                     }
                 }
 
-                // To compare we need same basis
+                // To compare we need same basis. Compute value of the available A in base B.
                 uint256 availableAInB = assetAInAssetB(tick.availableA, price);
 
                 // If more value in A than B, we can use all available B. Otherwise, use all available A
                 if (availableAInB > tick.availableB) {
-                    // We got more A than B, so fill everything in B and part of A
+                    // The value of all available B in asset A.
                     uint256 availableBInA = assetBInAssetA(tick.availableB, price);
 
                     // Update Asset A
@@ -264,10 +403,12 @@ contract BiDCABridge is BridgeBase {
             // If there is still available B, use the offer with A to buy it
             if (vars.offerAInB > 0 && tick.availableB > 0) {
                 uint256 userBuyingB = vars.offerAInB;
+                // We cannot buy more than available
                 if (vars.offerAInB > tick.availableB) {
                     userBuyingB = tick.availableB;
                 }
-                // Because of rounding, the sum of assetAPayment should be <= total offer.
+
+                // Compute the amount of A we need to pay to get this B.
                 uint256 assetAPayment = assetBInAssetA(userBuyingB, vars.currentPrice);
 
                 tick.availableB -= userBuyingB;
@@ -320,95 +461,6 @@ contract BiDCABridge is BridgeBase {
         int256 flowB = int256(vars.protocolBoughtB) - int256(vars.protocolSoldB);
 
         return (flowA, flowB);
-    }
-
-    function convert(
-        AztecTypes.AztecAsset calldata _inputAssetA,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata _outputAssetA,
-        AztecTypes.AztecAsset calldata,
-        uint256 _inputValue,
-        uint256 _interactionNonce,
-        uint64 _ticks,
-        address
-    )
-        external
-        payable
-        override(BridgeBase)
-        onlyRollup
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        // TODO: A bit of validation
-        bool assetA = _inputAssetA.erc20Address == address(ASSET_A);
-        deposit(_interactionNonce, _inputValue, _ticks, assetA);
-        return (0, 0, true);
-    }
-
-    function finalise(
-        AztecTypes.AztecAsset calldata _inputAssetA,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata _outputAssetA,
-        AztecTypes.AztecAsset calldata,
-        uint256 _nonce,
-        uint64
-    )
-        external
-        payable
-        virtual
-        override(BridgeBase)
-        onlyRollup
-        returns (
-            uint256 outputValueA,
-            uint256,
-            bool interactionComplete
-        )
-    {
-        uint256 accumulated;
-        (accumulated, interactionComplete) = getAccumulated(_nonce);
-
-        if (interactionComplete) {
-            DCA memory dca = dcas[_nonce];
-
-            if (_outputAssetA.erc20Address != (dca.assetA ? address(ASSET_B) : address(ASSET_A))) {
-                revert ErrorLib.InvalidOutputA();
-            }
-
-            outputValueA = accumulated;
-            delete dcas[_nonce];
-
-            // TODO: If the asset is ether, we need to do the tranfer
-        }
-    }
-
-    function getAccumulated(uint256 _nonce) public view returns (uint256 accumulated, bool ready) {
-        DCA storage dca = dcas[_nonce];
-        uint256 start = dca.start;
-        uint256 end = dca.end;
-        uint256 tickAmount = dca.total / (end - start);
-        bool assetA = dca.assetA;
-
-        ready = true;
-
-        for (uint256 i = start; i < end; i++) {
-            Tick storage tick = ticks[i];
-            (uint256 available, uint256 sold, uint256 bought) = assetA
-                ? (tick.availableA, tick.assetAToB.sold, tick.assetAToB.bought)
-                : (tick.availableB, tick.assetBToA.sold, tick.assetBToA.bought);
-            ready = ready && available == 0 && sold > 0;
-            accumulated += sold == 0 ? 0 : (bought * tickAmount) / (sold + available);
-        }
-    }
-
-    function getTick(uint256 _day) public view returns (Tick memory) {
-        return ticks[_day];
-    }
-
-    function getDCA(uint256 _nonce) public view returns (DCA memory) {
-        return dcas[_nonce];
     }
 
     function _lastUsedTick(uint256 _lastTickA, uint256 _lastTickB) internal pure returns (uint256) {
