@@ -12,9 +12,10 @@ import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {ICERC20} from "../../../interfaces/compound/ICERC20.sol";
 import {BiDCABridge} from "../../../bridges/dca/BiDCABridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
+import {IWETH} from "../../../interfaces/IWETH.sol";
 
 /**
- * @notice ERC20 token implementation useful in testin
+ * @notice ERC20 token implementation useful in testing
  * @author Lasse Herskind
  */
 contract Testtoken is ERC20 {
@@ -38,6 +39,8 @@ contract BiDCATest_unit is Test {
     using SafeERC20 for IERC20;
     using SafeERC20 for ERC20;
 
+    IWETH internal constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+
     BiDCABridge internal bridge;
     IERC20 internal assetA;
     IERC20 internal assetB;
@@ -45,6 +48,10 @@ contract BiDCATest_unit is Test {
     AztecTypes.AztecAsset emptyAsset;
     AztecTypes.AztecAsset aztecAssetA;
     AztecTypes.AztecAsset aztecAssetB;
+
+    receive() external payable {}
+
+    function receiveEthFromBridge(uint256 _interactionNonce) public payable {}
 
     function setUp() public {
         Testtoken a = new Testtoken("TokenA", "A", 18);
@@ -78,7 +85,7 @@ contract BiDCATest_unit is Test {
         deal(address(assetA), address(bridge), 1000 ether);
 
         {
-            (uint256 a, uint256 b) = bridge.available();
+            (uint256 a, uint256 b) = bridge.getAvailable();
             assertEq(a, 0);
             assertEq(b, 0);
         }
@@ -86,7 +93,7 @@ contract BiDCATest_unit is Test {
         vm.warp(block.timestamp + 2 days);
         {
             // Check the available amount of funds
-            (uint256 a, uint256 b) = bridge.available();
+            (uint256 a, uint256 b) = bridge.getAvailable();
             assertEq(a, 200e18, "Available A not matching");
             assertEq(b, 0, "Available B not matching");
         }
@@ -153,7 +160,7 @@ contract BiDCATest_unit is Test {
         deal(address(assetA), address(bridge), 2100 ether);
 
         {
-            (uint256 a, uint256 b) = bridge.available();
+            (uint256 a, uint256 b) = bridge.getAvailable();
             assertEq(a, 100 ether);
             assertEq(b, 0);
         }
@@ -161,7 +168,7 @@ contract BiDCATest_unit is Test {
         vm.warp(block.timestamp + 2 days);
         {
             // Check the available amount of funds
-            (uint256 a, uint256 b) = bridge.available();
+            (uint256 a, uint256 b) = bridge.getAvailable();
             assertEq(a, 300e18 + 400e18, "Available A not matching");
             assertEq(b, 0, "Available B not matching");
         }
@@ -255,7 +262,7 @@ contract BiDCATest_unit is Test {
         deal(address(assetA), address(bridge), 1000 ether);
 
         {
-            (uint256 a, uint256 b) = bridge.available();
+            (uint256 a, uint256 b) = bridge.getAvailable();
             assertEq(a, 0);
             assertEq(b, 0);
         }
@@ -263,7 +270,7 @@ contract BiDCATest_unit is Test {
         vm.warp(block.timestamp + 8 days);
         {
             // Check the available amount of funds
-            (uint256 a, uint256 b) = bridge.available();
+            (uint256 a, uint256 b) = bridge.getAvailable();
             assertEq(a, 700e18, "Available A not matching");
             assertEq(b, 0, "Available B not matching");
         }
@@ -327,7 +334,7 @@ contract BiDCATest_unit is Test {
         deal(address(assetA), address(bridge), 1000 ether);
 
         {
-            (uint256 a, uint256 b) = bridge.available();
+            (uint256 a, uint256 b) = bridge.getAvailable();
             assertEq(a, 0);
             assertEq(b, 0);
         }
@@ -335,7 +342,7 @@ contract BiDCATest_unit is Test {
         vm.warp(block.timestamp + 2 days);
         {
             // Check the available amount of funds
-            (uint256 a, uint256 b) = bridge.available();
+            (uint256 a, uint256 b) = bridge.getAvailable();
             assertEq(a, 200e18, "Available A not matching");
             assertEq(b, 0, "Available B not matching");
         }
@@ -409,7 +416,7 @@ contract BiDCATest_unit is Test {
         deal(address(assetA), address(bridge), 1000 ether);
 
         {
-            (uint256 a, uint256 b) = bridge.available();
+            (uint256 a, uint256 b) = bridge.getAvailable();
             assertEq(a, 0);
             assertEq(b, 0);
         }
@@ -417,7 +424,7 @@ contract BiDCATest_unit is Test {
         vm.warp(block.timestamp + 8 days);
         {
             // Check the available amount of funds
-            (uint256 a, uint256 b) = bridge.available();
+            (uint256 a, uint256 b) = bridge.getAvailable();
             assertEq(a, 700e18, "Available A not matching");
             assertEq(b, 0, "Available B not matching");
         }
@@ -505,7 +512,7 @@ contract BiDCATest_unit is Test {
         deal(address(assetB), address(bridge), 0.7e18);
 
         {
-            (uint256 a, uint256 b) = bridge.available();
+            (uint256 a, uint256 b) = bridge.getAvailable();
             assertEq(a, 0);
             assertEq(b, 0);
         }
@@ -513,7 +520,7 @@ contract BiDCATest_unit is Test {
         vm.warp(block.timestamp + 8 days);
         {
             // Check the available amount of funds
-            (uint256 a, uint256 b) = bridge.available();
+            (uint256 a, uint256 b) = bridge.getAvailable();
             assertEq(a, 700e18, "Available A not matching");
             assertEq(b, 0.7e18, "Available B not matching");
         }
@@ -608,6 +615,130 @@ contract BiDCATest_unit is Test {
         }
     }
 
+    function testBiFlowPerfectMatchEthBridge() public {
+        bridge = new BiDCABridge(address(this), address(assetA), address(WETH), 1 days);
+
+        assetB = IERC20(WETH);
+
+        aztecAssetB = AztecTypes.AztecAsset({
+            id: 2,
+            erc20Address: address(0),
+            assetType: AztecTypes.AztecAssetType.ETH
+        });
+
+        bridge.pokeNextTicks(10);
+        uint256 startTick = block.timestamp / bridge.TICK_SIZE();
+        // Deposit 700 A for selling over 7 days
+        bridge.convert(aztecAssetA, emptyAsset, aztecAssetB, emptyAsset, 700 ether, 0, 7, address(0));
+        bridge.convert{value: 0.7 ether}(aztecAssetB, emptyAsset, aztecAssetA, emptyAsset, 0.7 ether, 1, 7, address(0));
+        deal(address(assetA), address(bridge), 700e18);
+        deal(address(assetB), address(bridge), 0.7e18);
+
+        {
+            (uint256 a, uint256 b) = bridge.getAvailable();
+            assertEq(a, 0);
+            assertEq(b, 0);
+        }
+
+        vm.warp(block.timestamp + 8 days);
+        {
+            // Check the available amount of funds
+            (uint256 a, uint256 b) = bridge.getAvailable();
+            assertEq(a, 700e18, "Available A not matching");
+            assertEq(b, 0.7e18, "Available B not matching");
+        }
+        {
+            // Check the accumulated value of DCA(0)
+            (uint256 accumulated, bool ready) = bridge.getAccumulated(0);
+            assertEq(accumulated, 0);
+            assertFalse(ready);
+        }
+        {
+            // Check the accumulated value of DCA(1)
+            (uint256 accumulated, bool ready) = bridge.getAccumulated(1);
+            assertEq(accumulated, 0);
+            assertFalse(ready);
+        }
+
+        {
+            for (uint256 i = 1; i < 8; i++) {
+                // Check tick[i]
+                BiDCABridge.Tick memory tick = bridge.getTick(startTick + i);
+                assertEq(tick.availableA, 100e18, "Available A not matching");
+                assertEq(tick.availableB, 0.1e18, "Available B not matching");
+                assertEq(tick.priceAToB, 0, "Price not matching");
+            }
+        }
+
+        (int256 a, int256 b) = bridge.rebalanceAndfill(0, 0);
+
+        {
+            // Check rabalance output values
+            assertEq(a, 0 ether, "User did not buy 0 tokens");
+            assertEq(b, 0 ether, "User did not sell 0 eth");
+        }
+        {
+            for (uint256 i = 1; i < 8; i++) {
+                // Check tick[i]
+                BiDCABridge.Tick memory tick = bridge.getTick(startTick + i);
+                assertEq(tick.availableA, 0, "Available A not matching");
+                assertEq(tick.availableB, 0, "Available B not matching");
+                assertEq(tick.priceAToB, 0, "Price not matching");
+                assertEq(tick.assetAToB.sold, 100e18, "AToB sold not matching");
+                assertEq(tick.assetAToB.bought, 0.1e18, "AToB bought not matching");
+                assertEq(tick.assetBToA.sold, 0.1e18, "BToA sold not matching");
+                assertEq(tick.assetBToA.bought, 100e18, "AToB bought not matching");
+            }
+        }
+
+        {
+            // Check the accumulated value of DCA(0)
+            (uint256 accumulated, bool ready) = bridge.getAccumulated(0);
+            assertEq(accumulated, 0.7e18, "Accumulated not matching");
+            assertTrue(ready, "Is not ready");
+        }
+        {
+            // Check the accumulated value of DCA(1)
+            (uint256 accumulated, bool ready) = bridge.getAccumulated(1);
+            assertEq(accumulated, 700e18, "Accumulated not matching");
+            assertTrue(ready, "Is not ready");
+        }
+
+        {
+            // Finalise DCA(0)
+            uint256 ethBalBefore = address(this).balance;
+            (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = bridge.finalise(
+                aztecAssetA,
+                emptyAsset,
+                aztecAssetB,
+                emptyAsset,
+                0,
+                0
+            );
+            assertEq(outputValueA, 0.7e18, "OutputValue A not matching");
+            assertEq(outputValueB, 0, "Outputvalue B not zero");
+            assertTrue(interactionComplete, "Interaction failed");
+
+            assertEq(address(this).balance, ethBalBefore + outputValueA, "Eth balance not matching");
+        }
+        {
+            // Finalise DCA(1)
+            (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = bridge.finalise(
+                aztecAssetB,
+                emptyAsset,
+                aztecAssetA,
+                emptyAsset,
+                1,
+                0
+            );
+            assertEq(outputValueA, 700e18, "OutputValue A not matching");
+            assertEq(outputValueB, 0, "Outputvalue B not zero");
+            assertTrue(interactionComplete, "Interaction failed");
+
+            assetA.safeTransferFrom(address(bridge), address(this), outputValueA);
+        }
+    }
+
     function testBiFlowMoreAThanB() public {
         bridge.pokeNextTicks(10);
         uint256 startTick = block.timestamp / bridge.TICK_SIZE();
@@ -620,7 +751,7 @@ contract BiDCATest_unit is Test {
         deal(address(assetB), address(bridge), 0.7e18);
 
         {
-            (uint256 a, uint256 b) = bridge.available();
+            (uint256 a, uint256 b) = bridge.getAvailable();
             assertEq(a, 200e18);
             assertEq(b, 0);
         }
@@ -628,7 +759,7 @@ contract BiDCATest_unit is Test {
         vm.warp(block.timestamp + 8 days);
         {
             // Check the available amount of funds
-            (uint256 a, uint256 b) = bridge.available();
+            (uint256 a, uint256 b) = bridge.getAvailable();
             assertEq(a, 1400e18, "Available A not matching");
             assertEq(b, 0.7e18, "Available B not matching");
         }
@@ -766,18 +897,16 @@ contract BiDCATest_unit is Test {
         emit log_named_decimal_uint("Total ", dca.total, 18);
         emit log_named_uint("start ", dca.start);
         emit log_named_uint("end   ", dca.end);
-        if (dca.assetA) {
-            emit log_named_decimal_uint("accumB", accumulated, 18);
-        } else {
-            emit log_named_decimal_uint("accumA", accumulated, 18);
-        }
+        emit log_named_decimal_uint(dca.assetA ? "accumB" : "accumA", accumulated, 18);
         if (ready) {
             emit log("Ready for harvest");
         }
+
+        return dca;
     }
 
     function printAvailable() public {
-        (uint256 a, uint256 b) = bridge.available();
+        (uint256 a, uint256 b) = bridge.getAvailable();
         emit log_named_decimal_uint("Available A", a, 18);
         emit log_named_decimal_uint("Available B", b, 18);
     }
