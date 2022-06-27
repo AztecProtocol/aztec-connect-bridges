@@ -65,6 +65,27 @@ contract SwapBridgeInternalTest is Test, SwapBridge(address(0)) {
         assertEq(string(splitPath), string(referenceSplitPath), "Path incorrectly encoded");
     }
 
+    function testDecodeMinPrice() public {
+        uint24 significand = 2031142;
+        uint8 exponent = 27;
+        // |111101111111000100110| [11011|
+        uint64 referenceEncodedMinPrice = 0x3DFC4DB;
+        uint256 referenceDecodedMinPrice = significand * 10**exponent;
+
+        uint256 decodedMinPrice = _decodeMinPrice(referenceEncodedMinPrice);
+        assertEq(decodedMinPrice, referenceDecodedMinPrice, "Incorrect min price");
+    }
+
+    function testDecodeMinPriceFuzz(uint24 significand, uint8 exponent) public {
+        significand = uint24(bound(significand, 0, 2**21));
+        exponent = uint8(bound(exponent, 0, 2**5));
+        uint64 referenceEncodedMinPrice = (significand << 5) + exponent;
+        uint256 referenceDecodedMinPrice = significand * 10**exponent;
+
+        uint256 decodedMinPrice = _decodeMinPrice(referenceEncodedMinPrice);
+        assertEq(decodedMinPrice, referenceDecodedMinPrice, "Incorrect min price");
+    }
+
     function testInvalidPercentageAmounts() public {
         // 00000000000000000000000000 | 0110010 01 100 10 001 10 | 1000110 01 010 10 001 10
         uint64 encodedPath = 0x1932346546;

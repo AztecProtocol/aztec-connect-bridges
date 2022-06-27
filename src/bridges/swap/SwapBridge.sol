@@ -36,7 +36,9 @@ contract SwapBridge is BridgeBase {
      *      Fee bits are mapped to specific fee tiers as follows: 00 is 0.01%, 01 is 0.05%, 10 is 0.3%, 11 is 1%
      *      Middle tokens use this mapping:
      *      001 is ETH, 010 is USDC, 011 is USDT, 100 is DAI, 101 is WBTC, 110 is FRAX, 111 is BUSD,
-     *      000 means the middle token is unused
+     *      000 means the middle token is unused.
+     *      Min price is encoded as a floating point number. First 21 bits are used for significand, last 5 bits for
+     *      exponent: |21 bits significand| |5 bits exponent|
      */
 
     // Binary number 0000000000000000000000000000000000000000000001111111111111111111 (last 19 bits)
@@ -44,6 +46,9 @@ contract SwapBridge is BridgeBase {
 
     // Binary number 0000000000000000000000000000000000000011111111111111111111111111 (last 26 bits)
     uint64 private constant PRICE_MASK = 0x3FFFFFF;
+
+    // Binary number 0000000000000000000000000000000000000000000000000000000000011111 (last 5 bits)
+    uint64 private constant EXPONENT_MASK = 0x1F;
 
     // Binary number 11
     uint64 private constant FEE_MASK = 0x3;
@@ -166,9 +171,11 @@ contract SwapBridge is BridgeBase {
         }
     }
 
-    function _decodeMinPrice(uint64 _encodedSlippage) internal pure returns (uint256 minPrice) {
-        // TODO
-        return _encodedSlippage;
+    function _decodeMinPrice(uint64 _encodedMinPrice) internal pure returns (uint256 minPrice) {
+        // 21 bits significand, 5 bits exponent
+        uint64 significand = _encodedMinPrice >> 5;
+        uint64 exponent = _encodedMinPrice & EXPONENT_MASK;
+        minPrice = significand * 10**exponent;
     }
 
     function _getFeeTier(uint64 _encodedFeeTier) internal pure returns (uint24 feeTier) {
