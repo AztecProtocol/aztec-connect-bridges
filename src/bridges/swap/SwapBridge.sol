@@ -3,6 +3,7 @@
 pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
@@ -146,7 +147,11 @@ contract SwapBridge is BridgeBase {
             );
         }
 
-        if (amountOut < path.minPrice * _inputValue) revert InsufficientAmountOut();
+        // TODO: decimals are optional in ERC20 standard but all the tokens I can think of implement it. Should we handle decimals() not existing?
+        uint256 tokenOutDecimals = IERC20Metadata(_outputAssetA.erc20Address).decimals();
+        uint256 amountOutMinimum = _inputValue * path.minPrice / 10 ** tokenOutDecimals;
+
+        if (amountOut < amountOutMinimum) revert InsufficientAmountOut();
     }
 
     function _decodePath(
