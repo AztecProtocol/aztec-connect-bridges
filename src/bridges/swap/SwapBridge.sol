@@ -164,7 +164,7 @@ contract SwapBridge is BridgeBase {
         return _encodedSlippage;
     }
 
-    function _getFeeTier(uint64 _encodedFeeTier) private pure returns (uint24 feeTier) {
+    function _getFeeTier(uint64 _encodedFeeTier) internal pure returns (uint24 feeTier) {
         if (_encodedFeeTier == 0) {
             return uint24(100);
         }
@@ -180,7 +180,7 @@ contract SwapBridge is BridgeBase {
         revert InvalidFeeTierEncoding();
     }
 
-    function _getMiddleToken(uint256 _encodedToken) private pure returns (address token) {
+    function _getMiddleToken(uint256 _encodedToken) internal pure returns (address token) {
         if (_encodedToken == 1) {
             // ETH
             return 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
