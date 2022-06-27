@@ -14,14 +14,10 @@ import {BiDCABridge} from "../../../bridges/dca/BiDCABridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
 /**
- * @notice ERC20 token implementation that allow the owner to mint tokens and let anyone burn their own tokens
- * or token they have allowance to.
- * @dev The owner is immutable and therefore cannot be updated
+ * @notice ERC20 token implementation useful in testin
  * @author Lasse Herskind
  */
 contract Testtoken is ERC20 {
-    error InvalidCaller();
-
     constructor(
         string memory _name,
         string memory _symbol,
@@ -30,7 +26,6 @@ contract Testtoken is ERC20 {
 
     /**
      * @notice Mint tokens to address
-     * @dev Only callable by the owner
      * @param _to The receiver of tokens
      * @param _amount The amount of tokens to mint
      */

@@ -13,6 +13,11 @@ import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+/**
+ * @notice Very rough draft reference implementation of DCA
+ * @dev DO NOT USE THIS IS PRODUCTION, UNFINISHED CODE.
+ */
+
 contract BiDCABridge is BridgeBase, Test {
     using SafeERC20 for IERC20;
 
@@ -162,16 +167,12 @@ contract BiDCABridge is BridgeBase, Test {
 
     function rebalanceAndFillUniswap() public returns (int256, int256) {
         // TODO: Not implemented
-        // We kinda needs to rebalance it first.
         _rebalanceAndfill(0, 0, getPrice());
         // Find the amount Available. Then we need to get those funds. And then we can match funds.
         // Compute how much we would need to match these.
         // Flash swap these assets from uniswap
         // run rebalance again with the values, and we need to compute the price we got from uniswap.
-        //
-
-        // Practically, we want to borrow both assets from uniswap, and then return them both rofl. Its a bit ugly, but might be doable
-        // Call rebalance again with these values borrowed.
+        // Practically, we want to borrow both assets from uniswap, and then return them both. Its a bit ugly, but might be doable
     }
 
     /**
@@ -183,7 +184,6 @@ contract BiDCABridge is BridgeBase, Test {
         uint256 _offerB,
         uint256 _currentPrice
     ) internal returns (int256, int256) {
-        // Need to loop over the ticks
         RebalanceValues memory vars;
 
         uint256 oldestTickA = vars.oldestTickAvailableA = oldestTickAvailableA;
@@ -425,8 +425,6 @@ contract BiDCABridge is BridgeBase, Test {
         }
         return start;
     }
-
-    // TODO: We need a way to FORCE a trade as well. Just to make it possible to exit even if it is a worse price, just by going to uniswap etc.
 
     function _toU128(uint256 _a) internal pure returns (uint128) {
         if (_a > type(uint128).max) {
