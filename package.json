@@ -42,7 +42,6 @@
   "repository": "git@github.com:AztecProtocol/aztec-connect-bridges.git",
   "license": "MIT",
   "devDependencies": {
-    "@ethersproject/constants": "^5.5.0",
     "@openzeppelin/contracts": "^4.6.0",
     "@typechain/ethers-v5": "^9.0.0",
     "@typechain/hardhat": "^4.0.0",
