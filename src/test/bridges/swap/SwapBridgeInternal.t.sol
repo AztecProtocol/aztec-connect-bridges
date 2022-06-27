@@ -24,14 +24,16 @@ contract SwapBridgeInternalTest is Test, SwapBridge(address(0)) {
         // PATH1 LUSD -> USDC -> WETH -> LQTY   70% of input 1000110 01 010 10 001 10
         //            500    3000    3000
         // PATH2 LUSD -> DAI -> WETH -> LQTY    30% of input 0011110 01 100 10 001 10
-        // 00000000000000000000000000 | 0011110 01 100 10 001 10 | 1000110 01 010 10 001 10
-        uint64 encodedPath = 0xF32346546;
+        // MIN PRICE: significand 2031142, exponent 27
+        // 111101111111000100110 11011 | 0011110 01 100 10 001 10 | 1000110 01 010 10 001 10
+        uint64 encodedPath = 0xF7F136CF32346546;
         SwapBridge.Path memory path = _decodePath(LUSD, encodedPath, LQTY);
 
         assertEq(path.percentage1, 70, "Incorrect percentage 1");
         assertEq(string(path.splitPath1), string(referenceSplitPath1), "Split path 1 incorrectly encoded");
         assertEq(path.percentage2, 30, "Incorrect percentage 2");
         assertEq(string(path.splitPath2), string(referenceSplitPath2), "Split path 2 incorrectly encoded");
+        assertEq(path.minPrice, 2031142 * 10**27);
     }
 
     function testDecodeSplitPathAllMiddleTokensUsed() public {
