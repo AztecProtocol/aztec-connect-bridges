@@ -125,9 +125,9 @@ contract SwapBridge is BridgeBase {
 
         Path memory path = _decodePath(_inputAssetA.erc20Address, _auxData, _outputAssetA.erc20Address);
 
-        uint256 inputValueSplitPath1 = _inputValue * path.percentage1 / 100;
+        uint256 inputValueSplitPath1 = (_inputValue * path.percentage1) / 100;
 
-        uint256 amountOut = UNI_ROUTER.exactInput(
+        outputValueA = UNI_ROUTER.exactInput(
             ISwapRouter.ExactInputParams({
                 path: path.splitPath1,
                 recipient: address(this),
@@ -138,7 +138,7 @@ contract SwapBridge is BridgeBase {
         );
 
         if (path.percentage2 != 0) {
-            amountOut += UNI_ROUTER.exactInput(
+            outputValueA += UNI_ROUTER.exactInput(
                 ISwapRouter.ExactInputParams({
                     path: path.splitPath2,
                     recipient: address(this),
@@ -151,9 +151,9 @@ contract SwapBridge is BridgeBase {
 
         // TODO: decimals are optional in ERC20 standard but all the tokens I can think of implement it. Should we handle decimals() not existing?
         uint256 tokenOutDecimals = IERC20Metadata(_outputAssetA.erc20Address).decimals();
-        uint256 amountOutMinimum = _inputValue * path.minPrice / 10 ** tokenOutDecimals;
+        uint256 amountOutMinimum = (_inputValue * path.minPrice) / 10**tokenOutDecimals;
 
-        if (amountOut < amountOutMinimum) revert InsufficientAmountOut();
+        if (outputValueA < amountOutMinimum) revert InsufficientAmountOut();
     }
 
     function _decodePath(

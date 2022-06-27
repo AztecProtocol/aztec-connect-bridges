@@ -85,8 +85,21 @@ contract SwapBridgeTest is BridgeTestBase {
         deal(LUSD, address(bridge), swapAmount);
 
         vm.startPrank(address(ROLLUP_PROCESSOR));
-        bridge.convert(inputAssetA, emptyAsset, outputAssetA, emptyAsset, swapAmount, 0, encodedPath, address(0));
+        (uint256 outputValueA, , ) = bridge.convert(
+            inputAssetA,
+            emptyAsset,
+            outputAssetA,
+            emptyAsset,
+            swapAmount,
+            0,
+            encodedPath,
+            address(0)
+        );
+
+        IERC20(outputAssetA.erc20Address).transferFrom(address(bridge), address(ROLLUP_PROCESSOR), outputValueA);
 
         vm.stopPrank();
+
+        assertGt(outputValueA, 0);
     }
 }
