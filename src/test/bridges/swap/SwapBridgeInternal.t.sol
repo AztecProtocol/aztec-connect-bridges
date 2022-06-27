@@ -25,35 +25,43 @@ contract SwapBridgeInternalTest is DSTest, SwapBridge(address(0)) {
     }
 
     function testDecodeSplitPathAllMiddleTokensUsed() public {
-        bytes memory referencePath = abi.encodePacked(LUSD, uint24(500), USDC, uint24(3000), WETH, uint24(3000), LQTY);
+        bytes memory referenceSplitPath = abi.encodePacked(
+            LUSD,
+            uint24(500),
+            USDC,
+            uint24(3000),
+            WETH,
+            uint24(3000),
+            LQTY
+        );
 
         // 100 %   500 USDC 3000 WETH 3000
         // 1100100 01  010  10   001  10
-        uint64 encodedPath = 0x64546;
-        (uint256 percentage, bytes memory path) = _decodeSplitPath(LUSD, encodedPath, LQTY);
+        uint64 encodedSplitPath = 0x64546;
+        (uint256 percentage, bytes memory splitPath) = _decodeSplitPath(LUSD, encodedSplitPath, LQTY);
         assertEq(percentage, 100, "Incorrect percentage value");
-        assertEq(string(path), string(referencePath), "Path incorrectly encoded");
+        assertEq(string(splitPath), string(referenceSplitPath), "Path incorrectly encoded");
     }
 
     function testDecodeSplitPathOneMiddleTokenUsed() public {
-        bytes memory referencePath = abi.encodePacked(LUSD, uint24(500), USDC, uint24(3000), LQTY);
+        bytes memory referenceSplitPath = abi.encodePacked(LUSD, uint24(500), USDC, uint24(3000), LQTY);
 
         // 70%     500 USDC 100  ---- 3000
         // 1000110 01  010  00   000  10
-        uint64 encodedPath = 0x46502;
-        (uint256 percentage, bytes memory path) = _decodeSplitPath(LUSD, encodedPath, LQTY);
+        uint64 encodedSplitPath = 0x46502;
+        (uint256 percentage, bytes memory splitPath) = _decodeSplitPath(LUSD, encodedSplitPath, LQTY);
         assertEq(percentage, 70, "Incorrect percentage value");
-        assertEq(string(path), string(referencePath), "Path incorrectly encoded");
+        assertEq(string(splitPath), string(referenceSplitPath), "Path incorrectly encoded");
     }
 
     function testDecodeSplitPathNoMiddleTokenUsed() public {
-        bytes memory referencePath = abi.encodePacked(LUSD, uint24(3000), LQTY);
+        bytes memory referenceSplitPath = abi.encodePacked(LUSD, uint24(3000), LQTY);
 
         // 12%     100 ---  100  ---- 3000
         // 0001100 00  000  00   000  10
-        uint64 encodedPath = 0xC002;
-        (uint256 percentage, bytes memory path) = _decodeSplitPath(LUSD, encodedPath, LQTY);
+        uint64 encodedSplitPath = 0xC002;
+        (uint256 percentage, bytes memory splitPath) = _decodeSplitPath(LUSD, encodedSplitPath, LQTY);
         assertEq(percentage, 12, "Incorrect percentage value");
-        assertEq(string(path), string(referencePath), "Path incorrectly encoded");
+        assertEq(string(splitPath), string(referenceSplitPath), "Path incorrectly encoded");
     }
 }
