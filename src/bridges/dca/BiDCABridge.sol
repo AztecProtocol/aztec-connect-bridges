@@ -16,7 +16,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
  * @dev DO NOT USE THIS IS PRODUCTION, UNFINISHED CODE.
  */
 
-contract BiDCABridge is BridgeBase, Test {
+contract BiDCABridge is BridgeBase {
     using SafeERC20 for IERC20;
 
     struct RebalanceValues {
