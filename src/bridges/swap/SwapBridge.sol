@@ -19,22 +19,29 @@ contract SwapBridge is BridgeBase {
         bytes splitPath1;
         uint256 percentage2;
         bytes splitPath2;
-        uint256 amountOutMinimum;
+        uint256 minPrice;
     }
 
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
-    // @dev The following masks are used to decode multiple paths from 1 uint64. There can be 3 paths encoded in
-    //      auxData. (19 bits per path, 7 bits per slippage --> 3 * 19 + 7 = 64)
-    //      1 path consists of |2 bits fee| |3 bits middle token| |2 bits fee| |3 bits middle token| |2 bits fee|
-    //      Fee bits are mapped to specific fee tiers as follows: 00 is 0.01%, 01 is 0.05%, 10 is 0.3%, 11 is 1%
-    //      Slippage is also mapped to predefined values: TODO
-    uint64 private constant PATH_BIT_LENGTH = 19;
-    uint64 private constant PATHS_BIT_LENGTH = 38;
-    // Binary number 0000000000000000000000000000000000000000000001111111111111111111 (last 19 bits)
-    uint64 private constant PATH_MASK = 0x7FFFF;
+    uint64 private constant SPLIT_PATH_BIT_LENGTH = 19;
+    uint64 private constant SPLIT_PATHS_BIT_LENGTH = 38; // SPLIT_PATH_BIT_LENGTH * 2
+    uint64 private constant PRICE_BIT_LENGTH = 26; // 64 - SPLIT_PATHS_BIT_LENGTH
 
-    uint64 private constant PRICE_BIT_LENGTH = 26;
+    /**
+     * @dev The following masks are used to decode 2 split paths and minimum acceptable price from 1 uint64.
+     *      1 split path is encoded as follows:
+     *      |7 bits percentage| |2 bits fee| |3 bits middle token| |2 bits fee| |3 bits middle token| |2 bits fee|
+     *      The meaning of percentage is how much of input amount will be routed through this split path.
+     *      Fee bits are mapped to specific fee tiers as follows: 00 is 0.01%, 01 is 0.05%, 10 is 0.3%, 11 is 1%
+     *      Middle tokens use this mapping:
+     *      001 is ETH, 010 is USDC, 011 is USDT, 100 is DAI, 101 is WBTC, 110 is FRAX, 111 is BUSD,
+     *      000 means the middle token is unused
+     */
+
+    // Binary number 0000000000000000000000000000000000000000000001111111111111111111 (last 19 bits)
+    uint64 private constant SPLIT_PATH_MASK = 0x7FFFF;
+
     // Binary number 0000000000000000000000000000000000000011111111111111111111111111 (last 26 bits)
     uint64 private constant PRICE_MASK = 0x3FFFFFF;
 
@@ -44,8 +51,8 @@ contract SwapBridge is BridgeBase {
     uint64 private constant TOKEN_MASK = 0x7;
 
     /**
-     * @notice Set the address of RollupProcessor.sol.
-     * @param _rollupProcessor Address of the RollupProcessor.sol
+     * @notice Set the address of rollup processor.
+     * @param _rollupProcessor Address of rollup processor
      */
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
@@ -95,7 +102,7 @@ contract SwapBridge is BridgeBase {
             );
         }
 
-        if (amountOut < path.amountOutMinimum) revert InsufficientAmountOut();
+        if (amountOut < path.minPrice * _inputValue) revert InsufficientAmountOut();
     }
 
     function _decodePath(
@@ -105,7 +112,7 @@ contract SwapBridge is BridgeBase {
     ) internal view returns (Path memory path) {
         (uint256 percentage1, bytes memory splitPath1) = _decodeSplitPath(
             _tokenIn,
-            _encodedPath & PATH_MASK,
+            _encodedPath & SPLIT_PATH_MASK,
             _tokenOut
         );
         path.percentage1 = percentage1;
@@ -113,7 +120,7 @@ contract SwapBridge is BridgeBase {
 
         (uint256 percentage2, bytes memory splitPath2) = _decodeSplitPath(
             _tokenIn,
-            (_encodedPath >> PATH_BIT_LENGTH) & PATH_MASK,
+            (_encodedPath >> SPLIT_PATH_BIT_LENGTH) & SPLIT_PATH_MASK,
             _tokenOut
         );
 
@@ -121,7 +128,7 @@ contract SwapBridge is BridgeBase {
 
         path.percentage2 = percentage2;
         path.splitPath2 = splitPath2;
-        path.amountOutMinimum = _decodeAmountOutMinimum(_encodedPath >> PATHS_BIT_LENGTH);
+        path.minPrice = _decodeMinPrice(_encodedPath >> SPLIT_PATHS_BIT_LENGTH);
     }
 
     function _decodeSplitPath(
@@ -159,22 +166,26 @@ contract SwapBridge is BridgeBase {
         }
     }
 
-    function _decodeAmountOutMinimum(uint64 _encodedSlippage) internal pure returns (uint256 amountOutMinimum) {
+    function _decodeMinPrice(uint64 _encodedSlippage) internal pure returns (uint256 minPrice) {
         // TODO
         return _encodedSlippage;
     }
 
     function _getFeeTier(uint64 _encodedFeeTier) internal pure returns (uint24 feeTier) {
         if (_encodedFeeTier == 0) {
+            // Binary number 00
             return uint24(100);
         }
         if (_encodedFeeTier == 1) {
+            // Binary number 01
             return uint24(500);
         }
         if (_encodedFeeTier == 2) {
+            // Binary number 10
             return uint24(3000);
         }
         if (_encodedFeeTier == 3) {
+            // Binary number 11
             return uint24(10000);
         }
         revert InvalidFeeTierEncoding();
@@ -182,31 +193,31 @@ contract SwapBridge is BridgeBase {
 
     function _getMiddleToken(uint256 _encodedToken) internal pure returns (address token) {
         if (_encodedToken == 1) {
-            // ETH
+            // ETH, binary number 001
             return 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
         }
         if (_encodedToken == 2) {
-            // USDC
+            // USDC, binary number 010
             return 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
         }
         if (_encodedToken == 3) {
-            // USDT
+            // USDT, binary number 011
             return 0xdAC17F958D2ee523a2206206994597C13D831ec7;
         }
         if (_encodedToken == 4) {
-            // DAI
+            // DAI, binary number 100
             return 0x6B175474E89094C44Da98b954EedeAC495271d0F;
         }
         if (_encodedToken == 5) {
-            // WBTC
+            // WBTC, binary number 101
             return 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
         }
         if (_encodedToken == 6) {
-            // FRAX
+            // FRAX, binary number 110
             return 0x853d955aCEf822Db058eb8505911ED77F175b99e;
         }
         if (_encodedToken == 7) {
-            // BUSD
+            // BUSD, binary number 111
             return 0x4Fabb145d64652a948d72533023f6E7A623C7C53;
         }
         revert InvalidTokenEncoding();
