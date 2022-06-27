@@ -12,28 +12,14 @@ contract SwapBridgeInternalTest is DSTest, SwapBridge(address(0)) {
     address public constant LQTY = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
     address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
+    bytes private referenceSplitPath1 =
+        abi.encodePacked(LUSD, uint24(500), USDC, uint24(3000), WETH, uint24(3000), LQTY);
+    bytes private referenceSplitPath2 =
+        abi.encodePacked(LUSD, uint24(500), DAI, uint24(3000), WETH, uint24(3000), LQTY);
+
     function setUp() public {}
 
     function testDecodePath() public {
-        bytes memory referenceSplitPath1 = abi.encodePacked(
-            LUSD,
-            uint24(500),
-            USDC,
-            uint24(3000),
-            WETH,
-            uint24(3000),
-            LQTY
-        );
-        bytes memory referenceSplitPath2 = abi.encodePacked(
-            LUSD,
-            uint24(500),
-            DAI,
-            uint24(3000),
-            WETH,
-            uint24(3000),
-            LQTY
-        );
-
         //            500     3000    3000
         // PATH1 LUSD -> USDC -> WETH -> LQTY   70% of input 1000110 01 010 10 001 10
         //            500    3000    3000
@@ -49,22 +35,12 @@ contract SwapBridgeInternalTest is DSTest, SwapBridge(address(0)) {
     }
 
     function testDecodeSplitPathAllMiddleTokensUsed() public {
-        bytes memory referenceSplitPath = abi.encodePacked(
-            LUSD,
-            uint24(500),
-            USDC,
-            uint24(3000),
-            WETH,
-            uint24(3000),
-            LQTY
-        );
-
         // 100 %   500 USDC 3000 WETH 3000
         // 1100100 01  010  10   001  10
         uint64 encodedSplitPath = 0x64546;
         (uint256 percentage, bytes memory splitPath) = _decodeSplitPath(LUSD, encodedSplitPath, LQTY);
         assertEq(percentage, 100, "Incorrect percentage value");
-        assertEq(string(splitPath), string(referenceSplitPath), "Path incorrectly encoded");
+        assertEq(string(splitPath), string(referenceSplitPath1), "Path incorrectly encoded");
     }
 
     function testDecodeSplitPathOneMiddleTokenUsed() public {
