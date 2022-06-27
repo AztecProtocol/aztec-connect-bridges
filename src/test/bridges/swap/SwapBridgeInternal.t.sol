@@ -77,8 +77,8 @@ contract SwapBridgeInternalTest is Test, SwapBridge(address(0)) {
     }
 
     function testDecodeMinPriceFuzz(uint24 significand, uint8 exponent) public {
-        significand = uint24(bound(significand, 0, 2**21));
-        exponent = uint8(bound(exponent, 0, 2**5));
+        significand = uint24(bound(significand, 0, 2**21 - 1));
+        exponent = uint8(bound(exponent, 0, 2**5 - 1));
         uint64 referenceEncodedMinPrice = (uint64(significand) << 5) + exponent;
         uint256 referenceDecodedMinPrice = significand * 10**exponent;
 
