@@ -125,12 +125,14 @@ contract SwapBridge is BridgeBase {
 
         Path memory path = _decodePath(_inputAssetA.erc20Address, _auxData, _outputAssetA.erc20Address);
 
+        uint256 inputValueSplitPath1 = _inputValue * path.percentage1 / 100;
+
         uint256 amountOut = UNI_ROUTER.exactInput(
             ISwapRouter.ExactInputParams({
                 path: path.splitPath1,
                 recipient: address(this),
                 deadline: block.timestamp,
-                amountIn: _inputValue,
+                amountIn: inputValueSplitPath1,
                 amountOutMinimum: 0
             })
         );
@@ -141,7 +143,7 @@ contract SwapBridge is BridgeBase {
                     path: path.splitPath2,
                     recipient: address(this),
                     deadline: block.timestamp,
-                    amountIn: _inputValue,
+                    amountIn: _inputValue - inputValueSplitPath1,
                     amountOutMinimum: 0
                 })
             );
