@@ -1,4 +1,3 @@
-import { AddressZero } from '@ethersproject/constants';
 import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
 import {
   ElementBridge,
@@ -286,8 +285,8 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     const trancheAddress = pool.trancheAddress;
 
     const funds: FundManagement = {
-      sender: AddressZero,
-      recipient: AddressZero,
+      sender: EthAddress.ZERO.toString(),
+      recipient: EthAddress.ZERO.toString(),
       fromInternalBalance: false,
       toInternalBalance: false,
     };
