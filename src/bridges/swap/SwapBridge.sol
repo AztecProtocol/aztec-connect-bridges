@@ -2,6 +2,7 @@
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
@@ -61,6 +62,37 @@ contract SwapBridge is BridgeBase {
      */
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
+    /**
+     * @notice Sets all the important approvals.
+     * @param _tokenIn - Address of input token to later swap in convert(...) function
+     * @param _tokenOut - Address of output token to later return to rollup processor
+     * @dev SwapBridge never holds any ERC20 tokens after or before an invocation of any of its functions. For this
+     * reason the following is not a security risk and makes convert(...) function more gas efficient.
+     * @dev Note: If any of the input or output tokens is ETH just pass in a 0 address.
+     */
+    function preApproveTokenPair(address _tokenIn, address _tokenOut) external {
+        if (_tokenIn != address(0)) {
+            // Input token not ETH
+            if (!IERC20(_tokenIn).approve(address(UNI_ROUTER), type(uint256).max)) {
+                revert ErrorLib.ApproveFailed(_tokenIn);
+            }
+        }
+        if (_tokenIn != address(0)) {
+            // Output token not ETH
+            if (!IERC20(_tokenOut).approve(address(ROLLUP_PROCESSOR), type(uint256).max)) {
+                revert ErrorLib.ApproveFailed(_tokenOut);
+            }
+        }
+    }
+
+    /**
+     * @notice A function which swaps input token for output token along the path encoded in _auxData.
+     * @param _inputAssetA - Input ERC20 token
+     * @param _outputAssetA - Output ERC20 token
+     * @param _inputValue - Amount of input token to swap
+     * @param _auxData - Encoded path (gets decoded to Path struct)
+     * @return outputValueA - The amount of output token received
+     */
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata,
@@ -74,14 +106,21 @@ contract SwapBridge is BridgeBase {
         external
         payable
         override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
             uint256,
             bool
         )
     {
-        if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidInputA();
-        if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
+        if (
+            _inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20 &&
+            _inputAssetA.assetType != AztecTypes.AztecAssetType.ETH
+        ) revert ErrorLib.InvalidInputA();
+        if (
+            _outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20 &&
+            _outputAssetA.assetType != AztecTypes.AztecAssetType.ETH
+        ) revert ErrorLib.InvalidOutputA();
 
         Path memory path = _decodePath(_inputAssetA.erc20Address, _auxData, _outputAssetA.erc20Address);
 
