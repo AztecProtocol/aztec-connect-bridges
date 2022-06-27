@@ -2,8 +2,6 @@
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
-import {Test} from "forge-std/Test.sol";
-
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 
