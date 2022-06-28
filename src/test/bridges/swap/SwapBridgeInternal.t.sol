@@ -36,6 +36,34 @@ contract SwapBridgeInternalTest is Test, SwapBridge(address(0)) {
         assertEq(path.minPrice, 2031142 * 10**27);
     }
 
+    function testDecodePathOnly1SplitPath() public {
+        //            500     3000    3000
+        // PATH1 LUSD -> USDC -> WETH -> LQTY   100% of input 1100100 01 010 10 001 10
+        // MIN PRICE: significand 2031142, exponent 27
+        // 111101111111000100110 11011 | 0000000 00 000 00 000 00 | 1100100 01 010 10 001 10
+        uint64 encodedPath = 0xF7F136C000064546;
+        SwapBridge.Path memory path = _decodePath(LUSD, encodedPath, LQTY);
+
+        assertEq(path.percentage1, 100, "Incorrect percentage 1");
+        assertEq(string(path.splitPath1), string(referenceSplitPath1), "Split path 1 incorrectly encoded");
+        assertEq(path.percentage2, 0, "Incorrect percentage 2");
+        assertEq(path.minPrice, 2031142 * 10**27);
+    }
+
+    function testDecodePathOnly1SplitPathInPositionOfSplitPath2() public {
+        //            500     3000    3000
+        // PATH1 LUSD -> USDC -> WETH -> LQTY   100% of input 1100100 01 010 10 001 10
+        // MIN PRICE: significand 2031142, exponent 27
+        // 111101111111000100110 11011 | 1100100 01 100 10 001 10 | 0000000 00 000 00 000 00
+        uint64 encodedPath = 0xF7F136F232300000;
+        SwapBridge.Path memory path = _decodePath(LUSD, encodedPath, LQTY);
+
+        assertEq(path.percentage1, 0, "Incorrect percentage 1");
+        assertEq(path.percentage2, 100, "Incorrect percentage 2");
+        assertEq(string(path.splitPath2), string(referenceSplitPath2), "Split path 2 incorrectly encoded");
+        assertEq(path.minPrice, 2031142 * 10**27);
+    }
+
     function testDecodeSplitPathAllMiddleTokensUsed() public {
         // 100 %   500 USDC 3000 WETH 3000
         // 1100100 01  010  10   001  10
