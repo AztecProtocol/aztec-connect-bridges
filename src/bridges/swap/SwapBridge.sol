@@ -251,6 +251,14 @@ contract SwapBridge is BridgeBase {
                 _getFeeTier(fee3),
                 _tokenOut
             );
+        } else if (middleToken2 != 0) {
+            path = abi.encodePacked(
+                _tokenIn,
+                _getFeeTier(fee2),
+                _getMiddleToken(middleToken2),
+                _getFeeTier(fee3),
+                _tokenOut
+            );
         } else {
             path = abi.encodePacked(_tokenIn, _getFeeTier(fee3), _tokenOut);
         }
