@@ -5,9 +5,11 @@ pragma solidity >=0.8.4;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {ISwapRouter} from "../../interfaces/uniswapv3/ISwapRouter.sol";
+import {IWETH} from "../../interfaces/IWETH.sol";
 
 contract SwapBridge is BridgeBase {
     error InvalidFeeTierEncoding();
@@ -64,6 +66,8 @@ contract SwapBridge is BridgeBase {
      */
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
+    receive() external payable {}
+
     /**
      * @notice Sets all the important approvals.
      * @param _tokenIn - Address of input token to later swap in convert(...) function
@@ -92,6 +96,7 @@ contract SwapBridge is BridgeBase {
      * @param _inputAssetA - Input ERC20 token
      * @param _outputAssetA - Output ERC20 token
      * @param _inputValue - Amount of input token to swap
+     * @param _interactionNonce - Interaction nonce
      * @param _auxData - Encoded path (gets decoded to Path struct)
      * @return outputValueA - The amount of output token received
      */
@@ -101,7 +106,7 @@ contract SwapBridge is BridgeBase {
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
         uint256 _inputValue,
-        uint256,
+        uint256 _interactionNonce,
         uint64 _auxData,
         address
     )
@@ -157,10 +162,15 @@ contract SwapBridge is BridgeBase {
         }
 
         // TODO: decimals are optional in ERC20 standard but all the tokens I can think of implement it. Should we handle decimals() not existing?
-        uint256 tokenOutDecimals = IERC20Metadata(_outputAssetA.erc20Address).decimals();
+        uint256 tokenOutDecimals = outputIsEth ? 18 : IERC20Metadata(_outputAssetA.erc20Address).decimals();
         uint256 amountOutMinimum = (_inputValue * path.minPrice) / 10**tokenOutDecimals;
 
         if (outputValueA < amountOutMinimum) revert InsufficientAmountOut();
+
+        if (outputIsEth) {
+            IWETH(WETH).withdraw(outputValueA);
+            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
+        }
     }
 
     function _decodePath(

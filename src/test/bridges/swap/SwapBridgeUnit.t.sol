@@ -28,6 +28,8 @@ contract SwapBridgeUnitTest is Test {
 
         // Deploy the bridge
         bridge = new SwapBridge(rollupProcessor);
+        // Set ETH balance to 0 for clarity
+        vm.deal(address(bridge), 0);
 
         // Use the label cheatcode to mark addresses in the traces
         vm.label(address(bridge), "Swap Bridge");
