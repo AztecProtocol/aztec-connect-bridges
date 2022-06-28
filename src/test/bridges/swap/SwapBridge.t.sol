@@ -53,9 +53,7 @@ contract SwapBridgeTest is BridgeTestBase {
         bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
-    // @notice The purpose of this test is to directly test convert functionality of the bridge.
-    // @dev In order to avoid overflows we set _depositAmount to be uint96 instead of uint256.
-    function testSwapBridgeUnitTest() public {
+    function testSwap() public {
         uint256 swapAmount = 1e21; // 1000 LUSD
 
         //            500     3000    3000
@@ -63,7 +61,7 @@ contract SwapBridgeTest is BridgeTestBase {
         //            500    3000    3000
         // PATH2 LUSD -> DAI -> WETH -> LQTY    30% of input 0011110 01 100 10 001 10
         // MIN PRICE: significand 0, exponent 0
-        // 111101111111000100110 11011 | 0011110 01 100 10 001 10 | 1000110 01 010 10 001 10
+        // @dev Setting min price to 0 here in order to avoid issues with changing mainnet liquidity
         // 000000000000000000000 00000 | 0011110 01 100 10 001 10 | 1000110 01 010 10 001 10
         uint64 encodedPath = 0xF32346546;
 
@@ -86,6 +84,53 @@ contract SwapBridgeTest is BridgeTestBase {
 
         vm.startPrank(address(ROLLUP_PROCESSOR));
         (uint256 outputValueA, , ) = bridge.convert(
+            inputAssetA,
+            emptyAsset,
+            outputAssetA,
+            emptyAsset,
+            swapAmount,
+            0,
+            encodedPath,
+            address(0)
+        );
+
+        IERC20(outputAssetA.erc20Address).transferFrom(address(bridge), address(ROLLUP_PROCESSOR), outputValueA);
+
+        vm.stopPrank();
+
+        assertGt(outputValueA, 0);
+    }
+
+    function testSwapEth() public {
+        uint256 swapAmount = 10 ether;
+
+        //           3000
+        // PATH1 ETH  -> LQTY   85% of input 1010101 00 000 00 000 10
+        //           10000
+        // PATH2 ETH  -> LQTY   15% of input 0001111 00 000 00 000 11
+        // MIN PRICE: significand 0, exponent 0
+        // 000000000000000000000 00000 | 1010101 00 000 00 000 10 | 0001111 00 000 00 000 11
+        uint64 encodedPath = 0x2A8010F003;
+
+        bridge.preApproveTokenPair(address(0), LQTY);
+
+        // Define input and output assets
+        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
+            id: 0,
+            erc20Address: address(0),
+            assetType: AztecTypes.AztecAssetType.ETH
+        });
+
+        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset({
+            id: 2,
+            erc20Address: LQTY,
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+
+        deal(address(ROLLUP_PROCESSOR), swapAmount);
+
+        vm.startPrank(address(ROLLUP_PROCESSOR));
+        (uint256 outputValueA, , ) = bridge.convert{value: swapAmount}(
             inputAssetA,
             emptyAsset,
             outputAssetA,

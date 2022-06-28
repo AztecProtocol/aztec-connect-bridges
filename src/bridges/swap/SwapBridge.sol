@@ -24,6 +24,7 @@ contract SwapBridge is BridgeBase {
         uint256 minPrice;
     }
 
+    address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     uint64 private constant SPLIT_PATH_BIT_LENGTH = 19;
@@ -78,7 +79,7 @@ contract SwapBridge is BridgeBase {
                 revert ErrorLib.ApproveFailed(_tokenIn);
             }
         }
-        if (_tokenIn != address(0)) {
+        if (_tokenOut != address(0)) {
             // Output token not ETH
             if (!IERC20(_tokenOut).approve(address(ROLLUP_PROCESSOR), type(uint256).max)) {
                 revert ErrorLib.ApproveFailed(_tokenOut);
@@ -114,20 +115,25 @@ contract SwapBridge is BridgeBase {
             bool
         )
     {
-        if (
-            _inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20 &&
-            _inputAssetA.assetType != AztecTypes.AztecAssetType.ETH
-        ) revert ErrorLib.InvalidInputA();
-        if (
-            _outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20 &&
-            _outputAssetA.assetType != AztecTypes.AztecAssetType.ETH
-        ) revert ErrorLib.InvalidOutputA();
+        bool inputIsEth = _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
+        bool outputIsEth = _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
 
-        Path memory path = _decodePath(_inputAssetA.erc20Address, _auxData, _outputAssetA.erc20Address);
+        if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20 && !inputIsEth) {
+            revert ErrorLib.InvalidInputA();
+        }
+        if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20 && !outputIsEth) {
+            revert ErrorLib.InvalidOutputA();
+        }
+
+        Path memory path = _decodePath(
+            inputIsEth ? WETH : _inputAssetA.erc20Address,
+            _auxData,
+            outputIsEth ? WETH : _outputAssetA.erc20Address
+        );
 
         uint256 inputValueSplitPath1 = (_inputValue * path.percentage1) / 100;
 
-        outputValueA = UNI_ROUTER.exactInput(
+        outputValueA = UNI_ROUTER.exactInput{value: inputIsEth ? inputValueSplitPath1 : 0}(
             ISwapRouter.ExactInputParams({
                 path: path.splitPath1,
                 recipient: address(this),
@@ -138,12 +144,13 @@ contract SwapBridge is BridgeBase {
         );
 
         if (path.percentage2 != 0) {
-            outputValueA += UNI_ROUTER.exactInput(
+            uint256 inputValueSplitPath2 = _inputValue - inputValueSplitPath1;
+            outputValueA += UNI_ROUTER.exactInput{value: inputIsEth ? inputValueSplitPath2 : 0}(
                 ISwapRouter.ExactInputParams({
                     path: path.splitPath2,
                     recipient: address(this),
                     deadline: block.timestamp,
-                    amountIn: _inputValue - inputValueSplitPath1,
+                    amountIn: inputValueSplitPath2,
                     amountOutMinimum: 0
                 })
             );
