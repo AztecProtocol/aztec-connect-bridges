@@ -18,8 +18,53 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
  * @dev DO NOT USE THIS IS PRODUCTION, UNFINISHED CODE.
  */
 
-contract BiDCABridge is BridgeBase {
+library Muldiv {
+    // Used when computing how much you get
+    function mulDivDown(
+        uint256 x,
+        uint256 y,
+        uint256 denominator
+    ) internal pure returns (uint256 z) {
+        assembly {
+            // Store x * y in z for now.
+            z := mul(x, y)
+
+            // Equivalent to require(denominator != 0 && (x == 0 || (x * y) / x == y))
+            if iszero(and(iszero(iszero(denominator)), or(iszero(x), eq(div(z, x), y)))) {
+                revert(0, 0)
+            }
+
+            // Divide z by the denominator.
+            z := div(z, denominator)
+        }
+    }
+
+    // Used when computing how much to pay
+    function mulDivUp(
+        uint256 x,
+        uint256 y,
+        uint256 denominator
+    ) internal pure returns (uint256 z) {
+        assembly {
+            // Store x * y in z for now.
+            z := mul(x, y)
+
+            // Equivalent to require(denominator != 0 && (x == 0 || (x * y) / x == y))
+            if iszero(and(iszero(iszero(denominator)), or(iszero(x), eq(div(z, x), y)))) {
+                revert(0, 0)
+            }
+
+            // First, divide z - 1 by the denominator and add 1.
+            // We allow z - 1 to underflow if z is 0, because we multiply the
+            // end result by 0 if z is zero, ensuring we return 0 if z is zero.
+            z := mul(iszero(iszero(z)), add(div(sub(z, 1), denominator), 1))
+        }
+    }
+}
+
+abstract contract BiDCABridge is BridgeBase {
     using SafeERC20 for IERC20;
+    using Muldiv for uint256;
 
     error PositionAlreadyExists();
 
@@ -121,18 +166,6 @@ contract BiDCABridge is BridgeBase {
         return (flowA, flowB);
     }
 
-    function rebalanceAndFillUniswap() public returns (int256, int256) {
-        // TODO: Not implemented
-        _rebalanceAndfill(0, 0, getPrice());
-        // Find the amount Available. Then we need to get those funds. And then we can match funds.
-        // Compute how much we would need to match these.
-        // Flash swap these assets from uniswap
-        // run rebalance again with the values, and we need to compute the price we got from uniswap.
-        // Practically, we want to borrow both assets from uniswap, and then return them both. Its a bit ugly, but might be doable
-
-        return (0, 0);
-    }
-
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata,
@@ -225,16 +258,31 @@ contract BiDCABridge is BridgeBase {
         }
     }
 
-    function getPrice() public view returns (uint256) {
-        return 0.001e18; // 900017768410818; // 1111 usd per eth
+    /**
+     * @notice The brice of A in B, e.g., 0.1 would mean 10 A = 1 B
+     */
+    function getPrice() public view virtual returns (uint256);
+
+    function assetAInAssetB(
+        uint256 _amount,
+        uint256 _priceAToB,
+        bool _up
+    ) public pure returns (uint256) {
+        if (_up) {
+            return _amount.mulDivUp(_priceAToB, 1e18);
+        }
+        return _amount.mulDivDown(_priceAToB, 1e18);
     }
 
-    function assetAInAssetB(uint256 _amount, uint256 _priceAToB) public pure returns (uint256) {
-        return (_amount * _priceAToB) / 1e18;
-    }
-
-    function assetBInAssetA(uint256 _amount, uint256 _priceAToB) public pure returns (uint256) {
-        return (_amount * 1e18) / _priceAToB;
+    function assetBInAssetA(
+        uint256 _amount,
+        uint256 _priceAToB,
+        bool _up
+    ) public pure returns (uint256) {
+        if (_up) {
+            return _amount.mulDivUp(1e18, _priceAToB);
+        }
+        return _amount.mulDivDown(1e18, _priceAToB);
     }
 
     function getTick(uint256 _day) public view returns (Tick memory) {
@@ -286,8 +334,10 @@ contract BiDCABridge is BridgeBase {
         if (!_assetA && lastTickAvailableB == 0) {
             lastTickAvailableB = nextTick;
         }
+        // Update prices of today
         ticks[nextTick - 1].priceAToB = getPrice();
         ticks[nextTick - 1].priceUpdated = block.timestamp;
+
         uint240 tickAmount = _toU240(_amount / _ticks);
         for (uint256 i = nextTick; i < nextTick + _ticks; i++) {
             if (_assetA) {
@@ -333,11 +383,9 @@ contract BiDCABridge is BridgeBase {
             }
         }
 
-        // Compute values in opposite asset, for easier comparisons
-        vars.offerAInB = assetAInAssetB(_offerA, vars.currentPrice);
-        vars.offerBInA = assetBInAssetA(_offerB, vars.currentPrice);
-
-        //
+        // Compute values in opposite asset, for easier comparisons. Round down.
+        vars.offerAInB = assetAInAssetB(_offerA, vars.currentPrice, false);
+        vars.offerBInA = assetBInAssetA(_offerB, vars.currentPrice, false);
 
         uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
         for (uint256 i = oldestTick; i < nextTick; i++) {
@@ -364,39 +412,39 @@ contract BiDCABridge is BridgeBase {
                     }
                 }
 
-                // To compare we need same basis. Compute value of the available A in base B.
-                uint256 availableAInB = assetAInAssetB(tick.availableA, price);
+                // To compare we need same basis. Compute value of the available A in base B. Round down
+                uint256 buyableBWithA = assetAInAssetB(tick.availableA, price, false);
 
                 // If more value in A than B, we can use all available B. Otherwise, use all available A
-                if (availableAInB > tick.availableB) {
-                    // The value of all available B in asset A.
-                    uint256 availableBInA = assetBInAssetA(tick.availableB, price);
+                if (buyableBWithA > tick.availableB) {
+                    // The value of all available B in asset A. Round down
+                    uint256 buyableAWithB = assetBInAssetA(tick.availableB, price, false);
 
                     // Update Asset A
-                    tick.assetAToB.sold += availableBInA;
+                    tick.assetAToB.sold += buyableAWithB;
                     tick.assetAToB.bought += tick.availableB;
 
                     // Update Asset B
-                    tick.assetBToA.bought += availableBInA;
+                    tick.assetBToA.bought += buyableAWithB;
                     tick.assetBToA.sold += tick.availableB;
 
                     // Update available values
-                    tick.availableA -= availableBInA;
+                    tick.availableA -= buyableAWithB;
                     tick.availableB = 0;
                 } else {
                     // We got more B than A, fill everything in A and part of B
 
                     // Update Asset B
-                    tick.assetBToA.sold += availableAInB;
+                    tick.assetBToA.sold += buyableBWithA;
                     tick.assetBToA.bought += tick.availableA;
 
                     // Update Asset A
-                    tick.assetAToB.bought += availableAInB;
+                    tick.assetAToB.bought += buyableBWithA;
                     tick.assetAToB.sold += tick.availableA;
 
                     // Update available values
                     tick.availableA = 0;
-                    tick.availableB -= availableAInB;
+                    tick.availableB -= buyableBWithA;
                 }
             }
 
@@ -409,7 +457,8 @@ contract BiDCABridge is BridgeBase {
                 }
 
                 // Compute the amount of A we need to pay to get this B.
-                uint256 assetAPayment = assetBInAssetA(userBuyingB, vars.currentPrice);
+                // Should be rounding up. Have the external user overpay a little
+                uint256 assetAPayment = assetBInAssetA(userBuyingB, vars.currentPrice, true);
 
                 tick.availableB -= userBuyingB;
                 tick.assetBToA.sold += userBuyingB;
@@ -427,7 +476,7 @@ contract BiDCABridge is BridgeBase {
                 if (vars.offerBInA > tick.availableA) {
                     amountABought = tick.availableA;
                 }
-                uint256 assetBPayment = assetAInAssetB(amountABought, vars.currentPrice);
+                uint256 assetBPayment = assetAInAssetB(amountABought, vars.currentPrice, true);
 
                 tick.availableA -= amountABought;
                 tick.assetAToB.sold += amountABought;
