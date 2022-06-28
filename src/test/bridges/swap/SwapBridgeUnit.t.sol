@@ -176,4 +176,45 @@ contract SwapBridgeUnitTest is Test {
 
         assertGt(outputValueA, 0);
     }
+
+    function testInsufficientAmountOut() public {
+        // Testing that InsufficientAmountOut error is thrown by passing in a 1 million Dai as a minimum acceptable
+        // amount for 1 ETH.
+        uint256 swapAmount = 1 ether;
+
+        //           500     100
+        // PATH1 ETH -> USDC -> DAI   100% of input 1100100 01 010 00 000 00
+        // MIN PRICE: significand 1, exponent 24
+        // 000000000000000000001 10111 | 0000000 00 000 00 000 00 | 1100100 01 010 00 000 00
+        uint64 encodedPath = 0xDC000064500;
+
+        bridge.preApproveTokenPair(address(0), DAI);
+
+        // Define input and output assets
+        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
+            id: 0,
+            erc20Address: address(0),
+            assetType: AztecTypes.AztecAssetType.ETH
+        });
+
+        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset({
+            id: 2,
+            erc20Address: DAI,
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+
+        deal(rollupProcessor, swapAmount);
+
+        vm.expectRevert(SwapBridge.InsufficientAmountOut.selector);
+        bridge.convert{value: swapAmount}(
+            inputAssetA,
+            emptyAsset,
+            outputAssetA,
+            emptyAsset,
+            swapAmount,
+            0,
+            encodedPath,
+            address(0)
+        );
+    }
 }
