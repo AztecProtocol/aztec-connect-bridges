@@ -18,19 +18,23 @@ import {IWETH} from "../../interfaces/IWETH.sol";
  * @dev Encoding of a path allows for up to 2 split paths and up to 3 pools (2 middle tokens) in a each split path.
  *      A path is encoded in _auxData parameter passed to the convert method. _auxData carry 64 bits of information.
  *      Along with split paths there is a minimum price encoded in the auxData.
+ *
  *      Each split path takes 19 bits. Minimum price is encoded in 26 bits. Values are placed in the data as follows:
  *          |26 bits minimum price| |19 bits split path 2| |19 bits split path 1|
- *      In case only 1 split path is in use this split path has to be in the position of split path1.
+ *
  *      Encoding of split path is:
  *          |7 bits percentage| |2 bits fee| |3 bits middle token| |2 bits fee| |3 bits middle token| |2 bits fee|
- *      The meaning of percentage is how much of input amount will be routed through this split path.
+ *      The meaning of percentage is how much of input amount will be routed through the corresponding split path.
  *      Fee bits are mapped to specific fee tiers as follows:
  *          00 is 0.01%, 01 is 0.05%, 10 is 0.3%, 11 is 1%
  *      Middle tokens use the following mapping:
  *          001 is ETH, 010 is USDC, 011 is USDT, 100 is DAI, 101 is WBTC, 110 is FRAX, 111 is BUSD.
  *          000 means the middle token is unused.
+ *
  *      Min price is encoded as a floating point number. First 21 bits are used for significand, last 5 bits for
  *      exponent: |21 bits significand| |5 bits exponent|
+ *      Minimum amount out is computed with the following formula:
+ *          (inputValue * (significand * 10**exponent)) / (10 ** outputAssetDecimals)
  */
 contract SwapBridge is BridgeBase {
     error InvalidFeeTierEncoding();
@@ -57,19 +61,7 @@ contract SwapBridge is BridgeBase {
     uint64 private constant SPLIT_PATHS_BIT_LENGTH = 38; // SPLIT_PATH_BIT_LENGTH * 2
     uint64 private constant PRICE_BIT_LENGTH = 26; // 64 - SPLIT_PATHS_BIT_LENGTH
 
-    /**
-     * @dev The following masks are used to decode 2 split paths and minimum acceptable price from 1 uint64.
-     *      1 split path is encoded as follows:
-     *      |7 bits percentage| |2 bits fee| |3 bits middle token| |2 bits fee| |3 bits middle token| |2 bits fee|
-     *      The meaning of percentage is how much of input amount will be routed through this split path.
-     *      Fee bits are mapped to specific fee tiers as follows: 00 is 0.01%, 01 is 0.05%, 10 is 0.3%, 11 is 1%
-     *      Middle tokens use this mapping:
-     *      001 is ETH, 010 is USDC, 011 is USDT, 100 is DAI, 101 is WBTC, 110 is FRAX, 111 is BUSD,
-     *      000 means the middle token is unused.
-     *      Min price is encoded as a floating point number. First 21 bits are used for significand, last 5 bits for
-     *      exponent: |21 bits significand| |5 bits exponent|
-     */
-
+    // @dev The following masks are used to decode 2 split paths and minimum acceptable price from 1 uint64.
     // Binary number 0000000000000000000000000000000000000000000001111111111111111111 (last 19 bits)
     uint64 private constant SPLIT_PATH_MASK = 0x7FFFF;
 
