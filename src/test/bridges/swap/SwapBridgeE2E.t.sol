@@ -22,7 +22,7 @@ contract SwapBridgeE2ETest is BridgeTestBase {
     bytes private referenceSplitPath1 =
     abi.encodePacked(LUSD, uint24(500), USDC, uint24(3000), WETH, uint24(3000), LQTY);
     bytes private referenceSplitPath2 =
-    abi.encodePacked(LUSD, uint24(500), DAI, uint24(3000), WETH, uint24(3000), LQTY);
+    abi.encodePacked(LUSD, uint24(500), DAI, uint24(3000), WETH, uint24(10000), LQTY);
 
     SwapBridge private bridge;
 
@@ -63,12 +63,12 @@ contract SwapBridgeE2ETest is BridgeTestBase {
 
         //            500     3000    3000
         // PATH1 LUSD -> USDC -> WETH -> LQTY   70% of input 1000110 01 010 10 001 10
-        //            500    3000    3000
-        // PATH2 LUSD -> DAI -> WETH -> LQTY    30% of input 0011110 01 100 10 001 10
+        //            500    3000    10000
+        // PATH2 LUSD -> DAI -> WETH -> LQTY    30% of input 0011110 01 100 10 001 11
         // MIN PRICE: significand 0, exponent 0
         // @dev Setting min price to 0 here in order to avoid issues with changing mainnet liquidity
-        // 000000000000000000000 00000 | 0011110 01 100 10 001 10 | 1000110 01 010 10 001 10
-        uint64 encodedPath = 0xF32346546;
+        // 000000000000000000000 00000 | 0011110 01 100 10 001 11 | 1000110 01 010 10 001 10
+        uint64 encodedPath = 0xF323C6546;
 
         bridge.preApproveTokenPair(LUSD, LQTY);
 
@@ -81,7 +81,7 @@ contract SwapBridgeE2ETest is BridgeTestBase {
         // Compute quote
         uint256 swapAmountSplitPath1 = (swapAmount * 70) / 100;
         uint256 quote = QUOTER.quoteExactInput(referenceSplitPath1, swapAmountSplitPath1);
-        quote += QUOTER.quoteExactInput(referenceSplitPath1, swapAmount - swapAmountSplitPath1);
+        quote += QUOTER.quoteExactInput(referenceSplitPath2, swapAmount - swapAmountSplitPath1);
 
         // Computes the encoded data for the specific bridge interaction
         uint256 bridgeId = encodeBridgeId(id, lusdAsset, emptyAsset, lqtyAsset, emptyAsset, encodedPath);
