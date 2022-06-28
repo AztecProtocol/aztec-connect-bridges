@@ -202,6 +202,13 @@ contract SwapBridge is BridgeBase {
         }
     }
 
+    /**
+     * @notice A function which deserializes encoded path to Path struct.
+     * @param _tokenIn - Input ERC20 token
+     * @param _encodedPath - Encoded path
+     * @param _tokenOut - Output ERC20 token
+     * @return path - Decoded/deserialized path struct
+     */
     function _decodePath(
         address _tokenIn,
         uint64 _encodedPath,
@@ -228,11 +235,20 @@ contract SwapBridge is BridgeBase {
         path.minPrice = _decodeMinPrice(_encodedPath >> SPLIT_PATHS_BIT_LENGTH);
     }
 
+    /**
+     * @notice A function which returns a percentage of input going through the split path and the split path encoded
+     *         in a format compatible with Uniswap router.
+     * @param _tokenIn - Input ERC20 token
+     * @param _encodedSplitPath - Encoded split path (in the last 19 bits of uint64)
+     * @param _tokenOut - Output ERC20 token
+     * @return percentage - A percentage of input going through the corresponding split path
+     * @return splitPath - A split path encoded in a format compatible with Uniswap router
+     */
     function _decodeSplitPath(
         address _tokenIn,
         uint64 _encodedSplitPath,
         address _tokenOut
-    ) internal view returns (uint256 percentage, bytes memory path) {
+    ) internal view returns (uint256 percentage, bytes memory splitPath) {
         uint64 fee3 = _encodedSplitPath & FEE_MASK;
         uint64 middleToken2 = (_encodedSplitPath >> 2) & TOKEN_MASK;
         uint64 fee2 = (_encodedSplitPath >> 5) & FEE_MASK;
@@ -241,7 +257,7 @@ contract SwapBridge is BridgeBase {
         percentage = _encodedSplitPath >> 12;
 
         if (middleToken1 != 0 && middleToken2 != 0) {
-            path = abi.encodePacked(
+            splitPath = abi.encodePacked(
                 _tokenIn,
                 _getFeeTier(fee1),
                 _getMiddleToken(middleToken1),
@@ -251,7 +267,7 @@ contract SwapBridge is BridgeBase {
                 _tokenOut
             );
         } else if (middleToken1 != 0) {
-            path = abi.encodePacked(
+            splitPath = abi.encodePacked(
                 _tokenIn,
                 _getFeeTier(fee1),
                 _getMiddleToken(middleToken1),
@@ -259,7 +275,7 @@ contract SwapBridge is BridgeBase {
                 _tokenOut
             );
         } else if (middleToken2 != 0) {
-            path = abi.encodePacked(
+            splitPath = abi.encodePacked(
                 _tokenIn,
                 _getFeeTier(fee2),
                 _getMiddleToken(middleToken2),
@@ -267,10 +283,15 @@ contract SwapBridge is BridgeBase {
                 _tokenOut
             );
         } else {
-            path = abi.encodePacked(_tokenIn, _getFeeTier(fee3), _tokenOut);
+            splitPath = abi.encodePacked(_tokenIn, _getFeeTier(fee3), _tokenOut);
         }
     }
 
+    /**
+     * @notice A function which converts minimum price in a floating point format to integer.
+     * @param _encodedMinPrice - Encoded minimum price (in the last 26 bits of uint64)
+     * @return minPrice - Minimum acceptable price represented as an integer
+     */
     function _decodeMinPrice(uint64 _encodedMinPrice) internal pure returns (uint256 minPrice) {
         // 21 bits significand, 5 bits exponent
         uint64 significand = _encodedMinPrice >> 5;
@@ -278,6 +299,11 @@ contract SwapBridge is BridgeBase {
         minPrice = significand * 10**exponent;
     }
 
+    /**
+     * @notice A function which converts encoded fee tier to a fee tier in an integer format.
+     * @param _encodedFeeTier - Encoded fee tier (in the last 2 bits of uint64)
+     * @return feeTier - Decoded fee tier in an integer format
+     */
     function _getFeeTier(uint64 _encodedFeeTier) internal pure returns (uint24 feeTier) {
         if (_encodedFeeTier == 0) {
             // Binary number 00
@@ -298,6 +324,11 @@ contract SwapBridge is BridgeBase {
         revert InvalidFeeTierEncoding();
     }
 
+    /**
+     * @notice A function which returns token address for an encoded token.
+     * @param _encodedToken - Encoded token (in the last 3 bits of uint64)
+     * @return token - Token address
+     */
     function _getMiddleToken(uint256 _encodedToken) internal pure returns (address token) {
         if (_encodedToken == 1) {
             // ETH, binary number 001
