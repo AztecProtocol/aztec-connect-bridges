@@ -78,11 +78,11 @@ contract SwapBridgeInternalTest is Test, SwapBridge(address(0)) {
         assertEq(decodedMinPrice, referenceDecodedMinPrice, "Incorrect min price");
     }
 
-    function testDecodeMinPriceFuzz(uint24 significand, uint8 exponent) public {
-        significand = uint24(bound(significand, 0, 2**21 - 1));
-        exponent = uint8(bound(exponent, 0, 2**5 - 1));
-        uint64 referenceEncodedMinPrice = (uint64(significand) << 5) + exponent;
-        uint256 referenceDecodedMinPrice = significand * 10**exponent;
+    function testDecodeMinPriceFuzz(uint24 _significand, uint8 _exponent) public {
+        _significand = uint24(bound(_significand, 0, 2**21 - 1));
+        _exponent = uint8(bound(_exponent, 0, 2**5 - 1));
+        uint64 referenceEncodedMinPrice = (uint64(_significand) << 5) + _exponent;
+        uint256 referenceDecodedMinPrice = _significand * 10**_exponent;
 
         uint256 decodedMinPrice = _decodeMinPrice(referenceEncodedMinPrice);
         assertEq(decodedMinPrice, referenceDecodedMinPrice, "Incorrect min price");
@@ -92,7 +92,7 @@ contract SwapBridgeInternalTest is Test, SwapBridge(address(0)) {
         // 00000000000000000000000000 | 0110010 01 100 10 001 10 | 1000110 01 010 10 001 10
         uint64 encodedPath = 0x1932346546;
         vm.expectRevert(SwapBridge.InvalidPercentageAmounts.selector);
-        SwapBridge.Path memory path = _decodePath(LUSD, encodedPath, LQTY);
+        _decodePath(LUSD, encodedPath, LQTY);
     }
 
     function testInvalidFeeTierEncoding() public {
