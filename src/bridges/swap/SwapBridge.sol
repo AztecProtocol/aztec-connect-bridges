@@ -35,6 +35,13 @@ import {IWETH} from "../../interfaces/IWETH.sol";
  *      exponent: |21 bits significand| |5 bits exponent|
  *      Minimum amount out is computed with the following formula:
  *          (inputValue * (significand * 10**exponent)) / (10 ** outputAssetDecimals)
+ *      Here are 2 examples.
+ *      1) If I want to receive 10k Dai for 1 ETH I would set significand to 1 and exponent to 22.
+ *         _inputValue = 1e18, asset = ETH (18 decimals), outputAssetA: Dai (18 decimals)
+ *         (1e18 * (1 * 10**22)) / (10**18) = 1e22 --> 10k Dai
+ *      2) If I want to receive 2000 USDC for 1 ETH, I set significand to 2 and exponent to 27.
+ *         _inputValue = 1e9, asset = USDC (6 decimals), outputAssetA: ETH (18 decimals)
+ *         (1e9 * (2 * 10**27)) / (10**18) = 2e18 --> 2000 USDC
  */
 contract SwapBridge is BridgeBase {
     error InvalidFeeTierEncoding();
