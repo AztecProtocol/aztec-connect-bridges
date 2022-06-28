@@ -20,9 +20,9 @@ contract SwapBridgeE2ETest is BridgeTestBase {
     IQuoter public QUOTER = IQuoter(0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6);
 
     bytes private referenceSplitPath1 =
-    abi.encodePacked(LUSD, uint24(500), USDC, uint24(3000), WETH, uint24(3000), LQTY);
+        abi.encodePacked(LUSD, uint24(500), USDC, uint24(3000), WETH, uint24(3000), LQTY);
     bytes private referenceSplitPath2 =
-    abi.encodePacked(LUSD, uint24(500), DAI, uint24(3000), WETH, uint24(10000), LQTY);
+        abi.encodePacked(LUSD, uint24(500), DAI, uint24(3000), WETH, uint24(10000), LQTY);
 
     SwapBridge private bridge;
 

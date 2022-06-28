@@ -17,14 +17,17 @@ contract SwapBridge is BridgeBase {
     error InvalidPercentageAmounts();
     error InsufficientAmountOut();
 
-    // TODO: consider packing
+    // @notice A struct representing a path with 2 split paths.
     struct Path {
-        uint256 percentage1;
-        bytes splitPath1;
-        uint256 percentage2;
-        bytes splitPath2;
-        uint256 minPrice;
+        uint256 percentage1; // Percentage of input to swap through splitPath1
+        bytes splitPath1; // A path encoded in a format used by Uniswap's v3 router
+        uint256 percentage2; // Percentage of input to swap through splitPath2
+        bytes splitPath2; // A path encoded in a format used by Uniswap's v3 router
+        uint256 minPrice; // Minimum acceptable price
     }
+
+    // @dev Event which is emitted when the output token doesn't implement decimals().
+    event DefaultDecimalsWarning(address token);
 
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
@@ -161,8 +164,14 @@ contract SwapBridge is BridgeBase {
             );
         }
 
-        // TODO: decimals are optional in ERC20 standard but all the tokens I can think of implement it. Should we handle decimals() not existing?
-        uint256 tokenOutDecimals = outputIsEth ? 18 : IERC20Metadata(_outputAssetA.erc20Address).decimals();
+        uint256 tokenOutDecimals = 18;
+        if (!outputIsEth) {
+            try IERC20Metadata(_outputAssetA.erc20Address).decimals() returns (uint8 decimals) {
+                tokenOutDecimals = decimals;
+            } catch (bytes memory) {
+                emit DefaultDecimalsWarning(_outputAssetA.erc20Address);
+            }
+        }
         uint256 amountOutMinimum = (_inputValue * path.minPrice) / 10**tokenOutDecimals;
 
         if (outputValueA < amountOutMinimum) revert InsufficientAmountOut();
