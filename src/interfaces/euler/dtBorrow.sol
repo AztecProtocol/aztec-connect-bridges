@@ -1,9 +1,10 @@
 pragma solidity >=0.8.4;
 
-interface dBorrow {
+interface dtBorrow {
 
-    function borrow(uint subAccountId, uint amount) external;
-    function repay(uint subAccountId, uint amount) external;
+    function borrow(uint, uint) external;
+    function repay(uint, uint) external;
+    function balanceOf(address) external view returns (uint);
 
     
     
