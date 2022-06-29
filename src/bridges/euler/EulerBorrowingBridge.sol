@@ -42,7 +42,7 @@ contract EulerBorrowingBridge is BridgeBase {
     
     function performApprovals(address _collateral, address _borrowedToken) external {
         IERC20(_collateral).eToken.approve(EULER_MAINNET_addr, type(uint).max);
-        IERC20(_borrowedToken).eToken.approve(EULER_MAINNET_addr, type(uint).max);
+        IERC20(_borrowedToken).eToken.approve(EULER_MAINNET_addr, type(uint).max);        //need to fill in EULER_MAINNET address!!
 
         
         
