@@ -31,6 +31,7 @@ contract EulerBorrowingBridge is BridgeBase {
     
     module public immutable MODULE = module(address IEulerMarkets);  //fill in address
     IEERC20 public immutable eToken = IEERC20(address IEulerEToken);
+    dtBorrow public immutable DTBORROW = dtBorrow(address EulerDTtoken)
     
      /**
      * @notice Set the address of RollupProcessor.sol
@@ -103,7 +104,7 @@ contract EulerBorrowingBridge is BridgeBase {
           
         if  (_auxData == 1) {
              if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
-             dtBorrow borrowedDToken = dtBorrow(MODULE.underlyingToDToken(_token));
+             DTBORROW borrowedDToken = DTBORROW(MODULE.underlyingToDToken(_token));
              borrowedDToken.borrow(0, _inputValue);
              outputValueA = borrowedDToken.balanceOf(address(this));
              
@@ -113,7 +114,7 @@ contract EulerBorrowingBridge is BridgeBase {
 
         if  (_auxData == 2) {
             if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
-            dtBorrow borrowedDToken = dtBorrow(MODULE.underlyingToDToken(_token));
+            DTBORROW borrowedDToken = DTBORROW(MODULE.underlyingToDToken(_token));
             borrowedDToken.repay(0, type(uint).max);
             
             }
