@@ -64,12 +64,11 @@ contract EulerBorrowingBridge is BridgeBase {
      * @dev This method can only be called from RollupProcessor.sol. If `_auxData` is 0 the deposit flow is executed,
      * if 1 the borrow flow, if 2 the (loan) repay flow, if 3 the withdraw flow.
      *
-     * @param _inputAssetA - ETH/ERC20 (Mint), cToken ERC20 (Redeem)
-     * @param _outputAssetA - cToken (Mint), ETH/ERC20 (Redeem)
-     * @param _inputValue - the amount of ERC20 token/ETH to deposit (Mint), the amount of cToken to burn (Redeem)
-     * @param _interactionNonce - interaction nonce as defined in RollupProcessor.sol
-     * @param _auxData - 0 (Mint), 1 (Redeem)
-     * @return outputValueA - the amount of cToken (Mint) or ETH/ERC20 (Redeem) transferred to RollupProcessor.sol
+     * @param _inputAssetA - ERC20
+     * @param _outputAssetA - ERC20
+     * @param _inputValue - the amount of ERC20 tokens to deposit/borrow,
+     * @param _auxData - 0 (deposit), 1 (borrow), 3(repay loan), 4(withdraw underlying assets)
+     * @return outputValueA - Amount of ERC20 tokens withdrawed back / amount of ERC20 from the borrow 
      */
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
