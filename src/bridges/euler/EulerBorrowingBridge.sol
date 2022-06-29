@@ -44,7 +44,7 @@ contract EulerBorrowingBridge is BridgeBase {
     function performApprovals(address _collateral, address _borrowToken) external {
     
         if (MODULE.underlyingToAssetConfig(_collateral) < 0) revert MarketNotListed(); //checks if token is 'collateral asset'
-        if (_borrowToken == address(0)) revert InvalidInput();
+        if (_borrowToken == address(0)) revert InvalidInput();                          // checks if token exists 
         IERC20(_collateral).approve(EULER_MAINNET_addr, type(uint).max);
         IERC20(_borrowToken).approve(EULER_MAINNET_addr, type(uint).max);    //need to fill in EULER_MAINNET address!
         IERC20(_collateral).safeApprove(ROLLUP_PROCESSOR, type(uint256).max);
