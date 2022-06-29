@@ -9,7 +9,7 @@ interface IEERC20 is IERC20 {
     function deposit(uint, uint) external;
     function withdraw(uint, uint) external;
     function enterMarket(uint, address) external; //address here = collateral
-    function borrow(uint, amount) external;
+    function borrow(uint, uint) external;
     function repay(uint, uint) external;
 
     
