@@ -37,6 +37,12 @@ contract EulerBorrowingBridge is BridgeBase {
     
     receive() external payable {}
     
+        function performApprovals(address _eToken) external {
+        (bool isListed, , ) = MODULE.markets(_eToken);
+        if (!isListed) revert MarketNotListed();
+        _preApprove(IEERC20(_eToken));
+    }
+    
     
 }
 
