@@ -76,9 +76,9 @@ contract EulerBorrowingBridge is BridgeBase {
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
         uint256 _inputValue,
-        uint256 _interactionNonce,
+        uint256,
         uint64 _auxData,
-        address
+        address _token
     )
         external
         payable
