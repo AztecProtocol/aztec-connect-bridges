@@ -123,10 +123,11 @@ contract EulerBorrowingBridge is BridgeBase {
            
          if (_auxData == 3) {
             if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
-            eToken.withdraw(0, type(uint).max);
             outputValueA = eToken.balanceOfUnderlying(address(this));
+            eToken.withdraw(0, type(uint).max);
             
             }
+            
             
             }
             
@@ -136,11 +137,6 @@ contract EulerBorrowingBridge is BridgeBase {
            
           
        
-            
-    
-        
-        
-    
     
 }
 
