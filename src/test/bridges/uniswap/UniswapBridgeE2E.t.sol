@@ -56,6 +56,11 @@ contract UniswapBridgeE2ETest is BridgeTestBase {
 
         // Fetch the id of the example bridge
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
+
+        // EIP-1087 optimization related mints
+        deal(LQTY, address(bridge), 1);
+        deal(LUSD, address(bridge), 1);
+        deal(WETH, address(bridge), 1);
     }
 
     function testSwap() public {

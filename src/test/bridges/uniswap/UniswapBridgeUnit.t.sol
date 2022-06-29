@@ -39,6 +39,11 @@ contract UniswapBridgeUnitTest is Test {
         vm.label(WETH, "WETH");
         vm.label(LQTY, "LQTY");
         vm.label(USDC, "USDC");
+
+        // EIP-1087 optimization related mints
+        deal(LQTY, address(bridge), 1);
+        deal(LUSD, address(bridge), 1);
+        deal(WETH, address(bridge), 1);
     }
 
     function testInvalidInputAssetAType() public {
