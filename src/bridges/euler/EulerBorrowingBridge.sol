@@ -96,7 +96,7 @@ contract EulerBorrowingBridge is BridgeBase {
            if (MODULE.underlyingToAssetConfig(_token) <= 0) revert MarketNotListed();   //checks if token is 'collateral asset'
            eToken collateralEToken = eToken(MODULE.underlyingToEToken(_token));
            collateralEToken.deposit(0, _inputValue);
-           MODULE.enterMarket(0, _token);
+           MODULE.enterMarket(0, _token);                                             //enters market (deposited token to be counted as collateral)
            
           }
           
