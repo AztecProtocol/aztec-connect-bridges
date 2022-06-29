@@ -59,7 +59,7 @@ contract EulerBorrowingBridge is BridgeBase {
              
              
      /**
-     * @notice Function which deposits collateral, which allows the user to borrow
+     * @notice Function for depositing collateral, borrowing and withdrawing the underlying assets
      * @dev This method can only be called from RollupProcessor.sol. If `_auxData` is 0 the mint flow is executed,
      * if 1 redeem flow.
      *
