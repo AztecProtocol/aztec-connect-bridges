@@ -95,7 +95,7 @@ contract EulerBorrowingBridge is BridgeBase {
            if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) revert ErrorLib.InvalidOutputA();
            if (MODULE.underlyingToAssetConfig(_token) <= 0) revert MarketNotListed();   //checks if token is 'collateral asset'
            eToken collateralEToken = eToken(MODULE.underlyingToEToken(_token));
-           collateralEToken.deposit(0, _amount);
+           collateralEToken.deposit(0, _inputValue);
            MODULE.enterMarket(0, _token);
            
           }
