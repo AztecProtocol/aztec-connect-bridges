@@ -14,3 +14,12 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IEERC20} from "../../interfaces/euler/IEERC20.sol";
 import {module} from "../../interfaces/euler/module.sol";
 
+contract EulerBorrowingBridge is BridgeBase {
+    
+    using SafeERC20 for IERC20;
+    
+    error MarketNotListed();
+    
+    module public immutable MODULE = module(address);
+}
+
