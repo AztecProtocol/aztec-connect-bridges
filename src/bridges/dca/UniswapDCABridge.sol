@@ -29,6 +29,7 @@ interface IChainlinkOracle {
 }
 
 contract UniswapDCABridge is BiDCABridge {
+    using SafeERC20 for IERC20;
     bool public constant IS_TESTING = true;
 
     uint256 public constant MAX_AGE = 1 days; // Heartbeat of oracle is 24 hours.
@@ -46,9 +47,36 @@ contract UniswapDCABridge is BiDCABridge {
     }
 
     function rebalanceAndFillUniswap() public returns (int256, int256) {
+        // Gaswise not ideal. But somewhat understandable.
         // TODO: Not implemented
         // If we had an available unmatched we might do the first two in the same :thinking:
-        _rebalanceAndfill(0, 0, getPrice());
+        _rebalanceAndfill(0, 0, getPrice(), true);
+        (uint256 a, uint256 b) = getAvailable();
+
+        // We then pretty much need to loop through and match them. Almost like the rebalance. But with the caveat, that we need to also limit it based on how much we actually have available. We cannot just pull afterwards. e.g., sell == bought.
+
+        if (a > 0 && b > 0) {
+            // Note that the `protocolBoughtA` and `protocolSoldA` may not align perfectly. This is due to rounding. For a price < 1e18, the `protocolBoughtA` value will have trailing zeros due to *1e18/price computation.
+            // `protocolBoughtA` is bounded by the `_offerA` value and `protocolSoldA` is bounded by `tick.availableA` at every tick, e.g., the summed availablility.
+
+            // Note that the `protocolBoughtB` and `protocolSoldB` may not align perfectly. This is again due to rounding. For a price < 1e18, the `protocolBoughtA` value will have trailing zeros due to *1e18/price computation.
+            // `protocolBoughtB` is bounded by the `_offerB` value and `protocolSoldB` is bounded by `tick.availableB` at every tick, e.g., the summed availablility.
+
+            // Note, there is also rounding on the payment, as any trader will have the buyer overpay due to rounding up.
+
+            _rebalanceAndfill(a, b, getPrice(), true);
+        }
+
+        (a, b) = getAvailable();
+
+        if (a > 0) {
+            // Uniswap all A to B. Then compute the price, and use price-1 as the actual price. We want to undervalue a to ensure that we cover.
+        }
+
+        if (b > 0) {
+            // Uniswap all B to A. Then compute the price, and use price-1 as the actual price. We want to undervalue a to ensure that we cover.
+        }
+
         // Find the amount Available. Then we need to get those funds. And then we can match funds.
         // Compute how much we would need to match these.
         // Flash swap these assets from uniswap
@@ -69,7 +97,30 @@ contract UniswapDCABridge is BiDCABridge {
         return (0, 0);
     }
 
-    function getPrice() public view virtual override(BiDCABridge) returns (uint256) {
+    function rebalanceTest(
+        uint256 _a,
+        uint256 _b,
+        uint256 _price,
+        bool _self
+    ) public returns (int256, int256) {
+        (int256 flowA, int256 flowB) = _rebalanceAndfill(_a, _b, _price, _self);
+        if (!_self) {
+            if (flowA > 0) {
+                ASSET_A.safeTransferFrom(msg.sender, address(this), uint256(flowA));
+            } else if (flowA < 0) {
+                ASSET_A.safeTransfer(msg.sender, uint256(-flowA));
+            }
+
+            if (flowB > 0) {
+                ASSET_B.safeTransferFrom(msg.sender, address(this), uint256(flowB));
+            } else if (flowB < 0) {
+                ASSET_B.safeTransfer(msg.sender, uint256(-flowB));
+            }
+        }
+        return (flowA, flowB);
+    }
+
+    function getPrice() public virtual override(BiDCABridge) returns (uint256) {
         (, int256 answer, , uint256 updatedAt, ) = ORACLE.latestRoundData();
         if (!IS_TESTING && updatedAt + MAX_AGE < block.timestamp) {
             revert("Too old");
