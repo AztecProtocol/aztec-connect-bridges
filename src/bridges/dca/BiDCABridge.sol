@@ -13,8 +13,6 @@ import {IWETH} from "../../interfaces/IWETH.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {Test} from "forge-std/Test.sol";
-
 /**
  * @notice Very rough draft reference implementation of DCA
  * @dev DO NOT USE THIS IS PRODUCTION, UNFINISHED CODE.
@@ -64,7 +62,7 @@ library Muldiv {
     }
 }
 
-abstract contract BiDCABridge is BridgeBase, Test {
+abstract contract BiDCABridge is BridgeBase {
     using SafeERC20 for IERC20;
     using Muldiv for uint256;
 
