@@ -89,6 +89,83 @@ contract BiDCATest_unit is Test {
         assertGe(_a, a);
     }
 
+    function testSmallDirectFixedValues() public {
+        testSmallDirect(1000e18, 1e18);
+    }
+
+    function testSmallDirect(uint256 _aDeposit, uint256 _bDeposit) public {
+        assetA = IERC20(address(0x6B175474E89094C44Da98b954EedeAC495271d0F));
+        assetB = IERC20(address(WETH));
+        bridge = new UniswapDCABridge(address(this), address(assetA), address(assetB), 1 days, ORACLE);
+        aztecAssetA = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(assetA),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        aztecAssetB = AztecTypes.AztecAsset({
+            id: 2,
+            erc20Address: address(assetB),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+
+        uint256 price = bridge.getPrice();
+
+        uint256 aDeposit = bound(_aDeposit, 0.1e18, 1e21);
+        uint256 bDeposit = bound(_bDeposit, 0.1e18, 1e19);
+
+        bridge.convert(aztecAssetA, emptyAsset, aztecAssetB, emptyAsset, aDeposit, 0, 7, address(0));
+        deal(address(assetA), address(bridge), aDeposit);
+        vm.warp(block.timestamp + 1 days);
+
+        bridge.convert(aztecAssetB, emptyAsset, aztecAssetA, emptyAsset, bDeposit, 1, 7, address(0));
+        deal(address(assetB), address(bridge), bDeposit);
+        vm.warp(block.timestamp + 9 days);
+
+        emit log_named_decimal_uint("A bal", assetA.balanceOf(address(bridge)), 18);
+        emit log_named_decimal_uint("B bal", assetB.balanceOf(address(bridge)), 18);
+
+        price = (price * 9990) / 1000;
+        setPrice(price);
+
+        bridge.rebalanceAndFillUniswap();
+
+        {
+            (uint256 acc, bool ready) = bridge.getAccumulated(0);
+            assertTrue(ready);
+            // Run the finalise and exit with funds.
+            // Finalise DCA(0)
+            (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = bridge.finalise(
+                aztecAssetA,
+                emptyAsset,
+                aztecAssetB,
+                emptyAsset,
+                0,
+                0
+            );
+            assertEq(outputValueB, 0, "Outputvalue B not zero");
+            assertTrue(interactionComplete, "Interaction failed");
+            assetB.safeTransferFrom(address(bridge), address(this), outputValueA);
+        }
+        {
+            (uint256 acc, bool ready) = bridge.getAccumulated(1);
+            assertTrue(ready);
+            // Run the finalise and exit with funds.
+            (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = bridge.finalise(
+                aztecAssetB,
+                emptyAsset,
+                aztecAssetA,
+                emptyAsset,
+                1,
+                0
+            );
+            assertEq(outputValueB, 0, "Outputvalue B not zero");
+            assertTrue(interactionComplete, "Interaction failed");
+            assetA.safeTransferFrom(address(bridge), address(this), outputValueA);
+        }
+
+        printAvailable();
+    }
+
     function testSmall(
         uint256 _startPrice,
         uint256 _endPrice,
@@ -117,7 +194,7 @@ contract BiDCATest_unit is Test {
 
         printAvailable();
         {
-            (int256 a, int256 b) = bridge.rebalanceTest(0, 0, bridge.getPrice(), true);
+            (int256 a, int256 b) = bridge.rebalanceTest(0, 0, bridge.getPrice(), true, false);
             assertEq(a, 0, "Rebal 0, A flow != 0");
             assertEq(b, 0, "Rebal 0, B flow != 0");
 
@@ -134,7 +211,7 @@ contract BiDCATest_unit is Test {
                 emit log("Rebalance with all available");
                 // There is something here were we throw away some token.
 
-                (int256 a, int256 b) = bridge.rebalanceTest(_a, _b, bridge.getPrice(), true);
+                (int256 a, int256 b) = bridge.rebalanceTest(_a, _b, bridge.getPrice(), true, false);
                 emit log_named_decimal_int("Rebalance A", a, 18);
                 emit log_named_decimal_int("Rebalance B", b, 18);
                 printAvailable();
@@ -172,10 +249,10 @@ contract BiDCATest_unit is Test {
             deal(address(assetB), address(this), assetB.balanceOf(address(this)) + bOffer);
             assetB.approve(address(bridge), bOffer);
 
-            (int256 a, int256 b) = bridge.rebalanceTest(0, bOffer, _price, false);
+            emit log_named_decimal_int("Offer     B", int256(bOffer), 18);
+            (int256 a, int256 b) = bridge.rebalanceTest(0, bOffer, _price, true, true);
             emit log_named_decimal_int("Rebalance A", a, 18);
             emit log_named_decimal_int("Rebalance B", b, 18);
-            emit log_named_decimal_int("Offer     B", int256(bOffer), 18);
             assertGe(bOffer, uint256(b), "Offer must cover needed");
         }
 
@@ -189,10 +266,10 @@ contract BiDCATest_unit is Test {
             deal(address(assetA), address(this), assetA.balanceOf(address(this)) + aOffer);
             assetA.approve(address(bridge), aOffer);
 
-            (int256 a, int256 b) = bridge.rebalanceTest(aOffer, 0, _price, false);
+            emit log_named_decimal_int("Offer     A", int256(aOffer), 18);
+            (int256 a, int256 b) = bridge.rebalanceTest(aOffer, 0, _price, true, true);
             emit log_named_decimal_int("Rebalance A", a, 18);
             emit log_named_decimal_int("Rebalance B", b, 18);
-            emit log_named_decimal_int("Offer     A", int256(aOffer), 18);
             assertGe(aOffer, uint256(a), "Offer must cover needed");
         }
 
