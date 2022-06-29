@@ -131,13 +131,8 @@ abstract contract BiDCABridge is BridgeBase, Test {
         ASSET_B = IERC20(_assetB);
         TICK_SIZE = _tickSize;
 
-        if (_assetA != address(WETH)) {
-            IERC20(_assetA).safeApprove(_rollupProcessor, type(uint256).max);
-        }
-
-        if (_assetB != address(WETH)) {
-            IERC20(_assetB).safeApprove(_rollupProcessor, type(uint256).max);
-        }
+        IERC20(_assetA).safeApprove(_rollupProcessor, type(uint256).max);
+        IERC20(_assetB).safeApprove(_rollupProcessor, type(uint256).max);
     }
 
     receive() external payable {}
@@ -272,9 +267,9 @@ abstract contract BiDCABridge is BridgeBase, Test {
         uint256 _priceAToB,
         bool _up
     ) public pure returns (uint256) {
-        /*if (_up) {
+        if (_up) {
             return _amount.mulDivUp(_priceAToB, 1e18);
-        }*/
+        }
         return _amount.mulDivDown(_priceAToB, 1e18);
     }
 
@@ -283,9 +278,9 @@ abstract contract BiDCABridge is BridgeBase, Test {
         uint256 _priceAToB,
         bool _up
     ) public pure returns (uint256) {
-        /*if (_up) {
+        if (_up) {
             return _amount.mulDivUp(1e18, _priceAToB);
-        }*/
+        }
         return _amount.mulDivDown(1e18, _priceAToB);
     }
 
