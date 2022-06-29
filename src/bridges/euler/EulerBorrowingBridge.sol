@@ -39,7 +39,7 @@ contract EulerBorrowingBridge is BridgeBase {
     
     receive() external payable {}
     
-    //Approve the deposit token, and approve the token you're going to borrow
+    //Approve the deposit token(_collateral), and approve the token you're going to borrow(_borrowToken)
     
     function performApprovals(address _collateral, address _borrowToken) external {
     
