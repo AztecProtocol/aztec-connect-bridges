@@ -25,6 +25,7 @@ contract EulerBorrowingBridge is BridgeBase {
     using SafeERC20 for IERC20;
     
     error MarketNotListed();
+    error InvalidInput();
     
     module public immutable MODULE = module(address IEulerMarkets);  //fill in address
     IEERC20 public immutable eToken = IEERC20(address IEulerEToken);
@@ -40,17 +41,20 @@ contract EulerBorrowingBridge is BridgeBase {
     
     //Approve the deposit token, and approve the token you're going to borrow
     
-    function performApprovals(address _collateral, address _borrowedToken) external {
-        IERC20(_collateral).eToken.approve(EULER_MAINNET_addr, type(uint).max);
-        IERC20(_borrowedToken).eToken.approve(EULER_MAINNET_addr, type(uint).max);        //need to fill in EULER_MAINNET address!!
-
+    function performApprovals(address _collateral, address _borrowToken) external {
+    
+        if (_collateral == address(0)) revert InvalidInput();
+        if (_borrowToken == address(0)) revert InvalidInput();
+        IERC20(_collateral).approve(EULER_MAINNET_addr, type(uint).max);
+        IERC20(_borrowToken).approve(EULER_MAINNET_addr, type(uint).max);    //need to fill in EULER_MAINNET address!
+        IERC20(_collateral).safeApprove(ROLLUP_PROCESSOR, type(uint256).max);
+        IERC20(_borrowToken).safeApprove(ROLLUP_PROCESSOR, type(uint256).max);
         
-        
-             
-             
-             
              
              }
+             
+             
+            
     
         
         
