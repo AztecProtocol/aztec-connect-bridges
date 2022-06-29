@@ -11,6 +11,7 @@ interface IEERC20 is IERC20 {
     function enterMarket(uint, address) external; //address here = collateral
     function borrow(uint, uint) external;
     function repay(uint, uint) external;
+    function balanceOfUnderlying(address) external view returns (uint); //address here = account 
 
     
     
