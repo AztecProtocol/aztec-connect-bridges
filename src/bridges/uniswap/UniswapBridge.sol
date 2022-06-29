@@ -15,9 +15,9 @@ import {IWETH} from "../../interfaces/IWETH.sol";
  * @title Aztec Connect Bridge for swapping on Uniswap v3
  * @author Jan Benes (@benesjan on Github and Telegram)
  * @notice You can use this contract to swap tokens on Uniswap v3 along complex paths.
- * @dev Encoding of a path allows for up to 2 split paths and up to 3 pools (2 middle tokens) in a each split path.
- *      A path is encoded in _auxData parameter passed to the convert method. _auxData carry 64 bits of information.
- *      Along with split paths there is a minimum price encoded in auxData.
+ * @dev Encoding of a path allows for up to 2 split paths (see the definition bellow) and up to 3 pools (2 middle
+ *      tokens) in a each split path. A path is encoded in _auxData parameter passed to the convert method. _auxData
+ *      carry 64 bits of information. Along with split paths there is a minimum price encoded in auxData.
  *
  *      Each split path takes 19 bits. Minimum price is encoded in 26 bits. Values are placed in the data as follows:
  *          |26 bits minimum price| |19 bits split path 2| |19 bits split path 1|
@@ -34,14 +34,20 @@ import {IWETH} from "../../interfaces/IWETH.sol";
  *      Min price is encoded as a floating point number. First 21 bits are used for significand, last 5 bits for
  *      exponent: |21 bits significand| |5 bits exponent|
  *      Minimum amount out is computed with the following formula:
- *          (inputValue * (significand * 10**exponent)) / (10 ** outputAssetDecimals)
+ *          (inputValue * (significand * 10**exponent)) / (10 ** inputAssetDecimals)
  *      Here are 2 examples.
  *      1) If I want to receive 10k Dai for 1 ETH I would set significand to 1 and exponent to 22.
  *         _inputValue = 1e18, asset = ETH (18 decimals), outputAssetA: Dai (18 decimals)
  *         (1e18 * (1 * 10**22)) / (10**18) = 1e22 --> 10k Dai
- *      2) If I want to receive 2000 USDC for 1 ETH, I set significand to 2 and exponent to 27.
- *         _inputValue = 1e9, asset = USDC (6 decimals), outputAssetA: ETH (18 decimals)
- *         (1e9 * (2 * 10**27)) / (10**18) = 2e18 --> 2000 USDC
+ *      2) If I want to receive 2000 USDC for 1 ETH, I set significand to 2 and exponent to 9.
+ *         _inputValue = 1e18, asset = ETH (18 decimals), outputAssetA: USDC (6 decimals)
+ *         (1e18 * (2 * 10**9)) / (10**18) = 2e9 --> 2000 USDC
+ *
+ *      Definition of split path: Split path is a term we use when there are multiple (in this case 2) paths between
+ *      which the input amount of tokens is split. As an example we can consider swapping 100 ETH to DAI. In this case
+ *      there could be 2 split paths. 1st split path going through ETH-USDC 500 bps fee pool and USDC-DAI 100 bps fee
+ *      pool and 2nd split path going directly to DAI using the ETH-DAI 500 bps pool. First split path could for
+ *      example consume 80% of input (80 ETH) and the second split path the remaining 20% (20 ETH).
  */
 contract UniswapBridge is BridgeBase {
     error InvalidFeeTierEncoding();
@@ -59,7 +65,7 @@ contract UniswapBridge is BridgeBase {
     }
 
     // @dev Event which is emitted when the output token doesn't implement decimals().
-    event DefaultDecimalsWarning(address token);
+    event DefaultDecimalsWarning();
 
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
@@ -189,15 +195,15 @@ contract UniswapBridge is BridgeBase {
             );
         }
 
-        uint256 tokenOutDecimals = 18;
-        if (!outputIsEth) {
-            try IERC20Metadata(_outputAssetA.erc20Address).decimals() returns (uint8 decimals) {
-                tokenOutDecimals = decimals;
+        uint256 tokenInDecimals = 18;
+        if (!inputIsEth) {
+            try IERC20Metadata(_inputAssetA.erc20Address).decimals() returns (uint8 decimals) {
+                tokenInDecimals = decimals;
             } catch (bytes memory) {
-                emit DefaultDecimalsWarning(_outputAssetA.erc20Address);
+                emit DefaultDecimalsWarning();
             }
         }
-        uint256 amountOutMinimum = (_inputValue * path.minPrice) / 10**tokenOutDecimals;
+        uint256 amountOutMinimum = (_inputValue * path.minPrice) / 10**tokenInDecimals;
 
         if (outputValueA < amountOutMinimum) revert InsufficientAmountOut();
 
@@ -299,8 +305,8 @@ contract UniswapBridge is BridgeBase {
      */
     function _decodeMinPrice(uint64 _encodedMinPrice) internal pure returns (uint256 minPrice) {
         // 21 bits significand, 5 bits exponent
-        uint64 significand = _encodedMinPrice >> 5;
-        uint64 exponent = _encodedMinPrice & EXPONENT_MASK;
+        uint256 significand = _encodedMinPrice >> 5;
+        uint256 exponent = _encodedMinPrice & EXPONENT_MASK;
         minPrice = significand * 10**exponent;
     }
 
