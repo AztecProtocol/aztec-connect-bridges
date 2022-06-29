@@ -110,10 +110,26 @@ contract EulerBorrowingBridge is BridgeBase {
              
              
 
-        if  (_auxData == 2) {    
+        if  (_auxData == 2) {
+            if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
+            dtBorrow borrowedDToken = dtBorrow(MODULE.underlyingToDToken(_token));
+            borrowedDToken.repay(0, type(uint).max);
+            
+            }
+            
+            
              
            
-           
+         if (_auxData == 3) {
+            if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
+            eToken.withdraw(0, type(uint).max);
+            outputValueA = eToken.balanceOfUnderlying(address(this));
+            
+            }
+            
+            }
+            
+            
            
            
            
