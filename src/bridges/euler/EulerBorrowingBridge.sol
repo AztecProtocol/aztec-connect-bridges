@@ -26,7 +26,8 @@ contract EulerBorrowingBridge is BridgeBase {
     
     error MarketNotListed();
     
-    module public immutable MODULE = module(address);  //fill in address
+    module public immutable MODULE = module(address IEulerMarkets);  //fill in address
+    IEERC20 public immutable eToken = IEERC20(address IEulerEToken);
     
      /**
      * @notice Set the address of RollupProcessor.sol
@@ -37,11 +38,22 @@ contract EulerBorrowingBridge is BridgeBase {
     
     receive() external payable {}
     
-        function performApprovals(address _eToken) external {
-        (bool isListed, , ) = MODULE.markets(_eToken);
-        if (!isListed) revert MarketNotListed();
-        _preApprove(IEERC20(_eToken));
-    }
+    //Approve the deposit token, and approve the token you're going to borrow
+    
+    function performApprovals(address _collateral, address _borrowedToken) external {
+        IERC20(_collateral).eToken.approve(EULER_MAINNET_addr, type(uint).max);
+        IERC20(_borrowedToken).eToken.approve(EULER_MAINNET, type(uint).max);
+
+        
+        
+             
+             
+             
+             
+             }
+    
+        
+        
     
     
 }
