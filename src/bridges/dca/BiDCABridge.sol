@@ -13,6 +13,8 @@ import {IWETH} from "../../interfaces/IWETH.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import {Test} from "forge-std/Test.sol";
+
 /**
  * @notice Very rough draft reference implementation of DCA
  * @dev DO NOT USE THIS IS PRODUCTION, UNFINISHED CODE.
@@ -62,7 +64,7 @@ library Muldiv {
     }
 }
 
-abstract contract BiDCABridge is BridgeBase {
+abstract contract BiDCABridge is BridgeBase, Test {
     using SafeERC20 for IERC20;
     using Muldiv for uint256;
 
@@ -78,6 +80,8 @@ abstract contract BiDCABridge is BridgeBase {
         uint256 protocolSoldB;
         uint256 protocolBoughtA;
         uint256 protocolBoughtB;
+        uint256 lastUsedPrice;
+        uint256 lastUsedPriceTs;
     }
 
     struct DCA {
@@ -150,7 +154,7 @@ abstract contract BiDCABridge is BridgeBase {
     }
 
     function rebalanceAndfill(uint256 _offerA, uint256 _offerB) public returns (int256, int256) {
-        (int256 flowA, int256 flowB) = _rebalanceAndfill(_offerA, _offerB, getPrice());
+        (int256 flowA, int256 flowB) = _rebalanceAndfill(_offerA, _offerB, getPrice(), false);
         if (flowA > 0) {
             ASSET_A.safeTransferFrom(msg.sender, address(this), uint256(flowA));
         } else if (flowA < 0) {
@@ -261,16 +265,16 @@ abstract contract BiDCABridge is BridgeBase {
     /**
      * @notice The brice of A in B, e.g., 0.1 would mean 10 A = 1 B
      */
-    function getPrice() public view virtual returns (uint256);
+    function getPrice() public virtual returns (uint256);
 
     function assetAInAssetB(
         uint256 _amount,
         uint256 _priceAToB,
         bool _up
     ) public pure returns (uint256) {
-        if (_up) {
+        /*if (_up) {
             return _amount.mulDivUp(_priceAToB, 1e18);
-        }
+        }*/
         return _amount.mulDivDown(_priceAToB, 1e18);
     }
 
@@ -279,9 +283,9 @@ abstract contract BiDCABridge is BridgeBase {
         uint256 _priceAToB,
         bool _up
     ) public pure returns (uint256) {
-        if (_up) {
+        /*if (_up) {
             return _amount.mulDivUp(1e18, _priceAToB);
-        }
+        }*/
         return _amount.mulDivDown(1e18, _priceAToB);
     }
 
@@ -361,7 +365,8 @@ abstract contract BiDCABridge is BridgeBase {
     function _rebalanceAndfill(
         uint256 _offerA,
         uint256 _offerB,
-        uint256 _currentPrice
+        uint256 _currentPrice,
+        bool _self
     ) internal returns (int256, int256) {
         RebalanceValues memory vars;
         vars.currentPrice = _currentPrice;
@@ -372,18 +377,18 @@ abstract contract BiDCABridge is BridgeBase {
         uint256 oldestTick = _lastUsedTick(oldestTickA, oldestTickB);
 
         // Cache last used price for use in case we don't have a fresh price.
-        uint256 lastUsedPrice = ticks[oldestTick].priceAToB;
-        uint256 lastUsedPriceTs = ticks[oldestTick].priceUpdated;
-        if (lastUsedPrice == 0) {
+        vars.lastUsedPrice = ticks[oldestTick].priceAToB;
+        vars.lastUsedPriceTs = ticks[oldestTick].priceUpdated;
+        if (vars.lastUsedPrice == 0) {
             uint256 lookBack = oldestTick;
-            while (lastUsedPrice == 0) {
+            while (vars.lastUsedPrice == 0) {
                 lookBack--;
-                lastUsedPrice = ticks[lookBack].priceAToB;
-                lastUsedPriceTs = ticks[lookBack].priceUpdated;
+                vars.lastUsedPrice = ticks[lookBack].priceAToB;
+                vars.lastUsedPriceTs = ticks[lookBack].priceUpdated;
             }
         }
 
-        // Compute values in opposite asset, for easier comparisons. Round down.
+        // Compute values in opposite asset to do comparisons. Round down.
         vars.offerAInB = assetAInAssetB(_offerA, vars.currentPrice, false);
         vars.offerBInA = assetBInAssetA(_offerB, vars.currentPrice, false);
 
@@ -398,13 +403,13 @@ abstract contract BiDCABridge is BridgeBase {
 
                 // If a price is stored, update the last used price and timestamp. Otherwise intrapolate.
                 if (price > 0) {
-                    lastUsedPrice = price;
-                    lastUsedPriceTs = tick.priceUpdated;
+                    vars.lastUsedPrice = price;
+                    vars.lastUsedPriceTs = tick.priceUpdated;
                 } else {
-                    int256 slope = (int256(vars.currentPrice) - int256(lastUsedPrice)) /
-                        int256(block.timestamp - lastUsedPriceTs);
-                    uint256 dt = i * TICK_SIZE + TICK_SIZE / 2 - lastUsedPriceTs;
-                    int256 _price = int256(lastUsedPrice) + slope * int256(dt);
+                    int256 slope = (int256(vars.currentPrice) - int256(vars.lastUsedPrice)) /
+                        int256(block.timestamp - vars.lastUsedPriceTs);
+                    uint256 dt = i * TICK_SIZE + TICK_SIZE / 2 - vars.lastUsedPriceTs;
+                    int256 _price = int256(vars.lastUsedPrice) + slope * int256(dt);
                     if (_price <= 0) {
                         price = 0;
                     } else {
@@ -448,51 +453,53 @@ abstract contract BiDCABridge is BridgeBase {
                 }
             }
 
+            // Only a problem when we are trading between assets we have ourselves.
+            // Below is used to trade with external parties. Note that if own available assets are used, there are nothing ensuring that we have the assets that is matched.
+
             // If there is still available B, use the offer with A to buy it
             if (vars.offerAInB > 0 && tick.availableB > 0) {
-                uint256 userBuyingB = vars.offerAInB;
+                uint256 amountBSold = vars.offerAInB;
                 // We cannot buy more than available
                 if (vars.offerAInB > tick.availableB) {
-                    userBuyingB = tick.availableB;
+                    amountBSold = tick.availableB;
                 }
+                // Underpays actual price if self, otherwise overpay (to not mess rounding)
+                uint256 assetAPayment = assetBInAssetA(amountBSold, vars.currentPrice, !_self);
 
-                // Compute the amount of A we need to pay to get this B.
-                // Should be rounding up. Have the external user overpay a little
-                uint256 assetAPayment = assetBInAssetA(userBuyingB, vars.currentPrice, true);
-
-                tick.availableB -= userBuyingB;
-                tick.assetBToA.sold += userBuyingB;
+                tick.availableB -= amountBSold;
+                tick.assetBToA.sold += amountBSold;
                 tick.assetBToA.bought += assetAPayment;
 
-                vars.offerAInB -= userBuyingB;
-                vars.protocolSoldB += userBuyingB;
+                vars.offerAInB -= amountBSold;
+                vars.protocolSoldB += amountBSold;
                 vars.protocolBoughtA += assetAPayment;
             }
 
             // If there is still available A, use the offer with B to buy it
             if (vars.offerBInA > 0 && tick.availableA > 0) {
                 // Buying Asset A using Asset B
-                uint256 amountABought = vars.offerBInA;
+                uint256 amountASold = vars.offerBInA;
                 if (vars.offerBInA > tick.availableA) {
-                    amountABought = tick.availableA;
+                    amountASold = tick.availableA;
                 }
-                uint256 assetBPayment = assetAInAssetB(amountABought, vars.currentPrice, true);
+                // Underpays actual price if self, otherwise overpay (to not mess rounding)
+                uint256 assetBPayment = assetAInAssetB(amountASold, vars.currentPrice, !_self);
 
-                tick.availableA -= amountABought;
-                tick.assetAToB.sold += amountABought;
+                tick.availableA -= amountASold;
+                tick.assetAToB.sold += amountASold;
                 tick.assetAToB.bought += assetBPayment;
 
-                vars.offerBInA -= amountABought;
-                vars.protocolSoldA += amountABought;
+                vars.offerBInA -= amountASold;
+                vars.protocolSoldA += amountASold;
                 vars.protocolBoughtB += assetBPayment;
             }
 
-            if (tick.availableA == 0 && vars.oldestTickAvailableA == i - 1) {
-                // Only if the one before us also had it. Fuck
-                vars.oldestTickAvailableA = i;
+            // If no more available, increase tick to the next. Can be expensive if no-thing happend for a long time
+            if (tick.availableA == 0 && vars.oldestTickAvailableA == i) {
+                vars.oldestTickAvailableA = i + 1;
             }
-            if (tick.availableB == 0 && vars.oldestTickAvailableB == i - 1) {
-                vars.oldestTickAvailableB = i;
+            if (tick.availableB == 0 && vars.oldestTickAvailableB == i) {
+                vars.oldestTickAvailableB = i + 1;
             }
 
             // Update the storage

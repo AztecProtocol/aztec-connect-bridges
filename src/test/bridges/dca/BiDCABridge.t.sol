@@ -59,7 +59,11 @@ contract BiDCATest_unit is Test {
         Testtoken a = new Testtoken("TokenA", "A", 18);
         Testtoken b = new Testtoken("TokenB", "B", 18);
 
+        vm.label(address(a), "TokenA");
+        vm.label(address(b), "TokenB");
+
         bridge = new UniswapDCABridge(address(this), address(a), address(b), 1 days, ORACLE);
+        vm.deal(address(bridge), 0);
         vm.label(address(bridge), "Bridge");
 
         assetA = IERC20(address(a));
@@ -75,6 +79,175 @@ contract BiDCATest_unit is Test {
             erc20Address: address(assetB),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
+    }
+
+    function testRounding(uint128 _a, uint96 _price) public {
+        vm.assume(_a > 0 && _price > 0);
+        uint256 b = bridge.assetAInAssetB(_a, _price, false);
+        uint256 a = bridge.assetBInAssetA(b, _price, true);
+
+        assertGe(_a, a);
+    }
+
+    function testSmall(
+        uint256 _startPrice,
+        uint256 _endPrice,
+        uint256 _aDeposit,
+        uint256 _bDeposit
+    ) public {
+        uint256 price = bound(_startPrice, 0.00001e18, 1e18);
+        setPrice(price);
+
+        uint256 aDeposit = bound(_aDeposit, 0.1e18, 1e24);
+        uint256 bDeposit = bound(_bDeposit, 0.1e18, 1e21);
+
+        bridge.convert(aztecAssetA, emptyAsset, aztecAssetB, emptyAsset, aDeposit, 0, 7, address(0));
+        deal(address(assetA), address(bridge), aDeposit);
+        vm.warp(block.timestamp + 1 days);
+
+        bridge.convert(aztecAssetB, emptyAsset, aztecAssetA, emptyAsset, bDeposit, 1, 7, address(0));
+        deal(address(assetB), address(bridge), bDeposit);
+        vm.warp(block.timestamp + 9 days);
+
+        emit log_named_decimal_uint("A bal", assetA.balanceOf(address(bridge)), 18);
+        emit log_named_decimal_uint("B bal", assetB.balanceOf(address(bridge)), 18);
+
+        price = bound(_endPrice, 0.00001e18, 1e18);
+        setPrice(price);
+
+        printAvailable();
+        {
+            (int256 a, int256 b) = bridge.rebalanceTest(0, 0, bridge.getPrice(), true);
+            assertEq(a, 0, "Rebal 0, A flow != 0");
+            assertEq(b, 0, "Rebal 0, B flow != 0");
+
+            printAvailable();
+        }
+        (uint256 _a, uint256 _b) = bridge.getAvailable();
+
+        emit log_named_decimal_uint("A bal", assetA.balanceOf(address(bridge)), 18);
+        emit log_named_decimal_uint("B bal", assetB.balanceOf(address(bridge)), 18);
+        emit log("####");
+        // If we have both assets. Match with them as much as possible.
+        {
+            if (_a > 0 && _b > 0) {
+                emit log("Rebalance with all available");
+                // There is something here were we throw away some token.
+
+                (int256 a, int256 b) = bridge.rebalanceTest(_a, _b, bridge.getPrice(), true);
+                emit log_named_decimal_int("Rebalance A", a, 18);
+                emit log_named_decimal_int("Rebalance B", b, 18);
+                printAvailable();
+
+                assertGe(int256(_a), a, "Offer of A must cover needed");
+                assertGe(int256(_b), b, "Offer of B must cover needed");
+
+                // We also cannot be selling more than available
+                assertLe(-int256(_a), a, "Selling more A than available");
+                assertLe(-int256(_b), b, "Selling more B than available");
+
+                // Ensure that we are not buying too much A or B
+                assertLe(a, int256(0), "Bought too much A");
+                assertLe(b, int256(0), "Bought too much B");
+            }
+        }
+
+        emit log_named_decimal_uint("A bal", assetA.balanceOf(address(bridge)), 18);
+        emit log_named_decimal_uint("B bal", assetB.balanceOf(address(bridge)), 18);
+        emit log("----");
+
+        // Only one asset should be back now. Take that and swap on uniswap for some "price", then rebalance with the received tokens.
+        (uint256 _a2, uint256 _b2) = bridge.getAvailable();
+        emit log_named_decimal_uint("A bal", assetA.balanceOf(address(bridge)), 18);
+        emit log_named_decimal_uint("B bal", assetB.balanceOf(address(bridge)), 18);
+
+        if (_a2 > 0) {
+            emit log("Rebalance with A");
+            // We need to do a swap from A to something else (for now we can fake an exchange and price)
+            uint256 bOffer = bridge.assetAInAssetB(_a2, price, false);
+
+            // Compute a price from the received b amount, round down to make A less valuable.
+            uint256 _price = (bOffer * 1e18) / _a2;
+
+            deal(address(assetB), address(this), assetB.balanceOf(address(this)) + bOffer);
+            assetB.approve(address(bridge), bOffer);
+
+            (int256 a, int256 b) = bridge.rebalanceTest(0, bOffer, _price, false);
+            emit log_named_decimal_int("Rebalance A", a, 18);
+            emit log_named_decimal_int("Rebalance B", b, 18);
+            emit log_named_decimal_int("Offer     B", int256(bOffer), 18);
+            assertGe(bOffer, uint256(b), "Offer must cover needed");
+        }
+
+        if (_b2 > 0) {
+            emit log("Rebalance with B");
+            uint256 aOffer = bridge.assetBInAssetA(_b2, price, false);
+
+            // Compute a price from the amount we got from swap, round up, make A more valuable
+            uint256 _price = (_b2 * 1e18 + aOffer - 1) / aOffer;
+
+            deal(address(assetA), address(this), assetA.balanceOf(address(this)) + aOffer);
+            assetA.approve(address(bridge), aOffer);
+
+            (int256 a, int256 b) = bridge.rebalanceTest(aOffer, 0, _price, false);
+            emit log_named_decimal_int("Rebalance A", a, 18);
+            emit log_named_decimal_int("Rebalance B", b, 18);
+            emit log_named_decimal_int("Offer     A", int256(aOffer), 18);
+            assertGe(aOffer, uint256(a), "Offer must cover needed");
+        }
+
+        emit log_named_decimal_uint("A bal", assetA.balanceOf(address(bridge)), 18);
+        emit log_named_decimal_uint("B bal", assetB.balanceOf(address(bridge)), 18);
+
+        printAvailable();
+
+        {
+            // How did we end up with this?
+            (uint256 a, uint256 b) = bridge.getAvailable();
+            assertEq(a, 0, "Available A != 0");
+            assertEq(b, 0, "Available B != 0");
+        }
+        printDCA(0);
+        printDCA(1);
+
+        {
+            (uint256 acc, bool ready) = bridge.getAccumulated(0);
+            assertTrue(ready);
+            // Run the finalise and exit with funds.
+            // Finalise DCA(0)
+
+            (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = bridge.finalise(
+                aztecAssetA,
+                emptyAsset,
+                aztecAssetB,
+                emptyAsset,
+                0,
+                0
+            );
+            assertEq(outputValueB, 0, "Outputvalue B not zero");
+            assertTrue(interactionComplete, "Interaction failed");
+            emit log_named_decimal_uint("B bal", assetB.balanceOf(address(bridge)), 18);
+            assetB.safeTransferFrom(address(bridge), address(this), outputValueA);
+        }
+        {
+            (uint256 acc, bool ready) = bridge.getAccumulated(1);
+            assertTrue(ready);
+            // Run the finalise and exit with funds.
+            (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = bridge.finalise(
+                aztecAssetB,
+                emptyAsset,
+                aztecAssetA,
+                emptyAsset,
+                1,
+                0
+            );
+            assertEq(outputValueB, 0, "Outputvalue B not zero");
+            assertTrue(interactionComplete, "Interaction failed");
+            emit log_named_decimal_uint("A bal", assetA.balanceOf(address(bridge)), 18);
+            assetA.safeTransferFrom(address(bridge), address(this), outputValueA);
+
+            // Have an issue with rounding, the accounting of A is 1 higher than actual A.
+        }
     }
 
     // Test a flow with 1 DCA position over 7 days, ff 2 days into the run, offer enough to match
@@ -344,93 +517,6 @@ contract BiDCATest_unit is Test {
         }
     }
 
-    // Test a flow with 1 DCA position over 7 days, ff 2 days into the run, offer too little to match
-    function testFlow1_7DCA_2days_OfferTooLittle() public {
-        uint256 price = bridge.getPrice();
-        bridge.pokeNextTicks(10);
-        uint256 startTick = block.timestamp / bridge.TICK_SIZE();
-        // Deposit 700 A for selling over 7 days
-        bridge.convert(aztecAssetA, emptyAsset, aztecAssetB, emptyAsset, 700 ether, 0, 7, address(0));
-        deal(address(assetA), address(bridge), 700 ether);
-
-        {
-            (uint256 a, uint256 b) = bridge.getAvailable();
-            assertEq(a, 0);
-            assertEq(b, 0);
-        }
-
-        vm.warp(block.timestamp + 2 days);
-        {
-            // Check the available amount of funds
-            (uint256 a, uint256 b) = bridge.getAvailable();
-            assertEq(a, 200e18, "Available A not matching");
-            assertEq(b, 0, "Available B not matching");
-        }
-        {
-            // Check the accumulated value of DCA(0)
-            (uint256 accumulated, bool ready) = bridge.getAccumulated(0);
-            assertEq(accumulated, 0);
-            assertFalse(ready);
-        }
-
-        {
-            for (uint256 i = 1; i < 3; i++) {
-                // Check tick[i]
-                BiDCABridge.Tick memory tick = bridge.getTick(startTick + i);
-                assertEq(tick.availableA, 100 ether, "Available A not matching");
-                assertEq(tick.availableB, 0, "Available B not matching");
-                assertEq(tick.priceAToB, 0, "Price not matching");
-            }
-        }
-
-        deal(address(assetB), address(this), 1000 ether);
-        assetB.approve(address(bridge), type(uint256).max);
-        (int256 a, int256 b) = bridge.rebalanceAndfill(0, 0.1 ether);
-
-        {
-            // Check rabalance output values
-            uint256 _a = bridge.assetBInAssetA(0.1e18, price, false);
-            assertEq(a, -int256(_a), "User did not buy 100 tokens");
-            assertEq(assetA.balanceOf(address(this)), uint256(-a), "Asset A balance not matching");
-            assertEq(b, int256(bridge.assetAInAssetB(_a, price, true)), "User did not sell 0.1 eth");
-            assertEq(assetB.balanceOf(address(bridge)), uint256(b), "Asset B balance not matching");
-        }
-
-        {
-            // Check tick 1
-            BiDCABridge.Tick memory tick = bridge.getTick(startTick + 1);
-            assertEq(tick.availableA, 0, "Available A not matching");
-            assertEq(tick.availableB, 0, "Available B not matching");
-            assertEq(tick.priceAToB, 0, "Price not matching");
-            assertEq(tick.assetAToB.sold, 100e18, "AToB sold not matching");
-            assertEq(tick.assetAToB.bought, bridge.assetAInAssetB(100e18, price, true), "AToB bought not matching");
-            assertEq(tick.assetBToA.sold, 0, "BToA sold not matching");
-            assertEq(tick.assetBToA.bought, 0, "AToB bought not matching");
-        }
-
-        {
-            // Check tick 2
-            uint256 bLeft = 0.1e18 - bridge.assetAInAssetB(100e18, price, true);
-            uint256 aBought = bridge.assetBInAssetA(bLeft, price, false);
-
-            BiDCABridge.Tick memory tick = bridge.getTick(startTick + 2);
-            assertEq(tick.availableA, 100e18 - aBought, "Available A not matching");
-            assertEq(tick.availableB, 0, "Available B not matching");
-            assertEq(tick.priceAToB, 0, "Price not matching");
-            assertEq(tick.assetAToB.sold, aBought, "AToB sold not matching");
-            assertEq(tick.assetAToB.bought, bLeft, "AToB bought not matching");
-            assertEq(tick.assetBToA.sold, 0, "BToA sold not matching");
-            assertEq(tick.assetBToA.bought, 0, "AToB bought not matching");
-        }
-
-        {
-            // Check the accumulated value of DCA(0)
-            (uint256 accumulated, bool ready) = bridge.getAccumulated(0);
-            assertEq(accumulated, 0.1 ether, "Accumulated not matching");
-            assertFalse(ready, "Is ready");
-        }
-    }
-
     // Test a flow with 1 DCA position over 7 days, ff 8 days into the run, offer too little to match
     function testFlow1_7DCA_8days_OfferTooLittle() public {
         uint256 price = bridge.getPrice();
@@ -477,12 +563,14 @@ contract BiDCATest_unit is Test {
         {
             // Check rabalance output values
             // We go through two ticks, 100 from first
-            uint256 bLeft = 0.15e18 - bridge.assetAInAssetB(100e18, price, true);
+            uint256 assetBPayment1 = bridge.assetAInAssetB(100e18, price, true);
+            uint256 bLeft = 0.15e18 - assetBPayment1;
             uint256 aBought = bridge.assetBInAssetA(bLeft, price, false);
+            uint256 assetBPayment2 = bridge.assetAInAssetB(aBought, price, true);
 
-            assertEq(a, -int256(100e18 + aBought), "User did not buy 150 tokens");
+            assertEq(a, -int256(100e18 + aBought), "User did not buy matching tokens");
             assertEq(assetA.balanceOf(address(this)), uint256(-a), "Asset A balance not matching");
-            assertEq(b, int256(0.15e18), "User did not sell 0.15 eth");
+            assertEq(b, int256(assetBPayment1 + assetBPayment2), "User did not sell matching eth");
             assertEq(assetB.balanceOf(address(bridge)), uint256(b), "Asset B balance not matching");
         }
 
@@ -501,6 +589,7 @@ contract BiDCATest_unit is Test {
         {
             uint256 bLeft = 0.15e18 - bridge.assetAInAssetB(100e18, price, true);
             uint256 aBought = bridge.assetBInAssetA(bLeft, price, false);
+            uint256 assetBPayment2 = bridge.assetAInAssetB(aBought, price, true);
 
             // Check tick 2
             BiDCABridge.Tick memory tick = bridge.getTick(startTick + 2);
@@ -508,7 +597,7 @@ contract BiDCATest_unit is Test {
             assertEq(tick.availableB, 0, "Available B not matching");
             assertEq(tick.priceAToB, 0, "Price not matching");
             assertEq(tick.assetAToB.sold, aBought, "AToB sold not matching");
-            assertEq(tick.assetAToB.bought, bLeft, "AToB bought not matching");
+            assertEq(tick.assetAToB.bought, assetBPayment2, "AToB bought not matching");
             assertEq(tick.assetBToA.sold, 0, "BToA sold not matching");
             assertEq(tick.assetBToA.bought, 0, "AToB bought not matching");
         }
@@ -527,9 +616,14 @@ contract BiDCATest_unit is Test {
         }
 
         {
+            uint256 assetBPayment1 = bridge.assetAInAssetB(100e18, price, true);
+            uint256 bLeft = 0.15e18 - assetBPayment1;
+            uint256 aBought = bridge.assetBInAssetA(bLeft, price, false);
+            uint256 assetBPayment2 = bridge.assetAInAssetB(aBought, price, true);
+
             // Check the accumulated value of DCA(0)
             (uint256 accumulated, bool ready) = bridge.getAccumulated(0);
-            assertEq(accumulated, 0.15e18, "Accumulated not matching");
+            assertEq(accumulated, assetBPayment1 + assetBPayment2, "Accumulated not matching");
             assertFalse(ready, "Is ready");
         }
     }
@@ -993,8 +1087,12 @@ contract BiDCATest_unit is Test {
         return tick;
     }
 
-    function setPrice(int256 _newPrice) public {
+    function setPrice(uint256 _newPrice) public {
         bytes memory returnValue = abi.encode(uint80(0), int256(_newPrice), uint256(0), uint256(0), uint80(0));
         vm.mockCall(ORACLE, "", returnValue);
+
+        emit log_named_decimal_uint("Setting Price", _newPrice, 18);
+
+        assertEq(bridge.getPrice(), _newPrice, "Price not updated correctly");
     }
 }
