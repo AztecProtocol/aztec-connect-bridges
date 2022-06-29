@@ -50,8 +50,6 @@ contract UniswapDCABridge is BiDCABridge {
 
         IERC20(_assetA).safeApprove(address(UNI_ROUTER), type(uint256).max);
         IERC20(_assetB).safeApprove(address(UNI_ROUTER), type(uint256).max);
-
-        vm.label(address(UNI_ROUTER), "UNI_ROUTER");
     }
 
     function rebalanceAndFillUniswap() public returns (int256, int256) {
