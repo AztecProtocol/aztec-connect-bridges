@@ -13,6 +13,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 import {IEERC20} from "../../interfaces/euler/IEERC20.sol";
 import {module} from "../../interfaces/euler/module.sol";
+import {dtBorrow} from "../../interfaces/euler/dtBorrow.sol";
 
 /**
  * @title Aztec Connect Bridge for the Euler protocol
@@ -91,16 +92,25 @@ contract EulerBorrowingBridge is BridgeBase {
     { 
        if (_auxData == 0) {
            if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
-           if (MODULE.underlyingToAssetConfig(_collateral) <= 0) revert MarketNotListed();   //checks if token is 'collateral asset'
-           eToken collateralEToken = eToken(MODULE.underlyingToEToken(_collateral));
-           collateralEToken.deposit(0, _ammount);
-           MODULE.enterMarket(0, collateral);
+           if (MODULE.underlyingToAssetConfig(_token) <= 0) revert MarketNotListed();   //checks if token is 'collateral asset'
+           eToken collateralEToken = eToken(MODULE.underlyingToEToken(_token));
+           collateralEToken.deposit(0, _amount);
+           MODULE.enterMarket(0, _token);
            
           }
           
           
         if  (_auxData == 1) {
              if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
+             dtBorrow borrowedDToken = dtBorrow(MODULE.underlyingToDToken(_token));
+             borrowedDToken.borrow(0, _amount);
+             outputValueA = borrowedDToken.balanceOf(address(this));
+             
+             }
+             
+             
+
+        if  (_auxData == 2) {    
              
            
            
