@@ -7,9 +7,9 @@ import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
-import {SwapBridge} from "../../../bridges/swap/SwapBridge.sol";
+import {UniswapBridge} from "../../../bridges/uniswap/UniswapBridge.sol";
 
-contract SwapBridgeUnitTest is Test {
+contract UniswapBridgeUnitTest is Test {
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -19,7 +19,7 @@ contract SwapBridgeUnitTest is Test {
     AztecTypes.AztecAsset internal emptyAsset;
 
     address private rollupProcessor;
-    SwapBridge private bridge;
+    UniswapBridge private bridge;
 
     function receiveEthFromBridge(uint256 _interactionNonce) external payable {}
 
@@ -27,7 +27,7 @@ contract SwapBridgeUnitTest is Test {
         rollupProcessor = address(this);
 
         // Deploy the bridge
-        bridge = new SwapBridge(rollupProcessor);
+        bridge = new UniswapBridge(rollupProcessor);
         // Set ETH balance to 0 for clarity
         vm.deal(address(bridge), 0);
 
@@ -205,7 +205,7 @@ contract SwapBridgeUnitTest is Test {
 
         deal(rollupProcessor, swapAmount);
 
-        vm.expectRevert(SwapBridge.InsufficientAmountOut.selector);
+        vm.expectRevert(UniswapBridge.InsufficientAmountOut.selector);
         bridge.convert{value: swapAmount}(
             inputAssetA,
             emptyAsset,

@@ -3,9 +3,9 @@
 pragma solidity >=0.8.4;
 
 import {Test} from "forge-std/Test.sol";
-import {SwapBridge} from "../../../bridges/swap/SwapBridge.sol";
+import {UniswapBridge} from "../../../bridges/uniswap/UniswapBridge.sol";
 
-contract SwapBridgeInternalTest is Test, SwapBridge(address(0)) {
+contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -27,7 +27,7 @@ contract SwapBridgeInternalTest is Test, SwapBridge(address(0)) {
         // MIN PRICE: significand 2031142, exponent 27
         // 111101111111000100110 11011 | 0011110 01 100 10 001 10 | 1000110 01 010 10 001 10
         uint64 encodedPath = 0xF7F136CF32346546;
-        SwapBridge.Path memory path = _decodePath(LUSD, encodedPath, LQTY);
+        UniswapBridge.Path memory path = _decodePath(LUSD, encodedPath, LQTY);
 
         assertEq(path.percentage1, 70, "Incorrect percentage 1");
         assertEq(string(path.splitPath1), string(referenceSplitPath1), "Split path 1 incorrectly encoded");
@@ -42,7 +42,7 @@ contract SwapBridgeInternalTest is Test, SwapBridge(address(0)) {
         // MIN PRICE: significand 2031142, exponent 27
         // 111101111111000100110 11011 | 0000000 00 000 00 000 00 | 1100100 01 010 10 001 10
         uint64 encodedPath = 0xF7F136C000064546;
-        SwapBridge.Path memory path = _decodePath(LUSD, encodedPath, LQTY);
+        UniswapBridge.Path memory path = _decodePath(LUSD, encodedPath, LQTY);
 
         assertEq(path.percentage1, 100, "Incorrect percentage 1");
         assertEq(string(path.splitPath1), string(referenceSplitPath1), "Split path 1 incorrectly encoded");
@@ -56,7 +56,7 @@ contract SwapBridgeInternalTest is Test, SwapBridge(address(0)) {
         // MIN PRICE: significand 2031142, exponent 27
         // 111101111111000100110 11011 | 1100100 01 100 10 001 10 | 0000000 00 000 00 000 00
         uint64 encodedPath = 0xF7F136F232300000;
-        SwapBridge.Path memory path = _decodePath(LUSD, encodedPath, LQTY);
+        UniswapBridge.Path memory path = _decodePath(LUSD, encodedPath, LQTY);
 
         assertEq(path.percentage1, 0, "Incorrect percentage 1");
         assertEq(path.percentage2, 100, "Incorrect percentage 2");
@@ -119,17 +119,17 @@ contract SwapBridgeInternalTest is Test, SwapBridge(address(0)) {
     function testInvalidPercentageAmounts() public {
         // 00000000000000000000000000 | 0110010 01 100 10 001 10 | 1000110 01 010 10 001 10
         uint64 encodedPath = 0x1932346546;
-        vm.expectRevert(SwapBridge.InvalidPercentageAmounts.selector);
+        vm.expectRevert(UniswapBridge.InvalidPercentageAmounts.selector);
         _decodePath(LUSD, encodedPath, LQTY);
     }
 
     function testInvalidFeeTierEncoding() public {
-        vm.expectRevert(SwapBridge.InvalidFeeTierEncoding.selector);
+        vm.expectRevert(UniswapBridge.InvalidFeeTierEncoding.selector);
         _getFeeTier(4);
     }
 
     function testInvalidTokenEncoding() public {
-        vm.expectRevert(SwapBridge.InvalidTokenEncoding.selector);
+        vm.expectRevert(UniswapBridge.InvalidTokenEncoding.selector);
         _getMiddleToken(0);
     }
 }

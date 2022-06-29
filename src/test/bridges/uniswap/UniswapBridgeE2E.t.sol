@@ -7,10 +7,10 @@ import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
-import {SwapBridge} from "../../../bridges/swap/SwapBridge.sol";
+import {UniswapBridge} from "../../../bridges/uniswap/UniswapBridge.sol";
 import {IQuoter} from "../../../interfaces/uniswapv3/IQuoter.sol";
 
-contract SwapBridgeE2ETest is BridgeTestBase {
+contract UniswapBridgeE2ETest is BridgeTestBase {
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -24,14 +24,14 @@ contract SwapBridgeE2ETest is BridgeTestBase {
     bytes private referenceSplitPath2 =
         abi.encodePacked(LUSD, uint24(500), DAI, uint24(3000), WETH, uint24(10000), LQTY);
 
-    SwapBridge private bridge;
+    UniswapBridge private bridge;
 
     // To store the id of the swap bridge after being added
     uint256 private id;
 
     function setUp() public {
         // Deploy the bridge
-        bridge = new SwapBridge(address(ROLLUP_PROCESSOR));
+        bridge = new UniswapBridge(address(ROLLUP_PROCESSOR));
 
         // Use the label cheatcode to mark addresses in the traces
         vm.label(address(bridge), "Swap Bridge");

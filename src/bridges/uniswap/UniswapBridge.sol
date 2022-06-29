@@ -17,12 +17,12 @@ import {IWETH} from "../../interfaces/IWETH.sol";
  * @notice You can use this contract to swap tokens on Uniswap v3 along complex paths.
  * @dev Encoding of a path allows for up to 2 split paths and up to 3 pools (2 middle tokens) in a each split path.
  *      A path is encoded in _auxData parameter passed to the convert method. _auxData carry 64 bits of information.
- *      Along with split paths there is a minimum price encoded in the auxData.
+ *      Along with split paths there is a minimum price encoded in auxData.
  *
  *      Each split path takes 19 bits. Minimum price is encoded in 26 bits. Values are placed in the data as follows:
  *          |26 bits minimum price| |19 bits split path 2| |19 bits split path 1|
  *
- *      Encoding of split path is:
+ *      Encoding of a split path is:
  *          |7 bits percentage| |2 bits fee| |3 bits middle token| |2 bits fee| |3 bits middle token| |2 bits fee|
  *      The meaning of percentage is how much of input amount will be routed through the corresponding split path.
  *      Fee bits are mapped to specific fee tiers as follows:
@@ -43,7 +43,7 @@ import {IWETH} from "../../interfaces/IWETH.sol";
  *         _inputValue = 1e9, asset = USDC (6 decimals), outputAssetA: ETH (18 decimals)
  *         (1e9 * (2 * 10**27)) / (10**18) = 2e18 --> 2000 USDC
  */
-contract SwapBridge is BridgeBase {
+contract UniswapBridge is BridgeBase {
     error InvalidFeeTierEncoding();
     error InvalidTokenEncoding();
     error InvalidPercentageAmounts();
@@ -89,6 +89,7 @@ contract SwapBridge is BridgeBase {
      */
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
+    // @dev Empty method which is present here in order to be able to receive ETH when unwrapping WETH.
     receive() external payable {}
 
     /**
@@ -161,17 +162,21 @@ contract SwapBridge is BridgeBase {
 
         uint256 inputValueSplitPath1 = (_inputValue * path.percentage1) / 100;
 
-        outputValueA = UNI_ROUTER.exactInput{value: inputIsEth ? inputValueSplitPath1 : 0}(
-            ISwapRouter.ExactInputParams({
-                path: path.splitPath1,
-                recipient: address(this),
-                deadline: block.timestamp,
-                amountIn: inputValueSplitPath1,
-                amountOutMinimum: 0
-            })
-        );
+        if (path.percentage1 != 0) {
+            // Swap using the first swap path
+            outputValueA = UNI_ROUTER.exactInput{value: inputIsEth ? inputValueSplitPath1 : 0}(
+                ISwapRouter.ExactInputParams({
+                    path: path.splitPath1,
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: inputValueSplitPath1,
+                    amountOutMinimum: 0
+                })
+            );
+        }
 
         if (path.percentage2 != 0) {
+            // Swap using the second swap path
             uint256 inputValueSplitPath2 = _inputValue - inputValueSplitPath1;
             outputValueA += UNI_ROUTER.exactInput{value: inputIsEth ? inputValueSplitPath2 : 0}(
                 ISwapRouter.ExactInputParams({
