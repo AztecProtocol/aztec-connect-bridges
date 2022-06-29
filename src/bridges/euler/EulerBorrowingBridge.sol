@@ -61,8 +61,8 @@ contract EulerBorrowingBridge is BridgeBase {
              
      /**
      * @notice Function for depositing collateral, borrowing and withdrawing the underlying assets
-     * @dev This method can only be called from RollupProcessor.sol. If `_auxData` is 0 the mint flow is executed,
-     * if 1 redeem flow.
+     * @dev This method can only be called from RollupProcessor.sol. If `_auxData` is 0 the deposit flow is executed,
+     * if 1 the borrow flow, if 2 the (loan) repay flow, if 3 the withdraw flow.
      *
      * @param _inputAssetA - ETH/ERC20 (Mint), cToken ERC20 (Redeem)
      * @param _outputAssetA - cToken (Mint), ETH/ERC20 (Redeem)
