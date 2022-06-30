@@ -70,6 +70,65 @@ contract EulerLendingBridge is BridgeBase {
     }
     
     
+    /**
+     * @notice Function which mints and burns cTokens in an exchange for the underlying asset.
+     * @dev This method can only be called from RollupProcessor.sol. If `_auxData` is 0 the mint flow is executed,
+     * if 1 redeem flow.
+     *
+     * @param _inputAssetA - ETH/ERC20 (Mint), cToken ERC20 (Redeem)
+     * @param _outputAssetA - cToken (Mint), ETH/ERC20 (Redeem)
+     * @param _inputValue - the amount of ERC20 token/ETH to deposit (Mint), the amount of cToken to burn (Redeem)
+     * @param _interactionNonce - interaction nonce as defined in RollupProcessor.sol
+     * @param _auxData - 0 (Deposit), 1 (Withdraw)
+     * @return outputValueA - the amount of eTokens (Deposit) or ETH/ERC20 (Withdraw) transferred to RollupProcessor.sol
+     */
+    function convert(
+        AztecTypes.AztecAsset calldata _inputAssetA,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata _outputAssetA,
+        AztecTypes.AztecAsset calldata,
+        uint256 _inputValue,
+        uint256 _interactionNonce,
+        uint64 _auxData,
+        address _underlying
+    )
+        external
+        payable
+        override(BridgeBase)
+        onlyRollup
+        returns (
+            uint256 outputValueA,
+            uint256,
+            bool
+        )
+    {
+        if (_auxData == 0) {
+            //deposit
+            if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
+            if (markets.underlyingToEToken(_underlyin) == address(0)) revert MarketNotListed();    //checks if token is listed an can be deposited
+            
+            
+            IEulerEToken eToken = IEulerEToken(markets.underlyingToEToken(_underlying));
+            eToken.deposit(0, _inputValue);
+            outputValueA = eToken.balanceOf(address(this));
+            
+        } else if (_auxData == 1) {
+            //withdraw
+            if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidInputA();
+            
+            IEulerEToken eToken = IEulerEToken(markets.underlyingToEToken(underlying));
+            outputValueA = eToken.balanceOfUnderlying(address(this));
+            eToken.withdraw(0, type(uint).max);
+            
+            
+            
+            
+            
+            
+            
+        
+    
+    
     
     
     
