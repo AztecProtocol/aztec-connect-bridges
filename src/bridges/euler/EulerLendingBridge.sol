@@ -65,13 +65,13 @@ contract EulerLendingBridge is BridgeBase {
         }
             IERC20 underlying = IERC20(_underlyingAsset.underlyingToEToken());
             // Using safeApprove(...) instead of approve(...) here because underlying can be Tether;
-            allowance = underlying.allowance(address(this), address(_cToken));
+            allowance = underlyingToEToken.allowance(address(this), address(_underlyingAsset));
             if (allowance != type(uint256).max) {
                 // Resetting allowance to 0 in order to avoid issues with USDT
-                underlying.safeApprove(address(_cToken), 0);
-                underlying.safeApprove(address(_cToken), type(uint256).max);
+                underlyingToEToken.safeApprove(address(_underlyingAsset), 0);
+                underlyingToEToken.safeApprove(address(_underlyingAsset), type(uint256).max);
             }
-            allowance = underlying.allowance(address(this), ROLLUP_PROCESSOR);
+            allowance = underlyingToEToken.allowance(address(this), ROLLUP_PROCESSOR);
             if (allowance != type(uint256).max) {
                 // Resetting allowance to 0 in order to avoid issues with USDT
                 underlying.safeApprove(ROLLUP_PROCESSOR, 0);
