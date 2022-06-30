@@ -36,14 +36,23 @@ contract EulerLendingBridge is BridgeBase {
     
     function performApproval(address _underlyingAsset) public override(IEulerEToken) {
              
-       if (markets.underlyingToEToken(_underlyingAsset) == address(0)) revert MarketNotListed(); //checks if asset is listed
-       IERC20(_underlyingAsset).approve(ROLLUP_PROCESSOR, type(uint256).max);                         //need to add address 
-       IERC20(_underlyingAsset).safeApprove(pool, 0);
-       IERC20(_underlyingAsset).safeApprove(pool, type(uint256).max);
+       if (markets.underlyingToEToken(_underlyingAsset) == address(0)) revert MarketNotListed();    //checks if asset is listed
+       
+       // SafeApprove not needed because it follows IERC20;
+       IERC20(_underlyingAsset).approve(EULER_MAINNET, type(uint256).max);                          //need to add address 
+       IERC20(_underlyingAsset).approve(EULER_MAINNET, type(uint256).max);  
+       
+       // Approve the Euler Mainnet Contract to pull underlying asset, using safeApproval to handle non ERC20 compliant tokens
+       IERC20(_underlyingAsset).safeApprove(EULER_MAINNET, 0);
+       IERC20(_underlyingAsset).safeApprove(EULER_MAINNET, type(uint256).max);                       //need to add address 
+       
+       // Approve the RollupProcessor to pull underlying asset, using safeApproval to handle non ERC20 compliant token
        IERC20(_underlyingAsset).safeApprove(ROLLUP_PROCESSOR, 0);
-       IERC20(_underlyingAsset).safeApprove(ROLLUP_PROCESSOR, type(uint256).max);
+       IERC20(_underlyingAsset).safeApprove(ROLLUP_PROCESSOR, type(uint256).max);                    //need to add address
     
     }
+    
+    
     
     
 
