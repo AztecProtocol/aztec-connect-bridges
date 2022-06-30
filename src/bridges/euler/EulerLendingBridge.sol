@@ -29,7 +29,18 @@ contract EulerLendingBridge is BridgeBase {
     
     IEulerMarkets markets = IEulerMarkets(EULER_MAINNET_MARKETS);
     
-    IEulerEToken eToken = IEulerEToken(markets.underlyingToEToken(underlying));
+    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
+    
+    receive() external payable {}
+    
+    
+    function performApproval(address _underlying) external {
+             
+       if (markets.underlyingToEToken(_underlying) == address(0)) revert MarketNotListed(); //checks if market is listed
+       IERC20(_underlying).approve(EULER_MAINNET, type(uint).max);                          //need to add address 
+       IERC20(_underlyingAsset).safeApprove(ROLLUP_PROCESSOR, type(uint256).max);
+    
+    }
     
     
 
