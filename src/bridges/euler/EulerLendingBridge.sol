@@ -120,6 +120,11 @@ contract EulerLendingBridge is BridgeBase {
             outputValueA = eToken.balanceOfUnderlying(address(this));
             eToken.withdraw(0, type(uint).max);
             
+            } else {
+            revert ErrorLib.InvalidAuxData();
+        }
+    }
+            
             
             
             
