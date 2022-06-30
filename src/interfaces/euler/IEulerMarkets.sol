@@ -1,6 +1,6 @@
 pragma solidity >=0.8.4;
 
-interface module {
+interface IEulerMarkets {
 
     function enterMarket(uint, address) external; //address here = collateral
     function underlyingToAssetConfig(address) external view returns (IEuler.AssetConfig memory);
