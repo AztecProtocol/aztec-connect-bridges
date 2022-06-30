@@ -19,6 +19,15 @@ Developing a bridge is simple and permissionless. It is done entirely in Solidit
 6. Implement the Typescript `bridge-data.ts` class that tells a frontend developer how to use your bridge.
 7. Deploy your bridge! Instructions coming soon.
 
+## Deployed Bridge Info
+
+| Bridge | Id | InputAssetA (AssetId) | InputAssetB (AssetId) | OutputAssetA (AssetId) | OutputAssetB (AssetId) | auxData | async | Description |
+|---|---|---|---|---|---|---|---|---|
+| [Element](https://etherscan.io/address/0xaeD181779A8AAbD8Ce996949853FEA442C2CDB47) | 1 | DAI (1) | Not used | DAI (1) | Not used | The tranche expiry value for the interaction. | Yes | Smart contract responsible for depositing, managing and redeeming Defi interactions with the Element protocol |
+| [LidoBridge](https://etherscan.io/address/0x381abF150B53cc699f0dBBBEF3C5c0D1fA4B3Efd) | 2 | ETH (0) or wstETH (2) | Not used | wstETH (2) or ETH (0) | Not used | Not used | No | Deposit Eth and get wstETH from Lido, or deposit wstETH and get ETH from a Curve swap. |
+| [AceOfZkBridge](https://etherscan.io/address/0x0eb7F9464060289fE4FDDFDe2258f518c6347a70) | 4 | [Ace of ZK NFT](https://opensea.io/assets/ethereum/0xe56b526e532804054411a470c49715c531cfd485/16) | Not used | Not used | Not used | | No | A bridge to send the Ace of ZK to the rollup processor contract. |
+| [CurveStEthBridge](https://etherscan.io/address/0x0031130c56162e00A7e9C01eE4147b11cbac8776) | 5 | ETH (0) or wstETH (2) | Not used | wsthETH (2) or ETH (0) - will be opposite of `inputAssetA` | Not used | Not used | No |  A DeFiBridge for trading between Eth and wstEth using curve and the stEth wrapper. |
+
 ## Getting started
 
 Clone the repo with:
