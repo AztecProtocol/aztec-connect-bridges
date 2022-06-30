@@ -13,7 +13,6 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 import {IEulerEToken} from "../../interfaces/euler/IEulerEToken.sol";
 import {IEulerMarkets} from "../../interfaces/euler/IEulerMarkets.sol";
-import {IEulerDToken} from "../../interfaces/euler/IEulerDToken.sol";
 
 /**
  * @title Aztec Connect Bridge for the Euler protocol
@@ -75,12 +74,12 @@ contract EulerLendingBridge is BridgeBase {
      * @dev This method can only be called from RollupProcessor.sol. If `_auxData` is 0 the mint flow is executed,
      * if 1 redeem flow.
      *
-     * @param _inputAssetA - ETH/ERC20 (Mint), cToken ERC20 (Redeem)
-     * @param _outputAssetA - cToken (Mint), ETH/ERC20 (Redeem)
-     * @param _inputValue - the amount of ERC20 token/ETH to deposit (Mint), the amount of cToken to burn (Redeem)
+     * @param _inputAssetA - ERC20 (deposit), eToken ERC20 (withdraw)
+     * @param _outputAssetA - eToken (deposit), ERC20 (withdraw)
+     * @param _inputValue - the amount of ERC20 token to deposit, the amount of eToken to burn (withdraw)
      * @param _interactionNonce - interaction nonce as defined in RollupProcessor.sol
      * @param _auxData - 0 (Deposit), 1 (Withdraw)
-     * @return outputValueA - the amount of eTokens (Deposit) or ETH/ERC20 (Withdraw) transferred to RollupProcessor.sol
+     * @return outputValueA - the amount of eTokens (Deposit) or ERC20 (Withdraw) transferred to RollupProcessor.sol
      */
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
