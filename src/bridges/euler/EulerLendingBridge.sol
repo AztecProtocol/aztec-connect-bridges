@@ -38,50 +38,22 @@ contract EulerLendingBridge is BridgeBase {
              
        if (markets.underlyingToEToken(_underlyingAsset) == address(0)) revert MarketNotListed();    //checks if asset(address) is listed
        
-       // SafeApprove not needed because it follows IERC20;
+       // SafeApprove not needed if it follows IERC20;
        IERC20(_underlyingAsset).approve(EULER_MAINNET, type(uint256).max);                          //need to add address 
        IERC20(_underlyingAsset).approve(EULER_MAINNET, type(uint256).max);  
        
-       // Approve the Euler Mainnet Contract to pull underlying asset, using safeApproval to handle non ERC20 compliant tokens
+       // safeApprove, because Underlying can be tether
        IERC20(_underlyingAsset).safeApprove(EULER_MAINNET, 0);
        IERC20(_underlyingAsset).safeApprove(EULER_MAINNET, type(uint256).max);                       //need to add address 
        
-       // Approve the RollupProcessor to pull underlying asset, using safeApproval to handle non ERC20 compliant token
+       // safeApprove, because Underlying can be Tether
        IERC20(_underlyingAsset).safeApprove(ROLLUP_PROCESSOR, 0);
        IERC20(_underlyingAsset).safeApprove(ROLLUP_PROCESSOR, type(uint256).max);                    //need to add address
     
     }
     
     
-        function preApprove(address _underlyingAsset) external {
-           
-           if (markets.underlyingToEToken(_underlyingAsset) == address(0)) revert MarketNotListed();    //checks if asset(address) is listed
-           _preApprove(ICERC20(_underlyingAsset));
-    }
-    
-    
-        function _preApprove(ICERC20 _underlyingAsset) private {
-        uint256 allowance = _underlyingAsset.allowance(address(this), ROLLUP_PROCESSOR);
-        if (allowance < type(uint256).max) {
-            _underlyingAsset.approve(ROLLUP_PROCESSOR, type(uint256).max - allowance);
-        }
-        if (address(_cToken) != cETH) {
-            IERC20 underlying = IERC20(_cToken.underlying());
-            // Using safeApprove(...) instead of approve(...) here because underlying can be Tether;
-            allowance = underlying.allowance(address(this), address(_cToken));
-            if (allowance != type(uint256).max) {
-                // Resetting allowance to 0 in order to avoid issues with USDT
-                underlying.safeApprove(address(_cToken), 0);
-                underlying.safeApprove(address(_cToken), type(uint256).max);
-            }
-            allowance = underlying.allowance(address(this), ROLLUP_PROCESSOR);
-            if (allowance != type(uint256).max) {
-                // Resetting allowance to 0 in order to avoid issues with USDT
-                underlying.safeApprove(ROLLUP_PROCESSOR, 0);
-                underlying.safeApprove(ROLLUP_PROCESSOR, type(uint256).max);
-            }
-        }
-    }
+  
 }
     
     
