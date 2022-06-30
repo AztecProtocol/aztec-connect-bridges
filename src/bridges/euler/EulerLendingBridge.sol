@@ -108,7 +108,7 @@ contract EulerLendingBridge is BridgeBase {
             
             
             IEulerEToken eToken = IEulerEToken(markets.underlyingToEToken(_underlying));
-            eToken.deposit(0, _inputValue);
+            eToken.deposit(0, _inputValue);                                                              // 0 here means primary account
             outputValueA = eToken.balanceOf(address(this));
             
         } else if (_auxData == 1) {
@@ -117,7 +117,7 @@ contract EulerLendingBridge is BridgeBase {
             
             IEulerEToken eToken = IEulerEToken(markets.underlyingToEToken(_underlying));
             outputValueA = eToken.balanceOfUnderlying(address(this));
-            eToken.withdraw(0, _inputValue);
+            eToken.withdraw(0, _inputValue);                                                            // 0 here means primary account
             
             } else {
             revert ErrorLib.InvalidAuxData();
