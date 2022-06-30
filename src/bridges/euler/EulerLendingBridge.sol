@@ -11,9 +11,9 @@ import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IEERC20} from "../../interfaces/euler/IEERC20.sol";
-import {module} from "../../interfaces/euler/module.sol";
-import {dtBorrow} from "../../interfaces/euler/dtBorrow.sol";
+import {IEulerEToken} from "../../interfaces/euler/IEulerEToken.sol";
+import {IEulerMarkets} from "../../interfaces/euler/IEulerMarkets.sol";
+import {IEulerDToken} from "../../interfaces/euler/IEulerDToken.sol";
 
 /**
  * @title Aztec Connect Bridge for the Euler protocol
@@ -26,4 +26,7 @@ contract EulerLendingBridge is BridgeBase {
     using SafeERC20 for IERC20;
 
     error MarketNotListed();
+    
+    IEulerMarkets markets = IEulerMarkets(EULER_MAINNET_MARKETS);
+    
 
