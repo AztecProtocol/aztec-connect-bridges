@@ -129,12 +129,14 @@ contract EulerBorrowingBridge is BridgeBase {
             }
             
             
+           else {
+            revert ErrorLib.InvalidAuxData();
+        }   
+            
+            
             }
             
-            
-           
-           
-           
+               
           
        
     
