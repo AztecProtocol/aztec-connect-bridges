@@ -36,7 +36,7 @@ contract EulerLendingBridge is BridgeBase {
     
     function performApproval(address _underlyingAsset) public override(IEulerEToken) {
              
-       if (markets.underlyingToEToken(_underlyingAsset) == address(0)) revert MarketNotListed();    //checks if asset is listed
+       if (markets.underlyingToEToken(_underlyingAsset) == address(0)) revert MarketNotListed();    //checks if asset(address) is listed
        
        // SafeApprove not needed because it follows IERC20;
        IERC20(_underlyingAsset).approve(EULER_MAINNET, type(uint256).max);                          //need to add address 
