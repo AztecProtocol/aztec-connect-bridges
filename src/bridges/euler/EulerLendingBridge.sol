@@ -46,7 +46,7 @@ contract EulerLendingBridge is BridgeBase {
          _preApprove(IEulerEToken(_underlyingAsset));
     }
     
-    function _preApprove(ICERC20 _underlyingAsset) private {
+    function _preApprove(IEulerEToken _underlyingAsset) private {
         uint256 allowance = _underlyingAsset.allowance(address(this), ROLLUP_PROCESSOR);
         if (allowance < type(uint256).max) {
             _underlyingAsset.approve(ROLLUP_PROCESSOR, type(uint256).max - allowance);
