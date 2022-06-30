@@ -15,6 +15,8 @@ import {UniswapDCABridge} from "../../../bridges/dca/reference/UniswapDCABridge.
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {IWETH} from "../../../interfaces/IWETH.sol";
 
+import {TestDCABridge} from "./TestDCABridge.sol";
+
 /**
  * @notice ERC20 token implementation useful in testing
  * @author Lasse Herskind
@@ -43,7 +45,7 @@ contract BiDCATest_unit is Test {
     IWETH internal constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     address internal constant ORACLE = 0x773616E4d11A78F511299002da57A0a94577F1f4;
 
-    UniswapDCABridge internal bridge;
+    TestDCABridge internal bridge;
     IERC20 internal assetA;
     IERC20 internal assetB;
 
@@ -62,7 +64,7 @@ contract BiDCATest_unit is Test {
         vm.label(address(a), "TokenA");
         vm.label(address(b), "TokenB");
 
-        bridge = new UniswapDCABridge(address(this), address(a), address(b), 1 days, ORACLE);
+        bridge = new TestDCABridge(address(this), address(a), address(b), 1 days, ORACLE);
         vm.deal(address(bridge), 0);
         vm.label(address(bridge), "Bridge");
 
@@ -89,84 +91,314 @@ contract BiDCATest_unit is Test {
         assertGe(_a, a);
     }
 
-    function testSmallDirectFixedValues() public {
-        testSmallDirect(1000e18, 1e18);
+    function testUniswapForceFillAB() public {
+        testFuzzUniswapForceFill(1000e18, 6, 1e18, 6, false, 1, 8);
     }
 
-    function testSmallDirect(uint256 _aDeposit, uint256 _bDeposit) public {
-        assetA = IERC20(address(0x6B175474E89094C44Da98b954EedeAC495271d0F));
-        assetB = IERC20(address(WETH));
-        bridge = new UniswapDCABridge(address(this), address(assetA), address(assetB), 1 days, ORACLE);
-        aztecAssetA = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(assetA),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-        aztecAssetB = AztecTypes.AztecAsset({
-            id: 2,
-            erc20Address: address(assetB),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+    function testUniswapForceFillBA() public {
+        testFuzzUniswapForceFill(1e18, 6, 1000e18, 6, true, 1, 8);
+    }
 
-        uint256 price = bridge.getPrice();
+    /**
+     * @notice Large fuzzing function that will fuzz
+     * deposit of `_deposit1` asset (`_aFirst` ? A : B) for `_length1` time
+     * increase time by `_timeDiff` days
+     * deposit of `_deposit2` asset (`!_aFirst` ? A or B) for `_length2` time
+     * increase time by `_ff` days
+     * At this point, 0, 1 or both positions might be ready to finalise
+     * Update the oracle price to increase A value
+     * Rebalance fully + force fill rest on uniswap
+     * There should be no available assets left, and the effective price should be an interpolation
+     * meaning that a user going A -> B should have received more than a direct swap, and B -> A opposite
+     */
+    function testFuzzUniswapForceFill(
+        uint256 _deposit1,
+        uint8 _length1,
+        uint256 _deposit2,
+        uint8 _length2,
+        bool _aFirst,
+        uint8 _timediff,
+        uint8 _ff
+    ) public {
+        {
+            // Preparation
+            assetA = IERC20(address(0x6B175474E89094C44Da98b954EedeAC495271d0F));
+            assetB = IERC20(address(WETH));
+            bridge = new TestDCABridge(address(this), address(assetA), address(assetB), 1 days, ORACLE);
+            aztecAssetA = AztecTypes.AztecAsset({
+                id: 1,
+                erc20Address: address(assetA),
+                assetType: AztecTypes.AztecAssetType.ERC20
+            });
+            aztecAssetB = AztecTypes.AztecAsset({
+                id: 2,
+                erc20Address: address(assetB),
+                assetType: AztecTypes.AztecAssetType.ERC20
+            });
+        }
 
-        uint256 aDeposit = bound(_aDeposit, 0.1e18, 1e21);
-        uint256 bDeposit = bound(_bDeposit, 0.1e18, 1e19);
+        uint256 deposit1 = bound(_deposit1, 0.1e18, 1e21);
+        uint256 deposit2 = bound(_deposit2, 0.1e18, 1e21);
+        // The price we have from the oracle, might not match perfectly what we can actually get from uniswap.
+        uint256 priceBefore = bridge.getPrice();
 
-        bridge.convert(aztecAssetA, emptyAsset, aztecAssetB, emptyAsset, aDeposit, 0, 7, address(0));
-        deal(address(assetA), address(bridge), aDeposit);
-        vm.warp(block.timestamp + 1 days);
+        {
+            uint256 length1 = bound(_length1, 1, 14);
+            uint256 length2 = bound(_length2, 1, 14);
+            uint256 timediff = bound(_timediff, 1, 14);
+            uint256 endTime = block.timestamp + (timediff + bound(_ff, 1, 15)) * 1 days;
 
-        bridge.convert(aztecAssetB, emptyAsset, aztecAssetA, emptyAsset, bDeposit, 1, 7, address(0));
-        deal(address(assetB), address(bridge), bDeposit);
-        vm.warp(block.timestamp + 9 days);
+            {
+                // Deposit with asset A
+                bridge.convert(
+                    _aFirst ? aztecAssetA : aztecAssetB,
+                    emptyAsset,
+                    _aFirst ? aztecAssetB : aztecAssetA,
+                    emptyAsset,
+                    deposit1,
+                    0,
+                    uint64(length1),
+                    address(0)
+                );
+                deal(address(_aFirst ? assetA : assetB), address(bridge), deposit1);
+                vm.warp(block.timestamp + timediff * 1 days);
+            }
+            {
+                // Deposit2
+                bridge.convert(
+                    _aFirst ? aztecAssetB : aztecAssetA,
+                    emptyAsset,
+                    _aFirst ? aztecAssetA : aztecAssetB,
+                    emptyAsset,
+                    deposit2,
+                    1,
+                    uint64(length2),
+                    address(0)
+                );
+                deal(address(_aFirst ? assetB : assetA), address(bridge), deposit2);
+                vm.warp(endTime);
+            }
+        }
 
-        emit log_named_decimal_uint("A bal", assetA.balanceOf(address(bridge)), 18);
-        emit log_named_decimal_uint("B bal", assetB.balanceOf(address(bridge)), 18);
-
-        price = (price * 9990) / 1000;
-        setPrice(price);
+        // Update the price to get more assetB for every assetA.
+        setPrice(bridge.getPrice() * 2);
 
         bridge.rebalanceAndFillUniswap();
 
         {
+            // Finalise DCA position 0
             (uint256 acc, bool ready) = bridge.getAccumulated(0);
-            assertTrue(ready);
-            // Run the finalise and exit with funds.
-            // Finalise DCA(0)
             (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = bridge.finalise(
-                aztecAssetA,
+                _aFirst ? aztecAssetA : aztecAssetB,
                 emptyAsset,
-                aztecAssetB,
+                _aFirst ? aztecAssetB : aztecAssetA,
                 emptyAsset,
                 0,
                 0
             );
-            assertEq(outputValueB, 0, "Outputvalue B not zero");
-            assertTrue(interactionComplete, "Interaction failed");
-            assetB.safeTransferFrom(address(bridge), address(this), outputValueA);
+            if (bridge.getDCA(0).end <= (block.timestamp / bridge.TICK_SIZE())) {
+                assertTrue(ready, "Not ready to finalise 0");
+                assertEq(outputValueA, acc, "outputValueA not matching");
+                assertEq(outputValueB, 0, "Outputvalue B not zero");
+                assertTrue(interactionComplete, "Interaction failed");
+
+                if (_aFirst) {
+                    uint256 aToBDirect = bridge.assetAInAssetB(deposit1, priceBefore, false);
+                    assertGt(outputValueA, aToBDirect, "Received too little");
+                    assetB.safeTransferFrom(address(bridge), address(this), outputValueA);
+                } else {
+                    uint256 bToADirect = bridge.assetBInAssetA(deposit1, priceBefore, false);
+                    assertLt(outputValueA, bToADirect, "Received too much A");
+                    assetA.safeTransferFrom(address(bridge), address(this), outputValueA);
+                }
+            } else {
+                assertFalse(ready, "Ready to finalise 0");
+                assertEq(outputValueA, 0, "outputValueA not zero");
+                assertEq(outputValueB, 0, "Outputvalue B not zero");
+                assertFalse(interactionComplete, "Interaction passed");
+                printDCA(0);
+            }
         }
         {
+            // Finalise DCA position 1
             (uint256 acc, bool ready) = bridge.getAccumulated(1);
-            assertTrue(ready);
-            // Run the finalise and exit with funds.
             (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = bridge.finalise(
-                aztecAssetB,
+                _aFirst ? aztecAssetB : aztecAssetA,
                 emptyAsset,
-                aztecAssetA,
+                _aFirst ? aztecAssetA : aztecAssetB,
                 emptyAsset,
                 1,
                 0
             );
-            assertEq(outputValueB, 0, "Outputvalue B not zero");
-            assertTrue(interactionComplete, "Interaction failed");
-            assetA.safeTransferFrom(address(bridge), address(this), outputValueA);
+            if (bridge.getDCA(1).end <= (block.timestamp / bridge.TICK_SIZE())) {
+                assertTrue(ready, "Not ready to finalise 1");
+                assertEq(outputValueA, acc, "outputValueA not matching");
+                assertEq(outputValueB, 0, "Outputvalue B not zero");
+                assertTrue(interactionComplete, "Interaction failed");
+                if (!_aFirst) {
+                    uint256 aToBDirect = bridge.assetAInAssetB(deposit2, priceBefore, false);
+                    assertGt(outputValueA, aToBDirect, "Received too little");
+                    assetB.safeTransferFrom(address(bridge), address(this), outputValueA);
+                } else {
+                    uint256 bToADirect = bridge.assetBInAssetA(deposit2, priceBefore, false);
+                    assertLt(outputValueA, bToADirect, "Received too much A");
+                    assetA.safeTransferFrom(address(bridge), address(this), outputValueA);
+                }
+            } else {
+                assertFalse(ready, "Ready to finalise 0");
+                assertEq(outputValueA, 0, "outputValueA not zero");
+                assertEq(outputValueB, 0, "Outputvalue B not zero");
+                assertFalse(interactionComplete, "Interaction passed");
+                printDCA(1);
+            }
         }
 
-        printAvailable();
+        {
+            // Check that there are no available assets when everyone have exited
+            // and that leftovers are manageble
+            (uint256 availableA, uint256 availableB) = bridge.getAvailable();
+            assertEq(availableA, 0, "Available A != 0");
+            assertEq(availableB, 0, "Available B != 0");
+
+            // TODO: Figure out a good way to do this.
+            // assertLe(assetA.balanceOf(address(bridge)), deposit1 / 1e6, "too much left as 'dust'");
+            // assertLe(assetB.balanceOf(address(bridge)), deposit2 / 1e6, "too much left as 'dust'");
+        }
     }
 
-    function testSmall(
+    function testFuzzUniswapForceFillEth(
+        uint256 _deposit1,
+        uint256 _deposit2,
+        bool _aFirst
+    ) public {
+        {
+            // Preparation
+            assetA = IERC20(address(0x6B175474E89094C44Da98b954EedeAC495271d0F));
+            assetB = IERC20(address(WETH));
+            bridge = new TestDCABridge(address(this), address(assetA), address(assetB), 1 days, ORACLE);
+            aztecAssetA = AztecTypes.AztecAsset({
+                id: 1,
+                erc20Address: address(assetA),
+                assetType: AztecTypes.AztecAssetType.ERC20
+            });
+            aztecAssetB = AztecTypes.AztecAsset({
+                id: 0,
+                erc20Address: address(0),
+                assetType: AztecTypes.AztecAssetType.ETH
+            });
+        }
+
+        uint256 deposit1 = bound(_deposit1, 0.1e18, 1e21);
+        uint256 deposit2 = bound(_deposit2, 0.1e18, 1e21);
+        uint256 priceBefore = bridge.getPrice();
+
+        {
+            // Deposit with asset A
+            bridge.convert{value: _aFirst ? 0 : deposit1}(
+                _aFirst ? aztecAssetA : aztecAssetB,
+                emptyAsset,
+                _aFirst ? aztecAssetB : aztecAssetA,
+                emptyAsset,
+                deposit1,
+                0,
+                7,
+                address(0)
+            );
+            if (_aFirst) {
+                deal(address(assetA), address(bridge), deposit1);
+            }
+            vm.warp(block.timestamp + 1 days);
+        }
+        {
+            // Deposit2
+            bridge.convert{value: _aFirst ? deposit2 : 0}(
+                _aFirst ? aztecAssetB : aztecAssetA,
+                emptyAsset,
+                _aFirst ? aztecAssetA : aztecAssetB,
+                emptyAsset,
+                deposit2,
+                1,
+                7,
+                address(0)
+            );
+            if (!_aFirst) {
+                deal(address(assetA), address(bridge), deposit2);
+            }
+            vm.warp(block.timestamp + 9 days);
+        }
+
+        // Update the price to get more assetB for every assetA
+        setPrice((bridge.getPrice() * 13) / 10);
+
+        bridge.rebalanceAndFillUniswap();
+
+        {
+            // Finalise DCA position 0
+            (uint256 acc, bool ready) = bridge.getAccumulated(0);
+            uint256 ethBalBefore = address(this).balance;
+            (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = bridge.finalise(
+                _aFirst ? aztecAssetA : aztecAssetB,
+                emptyAsset,
+                _aFirst ? aztecAssetB : aztecAssetA,
+                emptyAsset,
+                0,
+                0
+            );
+            assertTrue(ready);
+            assertEq(outputValueA, acc, "outputValueA not matching");
+            assertEq(outputValueB, 0, "Outputvalue B not zero");
+            assertTrue(interactionComplete, "Interaction failed");
+
+            if (_aFirst) {
+                uint256 aToBDirect = bridge.assetAInAssetB(deposit1, priceBefore, false);
+                assertGt(outputValueA, aToBDirect, "Received too little");
+                assertEq(address(this).balance, ethBalBefore + outputValueA, "Incorrect balance");
+            } else {
+                uint256 bToADirect = bridge.assetBInAssetA(deposit1, priceBefore, false);
+                assertLt(outputValueA, bToADirect, "Received too much A");
+                assetA.safeTransferFrom(address(bridge), address(this), outputValueA);
+            }
+        }
+        {
+            // Finalise DCA position 1
+            (uint256 acc, bool ready) = bridge.getAccumulated(1);
+            uint256 ethBalBefore = address(this).balance;
+            (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = bridge.finalise(
+                _aFirst ? aztecAssetB : aztecAssetA,
+                emptyAsset,
+                _aFirst ? aztecAssetA : aztecAssetB,
+                emptyAsset,
+                1,
+                0
+            );
+            assertTrue(ready);
+            assertEq(outputValueA, acc, "outputValueA not matching");
+            assertEq(outputValueB, 0, "Outputvalue B not zero");
+            assertTrue(interactionComplete, "Interaction failed");
+            if (!_aFirst) {
+                uint256 aToBDirect = bridge.assetAInAssetB(deposit2, priceBefore, false);
+                assertGt(outputValueA, aToBDirect, "Received too little");
+                assertEq(address(this).balance, ethBalBefore + outputValueA, "Incorrect balance");
+            } else {
+                uint256 bToADirect = bridge.assetBInAssetA(deposit2, priceBefore, false);
+                assertLt(outputValueA, bToADirect, "Received too much A");
+                assetA.safeTransferFrom(address(bridge), address(this), outputValueA);
+            }
+        }
+
+        {
+            // Check that there are no available assets when everyone have exited
+            // and that leftovers are manageble
+            (uint256 availableA, uint256 availableB) = bridge.getAvailable();
+            assertEq(availableA, 0, "Available A != 0");
+            assertEq(availableB, 0, "Available B != 0");
+
+            assertLe(assetA.balanceOf(address(bridge)), deposit1 / 1e6, "too much left as 'dust'");
+            assertLe(assetB.balanceOf(address(bridge)), deposit2 / 1e6, "too much left as 'dust'");
+        }
+    }
+
+    function testFuzzOutlineUniswapForceFill(
         uint256 _startPrice,
         uint256 _endPrice,
         uint256 _aDeposit,
@@ -175,16 +407,19 @@ contract BiDCATest_unit is Test {
         uint256 price = bound(_startPrice, 0.00001e18, 1e18);
         setPrice(price);
 
-        uint256 aDeposit = bound(_aDeposit, 0.1e18, 1e24);
-        uint256 bDeposit = bound(_bDeposit, 0.1e18, 1e21);
+        {
+            // Perform deposits
+            uint256 aDeposit = bound(_aDeposit, 0.1e18, 1e24);
+            uint256 bDeposit = bound(_bDeposit, 0.1e18, 1e21);
 
-        bridge.convert(aztecAssetA, emptyAsset, aztecAssetB, emptyAsset, aDeposit, 0, 7, address(0));
-        deal(address(assetA), address(bridge), aDeposit);
-        vm.warp(block.timestamp + 1 days);
+            bridge.convert(aztecAssetA, emptyAsset, aztecAssetB, emptyAsset, aDeposit, 0, 7, address(0));
+            deal(address(assetA), address(bridge), aDeposit);
+            vm.warp(block.timestamp + 1 days);
 
-        bridge.convert(aztecAssetB, emptyAsset, aztecAssetA, emptyAsset, bDeposit, 1, 7, address(0));
-        deal(address(assetB), address(bridge), bDeposit);
-        vm.warp(block.timestamp + 9 days);
+            bridge.convert(aztecAssetB, emptyAsset, aztecAssetA, emptyAsset, bDeposit, 1, 7, address(0));
+            deal(address(assetB), address(bridge), bDeposit);
+            vm.warp(block.timestamp + 9 days);
+        }
 
         emit log_named_decimal_uint("A bal", assetA.balanceOf(address(bridge)), 18);
         emit log_named_decimal_uint("B bal", assetB.balanceOf(address(bridge)), 18);
@@ -831,8 +1066,8 @@ contract BiDCATest_unit is Test {
         }
     }
 
-    function testBiFlowPerfectMatchEthBridge() public {
-        bridge = new UniswapDCABridge(address(this), address(assetA), address(WETH), 1 days, ORACLE);
+    function testBiFlowPerfectMatchEth() public {
+        bridge = new TestDCABridge(address(this), address(assetA), address(WETH), 1 days, ORACLE);
 
         assetB = IERC20(WETH);
 
