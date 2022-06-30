@@ -24,3 +24,6 @@ import {dtBorrow} from "../../interfaces/euler/dtBorrow.sol";
 contract EulerLendingBridge is BridgeBase {
     
     using SafeERC20 for IERC20;
+
+    error MarketNotListed();
+
