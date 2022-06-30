@@ -10,6 +10,7 @@ interface IEulerEToken is IERC20 {
     function withdraw(uint, uint) external; 
     function balanceOfUnderlying(address) external view returns (uint); //address here = account 
     function approve(address, uint) external returns (bool); //address = spender (Euler_Mainnet)
+    function balanceOf(address) external view returns (uint);  // address = account (user)
    
     
 }
