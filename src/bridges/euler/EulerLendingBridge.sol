@@ -43,7 +43,7 @@ contract EulerLendingBridge is BridgeBase {
      */
     function preApprove(address _underlyingAsset) external {
          if (markets.underlyingToEToken(_underlyingAsset) == address(0)) revert MarketNotListed();    //checks if asset(address) is listed
-         _preApprove(ICERC20(_underlyingAsset));
+         _preApprove(IEulerEToken(_underlyingAsset));
     }
     
     function _preApprove(ICERC20 _underlyingAsset) private {
