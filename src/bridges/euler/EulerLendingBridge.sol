@@ -53,6 +53,39 @@ contract EulerLendingBridge is BridgeBase {
     }
     
     
+    function preApprove(address _underlyingAsset) external {
+         if (markets.underlyingToEToken(_underlyingAsset) == address(0)) revert MarketNotListed();    //checks if asset(address) is listed
+         _preApprove(ICERC20(_underlyingAsset));
+    }
+    
+    function _preApprove(ICERC20 _underlyingAsset) private {
+        uint256 allowance = _underlyingAsset.allowance(address(this), ROLLUP_PROCESSOR);
+        if (allowance < type(uint256).max) {
+            _underlyingAsset.approve(ROLLUP_PROCESSOR, type(uint256).max - allowance);
+        }
+            IERC20 underlying = IERC20(_underlyingAsset.underlyingToEToken());
+            // Using safeApprove(...) instead of approve(...) here because underlying can be Tether;
+            allowance = underlying.allowance(address(this), address(_cToken));
+            if (allowance != type(uint256).max) {
+                // Resetting allowance to 0 in order to avoid issues with USDT
+                underlying.safeApprove(address(_cToken), 0);
+                underlying.safeApprove(address(_cToken), type(uint256).max);
+            }
+            allowance = underlying.allowance(address(this), ROLLUP_PROCESSOR);
+            if (allowance != type(uint256).max) {
+                // Resetting allowance to 0 in order to avoid issues with USDT
+                underlying.safeApprove(ROLLUP_PROCESSOR, 0);
+                underlying.safeApprove(ROLLUP_PROCESSOR, type(uint256).max);
+            }
+        }
+    }
+    
+    
+    
+    
+    
+    
+    
   
 }
     
