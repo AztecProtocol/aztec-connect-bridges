@@ -29,4 +29,7 @@ contract EulerLendingBridge is BridgeBase {
     
     IEulerMarkets markets = IEulerMarkets(EULER_MAINNET_MARKETS);
     
+    IEulerEToken eToken = IEulerEToken(markets.underlyingToEToken(underlying));
+    
+    
 
