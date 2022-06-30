@@ -7,10 +7,7 @@ import {UniswapBridge} from "../../../bridges/uniswap/UniswapBridge.sol";
 
 contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
-    address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant LQTY = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
     uint64 private maxEncodedMinPrice = 67108863; // ((2**21 - 1) << 5) + (2**5 - 1);
     uint256 private maxMinPrice = 20971519999999999999999999999999999999;

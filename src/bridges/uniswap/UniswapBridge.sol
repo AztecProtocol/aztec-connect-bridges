@@ -74,32 +74,32 @@ contract UniswapBridge is BridgeBase {
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     // Addresses of middle tokens
-    address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address private constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
-    address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    address private constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
-    address private constant FRAX = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
-    address private constant BUSD = 0x4Fabb145d64652a948d72533023f6E7A623C7C53;
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address public constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
+    address public constant FRAX = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
+    address public constant BUSD = 0x4Fabb145d64652a948d72533023f6E7A623C7C53;
 
-    uint64 private constant SPLIT_PATH_BIT_LENGTH = 19;
-    uint64 private constant SPLIT_PATHS_BIT_LENGTH = 38; // SPLIT_PATH_BIT_LENGTH * 2
-    uint64 private constant PRICE_BIT_LENGTH = 26; // 64 - SPLIT_PATHS_BIT_LENGTH
+    uint64 public constant SPLIT_PATH_BIT_LENGTH = 19;
+    uint64 public constant SPLIT_PATHS_BIT_LENGTH = 38; // SPLIT_PATH_BIT_LENGTH * 2
+    uint64 public constant PRICE_BIT_LENGTH = 26; // 64 - SPLIT_PATHS_BIT_LENGTH
 
     // @dev The following masks are used to decode 2 split paths and minimum acceptable price from 1 uint64.
     // Binary number 0000000000000000000000000000000000000000000001111111111111111111 (last 19 bits)
-    uint64 private constant SPLIT_PATH_MASK = 0x7FFFF;
+    uint64 public constant SPLIT_PATH_MASK = 0x7FFFF;
 
     // Binary number 0000000000000000000000000000000000000011111111111111111111111111 (last 26 bits)
-    uint64 private constant PRICE_MASK = 0x3FFFFFF;
+    uint64 public constant PRICE_MASK = 0x3FFFFFF;
 
     // Binary number 0000000000000000000000000000000000000000000000000000000000011111 (last 5 bits)
-    uint64 private constant EXPONENT_MASK = 0x1F;
+    uint64 public constant EXPONENT_MASK = 0x1F;
 
     // Binary number 11
-    uint64 private constant FEE_MASK = 0x3;
+    uint64 public constant FEE_MASK = 0x3;
     // Binary number 111
-    uint64 private constant TOKEN_MASK = 0x7;
+    uint64 public constant TOKEN_MASK = 0x7;
 
     /**
      * @notice Set the address of rollup processor.
