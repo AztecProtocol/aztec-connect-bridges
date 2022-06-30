@@ -12,12 +12,39 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
     address public constant LQTY = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
     address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
+    uint64 private maxEncodedMinPrice = 67108863; // ((2**21 - 1) << 5) + (2**5 - 1);
+    uint256 private maxMinPrice = 20971519999999999999999999999999999999;
+    uint256 private maxDecodedMinPriceAfterEncoding = 20971510000000000000000000000000000000;
+
     bytes private referenceSplitPath1 =
         abi.encodePacked(LUSD, uint24(500), USDC, uint24(3000), WETH, uint24(3000), LQTY);
     bytes private referenceSplitPath2 =
         abi.encodePacked(LUSD, uint24(500), DAI, uint24(3000), WETH, uint24(3000), LQTY);
 
     function setUp() public {}
+
+    function testEncodeMinPriceForValuesWithoutPrecisionLoss(uint24 _price) public {
+        _price = uint24(bound(_price, 0, 2**21 - 1));
+        uint64 encodedMinPrice = uint64(this.encodeMinPrice(_price));
+        uint256 decodedMinPrice = _decodeMinPrice(encodedMinPrice);
+        assertEq(decodedMinPrice, _price);
+    }
+
+    function testEncodeMinPriceDoesntRevertAndDecodesToMax() public {
+        uint256 encoded = this.encodeMinPrice(maxMinPrice);
+        assertEq(encoded, maxEncodedMinPrice, "Encoded price doesn't equal max encoded price");
+        uint256 decoded = _decodeMinPrice(uint64(encoded));
+        assertEq(
+            decoded,
+            maxDecodedMinPriceAfterEncoding,
+            "Decoded max encoded doesn't equal max decoded after encoding"
+        );
+    }
+
+    function testEncodeMinPriceRevertsForPriceBiggerThanBoundry() public {
+        vm.expectRevert(UniswapBridge.Overflow.selector);
+        this.encodeMinPrice(maxMinPrice + 1);
+    }
 
     function testDecodePath() public {
         //            500     3000    3000

@@ -54,6 +54,8 @@ contract UniswapBridge is BridgeBase {
     error InvalidTokenEncoding();
     error InvalidPercentageAmounts();
     error InsufficientAmountOut();
+    // TODO: is there some native overflow error?
+    error Overflow();
 
     // @notice A struct representing a path with 2 split paths.
     struct Path {
@@ -210,6 +212,30 @@ contract UniswapBridge is BridgeBase {
         if (outputIsEth) {
             IWETH(WETH).withdraw(outputValueA);
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
+        }
+    }
+
+    /**
+     * @notice A function which encodes min price to the format used in this bridge.
+     * @param _minPrice - Minimum acceptable price
+     * @return encodedMinPrice - Min acceptable encoded in a format used in this bridge.
+     * @dev This function is not optimized and is expected to be used on frontend and in tests.
+     * @dev Reverts when _minPrice is bigger than max encodeable value.
+     */
+    function encodeMinPrice(uint256 _minPrice) external pure returns (uint256 encodedMinPrice) {
+        // 2097151 = 2**21 --> this number and its multiples of 10 can be encoded without precision loss
+        if (_minPrice <= 2097151) {
+            // uintValue is smaller than the boundary of significand --> significand = _x, exponent = 0
+            encodedMinPrice = _minPrice << 5;
+        } else {
+            uint256 exponent = 0;
+            while (_minPrice > 2097151) {
+                _minPrice /= 10;
+                ++exponent;
+                // 31 = 2**5 - 1 --> max exponent
+                if (exponent > 31) revert Overflow();
+            }
+            encodedMinPrice = (_minPrice << 5) + exponent;
         }
     }
 
