@@ -17,7 +17,7 @@ import {IEulerDToken} from "../../interfaces/euler/IEulerDToken.sol";
 
 /**
  * @title Aztec Connect Bridge for the Euler protocol
- * @notice You can use this contract to deposit collateral and borrow.
+ * @notice You can use this contract to get or redeem eTokens.
  * @dev Implementation of the IDefiBridge interface for eTokens.
  */
 
@@ -29,30 +29,19 @@ contract EulerLendingBridge is BridgeBase {
     
     IEulerMarkets markets = IEulerMarkets(EULER_MAINNET_MARKETS);
     
+     /**
+     * @notice Set the address of RollupProcessor.sol
+     * @param _rollupProcessor Address of RollupProcessor.sol
+     */
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
     
     receive() external payable {}
     
-    
-    function performApproval(address _underlyingAsset) public override(IEulerEToken) {
-             
-       if (markets.underlyingToEToken(_underlyingAsset) == address(0)) revert MarketNotListed();    //checks if asset(address) is listed
-       
-       // SafeApprove not needed if it follows IERC20;
-       IERC20(_underlyingAsset).approve(ROLLUP_PROCESSORT, type(uint256).max);                          //need to add address 
-       IERC20(_underlyingAsset).approve(EULER_MAINNET, type(uint256).max);  
-       
-       // safeApprove, because Underlying can be tether
-       IERC20(_underlyingAsset).safeApprove(EULER_MAINNET, 0);
-       IERC20(_underlyingAsset).safeApprove(EULER_MAINNET, type(uint256).max);                       //need to add address 
-       
-       // safeApprove, because Underlying can be Tether
-       IERC20(_underlyingAsset).safeApprove(ROLLUP_PROCESSOR, 0);
-       IERC20(_underlyingAsset).safeApprove(ROLLUP_PROCESSOR, type(uint256).max);                    //need to add address
-    
-    }
-    
-    
+     
+     /**
+     * @notice Set all the necessary approvals for a given underlying and its eToken.
+     * @param _underlyingAsset - underlying asset address
+     */
     function preApprove(address _underlyingAsset) external {
          if (markets.underlyingToEToken(_underlyingAsset) == address(0)) revert MarketNotListed();    //checks if asset(address) is listed
          _preApprove(ICERC20(_underlyingAsset));
