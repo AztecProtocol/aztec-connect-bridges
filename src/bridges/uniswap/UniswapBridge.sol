@@ -51,7 +51,9 @@ import {IWETH} from "../../interfaces/IWETH.sol";
  */
 contract UniswapBridge is BridgeBase {
     error InvalidFeeTierEncoding();
+    error InvalidFeeTier();
     error InvalidTokenEncoding();
+    error InvalidToken();
     error InvalidPercentageAmounts();
     error InsufficientAmountOut();
     // TODO: is there some native overflow error?
@@ -69,8 +71,16 @@ contract UniswapBridge is BridgeBase {
     // @dev Event which is emitted when the output token doesn't implement decimals().
     event DefaultDecimalsWarning();
 
-    address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+
+    // Addresses of middle tokens
+    address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address private constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address private constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
+    address private constant FRAX = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
+    address private constant BUSD = 0x4Fabb145d64652a948d72533023f6E7A623C7C53;
 
     uint64 private constant SPLIT_PATH_BIT_LENGTH = 19;
     uint64 private constant SPLIT_PATHS_BIT_LENGTH = 38; // SPLIT_PATH_BIT_LENGTH * 2
@@ -240,6 +250,101 @@ contract UniswapBridge is BridgeBase {
     }
 
     /**
+     * @notice A function which encodes a split path.
+     * @param _percentage - Percentage of swap amount to send through this split path
+     * @param _fee1 - 1st pool fee
+     * @param _token1 - Address of the 1st pool's output token
+     * @param _fee2 - 2nd pool fee
+     * @param _token2 - Address of the 2nd pool's output token
+     * @param _fee3 - 3rd pool fee
+     * @return Encoded split path (in the last 19 bits of uint)
+     * @dev In place of unused middle tokens and address(0). When fee tier is unused place there any valid value. This
+     *      value gets ignored.
+     */
+    function encodeSplitPath(
+        uint256 _percentage,
+        uint256 _fee1,
+        address _token1,
+        uint256 _fee2,
+        address _token2,
+        uint256 _fee3
+    ) external pure returns (uint256) {
+        return
+            (_percentage << 12) +
+            (encodeFeeTier(_fee1) << 10) +
+            (encodeMiddleToken(_token1) << 7) +
+            (encodeFeeTier(_fee2) << 5) +
+            (encodeMiddleToken(_token2) << 2) +
+            (encodeFeeTier(_fee3));
+    }
+
+    /**
+     * @notice A function which encodes fee tier.
+     * @param _feeTier - Fee tier in bps
+     * @return Encoded fee tier (in the last 2 bits of uint)
+     */
+    function encodeFeeTier(uint256 _feeTier) public pure returns (uint256) {
+        if (_feeTier == 100) {
+            // Binary number 00
+            return 0;
+        }
+        if (_feeTier == 500) {
+            // Binary number 01
+            return 1;
+        }
+        if (_feeTier == 3000) {
+            // Binary number 10
+            return 2;
+        }
+        if (_feeTier == 10000) {
+            // Binary number 11
+            return 3;
+        }
+        revert InvalidFeeTier();
+    }
+
+    /**
+     * @notice A function which returns token encoding for a given token address.
+     * @param _token - Token address
+     * @return encodedToken - Encoded token (in the last 3 bits of uint64)
+     */
+    function encodeMiddleToken(address _token) public pure returns (uint256 encodedToken) {
+        if (_token == address(0)) {
+            // unused token
+            return 0;
+        }
+        if (_token == WETH) {
+            // binary number 001
+            return 1;
+        }
+        if (_token == USDC) {
+            // binary number 010
+            return 2;
+        }
+        if (_token == USDT) {
+            // binary number 011
+            return 3;
+        }
+        if (_token == DAI) {
+            // binary number 100
+            return 4;
+        }
+        if (_token == WBTC) {
+            // binary number 101
+            return 5;
+        }
+        if (_token == FRAX) {
+            // binary number 110
+            return 6;
+        }
+        if (_token == BUSD) {
+            // binary number 111
+            return 7;
+        }
+        revert InvalidToken();
+    }
+
+    /**
      * @notice A function which deserializes encoded path to Path struct.
      * @param _tokenIn - Input ERC20 token
      * @param _encodedPath - Encoded path
@@ -296,31 +401,31 @@ contract UniswapBridge is BridgeBase {
         if (middleToken1 != 0 && middleToken2 != 0) {
             splitPath = abi.encodePacked(
                 _tokenIn,
-                _getFeeTier(fee1),
-                _getMiddleToken(middleToken1),
-                _getFeeTier(fee2),
-                _getMiddleToken(middleToken2),
-                _getFeeTier(fee3),
+                _decodeFeeTier(fee1),
+                _decodeMiddleToken(middleToken1),
+                _decodeFeeTier(fee2),
+                _decodeMiddleToken(middleToken2),
+                _decodeFeeTier(fee3),
                 _tokenOut
             );
         } else if (middleToken1 != 0) {
             splitPath = abi.encodePacked(
                 _tokenIn,
-                _getFeeTier(fee1),
-                _getMiddleToken(middleToken1),
-                _getFeeTier(fee3),
+                _decodeFeeTier(fee1),
+                _decodeMiddleToken(middleToken1),
+                _decodeFeeTier(fee3),
                 _tokenOut
             );
         } else if (middleToken2 != 0) {
             splitPath = abi.encodePacked(
                 _tokenIn,
-                _getFeeTier(fee2),
-                _getMiddleToken(middleToken2),
-                _getFeeTier(fee3),
+                _decodeFeeTier(fee2),
+                _decodeMiddleToken(middleToken2),
+                _decodeFeeTier(fee3),
                 _tokenOut
             );
         } else {
-            splitPath = abi.encodePacked(_tokenIn, _getFeeTier(fee3), _tokenOut);
+            splitPath = abi.encodePacked(_tokenIn, _decodeFeeTier(fee3), _tokenOut);
         }
     }
 
@@ -341,7 +446,7 @@ contract UniswapBridge is BridgeBase {
      * @param _encodedFeeTier - Encoded fee tier (in the last 2 bits of uint64)
      * @return feeTier - Decoded fee tier in an integer format
      */
-    function _getFeeTier(uint64 _encodedFeeTier) internal pure returns (uint24 feeTier) {
+    function _decodeFeeTier(uint64 _encodedFeeTier) internal pure returns (uint24 feeTier) {
         if (_encodedFeeTier == 0) {
             // Binary number 00
             return uint24(100);
@@ -366,34 +471,34 @@ contract UniswapBridge is BridgeBase {
      * @param _encodedToken - Encoded token (in the last 3 bits of uint64)
      * @return token - Token address
      */
-    function _getMiddleToken(uint256 _encodedToken) internal pure returns (address token) {
+    function _decodeMiddleToken(uint256 _encodedToken) internal pure returns (address token) {
         if (_encodedToken == 1) {
-            // ETH, binary number 001
-            return 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+            // binary number 001
+            return WETH;
         }
         if (_encodedToken == 2) {
-            // USDC, binary number 010
-            return 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+            // binary number 010
+            return USDC;
         }
         if (_encodedToken == 3) {
-            // USDT, binary number 011
-            return 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+            // binary number 011
+            return USDT;
         }
         if (_encodedToken == 4) {
-            // DAI, binary number 100
-            return 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+            // binary number 100
+            return DAI;
         }
         if (_encodedToken == 5) {
-            // WBTC, binary number 101
-            return 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
+            // binary number 101
+            return WBTC;
         }
         if (_encodedToken == 6) {
-            // FRAX, binary number 110
-            return 0x853d955aCEf822Db058eb8505911ED77F175b99e;
+            // binary number 110
+            return FRAX;
         }
         if (_encodedToken == 7) {
-            // BUSD, binary number 111
-            return 0x4Fabb145d64652a948d72533023f6E7A623C7C53;
+            // binary number 111
+            return BUSD;
         }
         revert InvalidTokenEncoding();
     }

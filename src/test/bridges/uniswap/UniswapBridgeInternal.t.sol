@@ -91,6 +91,22 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
         assertEq(path.minPrice, 2031142 * 10**27);
     }
 
+    function testEncodeSplitPath() public {
+        // 100 %   500 USDC 3000 WETH 3000
+        // 1100100 01  010  10   001  10
+        uint256 referenceEncodedSplitPath = 0x64546; // split path encoded by "hand"
+        uint256 encodedSplitPath = this.encodeSplitPath(100, 500, USDC, 3000, WETH, 3000);
+        assertEq(referenceEncodedSplitPath, encodedSplitPath, "Reference and received split paths do not match");
+    }
+
+    function testEncodeSplitPathOneMiddleTokenUsed() public {
+        // 70%     500 USDC 100  ---- 3000
+        // 1000110 01  010  00   000  10
+        uint256 referenceEncodedSplitPath = 0x46502; // split path encoded by "hand"
+        uint256 encodedSplitPath = this.encodeSplitPath(70, 500, USDC, 100, address(0), 3000);
+        assertEq(referenceEncodedSplitPath, encodedSplitPath, "Reference and received split paths do not match");
+    }
+
     function testDecodeSplitPathAllMiddleTokensUsed() public {
         // 100 %   500 USDC 3000 WETH 3000
         // 1100100 01  010  10   001  10
@@ -152,11 +168,11 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
 
     function testInvalidFeeTierEncoding() public {
         vm.expectRevert(UniswapBridge.InvalidFeeTierEncoding.selector);
-        _getFeeTier(4);
+        _decodeFeeTier(4);
     }
 
     function testInvalidTokenEncoding() public {
         vm.expectRevert(UniswapBridge.InvalidTokenEncoding.selector);
-        _getMiddleToken(0);
+        _decodeMiddleToken(0);
     }
 }
