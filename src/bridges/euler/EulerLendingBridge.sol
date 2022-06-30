@@ -104,7 +104,7 @@ contract EulerLendingBridge is BridgeBase {
         if (_auxData == 0) {
             //deposit
             if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
-            if (markets.underlyingToEToken(_underlyin) == address(0)) revert MarketNotListed();    //checks if token is listed an can be deposited
+            if (markets.underlyingToEToken(_underlying) == address(0)) revert MarketNotListed();    //checks if token is listed an can be deposited
             
             
             IEulerEToken eToken = IEulerEToken(markets.underlyingToEToken(_underlying));
