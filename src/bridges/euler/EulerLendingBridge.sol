@@ -116,9 +116,9 @@ contract EulerLendingBridge is BridgeBase {
             //withdraw
             if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidInputA();
             
-            IEulerEToken eToken = IEulerEToken(markets.underlyingToEToken(underlying));
+            IEulerEToken eToken = IEulerEToken(markets.underlyingToEToken(_underlying));
             outputValueA = eToken.balanceOfUnderlying(address(this));
-            eToken.withdraw(0, type(uint).max);
+            eToken.withdraw(0, _inputValue);
             
             } else {
             revert ErrorLib.InvalidAuxData();
