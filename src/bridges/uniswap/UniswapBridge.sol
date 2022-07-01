@@ -290,7 +290,7 @@ contract UniswapBridge is BridgeBase {
     /**
      * @notice A function which returns token encoding for a given token address.
      * @param _token - Token address
-     * @return encodedToken - Encoded token (in the last 3 bits of uint64)
+     * @return encodedToken - Encoded token (in the last 3 bits of uint256)
      */
     function encodeMiddleToken(address _token) public pure returns (uint256 encodedToken) {
         if (_token == address(0)) {
@@ -337,7 +337,7 @@ contract UniswapBridge is BridgeBase {
      */
     function _decodePath(
         address _tokenIn,
-        uint64 _encodedPath,
+        uint256 _encodedPath,
         address _tokenOut
     ) internal view returns (Path memory path) {
         (uint256 percentage1, bytes memory splitPath1) = _decodeSplitPath(
@@ -365,21 +365,21 @@ contract UniswapBridge is BridgeBase {
      * @notice A function which returns a percentage of input going through the split path and the split path encoded
      *         in a format compatible with Uniswap router.
      * @param _tokenIn - Input ERC20 token
-     * @param _encodedSplitPath - Encoded split path (in the last 19 bits of uint64)
+     * @param _encodedSplitPath - Encoded split path (in the last 19 bits of uint256)
      * @param _tokenOut - Output ERC20 token
      * @return percentage - A percentage of input going through the corresponding split path
      * @return splitPath - A split path encoded in a format compatible with Uniswap router
      */
     function _decodeSplitPath(
         address _tokenIn,
-        uint64 _encodedSplitPath,
+        uint256 _encodedSplitPath,
         address _tokenOut
     ) internal view returns (uint256 percentage, bytes memory splitPath) {
-        uint64 fee3 = _encodedSplitPath & FEE_MASK;
-        uint64 middleToken2 = (_encodedSplitPath >> 2) & TOKEN_MASK;
-        uint64 fee2 = (_encodedSplitPath >> 5) & FEE_MASK;
-        uint64 middleToken1 = (_encodedSplitPath >> 7) & TOKEN_MASK;
-        uint64 fee1 = (_encodedSplitPath >> 10) & FEE_MASK;
+        uint256 fee3 = _encodedSplitPath & FEE_MASK;
+        uint256 middleToken2 = (_encodedSplitPath >> 2) & TOKEN_MASK;
+        uint256 fee2 = (_encodedSplitPath >> 5) & FEE_MASK;
+        uint256 middleToken1 = (_encodedSplitPath >> 7) & TOKEN_MASK;
+        uint256 fee1 = (_encodedSplitPath >> 10) & FEE_MASK;
         percentage = _encodedSplitPath >> 12;
 
         if (middleToken1 != 0 && middleToken2 != 0) {
@@ -415,10 +415,10 @@ contract UniswapBridge is BridgeBase {
 
     /**
      * @notice A function which converts minimum price in a floating point format to integer.
-     * @param _encodedMinPrice - Encoded minimum price (in the last 26 bits of uint64)
+     * @param _encodedMinPrice - Encoded minimum price (in the last 26 bits of uint256)
      * @return minPrice - Minimum acceptable price represented as an integer
      */
-    function _decodeMinPrice(uint64 _encodedMinPrice) internal pure returns (uint256 minPrice) {
+    function _decodeMinPrice(uint256 _encodedMinPrice) internal pure returns (uint256 minPrice) {
         // 21 bits significand, 5 bits exponent
         uint256 significand = _encodedMinPrice >> 5;
         uint256 exponent = _encodedMinPrice & EXPONENT_MASK;
@@ -427,10 +427,10 @@ contract UniswapBridge is BridgeBase {
 
     /**
      * @notice A function which converts encoded fee tier to a fee tier in an integer format.
-     * @param _encodedFeeTier - Encoded fee tier (in the last 2 bits of uint64)
+     * @param _encodedFeeTier - Encoded fee tier (in the last 2 bits of uint256)
      * @return feeTier - Decoded fee tier in an integer format
      */
-    function _decodeFeeTier(uint64 _encodedFeeTier) internal pure returns (uint24 feeTier) {
+    function _decodeFeeTier(uint256 _encodedFeeTier) internal pure returns (uint24 feeTier) {
         if (_encodedFeeTier == 0) {
             // Binary number 00
             return uint24(100);
@@ -452,7 +452,7 @@ contract UniswapBridge is BridgeBase {
 
     /**
      * @notice A function which returns token address for an encoded token.
-     * @param _encodedToken - Encoded token (in the last 3 bits of uint64)
+     * @param _encodedToken - Encoded token (in the last 3 bits of uint256)
      * @return token - Token address
      */
     function _decodeMiddleToken(uint256 _encodedToken) internal pure returns (address token) {
