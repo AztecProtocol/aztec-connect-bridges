@@ -60,7 +60,7 @@ contract EulerTest is BridgeTestBase {
     
         function testPreApproveWhenAllowanceNotZero(uint256 _currentAllowance) public {
         vm.assume(_currentAllowance > 0); // not using bound(...) here because the constraint is not strict
-        // Set allowances to _currentAllowance for all the cTokens and its underlying
+        // Set allowances to _currentAllowance for all underlying and its eTokens
         address[] memory underlying = bridge.markets().underlyingToEToken();
         vm.startPrank(address(bridge));
         for (uint256 i; i < underlying.length; ++i) {
