@@ -68,9 +68,6 @@ contract UniswapBridge is BridgeBase {
         uint256 minPrice; // Minimum acceptable price
     }
 
-    // @dev Event which is emitted when the output token doesn't implement decimals().
-    event DefaultDecimalsWarning();
-
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     // Addresses of middle tokens
@@ -207,15 +204,7 @@ contract UniswapBridge is BridgeBase {
             );
         }
 
-        uint256 tokenInDecimals = 18;
-        if (!inputIsEth) {
-            try IERC20Metadata(_inputAssetA.erc20Address).decimals() returns (uint8 decimals) {
-                tokenInDecimals = decimals;
-            } catch (bytes memory) {
-                emit DefaultDecimalsWarning();
-            }
-        }
-        uint256 amountOutMinimum = (_inputValue * path.minPrice) / 10**tokenInDecimals;
+        uint256 amountOutMinimum = (_inputValue * path.minPrice);
 
         if (outputValueA < amountOutMinimum) revert InsufficientAmountOut();
 
