@@ -64,24 +64,23 @@ contract EulerTest is BridgeTestBase {
         address[] memory underlying = bridge.markets().underlyingToEToken();
         vm.startPrank(address(bridge));
         for (uint256 i; i < underlying.length; ++i) {
-            ICERC20 cToken = ICERC20(cTokens[i]);
-            uint256 allowance = cToken.allowance(address(this), address(ROLLUP_PROCESSOR));
+            IEulerEToken _underlying = IEulerEToken(underlying[i]);
+            uint256 allowance = _underlying.allowance(address(this), address(ROLLUP_PROCESSOR));
             if (allowance < _currentAllowance) {
-                cToken.approve(address(ROLLUP_PROCESSOR), _currentAllowance - allowance);
+                _underlying.approve(address(ROLLUP_PROCESSOR), _currentAllowance - allowance);
             }
-            if (address(cToken) != cETH) {
-                IERC20 underlying = IERC20(cToken.underlying());
+            
+                IERC20 etoken = IERC20(_underlying.underlyingToEToken());
                 // Using safeApprove(...) instead of approve(...) here because underlying can be Tether;
-                allowance = underlying.allowance(address(this), address(cToken));
+                allowance = etoken.allowance(address(this), address(cToken));
                 if (allowance != type(uint256).max) {
-                    underlying.safeApprove(address(cToken), 0);
-                    underlying.safeApprove(address(cToken), type(uint256).max);
+                    etoken.safeApprove(address(_underlying), 0);
+                    etoken.safeApprove(address(_underlying), type(uint256).max);
                 }
-                allowance = underlying.allowance(address(this), address(ROLLUP_PROCESSOR));
+                allowance = etoken.allowance(address(this), address(ROLLUP_PROCESSOR));
                 if (allowance != type(uint256).max) {
-                    underlying.safeApprove(address(ROLLUP_PROCESSOR), 0);
-                    underlying.safeApprove(address(ROLLUP_PROCESSOR), type(uint256).max);
-                }
+                    etoken.safeApprove(address(ROLLUP_PROCESSOR), 0);
+                    etoken.safeApprove(address(ROLLUP_PROCESSOR), type(uint256).max);
             }
         }
     
