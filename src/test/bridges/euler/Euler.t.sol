@@ -83,6 +83,13 @@ contract EulerTest is BridgeTestBase {
                     eToken.safeApprove(address(ROLLUP_PROCESSOR), type(uint256).max);
             }
         }
+        
+        
+        m.stopPrank();
+        
+         bridge.preApproveAll();
+         
+         
     
     
     
