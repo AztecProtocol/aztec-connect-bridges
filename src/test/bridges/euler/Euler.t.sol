@@ -70,7 +70,7 @@ contract EulerTest is BridgeTestBase {
                 _underlying.approve(address(ROLLUP_PROCESSOR), _currentAllowance - allowance);
             }
             
-                IERC20 etoken = IERC20(_underlying.underlyingToEToken());
+                IERC20 eToken = IERC20(_underlying.underlyingToEToken());
                 // Using safeApprove(...) instead of approve(...) here because underlying can be Tether;
                 allowance = eToken.allowance(address(this), address(cToken));
                 if (allowance != type(uint256).max) {
