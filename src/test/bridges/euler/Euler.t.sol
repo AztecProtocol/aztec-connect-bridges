@@ -90,7 +90,7 @@ contract EulerTest is BridgeTestBase {
         bridge.preApproveAll();
         
         function testERC20DepositAndWithdrawal(uint88 _depositAmount, uint88 _withdrawAmount) public {
-        address[] memory _underlying = bridge.markets().underlyingToEToken();
+        address[] memory _underlying;
         for (uint256 i; i < _underlying.length; ++i) {
             address underlying = _underlying[i];
                 _depositAndWithdrawERC20(underlying, _depositAmount, _redeemAmount);
