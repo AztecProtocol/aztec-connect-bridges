@@ -51,6 +51,15 @@ contract EulerTest is BridgeTestBase {
         }
     }
     
+        function testPreApproveReverts() public {
+        address nonCTokenAddress = 0x761d38e5ddf6ccf6cf7c55759d5210750b5d60f3;  //Dogelon Mars
+
+        vm.expectRevert(EulerLendingBridge.MarketNotListed.selector);
+        bridge.preApprove(nonCTokenAddress);
+    }
+    
+    
+    
     
     
     
