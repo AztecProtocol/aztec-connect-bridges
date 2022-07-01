@@ -204,8 +204,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     const timeRatio = divide(elapsedTime, totalTime, this.scalingFactor);
     const accruedInterest = (totalInterest * timeRatio) / this.scalingFactor;
     const totalPresentValue = defiEvent.totalInputValue + accruedInterest;
-    const shareRatio = divide(inputValue, defiEvent.totalInputValue, this.scalingFactor);
-    const userPresentValue = (totalPresentValue * shareRatio) / this.scalingFactor;
+    const userPresentValue = (totalPresentValue * defiEvent.totalInputValue) / defiEvent.totalInputValue;
 
     return [
       {
