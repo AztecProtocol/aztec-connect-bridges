@@ -178,8 +178,8 @@ contract EulerTest is BridgeTestBase {
 
         assertEq(bals.underlyingMid, bals.underlyingBefore - depositAmount, "token bal dont match after deposit");
         assertEq(bals.underlyingEnd, bals.underlyingMid + redeemedAmount, "token bal dont match after withdrawal");
-        assertEq(bals.cMid, bals.cBefore + mintAmount, "cToken bal dont match after deposit");
-        assertEq(bals.cEnd, bals.cMid - redeemAmount, "cToken bal dont match after withdrawal");
+        assertEq(bals.cMid, bals.cBefore + mintAmount, "eToken bal dont match after deposit");
+        assertEq(bals.cEnd, bals.cMid - redeemAmount, "eToken bal dont match after withdrawal");
     }
     
         function _addSupportedIfNotAdded(address _asset) internal {
