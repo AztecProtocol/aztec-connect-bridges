@@ -226,18 +226,12 @@ contract UniswapBridge is BridgeBase {
 
     /**
      * @notice A function which encodes min price to the format used in this bridge.
-     * @param _minPrice - Minimum acceptable price
-     * @param _tokenInDecimals - Amount of decimals of the input token
+     * @param _minPrice - Minimum acceptable price multiplied by 10**tokenInDecimals
      * @return encodedMinPrice - Min acceptable encoded in a format used in this bridge.
      * @dev This function is not optimized and is expected to be used on frontend and in tests.
      * @dev Reverts when _minPrice is bigger than max encodeable value.
      */
-    function encodeMinPrice(uint256 _minPrice, uint256 _tokenInDecimals)
-        external
-        pure
-        returns (uint256 encodedMinPrice)
-    {
-        _minPrice *= 10**_tokenInDecimals;
+    function encodeMinPrice(uint256 _minPrice) external pure returns (uint256 encodedMinPrice) {
         // 2097151 = 2**21 --> this number and its multiples of 10 can be encoded without precision loss
         if (_minPrice <= 2097151) {
             // uintValue is smaller than the boundary of significand --> significand = _x, exponent = 0

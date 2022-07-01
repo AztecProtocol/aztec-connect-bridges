@@ -196,10 +196,10 @@ contract UniswapBridgeUnitTest is Test {
             abi.encodePacked(WETH, uint24(500), USDC, uint24(3000), GUSD),
             swapAmount
         );
-        uint256 desiredMinPrice = quote / swapAmount;
+        uint256 desiredMinPrice = (quote * 10**tokenInDecimals) / swapAmount;
 
         uint64 encodedPath = uint64(
-            (bridge.encodeMinPrice(desiredMinPrice, tokenInDecimals) << bridge.SPLIT_PATHS_BIT_LENGTH()) +
+            (bridge.encodeMinPrice(desiredMinPrice) << bridge.SPLIT_PATHS_BIT_LENGTH()) +
                 (bridge.encodeSplitPath(100, 500, USDC, 100, address(0), 3000))
         );
 
@@ -245,7 +245,7 @@ contract UniswapBridgeUnitTest is Test {
         uint256 desiredMinPrice = quote / swapAmount;
 
         uint64 encodedPath = uint64(
-            (bridge.encodeMinPrice(desiredMinPrice, tokenInDecimals) << bridge.SPLIT_PATHS_BIT_LENGTH()) +
+            (bridge.encodeMinPrice(desiredMinPrice * 10**tokenInDecimals) << bridge.SPLIT_PATHS_BIT_LENGTH()) +
                 (bridge.encodeSplitPath(100, 100, address(0), 100, address(0), 500))
         );
 
