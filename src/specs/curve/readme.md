@@ -1,27 +1,24 @@
 # Spec for Curve stEth Bridge
 
 ## What does the bridge do? Why build it?
-
-The bridge deposits swaps `eth` to `stEth` using curve to get a staked eth derivative that earns a yield from staking rewards at the beaconchain. We build it to allow users to earn yield on their eth.
+The bridge deposits swaps `eth` to `stEth` using curve to get a staked eth derivative that earns a yield from staking rewards at the beaconchain. We build it to allow users to earn yield on their eth. 
 
 ## What protocol(s) does the bridge interact with ?
 
 The bridge interacts with two protocols, namely Lido and Curve.
 
-[Lido](https://lido.fi/) is a project that build liquid staking derivatives. They allow users to deposit stakeable assets (Eth, Sol etc) and in return get a representation of the staked asset which will grow with staking rewards. We will only be working with `stEth` (staked ether), so we will be using that for explanations going on.
+[Lido](https://lido.fi/) is a project that build liquid staking derivatives. They allow users to deposit stakeable assets (Eth, Sol etc) and in return get a representation of the staked asset which will grow with staking rewards. We will only be working with `stEth` (staked ether), so we will be using that for explanations going on. 
 
 `stEth` is a rebasing ERC20 token, and a users balance of it will grow/shrink based on accrued staking rewards or slashing events. After the Merge and the hardfork making it possible to withdraw staked ether from the beacon chain, `stEth` can be burned to redeem an equal amount of `eth`. Until then, `stEth` cannot be redeemed at lido directly, but can instead be traded at a secondary market, such as [curve.fi](https://curve.fi/steth).
 
 [Curve](https://curve.fi/) is a AMM that specializes in pools with low internal volatility (stableswap). It is at the time of writing, the most liquid market for trading between `stEth` and `eth`.
 
 ## What is the flow of the bridge?
-
-There are two flows of Curve stEth Bridge, namely deposits and withdraws.
+There are two flows of Curve stEth Bridge, namely deposits and withdraws. 
 
 ![Lido flows](./CurveStethBridge.svg)
 
-### Deposit
-
+### Deposit 
 If the bridge receives `eth` as the input token it will swap it on Curve to get `stEth` (NOTICE: it accepts any slippage), and wrap it to `wstEth` before return the tuple `(wstEthAmount, 0, false)` and the rollup pulls the `wstEth` tokens.
 
 The gas cost E2E for a deposit is ~250K, this is including the transfers to/from the Rollup Processor.
