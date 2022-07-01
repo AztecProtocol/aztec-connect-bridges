@@ -31,17 +31,16 @@ import {IWETH} from "../../interfaces/IWETH.sol";
  *          001 is ETH, 010 is USDC, 011 is USDT, 100 is DAI, 101 is WBTC, 110 is FRAX, 111 is BUSD.
  *          000 means the middle token is unused.
  *
- *      Min price is encoded as a floating point number. First 21 bits are used for significand, last 5 bits for
- *      exponent: |21 bits significand| |5 bits exponent|
- *      Minimum amount out is computed with the following formula:
- *          (inputValue * (significand * 10**exponent)) / (10 ** inputAssetDecimals)
- *      Here are 2 examples.
- *      1) If I want to receive 10k Dai for 1 ETH I would set significand to 1 and exponent to 22.
- *         _inputValue = 1e18, asset = ETH (18 decimals), outputAssetA: Dai (18 decimals)
- *         (1e18 * (1 * 10**22)) / (10**18) = 1e22 --> 10k Dai
- *      2) If I want to receive 2000 USDC for 1 ETH, I set significand to 2 and exponent to 9.
- *         _inputValue = 1e18, asset = ETH (18 decimals), outputAssetA: USDC (6 decimals)
- *         (1e18 * (2 * 10**9)) / (10**18) = 2e9 --> 2000 USDC
+ *      To compute a minimum price we can simply divide amountOutMinimum with input amount (swap amount). Minimum price
+ *      is expected to be encoded as a floating point number. First 21 bits are used for significand, last 5 bits for
+ *      exponent:
+ *          |21 bits significand| |5 bits exponent|
+ *      To convert minimum price to this format call encodeMinPrice(...) function on this contract.
+ *
+ *      Minimum price is converted back to integer using the following formula:
+ *          minPriceInt = significand * 10**exponent,
+ *      to get amountOutMinimum we simply multiply the value from above with input amount:
+ *          amountOutMinimum = minPriceInt * _inputValue
  *
  *      Definition of split path: Split path is a term we use when there are multiple (in this case 2) paths between
  *      which the input amount of tokens is split. As an example we can consider swapping 100 ETH to DAI. In this case
@@ -56,7 +55,6 @@ contract UniswapBridge is BridgeBase {
     error InvalidToken();
     error InvalidPercentageAmounts();
     error InsufficientAmountOut();
-    // TODO: is there some native overflow error?
     error Overflow();
 
     // @notice A struct representing a path with 2 split paths.
@@ -204,10 +202,7 @@ contract UniswapBridge is BridgeBase {
             );
         }
 
-        uint256 amountOutMinimum = (_inputValue * path.minPrice);
-
-        if (outputValueA < amountOutMinimum) revert InsufficientAmountOut();
-
+        if (outputValueA < _inputValue * path.minPrice) revert InsufficientAmountOut();
         if (outputIsEth) {
             IWETH(WETH).withdraw(outputValueA);
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
