@@ -36,10 +36,10 @@ export interface AuxDataConfig {
 
 export interface BridgeDataFieldGetters {
   /*
-  @dev This function should be implemented for stateful bridges. It's purpose is to tell the developer using the bridge the value of a given interaction.
-  @dev The value should be returned as an array of AssetValue's
+  @dev This function should be implemented for stateful bridges. It's purpose is to tell the developer using the bridge
+  @dev the value of the user's share of a given interaction. The value should be returned as an array of `AssetValue`s.
   */
-  getInteractionPresentValue?(interactionNonce: bigint): Promise<AssetValue[]>;
+  getInteractionPresentValue?(interactionNonce: bigint, inputValue: bigint): Promise<AssetValue[]>;
 
   /*
   @dev This function should be implemented for all bridges that use auxData that require onchain data. It's purpose is to tell the developer using the bridge
