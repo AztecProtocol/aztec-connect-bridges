@@ -99,6 +99,49 @@ contract EulerTest is BridgeTestBase {
     }
     
     
+        function testInvalidCaller() public {
+        vm.expectRevert(ErrorLib.InvalidCaller.selector);
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
+    }
+    
+    
+        function testInvalidInputAsset() public {
+        AztecTypes.AztecAsset memory ethAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(0x0000000000000000000000000000000000000000),
+            assetType: AztecTypes.AztecAssetType.ETH
+        });
+
+        vm.prank(address(ROLLUP_PROCESSOR));
+        vm.expectRevert(ErrorLib.InvalidInputA.selector);
+        bridge.convert(ethAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 1, address(0));
+    }
+    
+    
+    
+        function testInvalidOutputAsset() public {
+        vm.prank(address(ROLLUP_PROCESSOR));
+        vm.expectRevert(ErrorLib.InvalidOutputA.selector);
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
+    }
+    
+    
+        function testIncorrectAuxData() public {
+        vm.prank(address(ROLLUP_PROCESSOR));
+        vm.expectRevert(ErrorLib.InvalidAuxData.selector);
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 2, address(0));
+    }
+    
+        function testFinalise() public {
+        vm.prank(address(ROLLUP_PROCESSOR));
+        vm.expectRevert(ErrorLib.AsyncDisabled.selector);
+        bridge.finalise(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0);
+    }
+    
+    
+
+    
+    
         
         
          
