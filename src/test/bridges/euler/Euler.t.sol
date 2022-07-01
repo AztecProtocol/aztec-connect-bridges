@@ -45,11 +45,13 @@ contract EulerTest is BridgeTestBase {
     }
     
     function testPreApprove() public {
-        address[] memory cTokens = bridge.COMPTROLLER().getAllMarkets();
-        for (uint256 i; i < cTokens.length; ++i) {
-            bridge.preApprove(cTokens[i]);
+        address[] memory underlying = bridge.markets().underlyingToEToken();
+        for (uint256 i; i < underlying.length; ++i) {
+            bridge.preApprove(underlying[i]);
         }
     }
+    
+    
     
     
     
