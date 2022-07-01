@@ -138,6 +138,51 @@ contract EulerTest is BridgeTestBase {
         bridge.finalise(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0);
     }
     
+        function _depositAndWithdrawERC20(
+        address _underlying,
+        uint256 _depositAmount,
+        uint256 _redeemAmount
+    ) internal {
+        address ETOKEN = IEulerEToken(_underlying).underlyingToEToken();
+        _addSupportedIfNotAdded(ETOKEN);
+
+        Balances memory bals;
+
+        (uint256 depositAmount, uint256 mintAmount) = _getDepositAndMintAmounts(_underlying, _depositAmount);
+
+        deal(_underlying, address(ROLLUP_PROCESSOR), depositAmount);
+
+        AztecTypes.AztecAsset memory depositInputAssetA = getRealAztecAsset(_underlyingtoken);
+        AztecTypes.AztecAsset memory depositOutputAssetA = getRealAztecAsset(address(_cToken));
+
+        bals.underlyingBefore = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
+        bals.cBefore = IERC20(_cToken).balanceOf(address(ROLLUP_PROCESSOR));
+
+        uint256 inBridgeId = encodeBridgeId(id, depositInputAssetA, emptyAsset, depositOutputAssetA, emptyAsset, 0);
+        vm.expectEmit(true, true, false, true);
+        emit DefiBridgeProcessed(inBridgeId, getNextNonce(), depositAmount, mintAmount, 0, true, "");
+        sendDefiRollup(inBridgeId, depositAmount);
+
+        uint256 redeemAmount = bound(_redeemAmount, 1, mintAmount);
+        uint256 redeemedAmount = _getRedeemedAmount(_cToken, redeemAmount);
+        bals.underlyingMid = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
+        bals.cMid = IERC20(_cToken).balanceOf(address(ROLLUP_PROCESSOR));
+
+        uint256 outBridgeId = encodeBridgeId(id, depositOutputAssetA, emptyAsset, depositInputAssetA, emptyAsset, 1);
+        vm.expectEmit(true, true, false, true);
+        emit DefiBridgeProcessed(outBridgeId, getNextNonce(), redeemAmount, redeemedAmount, 0, true, "");
+        sendDefiRollup(outBridgeId, redeemAmount);
+
+        bals.underlyingEnd = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
+        bals.cEnd = IERC20(_cToken).balanceOf(address(ROLLUP_PROCESSOR));
+
+        assertEq(bals.underlyingMid, bals.underlyingBefore - depositAmount, "token bal dont match after deposit");
+        assertEq(bals.underlyingEnd, bals.underlyingMid + redeemedAmount, "token bal dont match after withdrawal");
+        assertEq(bals.cMid, bals.cBefore + mintAmount, "cToken bal dont match after deposit");
+        assertEq(bals.cEnd, bals.cMid - redeemAmount, "cToken bal dont match after withdrawal");
+    }
+
+    
     
 
     
