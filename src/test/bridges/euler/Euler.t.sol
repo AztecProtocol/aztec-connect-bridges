@@ -41,8 +41,10 @@ contract EulerTest is BridgeTestBase {
 
         isDeprecated[0xEb91861f8A4e1C12333F42DCE8fB0Ecdc28dA716] = true; // eUSDC
         isDeprecated[0x05305a615419D8CCE92FE3d5990A3C0C8e814716] = true; // eCOMP
-        isDeprecated[0xF5DCe57282A584D2746FaF1593d3121Fcac444dC] = true; // cSAI
+        isDeprecated[0x22729F64490d7A4941d64f47719cDa5c8CA4Ec32] = true; // eDAI
     }
+    
+    
     
     
 
