@@ -153,9 +153,9 @@ describe('element bridge data', () => {
     const defiEvent = getDefiEvent(56)!;
     const [daiValue] = await elementBridgeData.getInteractionPresentValue(56n, totalInput / userShareDivisor);
     const delta = outputValue - defiEvent.totalInputValue;
-    const scalingFactor = elementBridgeData.scalingFactor;
-    const ratio = ((BigInt(now) - startDate) * scalingFactor) / (expiration1 - startDate);
-    const out = defiEvent.totalInputValue + (delta * ratio) / scalingFactor;
+    const timeElapsed = BigInt(now) - startDate;
+    const fullTime = expiration1 - startDate;
+    const out = defiEvent.totalInputValue + (delta * timeElapsed) / fullTime;
 
     expect(daiValue.amount).toStrictEqual(out / userShareDivisor);
     expect(Number(daiValue.assetId)).toStrictEqual(bridge1.inputAssetIdA);
@@ -181,9 +181,9 @@ describe('element bridge data', () => {
         totalInput / userShareDivisor,
       );
       const delta = interactions[nonce].quantityPT.toBigInt() - defiEvent.totalInputValue;
-      const scalingFactor = elementBridgeData.scalingFactor;
-      const ratio = ((BigInt(now) - startDate) * scalingFactor) / (BigInt(bridgeId.auxData) - startDate);
-      const out = defiEvent.totalInputValue + (delta * ratio) / scalingFactor;
+      const timeElapsed = BigInt(now) - startDate;
+      const fullTime = BigInt(bridgeId.auxData) - startDate;
+      const out = defiEvent.totalInputValue + (delta * timeElapsed) / fullTime;
       expect(daiValue.amount).toStrictEqual(out / userShareDivisor);
       expect(Number(daiValue.assetId)).toStrictEqual(bridgeId.inputAssetIdA);
     };
