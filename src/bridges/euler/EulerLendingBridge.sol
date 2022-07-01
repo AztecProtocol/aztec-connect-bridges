@@ -71,8 +71,8 @@ contract EulerLendingBridge is BridgeBase {
     
     /**
      * @notice Function which mints and burns eTokens in an exchange for the underlying asset.
-     * @dev This method can only be called from RollupProcessor.sol. If `_auxData` is 0 the mint flow is executed,
-     * if 1 redeem flow.
+     * @dev This method can only be called from RollupProcessor.sol. If `_auxData` is 0 the deposit flow is executed,
+     * if 1 withdraw flow.
      *
      * @param _inputAssetA - ERC20 (deposit), eToken ERC20 (withdraw)
      * @param _outputAssetA - eToken (deposit), ERC20 (withdraw)
