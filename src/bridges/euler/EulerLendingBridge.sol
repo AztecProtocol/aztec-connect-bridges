@@ -70,7 +70,7 @@ contract EulerLendingBridge is BridgeBase {
     
     
     /**
-     * @notice Function which mints and burns cTokens in an exchange for the underlying asset.
+     * @notice Function which mints and burns eTokens in an exchange for the underlying asset.
      * @dev This method can only be called from RollupProcessor.sol. If `_auxData` is 0 the mint flow is executed,
      * if 1 redeem flow.
      *
