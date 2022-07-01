@@ -58,6 +58,33 @@ contract EulerTest is BridgeTestBase {
         bridge.preApprove(nonCTokenAddress);
     }
     
+        function testPreApproveWhenAllowanceNotZero(uint256 _currentAllowance) public {
+        vm.assume(_currentAllowance > 0); // not using bound(...) here because the constraint is not strict
+        // Set allowances to _currentAllowance for all the cTokens and its underlying
+        address[] memory underlying = bridge.markets().underlyingToEToken();
+        vm.startPrank(address(bridge));
+        for (uint256 i; i < underlying.length; ++i) {
+            ICERC20 cToken = ICERC20(cTokens[i]);
+            uint256 allowance = cToken.allowance(address(this), address(ROLLUP_PROCESSOR));
+            if (allowance < _currentAllowance) {
+                cToken.approve(address(ROLLUP_PROCESSOR), _currentAllowance - allowance);
+            }
+            if (address(cToken) != cETH) {
+                IERC20 underlying = IERC20(cToken.underlying());
+                // Using safeApprove(...) instead of approve(...) here because underlying can be Tether;
+                allowance = underlying.allowance(address(this), address(cToken));
+                if (allowance != type(uint256).max) {
+                    underlying.safeApprove(address(cToken), 0);
+                    underlying.safeApprove(address(cToken), type(uint256).max);
+                }
+                allowance = underlying.allowance(address(this), address(ROLLUP_PROCESSOR));
+                if (allowance != type(uint256).max) {
+                    underlying.safeApprove(address(ROLLUP_PROCESSOR), 0);
+                    underlying.safeApprove(address(ROLLUP_PROCESSOR), type(uint256).max);
+                }
+            }
+        }
+    
     
     
     
