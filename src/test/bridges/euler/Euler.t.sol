@@ -44,6 +44,13 @@ contract EulerTest is BridgeTestBase {
         isDeprecated[0x22729F64490d7A4941d64f47719cDa5c8CA4Ec32] = true; // eDAI
     }
     
+    function testPreApprove() public {
+        address[] memory cTokens = bridge.COMPTROLLER().getAllMarkets();
+        for (uint256 i; i < cTokens.length; ++i) {
+            bridge.preApprove(cTokens[i]);
+        }
+    }
+    
     
     
     
