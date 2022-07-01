@@ -66,7 +66,6 @@ contract EulerLendingBridge is BridgeBase {
                 underlying.safeApprove(ROLLUP_PROCESSOR, type(uint256).max);
             }
         }
-    }
     
     
     /**
@@ -125,5 +124,7 @@ contract EulerLendingBridge is BridgeBase {
             revert ErrorLib.InvalidAuxData();
         }
     }
+    
+}    
             
             
