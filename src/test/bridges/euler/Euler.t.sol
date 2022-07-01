@@ -39,7 +39,7 @@ contract EulerTest is BridgeTestBase {
 
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
-        isDeprecated[0x158079Ee67Fce2f58472A96584A73C7Ab9AC95c1] = true; // cREP - Augur v1
+        isDeprecated[0xEb91861f8A4e1C12333F42DCE8fB0Ecdc28dA716] = true; // eUSDC
         isDeprecated[0xC11b1268C1A384e55C48c2391d8d480264A3A7F4] = true; // legacy cWBTC token
         isDeprecated[0xF5DCe57282A584D2746FaF1593d3121Fcac444dC] = true; // cSAI
     }
