@@ -26,7 +26,7 @@ contract EulerLendingBridge is BridgeBase {
 
     error MarketNotListed();
     
-    IEulerMarkets public immutable markets = IEulerMarkets(EULER_MAINNET_MARKETS);
+    IEulerMarkets public immutable markets = IEulerMarkets(0x3520d5a913427E6F0D6A83E07ccD4A4da316e4d3);
     
      /**
      * @notice Set the address of RollupProcessor.sol
