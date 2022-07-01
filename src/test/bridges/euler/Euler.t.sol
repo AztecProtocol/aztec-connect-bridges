@@ -194,15 +194,3 @@ contract EulerTest is BridgeTestBase {
     }
         
         
-         
-         
-    
-    
-    
-    
-    
-    
-    
-    
-
-    
