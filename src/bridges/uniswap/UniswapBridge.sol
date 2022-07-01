@@ -216,7 +216,6 @@ contract UniswapBridge is BridgeBase {
             }
         }
         uint256 amountOutMinimum = (_inputValue * path.minPrice) / 10**tokenInDecimals;
-
         if (outputValueA < amountOutMinimum) revert InsufficientAmountOut();
 
         if (outputIsEth) {
