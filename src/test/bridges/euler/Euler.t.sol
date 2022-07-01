@@ -152,8 +152,8 @@ contract EulerTest is BridgeTestBase {
 
         deal(_underlying, address(ROLLUP_PROCESSOR), depositAmount);
 
-        AztecTypes.AztecAsset memory depositInputAssetA = getRealAztecAsset(_underlyingtoken);
-        AztecTypes.AztecAsset memory depositOutputAssetA = getRealAztecAsset(address(_cToken));
+        AztecTypes.AztecAsset memory depositInputAssetA = getRealAztecAsset(_underlying);
+        AztecTypes.AztecAsset memory depositOutputAssetA = getRealAztecAsset(address(ETOKEN));
 
         bals.underlyingBefore = IERC20(_underlying).balanceOf(address(ROLLUP_PROCESSOR));
         bals.eBefore = IERC20(ETOKEN).balanceOf(address(ROLLUP_PROCESSOR));
