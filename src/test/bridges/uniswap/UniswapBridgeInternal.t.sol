@@ -35,6 +35,22 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
         assertGt(decodedMinPrice, 0);
     }
 
+    function testPrecisionLossNeverBiggerThan1Bps(
+        uint80 _inputValue,
+        uint24 _price,
+        uint8 _tokenInDecimals
+    ) public {
+        uint256 decimals = bound(_tokenInDecimals, 0, 24);
+        uint256 price = bound(_price, 1, maxMinPrice / 10**decimals);
+        uint256 quote = _inputValue * price;
+
+        uint256 encodedMinPrice = this.encodeMinPrice(price * 10**decimals);
+        uint256 decodedMinPrice = _decodeMinPrice(encodedMinPrice);
+        uint256 amountOutMinimum = (_inputValue * decodedMinPrice) / 10**decimals;
+
+        assertApproxEqRel(quote, amountOutMinimum, 1e16);
+    }
+
     function testEncodeMinPriceDoesntRevertAndDecodesToMax() public {
         uint256 encoded = this.encodeMinPrice(maxMinPrice);
         assertEq(encoded, maxEncodedMinPrice, "Encoded price doesn't equal max encoded price");
