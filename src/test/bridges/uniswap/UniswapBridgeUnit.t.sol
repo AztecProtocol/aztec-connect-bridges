@@ -190,16 +190,16 @@ contract UniswapBridgeUnitTest is Test {
     function testSwapHighToLowDecimals(uint80 _swapAmount) public {
         // Trying to swap anywhere from 0.1 ETH to 10 thousand ETH
         uint256 swapAmount = bound(_swapAmount, 1e17, 1e22);
+        uint256 tokenInDecimals = 18;
 
         uint256 quote = QUOTER.quoteExactInput(
             abi.encodePacked(WETH, uint24(500), USDC, uint24(3000), GUSD),
             swapAmount
         );
-
         uint256 desiredMinPrice = quote / swapAmount;
 
         uint64 encodedPath = uint64(
-            (bridge.encodeMinPrice(desiredMinPrice) << bridge.SPLIT_PATHS_BIT_LENGTH()) +
+            (bridge.encodeMinPrice(desiredMinPrice, tokenInDecimals) << bridge.SPLIT_PATHS_BIT_LENGTH()) +
                 (bridge.encodeSplitPath(100, 500, USDC, 100, address(0), 3000))
         );
 
@@ -239,12 +239,13 @@ contract UniswapBridgeUnitTest is Test {
     function testSwapLowToHighDecimals(uint48 _swapAmount) public {
         // Trying to swap anywhere from 1 USDC to 10 million USDC
         uint256 swapAmount = bound(_swapAmount, 1e6, 1e13);
+        uint256 tokenInDecimals = 6;
 
         uint256 quote = QUOTER.quoteExactInput(abi.encodePacked(USDC, uint24(500), WETH), swapAmount);
         uint256 desiredMinPrice = quote / swapAmount;
 
         uint64 encodedPath = uint64(
-            (bridge.encodeMinPrice(desiredMinPrice) << bridge.SPLIT_PATHS_BIT_LENGTH()) +
+            (bridge.encodeMinPrice(desiredMinPrice, tokenInDecimals) << bridge.SPLIT_PATHS_BIT_LENGTH()) +
                 (bridge.encodeSplitPath(100, 100, address(0), 100, address(0), 500))
         );
 

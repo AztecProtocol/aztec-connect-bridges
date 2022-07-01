@@ -22,13 +22,13 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
 
     function testEncodeMinPriceForValuesWithoutPrecisionLoss(uint24 _price) public {
         _price = uint24(bound(_price, 0, 2**21 - 1));
-        uint64 encodedMinPrice = uint64(this.encodeMinPrice(_price));
+        uint64 encodedMinPrice = uint64(this.encodeMinPrice(_price, 0));
         uint256 decodedMinPrice = _decodeMinPrice(encodedMinPrice);
         assertEq(decodedMinPrice, _price);
     }
 
     function testEncodeMinPriceDoesntRevertAndDecodesToMax() public {
-        uint256 encoded = this.encodeMinPrice(maxMinPrice);
+        uint256 encoded = this.encodeMinPrice(maxMinPrice, 0);
         assertEq(encoded, maxEncodedMinPrice, "Encoded price doesn't equal max encoded price");
         uint256 decoded = _decodeMinPrice(uint64(encoded));
         assertEq(
@@ -40,7 +40,7 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
 
     function testEncodeMinPriceRevertsForPriceBiggerThanBoundry() public {
         vm.expectRevert(UniswapBridge.Overflow.selector);
-        this.encodeMinPrice(maxMinPrice + 1);
+        this.encodeMinPrice(maxMinPrice + 1, 0);
     }
 
     function testDecodePath() public {

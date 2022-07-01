@@ -31,16 +31,18 @@ import {IWETH} from "../../interfaces/IWETH.sol";
  *          001 is ETH, 010 is USDC, 011 is USDT, 100 is DAI, 101 is WBTC, 110 is FRAX, 111 is BUSD.
  *          000 means the middle token is unused.
  *
- *      To compute a minimum price we can simply divide amountOutMinimum with input amount (swap amount). Minimum price
- *      is expected to be encoded as a floating point number. First 21 bits are used for significand, last 5 bits for
- *      exponent:
- *          |21 bits significand| |5 bits exponent|
+ *      Min price is encoded as a floating point number. First 21 bits are used for significand, last 5 bits for
+ *      exponent: |21 bits significand| |5 bits exponent|
  *      To convert minimum price to this format call encodeMinPrice(...) function on this contract.
- *
- *      Minimum price is converted back to integer using the following formula:
- *          minPriceInt = significand * 10**exponent,
- *      to get amountOutMinimum we simply multiply the value from above with input amount:
- *          amountOutMinimum = minPriceInt * _inputValue
+ *      Minimum amount out is computed with the following formula:
+ *          (inputValue * (significand * 10**exponent)) / (10 ** inputAssetDecimals)
+ *      Here are 2 examples.
+ *      1) If I want to receive 10k Dai for 1 ETH I would set significand to 1 and exponent to 22.
+ *         _inputValue = 1e18, asset = ETH (18 decimals), outputAssetA: Dai (18 decimals)
+ *         (1e18 * (1 * 10**22)) / (10**18) = 1e22 --> 10k Dai
+ *      2) If I want to receive 2000 USDC for 1 ETH, I set significand to 2 and exponent to 9.
+ *         _inputValue = 1e18, asset = ETH (18 decimals), outputAssetA: USDC (6 decimals)
+ *         (1e18 * (2 * 10**9)) / (10**18) = 2e9 --> 2000 USDC
  *
  *      Definition of split path: Split path is a term we use when there are multiple (in this case 2) paths between
  *      which the input amount of tokens is split. As an example we can consider swapping 100 ETH to DAI. In this case
@@ -65,6 +67,9 @@ contract UniswapBridge is BridgeBase {
         bytes splitPath2; // A path encoded in a format used by Uniswap's v3 router
         uint256 minPrice; // Minimum acceptable price
     }
+
+    // @dev Event which is emitted when the output token doesn't implement decimals().
+    event DefaultDecimalsWarning();
 
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
@@ -202,7 +207,18 @@ contract UniswapBridge is BridgeBase {
             );
         }
 
-        if (outputValueA < _inputValue * path.minPrice) revert InsufficientAmountOut();
+        uint256 tokenInDecimals = 18;
+        if (!inputIsEth) {
+            try IERC20Metadata(_inputAssetA.erc20Address).decimals() returns (uint8 decimals) {
+                tokenInDecimals = decimals;
+            } catch (bytes memory) {
+                emit DefaultDecimalsWarning();
+            }
+        }
+        uint256 amountOutMinimum = (_inputValue * path.minPrice) / 10**tokenInDecimals;
+
+        if (outputValueA < amountOutMinimum) revert InsufficientAmountOut();
+
         if (outputIsEth) {
             IWETH(WETH).withdraw(outputValueA);
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
@@ -212,11 +228,17 @@ contract UniswapBridge is BridgeBase {
     /**
      * @notice A function which encodes min price to the format used in this bridge.
      * @param _minPrice - Minimum acceptable price
+     * @param _tokenInDecimals - Amount of decimals of the input token
      * @return encodedMinPrice - Min acceptable encoded in a format used in this bridge.
      * @dev This function is not optimized and is expected to be used on frontend and in tests.
      * @dev Reverts when _minPrice is bigger than max encodeable value.
      */
-    function encodeMinPrice(uint256 _minPrice) external pure returns (uint256 encodedMinPrice) {
+    function encodeMinPrice(uint256 _minPrice, uint256 _tokenInDecimals)
+        external
+        pure
+        returns (uint256 encodedMinPrice)
+    {
+        _minPrice *= 10**_tokenInDecimals;
         // 2097151 = 2**21 --> this number and its multiples of 10 can be encoded without precision loss
         if (_minPrice <= 2097151) {
             // uintValue is smaller than the boundary of significand --> significand = _x, exponent = 0
