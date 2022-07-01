@@ -232,7 +232,7 @@ contract UniswapBridge is BridgeBase {
      * @dev Reverts when _minPrice is bigger than max encodeable value.
      */
     function encodeMinPrice(uint256 _minPrice) external pure returns (uint256 encodedMinPrice) {
-        // 2097151 = 2**21 --> this number and its multiples of 10 can be encoded without precision loss
+        // 2097151 = 2**21 - 1 --> this number and its multiples of 10 can be encoded without precision loss
         if (_minPrice <= 2097151) {
             // uintValue is smaller than the boundary of significand --> significand = _x, exponent = 0
             encodedMinPrice = _minPrice << 5;
@@ -354,7 +354,7 @@ contract UniswapBridge is BridgeBase {
         address _tokenIn,
         uint256 _encodedPath,
         address _tokenOut
-    ) internal view returns (Path memory path) {
+    ) internal pure returns (Path memory path) {
         (uint256 percentage1, bytes memory splitPath1) = _decodeSplitPath(
             _tokenIn,
             _encodedPath & SPLIT_PATH_MASK,
@@ -389,7 +389,7 @@ contract UniswapBridge is BridgeBase {
         address _tokenIn,
         uint256 _encodedSplitPath,
         address _tokenOut
-    ) internal view returns (uint256 percentage, bytes memory splitPath) {
+    ) internal pure returns (uint256 percentage, bytes memory splitPath) {
         uint256 fee3 = _encodedSplitPath & FEE_MASK;
         uint256 middleToken2 = (_encodedSplitPath >> 2) & TOKEN_MASK;
         uint256 fee2 = (_encodedSplitPath >> 5) & FEE_MASK;
