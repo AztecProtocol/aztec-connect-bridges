@@ -64,14 +64,6 @@ No, the bridge is immutable without any admin role.
 
 No, the bridge don't maintain a state. However, it keep an insignificant amount of token (dust) in the bridge to reduce gas-costs of future transactions. By having dust, we don't need to do a `sstore` from `0` to `non-zero`.
 
-## Is the contract upgradeable?
-
-No, the bridge is immutable without any admin role.
-
-## Does the bridge maintain state?
-
-No, the bridge don't maintain a state. However, it keep an insignificant amount of token (dust) in the bridge to reduce gas-costs of future transactions. By having dust, we don't need to do a `sstore` from `0` to `non-zero`.
-
 ## What about withdrawing after the merge and hardfork?
 
 When Lido can support withdraws directly, a new bridge can be made that performs this interaction. Because the bridge don't hold the tokens, the user is free to take his shielded L2 `wstEth` and go to any other bridge to use them to his liking.
