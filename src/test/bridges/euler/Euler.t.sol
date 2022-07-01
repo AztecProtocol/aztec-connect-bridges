@@ -22,3 +22,11 @@ contract EulerTest is BridgeTestBase {
         uint256 cMid;
         uint256 cEnd;
     }
+    
+    EulerLendingBridge internal bridge;
+    uint256 internal id;
+    mapping(address => bool) internal isDeprecated;
+    
+    
+
+    
