@@ -64,10 +64,9 @@ contract EulerTest is BridgeTestBase {
         address[] memory underlying;
         vm.startPrank(address(bridge));
         for (uint256 i; i < underlying.length; ++i) {
-            IEulerEToken _underlying = IEulerEToken(underlying[i]);
-            uint256 allowance = _underlying.allowance(address(this), address(ROLLUP_PROCESSOR));
+            uint256 allowance = underlying.allowance(address(this), address(ROLLUP_PROCESSOR));
             if (allowance < _currentAllowance) {
-                _underlying.approve(address(ROLLUP_PROCESSOR), _currentAllowance - allowance);
+                underlying.approve(address(ROLLUP_PROCESSOR), _currentAllowance - allowance);
             }
             
                 IERC20 eToken = IERC20(_underlying.underlyingToEToken());
