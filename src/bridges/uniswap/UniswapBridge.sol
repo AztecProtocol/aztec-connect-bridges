@@ -237,26 +237,33 @@ contract UniswapBridge is BridgeBase {
     }
 
     /**
-     * @notice A function which encodes min price to the format used in this bridge.
-     * @param _minPrice - Minimum acceptable price multiplied by 10**tokenInDecimals
+     * @notice A function which computes min price and encodes it in the format used in this bridge.
+     * @param _amountIn - Amount of tokenIn to swap
+     * @param _minAmountOut - Amount of tokenOut to receive
+     * @param _tokenInDecimals - Number of decimals of tokenIn
      * @return encodedMinPrice - Min acceptable encoded in a format used in this bridge.
      * @dev This function is not optimized and is expected to be used on frontend and in tests.
-     * @dev Reverts when _minPrice is bigger than max encodeable value.
+     * @dev Reverts when min price is bigger than max encodeable value.
      */
-    function encodeMinPrice(uint256 _minPrice) external pure returns (uint256 encodedMinPrice) {
+    function computeEncodedMinPrice(
+        uint256 _amountIn,
+        uint256 _minAmountOut,
+        uint256 _tokenInDecimals
+    ) external pure returns (uint256 encodedMinPrice) {
+        uint256 minPrice = (_minAmountOut * 10**_tokenInDecimals) / _amountIn;
         // 2097151 = 2**21 - 1 --> this number and its multiples of 10 can be encoded without precision loss
-        if (_minPrice <= 2097151) {
-            // uintValue is smaller than the boundary of significand --> significand = _x, exponent = 0
-            encodedMinPrice = _minPrice << 5;
+        if (minPrice <= 2097151) {
+            // minPrice is smaller than the boundary of significand --> significand = _x, exponent = 0
+            encodedMinPrice = minPrice << 5;
         } else {
             uint256 exponent = 0;
-            while (_minPrice > 2097151) {
-                _minPrice /= 10;
+            while (minPrice > 2097151) {
+                minPrice /= 10;
                 ++exponent;
                 // 31 = 2**5 - 1 --> max exponent
                 if (exponent > 31) revert Overflow();
             }
-            encodedMinPrice = (_minPrice << 5) + exponent;
+            encodedMinPrice = (minPrice << 5) + exponent;
         }
     }
 
