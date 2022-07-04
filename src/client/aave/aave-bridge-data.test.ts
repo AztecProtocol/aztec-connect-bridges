@@ -80,7 +80,7 @@ describe("aave lending bridge data", () => {
     const zkAsset = {
       id: 3n,
       assetType: AztecAssetType.ERC20,
-      erc20Address: EthAddress.randomAddress().toString(),
+      erc20Address: EthAddress.random().toString(),
     };
 
     aaveLendingBridgeContract = {
@@ -110,7 +110,7 @@ describe("aave lending bridge data", () => {
     const zkAsset = {
       id: 3n,
       assetType: AztecAssetType.ERC20,
-      erc20Address: EthAddress.randomAddress().toString(),
+      erc20Address: EthAddress.random().toString(),
     };
 
     aaveLendingBridgeContract = {
@@ -136,7 +136,7 @@ describe("aave lending bridge data", () => {
     const zkAsset = {
       id: 3n,
       assetType: AztecAssetType.ERC20,
-      erc20Address: EthAddress.randomAddress().toString(),
+      erc20Address: EthAddress.random().toString(),
     };
 
     const rate = 3n * 10n ** 25n;
@@ -149,10 +149,10 @@ describe("aave lending bridge data", () => {
       currentVariableBorrowRate: 0,
       currentStableBorrowRate: 0,
       lastUpdateTimestamp: 0,
-      aTokenAddress: EthAddress.randomAddress().toString(),
-      stableDebtTokenAddress: EthAddress.randomAddress().toString(),
-      variableDebtTokenAddress: EthAddress.randomAddress().toString(),
-      interestRateStrategyAddress: EthAddress.randomAddress().toString(),
+      aTokenAddress: EthAddress.random().toString(),
+      stableDebtTokenAddress: EthAddress.random().toString(),
+      variableDebtTokenAddress: EthAddress.random().toString(),
+      interestRateStrategyAddress: EthAddress.random().toString(),
       id: 0,
     };
 
@@ -178,7 +178,7 @@ describe("aave lending bridge data", () => {
     const zkAsset = {
       id: 3n,
       assetType: AztecAssetType.ERC20,
-      erc20Address: EthAddress.randomAddress().toString(),
+      erc20Address: EthAddress.random().toString(),
     };
 
     const rate = 3n * 10n ** 25n;
@@ -190,10 +190,10 @@ describe("aave lending bridge data", () => {
       currentVariableBorrowRate: 0,
       currentStableBorrowRate: 0,
       lastUpdateTimestamp: 0,
-      aTokenAddress: EthAddress.randomAddress().toString(),
-      stableDebtTokenAddress: EthAddress.randomAddress().toString(),
-      variableDebtTokenAddress: EthAddress.randomAddress().toString(),
-      interestRateStrategyAddress: EthAddress.randomAddress().toString(),
+      aTokenAddress: EthAddress.random().toString(),
+      stableDebtTokenAddress: EthAddress.random().toString(),
+      variableDebtTokenAddress: EthAddress.random().toString(),
+      interestRateStrategyAddress: EthAddress.random().toString(),
       id: 0,
     };
 
@@ -218,7 +218,7 @@ describe("aave lending bridge data", () => {
     const zkAsset = {
       id: 3n,
       assetType: AztecAssetType.ERC20,
-      erc20Address: EthAddress.randomAddress().toString(),
+      erc20Address: EthAddress.random().toString(),
     };
 
     aaveLendingBridgeContract = {

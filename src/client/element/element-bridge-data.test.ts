@@ -11,7 +11,6 @@ import {
 } from '../../../typechain-types';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { AztecAssetType } from '../bridge-data';
-import { AddressZero } from '@ethersproject/constants';
 import { EthAddress } from '@aztec/barretenberg/address';
 
 jest.mock('../aztec/provider', () => ({
@@ -263,7 +262,7 @@ describe('element bridge data', () => {
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: AddressZero,
+        erc20Address: EthAddress.ZERO.toString(),
         id: 0n,
       },
       {
@@ -273,7 +272,7 @@ describe('element bridge data', () => {
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: AddressZero,
+        erc20Address: EthAddress.ZERO.toString(),
         id: 0n,
       },
       expiry,
@@ -322,7 +321,7 @@ describe('element bridge data', () => {
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: AddressZero,
+        erc20Address: EthAddress.ZERO.toString(),
         id: 0n,
       },
       {
@@ -332,7 +331,7 @@ describe('element bridge data', () => {
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: AddressZero,
+        erc20Address: EthAddress.ZERO.toString(),
         id: 0n,
       },
       expiry,
