@@ -112,23 +112,30 @@ contract UniswapBridge is BridgeBase {
 
     /**
      * @notice Sets all the important approvals.
-     * @param _tokenIn - Address of input token to later swap in convert(...) function
-     * @param _tokenOut - Address of output token to later return to rollup processor
+     * @param _tokensIn - An array of address of input tokens (tokens to later swap in the convert(...) function)
+     * @param _tokensOut - An array of address of output tokens (tokens to later return to rollup processor)
      * @dev SwapBridge never holds any ERC20 tokens after or before an invocation of any of its functions. For this
      * reason the following is not a security risk and makes convert(...) function more gas efficient.
-     * @dev Note: If any of the input or output tokens is ETH just pass in a 0 address.
      */
-    function preApproveTokenPair(address _tokenIn, address _tokenOut) external {
-        if (_tokenIn != address(0)) {
-            // Input token not ETH
-            if (!IERC20(_tokenIn).approve(address(UNI_ROUTER), type(uint256).max)) {
-                revert ErrorLib.ApproveFailed(_tokenIn);
+    function preApproveTokens(address[] calldata _tokensIn, address[] calldata _tokensOut) external {
+        uint256 tokensLength = _tokensIn.length;
+        for (uint256 i; i < tokensLength; ) {
+            address tokenIn = _tokensIn[i];
+            if (!IERC20(tokenIn).approve(address(UNI_ROUTER), type(uint256).max)) {
+                revert ErrorLib.ApproveFailed(tokenIn);
+            }
+            unchecked {
+                ++i;
             }
         }
-        if (_tokenOut != address(0)) {
-            // Output token not ETH
-            if (!IERC20(_tokenOut).approve(address(ROLLUP_PROCESSOR), type(uint256).max)) {
-                revert ErrorLib.ApproveFailed(_tokenOut);
+        tokensLength = _tokensOut.length;
+        for (uint256 i; i < tokensLength; ) {
+            address tokenOut = _tokensOut[i];
+            if (!IERC20(tokenOut).approve(address(ROLLUP_PROCESSOR), type(uint256).max)) {
+                revert ErrorLib.ApproveFailed(tokenOut);
+            }
+            unchecked {
+                ++i;
             }
         }
     }

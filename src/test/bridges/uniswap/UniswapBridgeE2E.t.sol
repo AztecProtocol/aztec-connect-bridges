@@ -75,7 +75,13 @@ contract UniswapBridgeE2ETest is BridgeTestBase {
         // 000000000000000000000 00000 | 0011110 01 100 10 001 11 | 1000110 01 010 10 001 10
         uint64 encodedPath = 0xF323C6546;
 
-        bridge.preApproveTokenPair(LUSD, LQTY);
+        address[] memory tokensIn = new address[](1);
+        tokensIn[0] = LUSD;
+
+        address[] memory tokensOut = new address[](1);
+        tokensOut[0] = LQTY;
+
+        bridge.preApproveTokens(tokensIn, tokensOut);
 
         // Define input and output assets
         AztecTypes.AztecAsset memory lusdAsset = getRealAztecAsset(LUSD);

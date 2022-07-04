@@ -17,6 +17,7 @@ contract UniswapBridgeUnitTest is Test {
     address public constant LQTY = 0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D;
     address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public constant GUSD = 0x056Fd409E1d7A124BD7017459dFEa2F387b6d5Cd; // Gemini USD, only 2 decimals
+    address public constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
 
     IQuoter public constant QUOTER = IQuoter(0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6);
 
@@ -68,7 +69,13 @@ contract UniswapBridgeUnitTest is Test {
         // 000000000000000000000 00000 | 0011110 01 100 10 001 10 | 1000110 01 010 10 001 10
         uint64 encodedPath = 0xF32346546;
 
-        bridge.preApproveTokenPair(LUSD, LQTY);
+        address[] memory tokensIn = new address[](1);
+        tokensIn[0] = LUSD;
+
+        address[] memory tokensOut = new address[](1);
+        tokensOut[0] = LQTY;
+
+        bridge.preApproveTokens(tokensIn, tokensOut);
 
         // Define input and output assets
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
@@ -112,7 +119,11 @@ contract UniswapBridgeUnitTest is Test {
         // 000000000000000000000 00000 | 1010101 00 000 00 000 10 | 0001111 00 000 00 000 11
         uint64 encodedPath = 0x2A8010F003;
 
-        bridge.preApproveTokenPair(address(0), LQTY);
+        address[] memory tokensIn = new address[](0);
+        address[] memory tokensOut = new address[](1);
+        tokensOut[0] = LQTY;
+
+        bridge.preApproveTokens(tokensIn, tokensOut);
 
         // Define input and output assets
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
@@ -156,7 +167,11 @@ contract UniswapBridgeUnitTest is Test {
         // 000000000000000000000 00000 | 1010101 00 000 00 000 10 | 0001111 00 000 00 000 11
         uint64 encodedPath = 0x2A8010F003;
 
-        bridge.preApproveTokenPair(LQTY, address(0));
+        address[] memory tokensIn = new address[](1);
+        tokensIn[0] = LQTY;
+        address[] memory tokensOut = new address[](0);
+
+        bridge.preApproveTokens(tokensIn, tokensOut);
 
         // Define input and output assets
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
@@ -203,7 +218,13 @@ contract UniswapBridgeUnitTest is Test {
                 (bridge.encodeSplitPath(100, 500, USDC, 100, address(0), 3000))
         );
 
-        bridge.preApproveTokenPair(WETH, GUSD);
+        address[] memory tokensIn = new address[](1);
+        tokensIn[0] = WETH;
+
+        address[] memory tokensOut = new address[](1);
+        tokensOut[0] = GUSD;
+
+        bridge.preApproveTokens(tokensIn, tokensOut);
 
         // Define input and output assets
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
@@ -249,7 +270,13 @@ contract UniswapBridgeUnitTest is Test {
                 (bridge.encodeSplitPath(100, 100, address(0), 100, address(0), 500))
         );
 
-        bridge.preApproveTokenPair(USDC, WETH);
+        address[] memory tokensIn = new address[](1);
+        tokensIn[0] = USDC;
+
+        address[] memory tokensOut = new address[](1);
+        tokensOut[0] = WETH;
+
+        bridge.preApproveTokens(tokensIn, tokensOut);
 
         // Define input and output assets
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
@@ -293,7 +320,10 @@ contract UniswapBridgeUnitTest is Test {
         // 000000000000000000001 10111 | 0000000 00 000 00 000 00 | 1100100 01 010 00 000 00
         uint64 encodedPath = 0xDC000064500;
 
-        bridge.preApproveTokenPair(address(0), DAI);
+        address[] memory tokensIn = new address[](0);
+        address[] memory tokensOut = new address[](1);
+        tokensOut[0] = DAI;
+        bridge.preApproveTokens(tokensIn, tokensOut);
 
         // Define input and output assets
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({

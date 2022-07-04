@@ -20,6 +20,12 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
 
     function setUp() public {}
 
+    function testPreApproveTokensEmptyTokenArrays() public {
+        address[] memory tokensIn = new address[](0);
+        address[] memory tokensOut = new address[](0);
+        this.preApproveTokens(tokensIn, tokensOut);
+    }
+
     function testEncodeMinPriceForValuesWithoutPrecisionLoss(uint24 _price) public {
         _price = uint24(bound(_price, 0, 2**21 - 1));
         uint256 encodedMinPrice = this.encodeMinPrice(_price);
