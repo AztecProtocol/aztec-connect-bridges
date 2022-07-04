@@ -4,6 +4,7 @@ pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
@@ -51,6 +52,8 @@ import {IWETH} from "../../interfaces/IWETH.sol";
  *      example consume 80% of input (80 ETH) and the second split path the remaining 20% (20 ETH).
  */
 contract UniswapBridge is BridgeBase {
+    using SafeERC20 for IERC20;
+
     error InvalidFeeTierEncoding();
     error InvalidFeeTier();
     error InvalidTokenEncoding();
@@ -121,9 +124,10 @@ contract UniswapBridge is BridgeBase {
         uint256 tokensLength = _tokensIn.length;
         for (uint256 i; i < tokensLength; ) {
             address tokenIn = _tokensIn[i];
-            if (!IERC20(tokenIn).approve(address(UNI_ROUTER), type(uint256).max)) {
-                revert ErrorLib.ApproveFailed(tokenIn);
-            }
+            // Using safeApprove(...) instead of approve(...) and first setting the allowance to 0 because underlying
+            // can be Tether
+            IERC20(tokenIn).safeApprove(address(UNI_ROUTER), 0);
+            IERC20(tokenIn).safeApprove(address(UNI_ROUTER), type(uint256).max);
             unchecked {
                 ++i;
             }
@@ -131,9 +135,10 @@ contract UniswapBridge is BridgeBase {
         tokensLength = _tokensOut.length;
         for (uint256 i; i < tokensLength; ) {
             address tokenOut = _tokensOut[i];
-            if (!IERC20(tokenOut).approve(address(ROLLUP_PROCESSOR), type(uint256).max)) {
-                revert ErrorLib.ApproveFailed(tokenOut);
-            }
+            // Using safeApprove(...) instead of approve(...) and first setting the allowance to 0 because underlying
+            // can be Tether
+            IERC20(tokenOut).safeApprove(address(ROLLUP_PROCESSOR), 0);
+            IERC20(tokenOut).safeApprove(address(ROLLUP_PROCESSOR), type(uint256).max);
             unchecked {
                 ++i;
             }
