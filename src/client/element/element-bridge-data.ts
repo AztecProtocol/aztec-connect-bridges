@@ -119,9 +119,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   }
 
   private async getCurrentBlock() {
-    const currentBlockNumber = await this.elementBridgeContract.provider.getBlockNumber();
-    const currentBlock = await this.elementBridgeContract.provider.getBlock(currentBlockNumber);
-    return currentBlock;
+    return this.elementBridgeContract.provider.getBlock("latest");
   }
 
   private async findDefiEventForNonce(interactionNonce: bigint) {
