@@ -11,7 +11,6 @@ import {
 } from '../../../typechain-types';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { AztecAssetType } from '../bridge-data';
-import { AddressZero } from '@ethersproject/constants';
 import { EthAddress } from '@aztec/barretenberg/address';
 
 jest.mock('../aztec/provider', () => ({
@@ -148,14 +147,16 @@ describe('element bridge data', () => {
       finalised: false,
       failed: false,
     } as Interaction;
+    const totalInput = defiEvents.find(x => x.nonce === 56)!.totalInputValue;
+    const userShareDivisor = 2n;
     const defiEvent = getDefiEvent(56)!;
-    const [daiValue] = await elementBridgeData.getInteractionPresentValue(56n);
+    const [daiValue] = await elementBridgeData.getInteractionPresentValue(56n, totalInput / userShareDivisor);
     const delta = outputValue - defiEvent.totalInputValue;
-    const scalingFactor = elementBridgeData.scalingFactor;
-    const ratio = ((BigInt(now) - startDate) * scalingFactor) / (expiration1 - startDate);
-    const out = defiEvent.totalInputValue + (delta * ratio) / scalingFactor;
+    const timeElapsed = BigInt(now) - startDate;
+    const fullTime = expiration1 - startDate;
+    const out = defiEvent.totalInputValue + (delta * timeElapsed) / fullTime;
 
-    expect(daiValue.amount).toStrictEqual(out);
+    expect(daiValue.amount).toStrictEqual(out / userShareDivisor);
     expect(Number(daiValue.assetId)).toStrictEqual(bridge1.inputAssetIdA);
   });
 
@@ -171,14 +172,18 @@ describe('element bridge data', () => {
         finalised: false,
         failed: false,
       } as Interaction;
+      const totalInput = defiEvents.find(x => x.nonce === nonce)!.totalInputValue;
+      const userShareDivisor = 2n;
 
-      const [daiValue] = await elementBridgeData.getInteractionPresentValue(BigInt(nonce));
+      const [daiValue] = await elementBridgeData.getInteractionPresentValue(
+        BigInt(nonce),
+        totalInput / userShareDivisor,
+      );
       const delta = interactions[nonce].quantityPT.toBigInt() - defiEvent.totalInputValue;
-      const scalingFactor = elementBridgeData.scalingFactor;
-      const ratio = ((BigInt(now) - startDate) * scalingFactor) / (BigInt(bridgeId.auxData) - startDate);
-      const out = defiEvent.totalInputValue + (delta * ratio) / scalingFactor;
-
-      expect(daiValue.amount).toStrictEqual(out);
+      const timeElapsed = BigInt(now) - startDate;
+      const fullTime = BigInt(bridgeId.auxData) - startDate;
+      const out = defiEvent.totalInputValue + (delta * timeElapsed) / fullTime;
+      expect(daiValue.amount).toStrictEqual(out / userShareDivisor);
       expect(Number(daiValue.assetId)).toStrictEqual(bridgeId.inputAssetIdA);
     };
     await testInteraction(56);
@@ -193,7 +198,7 @@ describe('element bridge data', () => {
 
   it('requesting the present value of an unknown interaction should return empty values', async () => {
     const elementBridgeData = createElementBridgeData();
-    const values = await elementBridgeData.getInteractionPresentValue(57n);
+    const values = await elementBridgeData.getInteractionPresentValue(57n, 0n);
     expect(values).toStrictEqual([]);
   });
 
@@ -257,7 +262,7 @@ describe('element bridge data', () => {
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: AddressZero,
+        erc20Address: EthAddress.ZERO.toString(),
         id: 0n,
       },
       {
@@ -267,7 +272,7 @@ describe('element bridge data', () => {
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: AddressZero,
+        erc20Address: EthAddress.ZERO.toString(),
         id: 0n,
       },
       expiry,
@@ -316,7 +321,7 @@ describe('element bridge data', () => {
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: AddressZero,
+        erc20Address: EthAddress.ZERO.toString(),
         id: 0n,
       },
       {
@@ -326,7 +331,7 @@ describe('element bridge data', () => {
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: AddressZero,
+        erc20Address: EthAddress.ZERO.toString(),
         id: 0n,
       },
       expiry,

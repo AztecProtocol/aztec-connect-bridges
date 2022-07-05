@@ -1,4 +1,3 @@
-import { AddressZero } from '@ethersproject/constants';
 import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
 import {
   ElementBridge,
@@ -54,7 +53,7 @@ function divide(a: bigint, b: bigint, precision: bigint) {
   return (a * precision) / b;
 }
 
-const decodeEvent = async (event: AsyncDefiBridgeProcessedEvent) => {
+const decodeEvent = async (event: AsyncDefiBridgeProcessedEvent): Promise<EventBlock> => {
   const {
     args: [bridgeId, nonce, totalInputValue],
   } = event;
@@ -120,9 +119,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   }
 
   private async getCurrentBlock() {
-    const currentBlockNumber = await this.elementBridgeContract.provider.getBlockNumber();
-    const currentBlock = await this.elementBridgeContract.provider.getBlock(currentBlockNumber);
-    return currentBlock;
+    return this.elementBridgeContract.provider.getBlock("latest");
   }
 
   private async findDefiEventForNonce(interactionNonce: bigint) {
@@ -181,7 +178,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   // @dev which define how much a given interaction is worth in terms of Aztec asset ids.
   // @param bigint interactionNonce the interaction nonce to return the value for
 
-  async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
+  async getInteractionPresentValue(interactionNonce: bigint, inputValue: bigint): Promise<AssetValue[]> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
     if (interaction === undefined) {
       return [];
@@ -201,13 +198,14 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     const totalInterest = endValue.toBigInt() - defiEvent.totalInputValue;
     const elapsedTime = BigInt(now - defiEvent.timestamp);
     const totalTime = exitTimestamp.toBigInt() - BigInt(defiEvent.timestamp);
-    const timeRatio = divide(elapsedTime, totalTime, this.scalingFactor);
-    const accruedInterst = (totalInterest * timeRatio) / this.scalingFactor;
+    const accruedInterest = (totalInterest * elapsedTime) / totalTime;
+    const totalPresentValue = defiEvent.totalInputValue + accruedInterest;
+    const userPresentValue = (totalPresentValue * inputValue) / defiEvent.totalInputValue;
 
     return [
       {
         assetId: BigInt(BridgeId.fromBigInt(defiEvent.bridgeId).inputAssetIdA),
-        amount: defiEvent.totalInputValue + accruedInterst,
+        amount: userPresentValue,
       },
     ];
   }
@@ -286,8 +284,8 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     const trancheAddress = pool.trancheAddress;
 
     const funds: FundManagement = {
-      sender: AddressZero,
-      recipient: AddressZero,
+      sender: EthAddress.ZERO.toString(),
+      recipient: EthAddress.ZERO.toString(),
       fromInternalBalance: false,
       toInternalBalance: false,
     };

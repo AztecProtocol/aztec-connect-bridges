@@ -7,7 +7,7 @@ import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+
 import {AztecTypes} from "../../aztec/AztecTypes.sol";
 import {IERC4626} from "./Interfaces/IERC4626.sol";
 
@@ -19,7 +19,7 @@ import {IERC4626} from "./Interfaces/IERC4626.sol";
  *
  
  */
-contract VaultBridge is IDefiBridge, Ownable {
+contract VaultBridge is IDefiBridge {
     using SafeMath for uint256;
     error Unauthorized();
     error InvalidTokenPair();
@@ -110,11 +110,7 @@ contract VaultBridge is IDefiBridge, Ownable {
         address token,
         uint256 amount
     ) internal returns (uint256) {
-        IERC20 depositToken = IERC20(token);
-
-        uint256 shares = IERC4626(vault).deposit(amount, address(this));
-
-        return shares;
+        return IERC4626(vault).deposit(amount, address(this));
     }
 
     /**
@@ -131,9 +127,7 @@ contract VaultBridge is IDefiBridge, Ownable {
         address token,
         uint256 amount
     ) internal returns (uint256) {
-        uint256 assets = IERC4626(vault).redeem(amount, address(this), address(this));
-
-        return assets;
+        return IERC4626(vault).redeem(amount, address(this), address(this));
     }
 
     /**

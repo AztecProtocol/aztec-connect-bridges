@@ -4,18 +4,17 @@ pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
-
-import {IStabilityPool} from "./interfaces/IStabilityPool.sol";
-import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
+import {BridgeBase} from "../base/BridgeBase.sol";
+import {ErrorLib} from "../base/ErrorLib.sol";
+import {IStabilityPool} from "../../interfaces/liquity/IStabilityPool.sol";
+import {ISwapRouter} from "../../interfaces/uniswapv3/ISwapRouter.sol";
 
 /**
  * @title Aztec Connect Bridge for Liquity's StabilityPool.sol
  * @author Jan Benes (@benesjan on Github and Telegram)
  * @notice You can use this contract to deposit and withdraw LUSD to and from Liquity's StabilityPool.sol.
- * @dev Implementation of the IDefiBridge interface for StabilityPool.sol.
  *
  * The contract inherits from OpenZeppelin's implementation of ERC20 token because token balances are used to track
  * the depositor's ownership of the assets controlled by the bridge contract. The token is called StabilityPoolBridge
@@ -31,11 +30,8 @@ import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
  *
  * Note: StabilityPoolBridge.sol is very similar to StakingBridge.sol.
  */
-contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB") {
-    error ApproveFailed(address token);
-    error InvalidCaller();
-    error IncorrectInput();
-    error AsyncModeDisabled();
+contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") {
+    error SwapFailed();
 
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -49,7 +45,11 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
     // Optimization based on EIP-1087
     uint256 internal constant DUST = 1;
 
-    address public immutable ROLLUP_PROCESSOR;
+    // Smallest amounts of rewards to swap (gas optimizations)
+    // Note: these amounts have to be higher than DUST
+    uint256 private constant MIN_LQTY_SWAP_AMT = 1e20; // 100 LQTY tokens
+    uint256 private constant MIN_ETH_SWAP_AMT = 1e17; // 0.1 ETH
+
     address public immutable FRONTEND_TAG; // see StabilityPool.sol for details
 
     /**
@@ -59,8 +59,7 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
      * @dev Frontend tag is set here because there can be only 1 frontend tag per msg.sender in the StabilityPool.sol.
      * See https://docs.liquity.org/faq/frontend-operators#how-do-frontend-tags-work[Liquity docs] for more details.
      */
-    constructor(address _rollupProcessor, address _frontEndTag) {
-        ROLLUP_PROCESSOR = _rollupProcessor;
+    constructor(address _rollupProcessor, address _frontEndTag) BridgeBase(_rollupProcessor) {
         FRONTEND_TAG = _frontEndTag;
         _mint(address(this), DUST);
     }
@@ -72,12 +71,12 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
      * efficient.
      */
     function setApprovals() external {
-        if (!this.approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(address(this));
-        if (!IERC20(LUSD).approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(LUSD);
-        if (!IERC20(LUSD).approve(address(STABILITY_POOL), type(uint256).max)) revert ApproveFailed(LUSD);
-        if (!IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(WETH);
-        if (!IERC20(LQTY).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(LQTY);
-        if (!IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(USDC);
+        if (!this.approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ErrorLib.ApproveFailed(address(this));
+        if (!IERC20(LUSD).approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ErrorLib.ApproveFailed(LUSD);
+        if (!IERC20(LUSD).approve(address(STABILITY_POOL), type(uint256).max)) revert ErrorLib.ApproveFailed(LUSD);
+        if (!IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max)) revert ErrorLib.ApproveFailed(WETH);
+        if (!IERC20(LQTY).approve(address(UNI_ROUTER), type(uint256).max)) revert ErrorLib.ApproveFailed(LQTY);
+        if (!IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max)) revert ErrorLib.ApproveFailed(USDC);
     }
 
     /**
@@ -94,8 +93,16 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
      * @param _inputAssetA - LUSD (Deposit) or SPB (Withdrawal)
      * @param _outputAssetA - SPB (Deposit) or LUSD (Withdrawal)
      * @param _inputValue - the amount of LUSD to deposit or the amount of SPB to burn and exchange for LUSD
+     * @param _auxData - when set to 1 during withdrawals "urgent withdrawal mode" is set (see note bellow)
      * @return outputValueA - the amount of SPB (Deposit) or LUSD (Withdrawal) minted/transferred to
      * the RollupProcessor.sol
+     *
+     * @dev Note: When swapping rewards fails during withdrawals and "urgent withdrawal mode" is set, the method
+     *            doesn't revert and the withdrawer gives up on their claim on the rewards. This mode is present
+     *            in order to avoid a scenario when issues with Uniswap pools (lacking liquidity etc.) prevents users
+     *            from withdrawing their funds. This mode can't be set upon deposit because it would allow depositors
+     *            to steal value from previous bridge depositors. Also the deposit flow being bricked is much less
+     *            severe than for withdrawal flow.
      */
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
@@ -104,27 +111,26 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
         AztecTypes.AztecAsset calldata,
         uint256 _inputValue,
         uint256,
-        uint64,
+        uint64 _auxData,
         address
     )
         external
         payable
-        override(IDefiBridge)
+        override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
             uint256,
             bool
         )
     {
-        if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
-
         if (_inputAssetA.erc20Address == LUSD && _outputAssetA.erc20Address == address(this)) {
             // Deposit
             // Provides LUSD to the pool and claim rewards.
             STABILITY_POOL.provideToSP(_inputValue, FRONTEND_TAG);
-            _swapRewardsToLUSDAndDeposit();
+            _swapRewardsToLUSDAndDeposit(false);
             uint256 totalLUSDOwnedBeforeDeposit = STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) - _inputValue;
-            uint256 totalSupply = this.totalSupply();
+            uint256 totalSupply = totalSupply();
             // outputValueA = how much SPB should be minted
             if (totalSupply == 0) {
                 // When the totalSupply is 0, I set the SPB/LUSD ratio to be 1.
@@ -139,37 +145,16 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
             // Withdrawal
             // Claim rewards and swap them to LUSD.
             STABILITY_POOL.withdrawFromSP(0);
-            _swapRewardsToLUSDAndDeposit();
+            _swapRewardsToLUSDAndDeposit(_auxData == 1);
 
-            // stabilityPool.getCompoundedLUSDDeposit(address(this)) / this.totalSupply() = how much LUSD is one SPB
+            // stabilityPool.getCompoundedLUSDDeposit(address(this)) / totalSupply() = how much LUSD is one SPB
             // outputValueA = amount of LUSD to be withdrawn and sent to RollupProcessor.sol
-            outputValueA = (STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) * _inputValue) / this.totalSupply();
+            outputValueA = (STABILITY_POOL.getCompoundedLUSDDeposit(address(this)) * _inputValue) / totalSupply();
             STABILITY_POOL.withdrawFromSP(outputValueA);
             _burn(address(this), _inputValue);
         } else {
-            revert IncorrectInput();
+            revert ErrorLib.InvalidInput();
         }
-    }
-
-    // @notice This function always reverts because this contract does not implement async flow.
-    function finalise(
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        uint256,
-        uint64
-    )
-        external
-        payable
-        override(IDefiBridge)
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        revert AsyncModeDisabled();
     }
 
     /**
@@ -181,26 +166,32 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
 
     /*
      * @notice Swaps any ETH and LQTY currently held by the contract to LUSD and deposits LUSD to the StabilityPool.sol.
-     *
+     * @param _isUrgentWithdrawalMode When set to true the function doesn't revert when the swaps fail.
      * @dev Note: The best route for LQTY -> LUSD is consistently LQTY -> WETH -> USDC -> LUSD. Since I want to swap
      * liquidations rewards (ETH) to LUSD as well, I will first swap LQTY to WETH and then swap it all through USDC to
      * LUSD.
      */
-    function _swapRewardsToLUSDAndDeposit() internal {
+    function _swapRewardsToLUSDAndDeposit(bool _isUrgentWithdrawalMode) internal {
         uint256 lqtyBalance = IERC20(LQTY).balanceOf(address(this));
-        if (lqtyBalance > DUST) {
-            UNI_ROUTER.exactInputSingle(
-                ISwapRouter.ExactInputSingleParams(
-                    LQTY,
-                    WETH,
-                    3000,
-                    address(this),
-                    block.timestamp,
-                    lqtyBalance - DUST,
-                    0,
-                    0
+        if (lqtyBalance > MIN_LQTY_SWAP_AMT) {
+            try
+                UNI_ROUTER.exactInputSingle(
+                    ISwapRouter.ExactInputSingleParams(
+                        LQTY,
+                        WETH,
+                        3000,
+                        address(this),
+                        block.timestamp,
+                        lqtyBalance - DUST,
+                        0,
+                        0
+                    )
                 )
-            );
+            {} catch (bytes memory) {
+                if (!_isUrgentWithdrawalMode) {
+                    revert SwapFailed();
+                }
+            }
         }
 
         uint256 ethBalance = address(this).balance;
@@ -210,19 +201,25 @@ contract StabilityPoolBridge is IDefiBridge, ERC20("StabilityPoolBridge", "SPB")
         }
 
         uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
-        if (wethBalance > DUST) {
-            uint256 lusdBalance = UNI_ROUTER.exactInput(
-                ISwapRouter.ExactInputParams({
-                    path: abi.encodePacked(WETH, uint24(500), USDC, uint24(500), LUSD),
-                    recipient: address(this),
-                    deadline: block.timestamp,
-                    amountIn: wethBalance - DUST,
-                    amountOutMinimum: 0
-                })
-            );
-
-            if (lusdBalance != 0) {
-                STABILITY_POOL.provideToSP(lusdBalance, FRONTEND_TAG);
+        if (wethBalance > MIN_ETH_SWAP_AMT) {
+            try
+                UNI_ROUTER.exactInput(
+                    ISwapRouter.ExactInputParams({
+                        path: abi.encodePacked(WETH, uint24(500), USDC, uint24(500), LUSD),
+                        recipient: address(this),
+                        deadline: block.timestamp,
+                        amountIn: wethBalance - DUST,
+                        amountOutMinimum: 0
+                    })
+                )
+            returns (uint256 lusdBalance) {
+                if (lusdBalance != 0) {
+                    STABILITY_POOL.provideToSP(lusdBalance, FRONTEND_TAG);
+                }
+            } catch (bytes memory) {
+                if (!_isUrgentWithdrawalMode) {
+                    revert SwapFailed();
+                }
             }
         }
     }

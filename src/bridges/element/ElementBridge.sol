@@ -4,26 +4,27 @@ pragma solidity >=0.6.10 <=0.8.10;
 pragma experimental ABIEncoderV2;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IVault, IAsset, PoolSpecialization} from "./interfaces/IVault.sol";
-import {IPool} from "./interfaces/IPool.sol";
-import {ITranche} from "./interfaces/ITranche.sol";
-import {IDeploymentValidator} from "./interfaces/IDeploymentValidator.sol";
+import {IVault, IAsset, PoolSpecialization} from "../../interfaces/element/IVault.sol";
+import {IPool} from "../../interfaces/element/IPool.sol";
+import {ITranche} from "../../interfaces/element/ITranche.sol";
+import {IDeploymentValidator} from "../../interfaces/element/IDeploymentValidator.sol";
 import {IERC20Permit, IERC20} from "../../interfaces/IERC20Permit.sol";
-import {IWrappedPosition} from "./interfaces/IWrappedPosition.sol";
-import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+import {IWrappedPosition} from "../../interfaces/element/IWrappedPosition.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {MinHeap} from "./MinHeap.sol";
-import {FullMath} from "../uniswapv3/libraries/FullMath.sol";
+import {FullMath} from "../../libraries/uniswapv3/FullMath.sol";
 
-import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
+import {BridgeBase} from "../base/BridgeBase.sol";
+import {ErrorLib} from "../base/ErrorLib.sol";
 
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 
 /**
  * @title Element Bridge
  * @dev Smart contract responsible for depositing, managing and redeeming Defi interactions with the Element protocol
  */
 
-contract ElementBridge is IDefiBridge {
+contract ElementBridge is BridgeBase {
     using MinHeap for MinHeap.MinHeapData;
 
     /*----------------------------------------
@@ -32,14 +33,12 @@ contract ElementBridge is IDefiBridge {
     error INVALID_TRANCHE();
     error INVALID_WRAPPED_POSITION();
     error INVALID_POOL();
-    error INVALID_CALLER();
     error ASSET_IDS_NOT_EQUAL();
     error ASSET_NOT_ERC20();
     error INPUT_ASSETB_NOT_UNUSED();
     error OUTPUT_ASSETB_NOT_UNUSED();
     error INTERACTION_ALREADY_EXISTS();
     error POOL_NOT_FOUND();
-    error UNKNOWN_NONCE();
     error BRIDGE_NOT_READY();
     error ALREADY_FINALISED();
     error TRANCHE_POSITION_MISMATCH();
@@ -138,9 +137,6 @@ contract ElementBridge is IDefiBridge {
     // mapping containing the block number in which a tranche was configured
     mapping(address => uint256) private trancheDeploymentBlockNumbers;
 
-    // the aztec rollup processor contract
-    address public immutable rollupProcessor;
-
     // the balancer contract
     address private immutable balancerAddress;
 
@@ -184,8 +180,7 @@ contract ElementBridge is IDefiBridge {
         bytes32 _trancheBytecodeHash,
         address _balancerVaultAddress,
         address _elementDeploymentValidatorAddress
-    ) {
-        rollupProcessor = _rollupProcessor;
+    ) BridgeBase(_rollupProcessor) {
         trancheFactory = _trancheFactory;
         trancheBytecodeHash = _trancheBytecodeHash;
         balancerAddress = _balancerVaultAddress;
@@ -376,7 +371,7 @@ contract ElementBridge is IDefiBridge {
     function getTrancheDeploymentBlockNumber(uint256 interactionNonce) public view returns (uint256 blockNumber) {
         Interaction storage interaction = interactions[interactionNonce];
         if (interaction.expiry == 0) {
-            revert UNKNOWN_NONCE();
+            revert ErrorLib.InvalidNonce();
         }
         blockNumber = trancheDeploymentBlockNumbers[interaction.trancheAddress];
     }
@@ -439,7 +434,8 @@ contract ElementBridge is IDefiBridge {
     )
         external
         payable
-        override
+        override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
             uint256 outputValueB,
@@ -448,10 +444,6 @@ contract ElementBridge is IDefiBridge {
     {
         int64 gasAtStart = int64(int256(gasleft()));
         int64 gasUsed = 0;
-        // ### INITIALIZATION AND SANITY CHECKS
-        if (msg.sender != rollupProcessor) {
-            revert INVALID_CALLER();
-        }
         if (inputAssetA.id != outputAssetA.id) {
             revert ASSET_IDS_NOT_EQUAL();
         }
@@ -599,7 +591,7 @@ contract ElementBridge is IDefiBridge {
             }
             uint256 gasForFinalise = gasRemaining - ourGasFloor;
             // make the call to finalise the interaction with the gas limit
-            try IRollupProcessor(rollupProcessor).processAsyncDefiInteraction{gas: gasForFinalise}(nonce) returns (
+            try IRollupProcessor(ROLLUP_PROCESSOR).processAsyncDefiInteraction{gas: gasForFinalise}(nonce) returns (
                 bool interactionCompleted
             ) {
                 // no need to do anything here, we just need to know that the call didn't throw
@@ -624,7 +616,8 @@ contract ElementBridge is IDefiBridge {
     )
         external
         payable
-        override
+        override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
             uint256 outputValueB,
@@ -633,13 +626,10 @@ contract ElementBridge is IDefiBridge {
     {
         int64 gasAtStart = int64(int256(gasleft()));
         int64 gasUsed = 0;
-        if (msg.sender != rollupProcessor) {
-            revert INVALID_CALLER();
-        }
         // retrieve the interaction and verify it's ready for finalising
         Interaction storage interaction = interactions[interactionNonce];
         if (interaction.expiry == 0) {
-            revert UNKNOWN_NONCE();
+            revert ErrorLib.InvalidNonce();
         }
         if (interaction.expiry >= block.timestamp) {
             revert BRIDGE_NOT_READY();
@@ -720,7 +710,7 @@ contract ElementBridge is IDefiBridge {
         }
 
         // approve the transfer of funds back to the rollup contract
-        ERC20(outputAssetA.erc20Address).approve(rollupProcessor, amountToAllocate);
+        ERC20(outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, amountToAllocate);
         interaction.finalised = true;
         popInteractionFromNonceMapping(interaction, interactionNonce);
         outputValueA = amountToAllocate;

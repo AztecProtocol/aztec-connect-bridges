@@ -4,18 +4,17 @@ pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
-
-import {ILQTYStaking} from "./interfaces/ILQTYStaking.sol";
-import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
+import {BridgeBase} from "../base/BridgeBase.sol";
+import {ErrorLib} from "../base/ErrorLib.sol";
+import {ILQTYStaking} from "../../interfaces/liquity/ILQTYStaking.sol";
+import {ISwapRouter} from "../../interfaces/uniswapv3/ISwapRouter.sol";
 
 /**
  * @title Aztec Connect Bridge for Liquity's LQTYStaking.sol
  * @author Jan Benes (@benesjan on Github and Telegram)
- * @notice You can use this contract to stake and unstake LQRTY to and from LQTY staking contract.
- * @dev Implementation of the IDefiBridge interface for LQTYStaking.sol from Liquity protocol.
+ * @notice You can use this contract to stake and unstake LQTY to and from LQTY staking contract.
  *
  * The contract inherits from OpenZeppelin's implementation of ERC20 token because token balances are used to track
  * the depositor's ownership of the assets controlled by the bridge contract. The token is called LQTYStaking and
@@ -29,11 +28,8 @@ import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
  *
  * Note: StakingBridge.sol is very similar to StabilityPoolBridge.sol.
  */
-contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
-    error ApproveFailed(address token);
-    error InvalidCaller();
-    error IncorrectInput();
-    error AsyncModeDisabled();
+contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
+    error SwapFailed();
 
     address public constant LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -47,14 +43,16 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
     // Optimization based on EIP-1087
     uint256 internal constant DUST = 1;
 
-    address public immutable ROLLUP_PROCESSOR;
+    // Smallest amounts of rewards to swap (gas optimizations)
+    // Note: these amounts have to be higher than DUST
+    uint256 private constant MIN_LUSD_SWAP_AMT = 1e20; // 100 LUSD
+    uint256 private constant MIN_ETH_SWAP_AMT = 1e17; // 0.1 ETH
 
     /**
      * @notice Set the address of RollupProcessor.sol.
      * @param _rollupProcessor Address of the RollupProcessor.sol
      */
-    constructor(address _rollupProcessor) {
-        ROLLUP_PROCESSOR = _rollupProcessor;
+    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {
         _mint(address(this), DUST);
     }
 
@@ -68,12 +66,12 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
      * For this reason the following is not a security risk and makes the convert() function more gas efficient.
      */
     function setApprovals() external {
-        if (!this.approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(address(this));
-        if (!IERC20(LQTY).approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ApproveFailed(LQTY);
-        if (!IERC20(LQTY).approve(address(STAKING_CONTRACT), type(uint256).max)) revert ApproveFailed(LQTY);
-        if (!IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(WETH);
-        if (!IERC20(LUSD).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(LUSD);
-        if (!IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max)) revert ApproveFailed(USDC);
+        if (!this.approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ErrorLib.ApproveFailed(address(this));
+        if (!IERC20(LQTY).approve(ROLLUP_PROCESSOR, type(uint256).max)) revert ErrorLib.ApproveFailed(LQTY);
+        if (!IERC20(LQTY).approve(address(STAKING_CONTRACT), type(uint256).max)) revert ErrorLib.ApproveFailed(LQTY);
+        if (!IERC20(WETH).approve(address(UNI_ROUTER), type(uint256).max)) revert ErrorLib.ApproveFailed(WETH);
+        if (!IERC20(LUSD).approve(address(UNI_ROUTER), type(uint256).max)) revert ErrorLib.ApproveFailed(LUSD);
+        if (!IERC20(USDC).approve(address(UNI_ROUTER), type(uint256).max)) revert ErrorLib.ApproveFailed(USDC);
     }
 
     /**
@@ -86,8 +84,16 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
      * @param _inputAssetA - LQTY (Staking) or SB (Unstaking)
      * @param _outputAssetA - SB (Staking) or LQTY (Unstaking)
      * @param _inputValue - the amount of LQTY to stake or the amount of SB to burn and exchange for LQTY
+     * @param _auxData - when set to 1 during withdrawals "urgent withdrawal mode" is set (see note bellow)
      * @return outputValueA - the amount of SB (Staking) or LQTY (Unstaking) minted/transferred to
      * the RollupProcessor.sol
+     *
+     * @dev Note: When swapping rewards fails during withdrawals and "urgent withdrawal mode" is set, the method
+     *            doesn't revert and the withdrawer gives up on their claim on the rewards. This mode is present
+     *            in order to avoid a scenario when issues with Uniswap pools (lacking liquidity etc.) prevents users
+     *            from withdrawing their funds. This mode can't be set upon deposit because it would allow depositors
+     *            to steal value from previous bridge depositors. Also the deposit flow being bricked is much less
+     *            severe than for withdrawal flow.
      */
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
@@ -96,26 +102,25 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
         AztecTypes.AztecAsset calldata,
         uint256 _inputValue,
         uint256,
-        uint64,
+        uint64 _auxData,
         address
     )
         external
         payable
-        override(IDefiBridge)
+        override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
             uint256,
             bool
         )
     {
-        if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
-
         if (_inputAssetA.erc20Address == LQTY && _outputAssetA.erc20Address == address(this)) {
             // Deposit
             // Stake and claim rewards
             STAKING_CONTRACT.stake(_inputValue);
-            _swapRewardsToLQTYAndStake();
-            uint256 totalSupply = this.totalSupply();
+            _swapRewardsToLQTYAndStake(false);
+            uint256 totalSupply = totalSupply();
             // outputValueA = how much SB should be minted
             if (totalSupply == 0) {
                 // When the totalSupply is 0, I set the SB/LQTY ratio to be 1.
@@ -131,37 +136,16 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
             // Withdrawal
             // Claim rewards
             STAKING_CONTRACT.unstake(0);
-            _swapRewardsToLQTYAndStake();
+            _swapRewardsToLQTYAndStake(_auxData == 1);
 
-            // STAKING_CONTRACT.stakes(address(this)) / this.totalSupply() = how much LQTY is one SB
+            // STAKING_CONTRACT.stakes(address(this)) / totalSupply() = how much LQTY is one SB
             // outputValueA = amount of LQTY to be withdrawn and sent to rollupProcessor
-            outputValueA = (STAKING_CONTRACT.stakes(address(this)) * _inputValue) / this.totalSupply();
+            outputValueA = (STAKING_CONTRACT.stakes(address(this)) * _inputValue) / totalSupply();
             STAKING_CONTRACT.unstake(outputValueA);
             _burn(address(this), _inputValue);
         } else {
-            revert IncorrectInput();
+            revert ErrorLib.InvalidInput();
         }
-    }
-
-    // @notice This function always reverts because this contract does not implement async flow.
-    function finalise(
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        AztecTypes.AztecAsset calldata,
-        uint256,
-        uint64
-    )
-        external
-        payable
-        override(IDefiBridge)
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        revert AsyncModeDisabled();
     }
 
     /**
@@ -173,23 +157,29 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
 
     /*
      * @notice Swaps any ETH and LUSD currently held by the contract to LQTY and stakes LQTY in LQTYStaking.sol.
-     *
+     * @param _isUrgentWithdrawalMode When set to true the function doesn't revert when the swaps fail.
      * @dev Note: The best route for LUSD -> LQTY is consistently LUSD -> USDC -> WETH -> LQTY. Since I want to swap
      * liquidation rewards (ETH) to LQTY as well, I will first swap LUSD to WETH through USDC and then swap it all
      * to LQTY
      */
-    function _swapRewardsToLQTYAndStake() internal {
+    function _swapRewardsToLQTYAndStake(bool _isUrgentWithdrawalMode) internal {
         uint256 lusdBalance = IERC20(LUSD).balanceOf(address(this));
-        if (lusdBalance > DUST) {
-            UNI_ROUTER.exactInput(
-                ISwapRouter.ExactInputParams({
-                    path: abi.encodePacked(LUSD, uint24(500), USDC, uint24(500), WETH),
-                    recipient: address(this),
-                    deadline: block.timestamp,
-                    amountIn: lusdBalance - DUST,
-                    amountOutMinimum: 0
-                })
-            );
+        if (lusdBalance > MIN_LUSD_SWAP_AMT) {
+            try
+                UNI_ROUTER.exactInput(
+                    ISwapRouter.ExactInputParams({
+                        path: abi.encodePacked(LUSD, uint24(500), USDC, uint24(500), WETH),
+                        recipient: address(this),
+                        deadline: block.timestamp,
+                        amountIn: lusdBalance - DUST,
+                        amountOutMinimum: 0
+                    })
+                )
+            {} catch (bytes memory) {
+                if (!_isUrgentWithdrawalMode) {
+                    revert SwapFailed();
+                }
+            }
         }
 
         uint256 ethBalance = address(this).balance;
@@ -199,21 +189,28 @@ contract StakingBridge is IDefiBridge, ERC20("StakingBridge", "SB") {
         }
 
         uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
-        if (wethBalance > DUST) {
-            uint256 amountLQTYOut = UNI_ROUTER.exactInputSingle(
-                ISwapRouter.ExactInputSingleParams(
-                    WETH,
-                    LQTY,
-                    3000,
-                    address(this),
-                    block.timestamp,
-                    wethBalance - DUST,
-                    0,
-                    0
+        if (wethBalance > MIN_ETH_SWAP_AMT) {
+            try
+                UNI_ROUTER.exactInputSingle(
+                    ISwapRouter.ExactInputSingleParams(
+                        WETH,
+                        LQTY,
+                        3000,
+                        address(this),
+                        block.timestamp,
+                        wethBalance - DUST,
+                        0,
+                        0
+                    )
                 )
-            );
-            if (amountLQTYOut != 0) {
-                STAKING_CONTRACT.stake(amountLQTYOut);
+            returns (uint256 amountLQTYOut) {
+                if (amountLQTYOut != 0) {
+                    STAKING_CONTRACT.stake(amountLQTYOut);
+                }
+            } catch (bytes memory) {
+                if (!_isUrgentWithdrawalMode) {
+                    revert SwapFailed();
+                }
             }
         }
     }
