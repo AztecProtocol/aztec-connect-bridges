@@ -3,32 +3,25 @@
 pragma solidity ^0.8.4;
 pragma experimental ABIEncoderV2;
 
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-
-import {IDefiBridge} from "../../interfaces/IDefiBridge.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {AztecTypes} from "../../aztec/AztecTypes.sol";
-import {IERC4626} from "./Interfaces/IERC4626.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
+import {IERC4626} from "../../interfaces/erc4626/IERC4626.sol";
+import {BridgeBase} from "../base/BridgeBase.sol";
+import {ErrorLib} from "../base/ErrorLib.sol";
 
 /**
  * @title Aztec Connect Bridge for ERC4626 compatible vaults
  * @author (@johhonn on Github)
- * @notice You can use this contract to stake asset tokens and bridge share tokens for any ERC2626 compatible bride.
+ * @notice You can use this contract to stake asset tokens and bridge share tokens for any ERC2626 compatible bridge.
  * @dev Implementation of the IDefiBridge interface for IERC4626
  *
  
  */
-contract VaultBridge is IDefiBridge {
-    using SafeMath for uint256;
-    error Unauthorized();
-    error InvalidTokenPair();
+contract VaultBridge is BridgeBase {
     error AssetMustBeEmpty();
-    address public immutable rollupProcessor;
 
-    constructor(address _rollupProcessor) public {
-        rollupProcessor = _rollupProcessor;
-    }
+    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
     /**
      * @notice Function which stakes or unstakes
@@ -55,7 +48,8 @@ contract VaultBridge is IDefiBridge {
     )
         external
         payable
-        override
+        override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
             uint256,
@@ -68,26 +62,37 @@ contract VaultBridge is IDefiBridge {
             inputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED
         ) revert AssetMustBeEmpty();
 
-        if (msg.sender != rollupProcessor) revert Unauthorized();
+        //if (msg.sender != rollupProcessor) revert ErrorLib.LInvalidCaller();
 
-        if (testPair(outputAssetA.erc20Address, inputAssetA.erc20Address)) {
-            outputValueA = enter(outputAssetA.erc20Address, inputAssetA.erc20Address, totalInputValue);
-        } else if (testPair(inputAssetA.erc20Address, outputAssetA.erc20Address)) {
-            outputValueA = exit(inputAssetA.erc20Address, outputAssetA.erc20Address, totalInputValue);
+        if (isValidPair(outputAssetA.erc20Address, inputAssetA.erc20Address)) {
+            outputValueA = _enter(outputAssetA.erc20Address, totalInputValue);
+        } else if (isValidPair(inputAssetA.erc20Address, outputAssetA.erc20Address)) {
+            outputValueA = _exit(inputAssetA.erc20Address, totalInputValue);
         } else {
-            revert InvalidTokenPair();
+            revert ErrorLib.InvalidInput();
         }
     }
 
     /**
-     * @notice Function which test whether a token is a vaild asset for a given vault
+     * @notice Public Function used to preapprove vault pairs
+     * @param vault address of erc4626 vault
+     * @param token address of the vault asset
+     */
+    function approvePair(address vault, address token) public {
+        IERC20(token).approve(ROLLUP_PROCESSOR, type(uint256).max);
+        IERC20(token).approve(vault, type(uint256).max);
+        IERC20(vault).approve(ROLLUP_PROCESSOR, type(uint256).max);
+    }
+
+    /**
+     * @notice Function which checks whether a token is a vaild asset for a given vault
      * @dev This method is used to check whether input and output assets are matching vault share/asset pairs
      *
      * @param vault address of erc4626 vault
      * @param asset address of the vault asset token
      *
      */
-    function testPair(address vault, address asset) public returns (bool) {
+    function isValidPair(address vault, address asset) internal returns (bool) {
         try IERC4626(vault).asset() returns (IERC20 token) {
             return address(token) == asset;
         } catch {
@@ -99,17 +104,12 @@ contract VaultBridge is IDefiBridge {
      * @notice Internal Function used to stake
      * @dev This method deposits an exact amount of asset into an erc4626 vault
      *
-     * @param vault address of erc4626 vault
-     * @param token address of the vault asset token
+     * @param vault address of erc4626 vault     
      * @param amount amount of an asset to be burned
    
      */
     // enter by deposit exact assets
-    function enter(
-        address vault,
-        address token,
-        uint256 amount
-    ) internal returns (uint256) {
+    function _enter(address vault, uint256 amount) internal returns (uint256) {
         return IERC4626(vault).deposit(amount, address(this));
     }
 
@@ -118,27 +118,11 @@ contract VaultBridge is IDefiBridge {
      * @dev This method redeems an exact number of shares into an erc4626 vault
      *
      * @param vault address of erc4626 vault
-     * @param token address of the vault asset
      * @param amount amount of shares to be redeemed
      *
      */
-    function exit(
-        address vault,
-        address token,
-        uint256 amount
-    ) internal returns (uint256) {
+    function _exit(address vault, uint256 amount) internal returns (uint256) {
         return IERC4626(vault).redeem(amount, address(this), address(this));
-    }
-
-    /**
-     * @notice Public Function used to preapprove vault pairs
-     * @param vault address of erc4626 vault
-     * @param token address of the vault asset
-     */
-    function approvePair(address vault, address token) public {
-        IERC20(token).approve(rollupProcessor, type(uint256).max);
-        IERC20(token).approve(vault, type(uint256).max);
-        IERC20(vault).approve(rollupProcessor, type(uint256).max);
     }
 
     // @notice This function always reverts because this contract does not implement async flow.
