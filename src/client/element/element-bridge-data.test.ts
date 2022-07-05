@@ -8,10 +8,17 @@ import {
   ElementBridge__factory,
   IRollupProcessor__factory,
   IVault__factory,
+<<<<<<< HEAD
 } from "../../../typechain-types";
 import { BridgeId } from "@aztec/barretenberg/bridge_id";
 import { AztecAssetType } from "../bridge-data";
 import { EthAddress } from "@aztec/barretenberg/address";
+=======
+} from '../../../typechain-types';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { AztecAssetType } from '../bridge-data';
+import { EthAddress } from '@aztec/barretenberg/address';
+>>>>>>> de3f647e... pull master from upstream and merge
 
 jest.mock("../aztec/provider", () => ({
   createWeb3Provider: jest.fn(),

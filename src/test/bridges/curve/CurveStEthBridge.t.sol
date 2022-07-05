@@ -1,5 +1,9 @@
+<<<<<<< HEAD
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec.
+=======
+// SPDX-License-Identifier: UNLICENSED
+>>>>>>> de3f647e... pull master from upstream and merge
 pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -41,10 +45,13 @@ contract CurveStEthBridgeTest is BridgeTestBase {
         deal(address(WRAPPED_STETH), address(bridge), 1);
         LIDO.submit{value: 10}(address(0));
         LIDO.transfer(address(bridge), 10);
+<<<<<<< HEAD
 
         vm.label(address(bridge.LIDO()), "LIDO");
         vm.label(address(bridge.WRAPPED_STETH()), "WRAPPED_STETH");
         vm.label(address(bridge.CURVE_POOL()), "CURVE_POOL");
+=======
+>>>>>>> de3f647e... pull master from upstream and merge
     }
 
     function testErrorCodes() public {
@@ -107,6 +114,7 @@ contract CurveStEthBridgeTest is BridgeTestBase {
         validateUnwrap(WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)) / 2);
     }
 
+<<<<<<< HEAD
     function testMinPriceTooBigWrap() public {
         uint256 depositAmount = 1e18;
         vm.deal(address(bridge), depositAmount);
@@ -133,6 +141,8 @@ contract CurveStEthBridgeTest is BridgeTestBase {
         bridge.convert(wstETHAsset, emptyAsset, ethAsset, emptyAsset, depositAmount, 0, minPrice, address(0));
     }
 
+=======
+>>>>>>> de3f647e... pull master from upstream and merge
     /**
         Testing flow:
         1. Send ETH to bridge
@@ -157,10 +167,15 @@ contract CurveStEthBridgeTest is BridgeTestBase {
         uint256 beforeWstETHBalance = WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
 
         uint256 wstEthIncrease = _computeEthToWST(_depositAmount);
+<<<<<<< HEAD
         // Set minPrice in such a way that computed minDy is equal to wstEthIncrease
         uint64 minPrice = uint64((wstEthIncrease * bridge.PRECISION()) / _depositAmount);
 
         uint256 bridgeId = encodeBridgeId(id, ethAsset, emptyAsset, wstETHAsset, emptyAsset, minPrice);
+=======
+
+        uint256 bridgeId = encodeBridgeId(id, ethAsset, emptyAsset, wstETHAsset, emptyAsset, 0);
+>>>>>>> de3f647e... pull master from upstream and merge
         vm.expectEmit(true, true, false, true);
         emit DefiBridgeProcessed(bridgeId, getNextNonce(), _depositAmount, wstEthIncrease, 0, true, "");
         sendDefiRollup(bridgeId, _depositAmount);
@@ -180,15 +195,24 @@ contract CurveStEthBridgeTest is BridgeTestBase {
         uint256 beforeWstEthBalance = WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
 
         uint256 expectedEth = _computeWSTHToEth(_depositAmount);
+<<<<<<< HEAD
         // Set minPrice in such a way that computed minDy is equal to expectedEth
         uint64 minPrice = uint64((expectedEth * bridge.PRECISION()) / _depositAmount);
 
         uint256 bridgeId = encodeBridgeId(id, wstETHAsset, emptyAsset, ethAsset, emptyAsset, minPrice);
+=======
+
+        uint256 bridgeId = encodeBridgeId(id, wstETHAsset, emptyAsset, ethAsset, emptyAsset, 0);
+>>>>>>> de3f647e... pull master from upstream and merge
         vm.expectEmit(true, true, false, true);
         emit DefiBridgeProcessed(bridgeId, getNextNonce(), _depositAmount, expectedEth, 0, true, "");
         sendDefiRollup(bridgeId, _depositAmount);
 
+<<<<<<< HEAD
         assertEq(address(ROLLUP_PROCESSOR).balance, beforeETHBalance + expectedEth, "ETH balance not matching");
+=======
+        assertEq(address(ROLLUP_PROCESSOR).balance, beforeETHBalance + expectedEth, "ETH balance not maching");
+>>>>>>> de3f647e... pull master from upstream and merge
         assertEq(
             WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)),
             beforeWstEthBalance - _depositAmount,

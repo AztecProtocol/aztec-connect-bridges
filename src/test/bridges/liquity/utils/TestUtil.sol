@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
@@ -5,6 +6,16 @@ pragma solidity >=0.8.4;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AztecTypes} from "../../../../aztec/libraries/AztecTypes.sol";
 import {Test} from "forge-std/Test.sol";
+=======
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright 2022 Spilsbury Holdings Ltd
+pragma solidity >=0.8.4;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Test} from "forge-std/Test.sol";
+import {DefiBridgeProxy} from "../../../../aztec/DefiBridgeProxy.sol";
+import {RollupProcessor} from "../../../../aztec/RollupProcessor.sol";
+>>>>>>> de3f647e... pull master from upstream and merge
 
 import {MockPriceFeed} from "./MockPriceFeed.sol";
 import {IPriceFeed} from "../../../../interfaces/liquity/IPriceFeed.sol";
@@ -19,12 +30,16 @@ contract TestUtil is Test {
 
     mapping(bytes32 => Token) internal tokens;
 
+<<<<<<< HEAD
     AztecTypes.AztecAsset internal emptyAsset;
     address internal rollupProcessor;
 
     // @dev This method exists on RollupProcessor.sol. It's defined here in order to be able to receive ETH like a real
     //      rollup processor would.
     function receiveEthFromBridge(uint256 _interactionNonce) external payable {}
+=======
+    RollupProcessor internal rollupProcessor;
+>>>>>>> de3f647e... pull master from upstream and merge
 
     function setUpTokens() public {
         tokens["LUSD"].addr = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
@@ -54,4 +69,11 @@ contract TestUtil is Test {
         // I want a number between 1 WAD and 10 million WAD
         return uint256(keccak256(abi.encodePacked(_seed))) % 10**25;
     }
+<<<<<<< HEAD
+=======
+
+    function _aztecPreSetup() internal {
+        rollupProcessor = new RollupProcessor(address(new DefiBridgeProxy()));
+    }
+>>>>>>> de3f647e... pull master from upstream and merge
 }

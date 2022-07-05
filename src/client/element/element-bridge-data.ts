@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from "../bridge-data";
+=======
+import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
+>>>>>>> de3f647e... pull master from upstream and merge
 import {
   ElementBridge,
   IVault,

@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+
+>>>>>>> de3f647e... pull master from upstream and merge
 # Contributor Covenant Code of Conduct
 
 ## Our Pledge
@@ -17,16 +21,26 @@ diverse, inclusive, and healthy community.
 Examples of behavior that contributes to a positive environment for our
 community include:
 
+<<<<<<< HEAD
 - Demonstrating empathy and kindness toward other people
 - Being respectful of differing opinions, viewpoints, and experiences
 - Giving and gracefully accepting constructive feedback
 - Accepting responsibility and apologizing to those affected by our mistakes,
   and learning from the experience
 - Focusing on what is best not just for us as individuals, but for the overall
+=======
+* Demonstrating empathy and kindness toward other people
+* Being respectful of differing opinions, viewpoints, and experiences
+* Giving and gracefully accepting constructive feedback
+* Accepting responsibility and apologizing to those affected by our mistakes,
+  and learning from the experience
+* Focusing on what is best not just for us as individuals, but for the overall
+>>>>>>> de3f647e... pull master from upstream and merge
   community
 
 Examples of unacceptable behavior include:
 
+<<<<<<< HEAD
 - The use of sexualized language or imagery, and sexual attention or advances of
   any kind
 - Trolling, insulting or derogatory comments, and personal or political attacks
@@ -34,6 +48,15 @@ Examples of unacceptable behavior include:
 - Publishing others' private information, such as a physical or email address,
   without their explicit permission
 - Other conduct which could reasonably be considered inappropriate in a
+=======
+* The use of sexualized language or imagery, and sexual attention or advances of
+  any kind
+* Trolling, insulting or derogatory comments, and personal or political attacks
+* Public or private harassment
+* Publishing others' private information, such as a physical or email address,
+  without their explicit permission
+* Other conduct which could reasonably be considered inappropriate in a
+>>>>>>> de3f647e... pull master from upstream and merge
   professional setting
 
 ## Enforcement Responsibilities
@@ -119,14 +142,26 @@ version 2.1, available at
 [https://www.contributor-covenant.org/version/2/1/code_of_conduct.html][v2.1].
 
 Community Impact Guidelines were inspired by
+<<<<<<< HEAD
 [Mozilla's code of conduct enforcement ladder][mozilla coc].
 
 For answers to common questions about this code of conduct, see the FAQ at
 [https://www.contributor-covenant.org/faq][faq]. Translations are available at
+=======
+[Mozilla's code of conduct enforcement ladder][Mozilla CoC].
+
+For answers to common questions about this code of conduct, see the FAQ at
+[https://www.contributor-covenant.org/faq][FAQ]. Translations are available at
+>>>>>>> de3f647e... pull master from upstream and merge
 [https://www.contributor-covenant.org/translations][translations].
 
 [homepage]: https://www.contributor-covenant.org
 [v2.1]: https://www.contributor-covenant.org/version/2/1/code_of_conduct.html
+<<<<<<< HEAD
 [mozilla coc]: https://github.com/mozilla/diversity
 [faq]: https://www.contributor-covenant.org/faq
+=======
+[Mozilla CoC]: https://github.com/mozilla/diversity
+[FAQ]: https://www.contributor-covenant.org/faq
+>>>>>>> de3f647e... pull master from upstream and merge
 [translations]: https://www.contributor-covenant.org/translations

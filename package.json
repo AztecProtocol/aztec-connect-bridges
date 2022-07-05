@@ -16,12 +16,23 @@
     "test:pinned": "yarn test:pinned:14000000 && yarn test:pinned:14970000 && yarn test:pinned:14972000",
     "test:contracts:block": "forge test --fork-block-number",
     "cast": "cast",
+<<<<<<< HEAD
     "test:contracts": "forge test --no-match-contract 'Element|Set|StabilityPoolBridge|AceOfZk' --no-match-test 'testRedistribution' -vvv && yarn test:pinned",
     "build": "yarn clean && yarn compile:typechain && yarn compile:client-dest",
     "formatting": "yarn prettier --write .",
     "formatting:check": "prettier --check .",
     "lint": "yarn lint:check --fix",
     "lint:check": "solhint --config ./.solhint.json \"src/**/*.sol\""
+=======
+    "test:contracts": "forge test --no-match-contract 'Element|Set|StabilityPoolBridge' --no-match-test 'testRedistribution' -vvv && yarn test:pinned",
+    "build": "yarn clean && yarn compile:typechain && yarn compile:client-dest",
+    "lint": "yarn formatting && yarn solhint",
+    "lint:check": "yarn formatting:check && yarn solhint:check",
+    "formatting": "yarn formatting:check --write",
+    "formatting:check": "prettier --check \"src/**/*.sol\"",
+    "solhint": "yarn solhint:check --fix",
+    "solhint:check": "solhint --config ./.solhint.json \"src/**/*.sol\""
+>>>>>>> de3f647e... pull master from upstream and merge
   },
   "dependencies": {
     "@aztec/barretenberg": "2.1.26",
@@ -46,7 +57,10 @@
     "@types/jest": "^28.1.3",
     "ethers": "^5.6.9",
     "hardhat": "^2.9.9",
+<<<<<<< HEAD
     "husky": "^8.0.1",
+=======
+>>>>>>> de3f647e... pull master from upstream and merge
     "jest": "^28.1.1",
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-beta.19",

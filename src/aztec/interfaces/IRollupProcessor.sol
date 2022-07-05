@@ -4,6 +4,7 @@ pragma solidity >=0.8.4;
 
 interface IRollupProcessor {
     /*----------------------------------------
+<<<<<<< HEAD
       EVENTS
       ----------------------------------------*/
     event OffchainData(uint256 indexed rollupId, uint256 chunk, uint256 totalChunks, address sender);
@@ -28,6 +29,8 @@ interface IRollupProcessor {
     event Unpaused(address account);
 
     /*----------------------------------------
+=======
+>>>>>>> de3f647e... pull master from upstream and merge
       MUTATING FUNCTIONS
       ----------------------------------------*/
 

@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
-// Copyright 2022 Aztec.
+// SPDX-License-Identifier: GPL-2.0-only
 pragma solidity >=0.8.4;
 
 import {IPriceFeed} from "../../../../interfaces/liquity/IPriceFeed.sol";

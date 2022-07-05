@@ -6,8 +6,13 @@ import {Test} from "forge-std/Test.sol";
 import {stdStorage} from "forge-std/Test.sol";
 import {StdStorage} from "forge-std/Test.sol";
 
+<<<<<<< HEAD:src/test/bridges/element/Element.t.sol
 import {DefiBridgeProxy} from "./aztecmocks/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./aztecmocks/RollupProcessor.sol";
+=======
+import {DefiBridgeProxy} from "../../../aztec/DefiBridgeProxy.sol";
+import {RollupProcessor} from "../../../aztec/RollupProcessor.sol";
+>>>>>>> de3f647e... pull master from upstream and merge:src/test/element/Element.t.sol
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ElementBridge} from "../../../bridges/element/ElementBridge.sol";

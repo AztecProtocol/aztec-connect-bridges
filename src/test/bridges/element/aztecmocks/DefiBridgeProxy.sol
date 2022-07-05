@@ -2,8 +2,13 @@
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
+<<<<<<< HEAD:src/test/bridges/element/aztecmocks/DefiBridgeProxy.sol
 import {IDefiBridge} from "../../../../aztec/interfaces/IDefiBridge.sol";
 import {AztecTypes} from "../../../../aztec/libraries/AztecTypes.sol";
+=======
+import {IDefiBridge} from "./interfaces/IDefiBridge.sol";
+import {AztecTypes} from "./libraries/AztecTypes.sol";
+>>>>>>> de3f647e... pull master from upstream and merge:src/aztec/DefiBridgeProxy.sol
 import {TokenTransfers} from "./libraries/TokenTransfers.sol";
 
 contract DefiBridgeProxy {

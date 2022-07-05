@@ -1,6 +1,10 @@
 cache/
 out/
+<<<<<<< HEAD
 node_modules/
+=======
+node_modules
+>>>>>>> de3f647e... pull master from upstream and merge
 artifacts/
 yarn-error.log
 client-dest/
