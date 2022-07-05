@@ -70,8 +70,12 @@ contract ERC4626 is Test {
         vault.approvePair(address(vault), address(maple));
 =======
 
+<<<<<<< HEAD
         vaultbridge.approvePair(address(vault), address(maple));
 >>>>>>> c5027841... update vault and tes
+=======
+        vaultbridge.approvePair(address(vault), address(maple), false);
+>>>>>>> 8e69e4c8... update approve for tether
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,
