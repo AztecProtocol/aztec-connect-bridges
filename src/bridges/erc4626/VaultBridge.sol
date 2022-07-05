@@ -28,7 +28,7 @@ contract VaultBridge is BridgeBase {
      * @dev This method can only be called from the RollupProcessor.sol. If the input asset is the ERC4626 vault asset, staking flow is
      * executed. If input is the vault share token, unstaking. RollupProcessor.sol has to transfer the tokens to the bridge before calling
      * the method. If this is not the case, the function will revert (either in STAKING_CONTRACT.stake(...) or during
-     * SB burn).
+     * SB burn).This contract is stateless and cannot hold tokens thus is safe to approve.
      *
      * @param inputAssetA - Vault asset (Staking) or Vault Address (Unstaking)
      * @param outputAssetA - Vault Address (Staking) or Vault asset (UnStaking)
@@ -61,8 +61,6 @@ contract VaultBridge is BridgeBase {
             outputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED ||
             inputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED
         ) revert AssetMustBeEmpty();
-
-        //if (msg.sender != rollupProcessor) revert ErrorLib.LInvalidCaller();
 
         if (isValidPair(outputAssetA.erc20Address, inputAssetA.erc20Address)) {
             outputValueA = _enter(outputAssetA.erc20Address, totalInputValue);
