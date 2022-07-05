@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2022 Spilsbury Holdings Ltd
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -103,7 +103,7 @@ contract StabilityPoolBridgeUnitTest is TestUtil {
 
         while (i < numIters) {
             depositAmount = rand(depositAmount);
-            // 1. Mint deposit amount of LUSD to the directly to the bridge (to avoid transfer)
+            // 1. Mint deposit amount of LUSD directly to the bridge (to avoid transfer)
             deal(inputAssetA.erc20Address, address(bridge), depositAmount);
             // 2. Mint rewards to the bridge
             deal(tokens["LQTY"].addr, address(bridge), 1e20);
@@ -150,7 +150,7 @@ contract StabilityPoolBridgeUnitTest is TestUtil {
                 address(0)
             );
 
-            // 4. Transfer LUSD back to RollupProcessor
+            // 8. Transfer LUSD back to RollupProcessor
             IERC20(outputAssetA.erc20Address).transferFrom(address(bridge), rollupProcessor, outputValueA);
 
             i++;
@@ -186,7 +186,7 @@ contract StabilityPoolBridgeUnitTest is TestUtil {
         );
     }
 
-    function testUrgentModeOffSwap2Q() public {
+    function testUrgentModeOffSwap2() public {
         // I will deposit and withdraw 1 million LUSD
         uint256 lusdAmount = 1e24;
         _deposit(lusdAmount);
@@ -245,9 +245,9 @@ contract StabilityPoolBridgeUnitTest is TestUtil {
         // 2. Deposit LUSD to the StabilityPool contract through the bridge
         (uint256 outputValueA, , ) = bridge.convert(
             AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            emptyAsset,
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            emptyAsset,
             _depositAmount,
             0,
             0,

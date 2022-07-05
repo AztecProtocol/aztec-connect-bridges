@@ -1,13 +1,14 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2022 Spilsbury Holdings Ltd
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {TestUtil} from "./utils/TestUtil.sol";
 import {StakingBridge} from "../../../bridges/liquity/StakingBridge.sol";
 
-contract StakingBridgeTest is TestUtil {
+contract StakingBridgeUnitTest is TestUtil {
     address public constant LUSD_USDC_POOL = 0x4e0924d3a751bE199C426d52fb1f2337fa96f736; // 500 bps fee tier
     address public constant USDC_ETH_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640; // 500 bps fee tier
     address public constant LQTY_ETH_POOL = 0xD1D5A4c0eA98971894772Dcd6D2f1dc71083C44E; // 3000 bps fee tier
@@ -15,8 +16,9 @@ contract StakingBridgeTest is TestUtil {
     StakingBridge private bridge;
 
     function setUp() public {
-        _aztecPreSetup();
+        rollupProcessor = address(this);
         setUpTokens();
+
         bridge = new StakingBridge(address(rollupProcessor));
         bridge.setApprovals();
 
@@ -37,42 +39,49 @@ contract StakingBridgeTest is TestUtil {
 
     function testIncorrectInput() public {
         // Call convert with incorrect input
-        vm.prank(address(rollupProcessor));
         vm.expectRevert(ErrorLib.InvalidInput.selector);
-        bridge.convert(
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-            0,
-            0,
-            0,
-            address(0)
-        );
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
     function testFullDepositWithdrawalFlow() public {
         // I will deposit and withdraw 1 million LQTY
-        uint256 lqtyAmount = 1e24;
-        _deposit(lqtyAmount);
+        uint256 inputValue = 1e24;
+        _deposit(inputValue);
+
+        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
+            2,
+            address(bridge),
+            AztecTypes.AztecAssetType.ERC20
+        );
+        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(
+            1,
+            tokens["LQTY"].addr,
+            AztecTypes.AztecAssetType.ERC20
+        );
+
+        // Transfer SB back to the bridge
+        IERC20(inputAssetA.erc20Address).transfer(address(bridge), inputValue);
 
         // Withdraw LQTY from the staking contract through the bridge
-        rollupProcessor.convert(
-            address(bridge),
-            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-            AztecTypes.AztecAsset(1, tokens["LQTY"].addr, AztecTypes.AztecAssetType.ERC20),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-            lqtyAmount,
+        (uint256 outputValueA, , ) = bridge.convert(
+            inputAssetA,
+            emptyAsset,
+            outputAssetA,
+            emptyAsset,
+            inputValue,
             1,
-            0
+            0,
+            address(0)
         );
 
         // Check the total supply of SPB token is 0
         assertEq(bridge.totalSupply(), 0);
 
-        // Check the LQTY balance of rollupProcessor is equal to the initial LQTY deposit
-        assertEq(tokens["LQTY"].erc.balanceOf(address(rollupProcessor)), lqtyAmount);
+        // Transfer the funds back from the bridge to the rollup processor
+        IERC20(outputAssetA.erc20Address).transferFrom(address(bridge), rollupProcessor, outputValueA);
+
+        // Check the LQTY balance of rollupProcessor is greater than or equal to the initial LQTY deposit
+        assertGe(outputValueA, inputValue);
     }
 
     function testMultipleDepositsWithdrawals() public {
@@ -81,47 +90,73 @@ contract StakingBridgeTest is TestUtil {
         uint256 depositAmount = 203;
         uint256[] memory sbBalances = new uint256[](numIters);
 
+        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
+            1,
+            tokens["LQTY"].addr,
+            AztecTypes.AztecAssetType.ERC20
+        );
+        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(
+            2,
+            address(bridge),
+            AztecTypes.AztecAssetType.ERC20
+        );
+
         while (i < numIters) {
             depositAmount = rand(depositAmount);
-            // 1. Mint deposit amount of LQTY to the rollupProcessor
-            deal(tokens["LQTY"].addr, address(rollupProcessor), depositAmount);
+            // 1. Mint deposit amount of LQTY directly to the bridge (to avoid transfer)
+            deal(inputAssetA.erc20Address, address(bridge), depositAmount);
             // 2. Mint rewards to the bridge
             deal(tokens["LUSD"].addr, address(bridge), 1e20);
             deal(tokens["WETH"].addr, address(bridge), 1e18);
 
             // 3. Deposit LQTY to the staking contract through the bridge
-            (uint256 outputValueA, , ) = rollupProcessor.convert(
-                address(bridge),
-                AztecTypes.AztecAsset(1, tokens["LQTY"].addr, AztecTypes.AztecAssetType.ERC20),
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            (uint256 outputValueA, , ) = bridge.convert(
+                inputAssetA,
+                emptyAsset,
+                outputAssetA,
+                emptyAsset,
                 depositAmount,
                 i,
-                0
+                0,
+                address(0)
             );
+
+            // 4. Transfer SB back to RollupProcessor
+            IERC20(outputAssetA.erc20Address).transferFrom(address(bridge), rollupProcessor, outputValueA);
 
             sbBalances[i] = outputValueA;
             i++;
         }
 
+        // 5. Swap input/output assets to execute withdraw flow in the next convert call
+        (inputAssetA, outputAssetA) = (outputAssetA, inputAssetA);
+
         i = 0;
         while (i < numIters) {
-            // 4. Withdraw LQTY from Staking through the bridge
-            rollupProcessor.convert(
-                address(bridge),
-                AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-                AztecTypes.AztecAsset(1, tokens["LQTY"].addr, AztecTypes.AztecAssetType.ERC20),
-                AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            uint256 inputValue = sbBalances[i];
+
+            // 6. Transfer SB back to the bridge
+            IERC20(inputAssetA.erc20Address).transfer(address(bridge), inputValue);
+
+            // 7. Withdraw LQTY from staking contract through the bridge
+            (uint256 outputValueA, , ) = bridge.convert(
+                inputAssetA,
+                emptyAsset,
+                outputAssetA,
+                emptyAsset,
                 sbBalances[i],
                 numIters + i,
-                0
+                0,
+                address(0)
             );
+
+            // 8. Transfer LQTY back to RollupProcessor
+            IERC20(outputAssetA.erc20Address).transferFrom(address(bridge), rollupProcessor, outputValueA);
+
             i++;
         }
 
-        // 6. Check the total supply of SPB token is 0
+        // 6. Check the total supply of SB token is 0
         assertEq(bridge.totalSupply(), 0);
     }
 
@@ -139,12 +174,11 @@ contract StakingBridgeTest is TestUtil {
 
         // Withdraw LQTY from the staking contract through the bridge
         vm.expectRevert(StakingBridge.SwapFailed.selector);
-        vm.prank(address(rollupProcessor));
         bridge.convert(
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            emptyAsset,
             AztecTypes.AztecAsset(1, tokens["LQTY"].addr, AztecTypes.AztecAssetType.ERC20),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            emptyAsset,
             lqtyAmount,
             1,
             0,
@@ -166,7 +200,6 @@ contract StakingBridgeTest is TestUtil {
 
         // Withdraw LQTY from the staking contract through the bridge
         vm.expectRevert(StakingBridge.SwapFailed.selector);
-        vm.prank(address(rollupProcessor));
         bridge.convert(
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
@@ -193,7 +226,6 @@ contract StakingBridgeTest is TestUtil {
 
         // Withdraw LQTY from the staking contract through the bridge
         vm.expectRevert(StakingBridge.SwapFailed.selector);
-        vm.prank(address(rollupProcessor));
         bridge.convert(
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
@@ -208,27 +240,32 @@ contract StakingBridgeTest is TestUtil {
 
     function _deposit(uint256 _depositAmount) private {
         // 1. Mint the deposit amount of LQTY to the bridge
-        deal(tokens["LQTY"].addr, address(rollupProcessor), _depositAmount);
+        deal(tokens["LQTY"].addr, address(bridge), _depositAmount);
 
         // 2. Deposit LQTY to the staking contract through the bridge
-        rollupProcessor.convert(
-            address(bridge),
+        (uint256 outputValueA, , ) = bridge.convert(
             AztecTypes.AztecAsset(1, tokens["LQTY"].addr, AztecTypes.AztecAssetType.ERC20),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            emptyAsset,
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
+            emptyAsset,
             _depositAmount,
             0,
-            0
+            0,
+            address(0)
         );
 
         // 3. Check the total supply of SB token is equal to the amount of LQTY deposited
         assertEq(bridge.totalSupply(), _depositAmount);
 
-        // 4. Check the SB balance of rollupProcessor is equal to the amount of LQTY deposited
-        assertEq(bridge.balanceOf(address(rollupProcessor)), _depositAmount);
+        // 4. Transfer SB back to RollupProcessor
+        IERC20(address(bridge)).transferFrom(address(bridge), rollupProcessor, outputValueA);
 
-        // 5. Check the LQTY balance of StakingBridge in the staking contract is equal to the amount of LQTY deposited
-        assertEq(bridge.STAKING_CONTRACT().stakes(address(bridge)), _depositAmount);
+        // 5. Check the SB balance of rollupProcessor is equal to the amount of LQTY deposited
+        assertEq(outputValueA, _depositAmount);
+        assertEq(bridge.balanceOf(rollupProcessor), _depositAmount);
+
+        // 6. Check the LQTY balance of StakingBridge in the staking contract is greater than or equal to the amount of
+        // LQTY deposited
+        assertGe(bridge.STAKING_CONTRACT().stakes(address(bridge)), _depositAmount);
     }
 }
