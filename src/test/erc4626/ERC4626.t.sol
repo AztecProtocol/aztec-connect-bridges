@@ -20,9 +20,9 @@ import {Vm} from "../../../lib/forge-std/src/Vm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DefiBridgeProxy} from "./../../aztec/DefiBridgeProxy.sol";
 import {RollupProcessor} from "./../../aztec/RollupProcessor.sol";
-import {IERC4626} from "./../../bridges/erc4626/Interfaces/IERC4626.sol";
+import {IERC4626} from "./../../interfaces/erc4626/IERC4626.sol";
 import {VaultBridge} from "./../../bridges/erc4626/VaultBridge.sol";
-import {AztecTypes} from "./../../aztec/AztecTypes.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
