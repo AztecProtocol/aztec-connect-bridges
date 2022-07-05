@@ -39,7 +39,7 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
     error InvalidInputB();
     error InvalidRefund();
     error InvalidOutputs();
-    
+
     IQuoter public immutable QUOTER;
     uint256 public constant MAGIC_NUMBER_DAYS = 60 * 60 * 24; //seconds in a day
 
@@ -145,7 +145,7 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             bool isAsync
         )
     {
-        if ( !(msg.sender == address(ROLLUP_PROCESSOR) ||  msg.sender == address(this) ) ) revert InvalidCaller();
+        if (!(msg.sender == address(ROLLUP_PROCESSOR) || msg.sender == address(this))) revert InvalidCaller();
         console.log("logging nonce", _interactionNonce);
 
         //Uniswap V3 range limit order
@@ -244,7 +244,7 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
                 address token1 = deposits[_interactionNonce].token1;
 
                 bool validArgs = ((tokenA == token0 && token1 == tokenB) || (tokenB == token0 && token1 == tokenA));
-                if(!validArgs) revert InvalidOutputs();
+                if (!validArgs) revert InvalidOutputs();
             }
 
             (outputValueA, outputValueB) = (deposits[_interactionNonce].amount0, deposits[_interactionNonce].amount1);

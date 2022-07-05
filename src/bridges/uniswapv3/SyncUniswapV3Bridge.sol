@@ -6,7 +6,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
-import {UniswapV3Bridge, TransferHelper, ISwapRouter } from "./UniswapV3Bridge.sol";
+import {UniswapV3Bridge, TransferHelper, ISwapRouter} from "./UniswapV3Bridge.sol";
 import {IUniswapV3Pool} from "./interfaces/IUniswapV3Pool.sol";
 import {IDefiBridge} from "../../aztec/interfaces/IDefiBridge.sol";
 import {console} from "../../../lib/forge-std/src/console.sol";
@@ -149,7 +149,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
     {
         //require(inputValue == 0, "ZERO");
 
-        if ( !(msg.sender == address(ROLLUP_PROCESSOR) ||  msg.sender == address(this) ) ) revert InvalidCaller();
+        if (!(msg.sender == address(ROLLUP_PROCESSOR) || msg.sender == address(this))) revert InvalidCaller();
 
         //INTERACTION TYPE 1
         //1 real 1 not used
@@ -184,8 +184,9 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             //sanity checks + variable instantiation
             address inputAddress = _checkForType(_inputAssetA);
             address refundAddress = _checkForType(_outputAssetB); // this asset is used for refunds
-            
-            if( !( inputAddress == refundAddress || refundAddress == syncMintFundingMap[_inputAssetB.id].token ) ) revert InvalidRefund();
+
+            if (!(inputAddress == refundAddress || refundAddress == syncMintFundingMap[_inputAssetB.id].token))
+                revert InvalidRefund();
 
             (outputValueA, outputValueB) = _convertMintPart2(
                 inputAddress,

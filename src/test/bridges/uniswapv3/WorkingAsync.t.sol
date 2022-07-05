@@ -15,7 +15,7 @@ import {IUniswapV3Factory} from "../../../bridges/uniswapv3/interfaces/IUniswapV
 import {IUniswapV3Pool} from "../../../bridges/uniswapv3/interfaces/IUniswapV3Pool.sol";
 import {TickMath} from "../../../bridges/uniswapv3/libraries/TickMath.sol";
 import {AsyncUniswapV3Bridge} from "../../../bridges/uniswapv3/AsyncUniswapV3Bridge.sol";
-import { TransferHelper, ISwapRouter } from "../../../bridges/uniswapv3/UniswapV3Bridge.sol";
+import {TransferHelper, ISwapRouter} from "../../../bridges/uniswapv3/UniswapV3Bridge.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {LiquidityAmounts} from "../../../bridges/uniswapv3/libraries/LiquidityAmounts.sol";
 import {AztecKeeper} from "../../../bridges/uniswapv3/AztecKeeper.sol";
