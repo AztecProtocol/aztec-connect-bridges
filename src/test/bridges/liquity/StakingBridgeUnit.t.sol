@@ -19,7 +19,7 @@ contract StakingBridgeUnitTest is TestUtil {
         rollupProcessor = address(this);
         setUpTokens();
 
-        bridge = new StakingBridge(address(rollupProcessor));
+        bridge = new StakingBridge(rollupProcessor);
         bridge.setApprovals();
 
         // EIP-1087 optimization related mints
