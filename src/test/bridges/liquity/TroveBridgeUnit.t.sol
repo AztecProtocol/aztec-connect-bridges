@@ -287,8 +287,11 @@ contract TroveBridgeUnitTest is TestUtil {
             AztecTypes.AztecAssetType.ERC20
         );
         AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH);
-        AztecTypes.AztecAsset memory outputAssetB = AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20);
-
+        AztecTypes.AztecAsset memory outputAssetB = AztecTypes.AztecAsset(
+            1,
+            tokens["LUSD"].addr,
+            AztecTypes.AztecAssetType.ERC20
+        );
 
         // inputValue is equal to rollupProcessor TB balance --> we want to repay the debt in full
         uint256 inputValue = bridge.balanceOf(rollupProcessor);
@@ -296,7 +299,7 @@ contract TroveBridgeUnitTest is TestUtil {
         IERC20(inputAssetA.erc20Address).transfer(address(bridge), inputValue);
 
         // Mint the debt amount of LUSD to the bridge
-        deal(inputAssetB.erc20Address, address(bridge), inputValue);
+        deal(inputAssetB.erc20Address, address(bridge), inputValue + bridge.DUST());
 
         (, uint256 outputValueB, ) = bridge.convert(
             inputAssetA,
@@ -714,7 +717,7 @@ contract TroveBridgeUnitTest is TestUtil {
         );
 
         // Borrow against ROLLUP_PROCESSOR_WEI_BALANCE
-        (uint256 outputValueA, uint256 outputValueB, ) = bridge.convert(
+        (uint256 outputValueA, uint256 outputValueB, ) = bridge.convert{value: depositAmount}(
             inputAssetA,
             emptyAsset,
             outputAssetA,
