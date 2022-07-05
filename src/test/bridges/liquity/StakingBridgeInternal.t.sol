@@ -13,7 +13,7 @@ contract StakingBridgeTestInternal is TestUtil, StakingBridge(address(0)) {
     address public constant LQTY_ETH_POOL = 0xD1D5A4c0eA98971894772Dcd6D2f1dc71083C44E; // 3000 bps fee tier
 
     function setUp() public {
-        _aztecPreSetup();
+        rollupProcessor = address(this);
         setUpTokens();
 
         // solhint-disable-next-line
