@@ -44,7 +44,7 @@ contract ERC4626 is Test {
         // uint256 depositAmount = 5000;
         deal(address(maple), address(rollupProcessor), depositAmount);
 
-        vaultbridge.approvePair(address(vault), address(maple));
+        vaultbridge.approvePair(address(vault), address(maple), false);
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,

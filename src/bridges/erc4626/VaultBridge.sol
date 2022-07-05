@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 pragma experimental ABIEncoderV2;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {IERC4626} from "../../interfaces/erc4626/IERC4626.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
@@ -19,6 +19,8 @@ import {ErrorLib} from "../base/ErrorLib.sol";
  
  */
 contract VaultBridge is BridgeBase {
+    using SafeERC20 for IERC20;
+
     error AssetMustBeEmpty();
 
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
@@ -75,10 +77,21 @@ contract VaultBridge is BridgeBase {
      * @notice Public Function used to preapprove vault pairs
      * @param vault address of erc4626 vault
      * @param token address of the vault asset
+     * @param safeApprove bool determining whether the asset will use safe approve or not
      */
-    function approvePair(address vault, address token) public {
-        IERC20(token).approve(ROLLUP_PROCESSOR, type(uint256).max);
-        IERC20(token).approve(vault, type(uint256).max);
+    function approvePair(
+        address vault,
+        address token,
+        bool safeApprove
+    ) public {
+        if (safeApprove) {
+            IERC20(token).safeApprove(address(token), 0);
+            IERC20(token).safeApprove(address(token), type(uint256).max);
+        } else {
+            IERC20(token).approve(ROLLUP_PROCESSOR, type(uint256).max);
+            IERC20(token).approve(vault, type(uint256).max);
+        }
+
         IERC20(vault).approve(ROLLUP_PROCESSOR, type(uint256).max);
     }
 
