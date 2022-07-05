@@ -2,7 +2,7 @@
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
-import {Test} from "forge-std/Test.sol";
+import {Test} from "../../../../lib/forge-std/src/Test.sol";
 import {AztecTypes} from "./../../../aztec/libraries/AztecTypes.sol";
 import {IRollupProcessor} from "./../../../aztec/interfaces/IRollupProcessor.sol";
 
