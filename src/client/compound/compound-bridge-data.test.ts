@@ -62,4 +62,14 @@ describe("compound lending bridge data", () => {
     // TODO: mock response and make the test more specific
     expect(expectedOutput).toBeGreaterThan(0);
   });
+
+  it("should correctly compute market size", async () => {
+    const marketSizeMint = (await compoundBridgeData.getMarketSize(ethAsset, emptyAsset, cethAsset, emptyAsset, 0n))[0];
+    const marketSizeRedeem = (
+      await compoundBridgeData.getMarketSize(cethAsset, emptyAsset, ethAsset, emptyAsset, 1n)
+    )[0];
+    // TODO: mock response and make the test more specific
+    expect(marketSizeMint.amount).toBe(marketSizeRedeem.amount);
+    expect(marketSizeMint.amount).toBeGreaterThan(0);
+  });
 });

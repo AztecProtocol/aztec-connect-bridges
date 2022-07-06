@@ -1,8 +1,15 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { JsonRpcProvider, Provider } from "@ethersproject/providers";
 import { BigNumber } from "ethers";
-import { ICERC20__factory, IComptroller, IComptroller__factory } from "../../../typechain-types";
-import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
+import { ICERC20__factory, IComptroller, IComptroller__factory, IERC20__factory } from "../../../typechain-types";
+import {
+  AssetValue,
+  AuxDataConfig,
+  AztecAsset,
+  AztecAssetType,
+  BridgeDataFieldGetters,
+  SolidityType,
+} from "../bridge-data";
 
 export class CompoundBridgeData implements BridgeDataFieldGetters {
   expScale = 10n ** 18n;
@@ -75,6 +82,43 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     } else {
       throw "Invalid auxData";
     }
+  }
+
+  async getMarketSize(
+    inputAssetA: AztecAsset,
+    inputAssetB: AztecAsset,
+    outputAssetA: AztecAsset,
+    outputAssetB: AztecAsset,
+    auxData: bigint,
+  ): Promise<AssetValue[]> {
+    let cTokenAddress;
+    let underlyingAsset;
+    if (auxData === 0n) {
+      // Minting
+      cTokenAddress = outputAssetA.erc20Address;
+      underlyingAsset = inputAssetA;
+    } else if (auxData === 1n) {
+      // Redeeming
+      cTokenAddress = inputAssetA.erc20Address;
+      underlyingAsset = outputAssetA;
+    } else {
+      throw "Invalid auxData";
+    }
+
+    let marketSize;
+    if (underlyingAsset.assetType === AztecAssetType.ETH) {
+      marketSize = await this.ethersProvider.getBalance(cTokenAddress);
+    } else {
+      marketSize = await IERC20__factory.connect(outputAssetA.erc20Address, this.ethersProvider).balanceOf(
+        cTokenAddress,
+      );
+    }
+    return [
+      {
+        assetId: underlyingAsset.id,
+        amount: marketSize.toBigInt(),
+      },
+    ];
   }
 
   private async getAllMarkets(): Promise<EthAddress[]> {
