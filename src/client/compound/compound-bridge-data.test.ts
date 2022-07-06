@@ -40,10 +40,10 @@ describe("compound lending bridge data", () => {
   it("should correctly fetch auxData when minting", async () => {
     const auxDataRedeem = await compoundBridgeData.getAuxData(ethAsset, emptyAsset, cethAsset, emptyAsset);
     expect(auxDataRedeem[0]).toBe(0n);
-  })
+  });
 
   it("should correctly fetch auxData when redeeming", async () => {
     const auxDataRedeem = await compoundBridgeData.getAuxData(cethAsset, emptyAsset, ethAsset, emptyAsset);
     expect(auxDataRedeem[0]).toBe(1n);
-  })
+  });
 });
