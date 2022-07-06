@@ -9,4 +9,3 @@ The bridge can only be accessed with any bridging functionality through the `con
 If the bridge's `convert` method is supplied DAI on Ethereum, it will return the caller with the best priced amount of imUSD via mStable smart contracts.
 
 If the bridge's `convert` method is is supplied imUSD on Ethereum, it will return the caller with the best priced amount of DAI via mStable smart contracts.
-
