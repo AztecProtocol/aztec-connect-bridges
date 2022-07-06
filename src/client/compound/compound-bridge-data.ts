@@ -1,15 +1,19 @@
 import { EthAddress } from "@aztec/barretenberg/address";
-import { EthereumProvider } from "@aztec/barretenberg/blockchain";
-import { JsonRpcProvider } from "@ethersproject/providers";
-import { IComptroller, IComptroller__factory } from "../../../typechain-types";
-import { createWeb3Provider } from "../aztec/provider";
+import { JsonRpcProvider, Provider } from "@ethersproject/providers";
+import { BigNumber } from "ethers";
+import { ICERC20__factory, IComptroller, IComptroller__factory } from "../../../typechain-types";
 import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
 
 export class CompoundBridgeData implements BridgeDataFieldGetters {
+  expScale = 10n ** 18n;
+  ethersProvider: Provider;
   allMarkets?: EthAddress[];
 
-  private constructor(private comptrollerContract: IComptroller) {}
+  private constructor(private comptrollerContract: IComptroller) {
+    this.ethersProvider = this.comptrollerContract.provider;
+  }
 
+  // TODO: use generic provider instead of ether's one
   // static create(provider: EthereumProvider) {
   static create(provider: JsonRpcProvider) {
     // const ethersProvider = createWeb3Provider(provider);
@@ -31,17 +35,6 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     },
   ];
 
-  getExpectedOutput(
-    inputAssetA: AztecAsset,
-    inputAssetB: AztecAsset,
-    outputAssetA: AztecAsset,
-    outputAssetB: AztecAsset,
-    auxData: bigint,
-    inputValue: bigint,
-  ): Promise<bigint[]> {
-    throw new Error("Method not implemented.");
-  }
-
   // NOTE: getAuxData not implemented because the method will not be relevant if use generic ERC4626 vault with wrappers
 
   async getAuxData(
@@ -61,10 +54,32 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     }
   }
 
+  async getExpectedOutput(
+    inputAssetA: AztecAsset,
+    inputAssetB: AztecAsset,
+    outputAssetA: AztecAsset,
+    outputAssetB: AztecAsset,
+    auxData: bigint,
+    inputValue: bigint,
+  ): Promise<bigint[]> {
+    if (auxData === 0n) {
+      // Minting
+      const cToken = ICERC20__factory.connect(outputAssetA.erc20Address, this.ethersProvider);
+      const exchangeRateStored = await cToken.exchangeRateStored();
+      return [BigNumber.from(inputValue).mul(this.expScale).div(exchangeRateStored).toBigInt()];
+    } else if (auxData === 1n) {
+      // Redeeming
+      const cToken = ICERC20__factory.connect(inputAssetA.erc20Address, this.ethersProvider);
+      const exchangeRateStored = await cToken.exchangeRateStored();
+      return [BigNumber.from(inputValue).mul(exchangeRateStored).div(this.expScale).toBigInt()];
+    } else {
+      throw "Invalid auxData";
+    }
+  }
+
   private async getAllMarkets(): Promise<EthAddress[]> {
     if (!this.allMarkets) {
-      const allMarketsStrings = await this.comptrollerContract.getAllMarkets();
-      this.allMarkets = allMarketsStrings.map(stringAddr => {
+      this.allMarkets = (await this.comptrollerContract.getAllMarkets()).map(stringAddr => {
         return EthAddress.fromString(stringAddr);
       });
     }

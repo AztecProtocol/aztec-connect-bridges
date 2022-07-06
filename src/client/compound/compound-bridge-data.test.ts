@@ -46,4 +46,20 @@ describe("compound lending bridge data", () => {
     const auxDataRedeem = await compoundBridgeData.getAuxData(cethAsset, emptyAsset, ethAsset, emptyAsset);
     expect(auxDataRedeem[0]).toBe(1n);
   });
+
+  it("should correctly compute expected output when minting", async () => {
+    const expectedOutput = (
+      await compoundBridgeData.getExpectedOutput(ethAsset, emptyAsset, cethAsset, emptyAsset, 0n, 10n ** 18n)
+    )[0];
+    // TODO: mock response and make the test more specific
+    expect(expectedOutput).toBeGreaterThan(0);
+  });
+
+  it("should correctly compute expected output when redeeming", async () => {
+    const expectedOutput = (
+      await compoundBridgeData.getExpectedOutput(cethAsset, emptyAsset, ethAsset, emptyAsset, 1n, 4983783707n)
+    )[0];
+    // TODO: mock response and make the test more specific
+    expect(expectedOutput).toBeGreaterThan(0);
+  });
 });
