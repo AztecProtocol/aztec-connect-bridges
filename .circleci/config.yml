@@ -1,15 +1,15 @@
-version: '2.1'
+version: "2.1"
 orbs:
   node: circleci/node@5.0.0
 jobs:
   build-and-test:
     docker:
-      - image: 'cimg/base:stable-20.04'
+      - image: "cimg/base:stable-20.04"
     steps:
       - checkout
       - node/install:
           install-yarn: true
-          node-version: '16.13'
+          node-version: "16.13"
       - run:
           name: Setup Foundry
           shell: /bin/bash
@@ -53,12 +53,12 @@ jobs:
             yarn build
   publish:
     docker:
-      - image: 'cimg/base:stable-20.04'
+      - image: "cimg/base:stable-20.04"
     steps:
       - checkout
       - node/install:
           install-yarn: true
-          node-version: '16.13'
+          node-version: "16.13"
       - run:
           name: Authenticate with registry
           command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc

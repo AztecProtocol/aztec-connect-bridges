@@ -1,4 +1,4 @@
-import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
+import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from "../bridge-data";
 import {
   ElementBridge,
   IVault,
@@ -6,12 +6,12 @@ import {
   ElementBridge__factory,
   IVault__factory,
   RollupProcessor__factory,
-} from '../../../typechain-types';
-import { AsyncDefiBridgeProcessedEvent } from '../../../typechain-types/RollupProcessor';
-import { EthereumProvider } from '@aztec/barretenberg/blockchain';
-import { createWeb3Provider } from '../aztec/provider';
-import { EthAddress } from '@aztec/barretenberg/address';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+} from "../../../typechain-types";
+import { AsyncDefiBridgeProcessedEvent } from "../../../typechain-types/RollupProcessor";
+import { EthereumProvider } from "@aztec/barretenberg/blockchain";
+import { createWeb3Provider } from "../aztec/provider";
+import { EthAddress } from "@aztec/barretenberg/address";
+import { BridgeId } from "@aztec/barretenberg/bridge_id";
 
 export type BatchSwapStep = {
   poolId: string;
@@ -254,7 +254,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
       start: 0,
       length: 64,
       solidityType: SolidityType.uint64,
-      description: 'Unix Timestamp of the tranch expiry',
+      description: "Unix Timestamp of the tranch expiry",
     },
   ];
 
@@ -295,7 +295,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
       assetInIndex: 0,
       assetOutIndex: 1,
       amount: precision.toString(),
-      userData: '0x',
+      userData: "0x",
     };
 
     const deltas = await this.balancerContract.queryBatchSwap(
