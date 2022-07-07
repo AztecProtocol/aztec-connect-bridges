@@ -151,7 +151,7 @@ describe("compound lending bridge data", () => {
     expect(expectedYield).toBe(0);
   });
 
-  it("should correctly compute market when underlying is ERC20", async () => {
+  it("should correctly compute market size", async () => {
     // Setup mocks
     erc20Contract = {
       ...erc20Contract,

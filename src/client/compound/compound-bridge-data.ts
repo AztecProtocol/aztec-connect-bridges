@@ -1,8 +1,8 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
-import { Provider } from "@ethersproject/providers";
+import { Web3Provider } from "@ethersproject/providers";
 import { BigNumber } from "ethers";
-import { ICERC20__factory, IComptroller, IComptroller__factory, IERC20__factory } from "../../../typechain-types";
+import { ICERC20__factory, IComptroller__factory, IERC20__factory } from "../../../typechain-types";
 import { createWeb3Provider } from "../aztec/provider";
 import {
   AssetValue,
@@ -15,21 +15,12 @@ import {
 
 export class CompoundBridgeData implements BridgeDataFieldGetters {
   expScale = 10n ** 18n;
-  ethersProvider: Provider;
   allMarkets?: EthAddress[];
 
-  private constructor(private comptrollerContract: IComptroller) {
-    this.ethersProvider = this.comptrollerContract.provider;
-  }
+  private constructor(private ethersProvider: Web3Provider) {}
 
   static create(provider: EthereumProvider) {
-    const ethersProvider = createWeb3Provider(provider);
-    const comptrollerContract = IComptroller__factory.connect(
-      "0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B",
-      ethersProvider,
-    );
-
-    return new CompoundBridgeData(comptrollerContract);
+    return new CompoundBridgeData(createWeb3Provider(provider));
   }
 
   auxDataConfig: AuxDataConfig[] = [
@@ -146,7 +137,11 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
 
   private async getAllMarkets(): Promise<EthAddress[]> {
     if (!this.allMarkets) {
-      this.allMarkets = (await this.comptrollerContract.getAllMarkets()).map(stringAddr => {
+      const allMarketsString = await IComptroller__factory.connect(
+        "0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B",
+        this.ethersProvider,
+      ).getAllMarkets();
+      this.allMarkets = allMarketsString.map(stringAddr => {
         return EthAddress.fromString(stringAddr);
       });
     }
