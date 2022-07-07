@@ -74,14 +74,15 @@ contract VaultBridge is BridgeBase {
     }
 
     /**
-     * @notice Public Function used to preapprove vault pairs using safe approve for token
+     * @notice Public Function used to preapprove vault pairs
      * @param vault address of erc4626 vault
      * @param token address of the vault asset
      
      */
     function approvePair(address vault, address token) public {
-        IERC20(token).safeApprove(address(token), 0);
-        IERC20(token).safeApprove(address(token), type(uint256).max);
+        IERC20(token).safeIncreaseAllowance(ROLLUP_PROCESSOR, type(uint256).max);
+        IERC20(token).safeIncreaseAllowance(vault, type(uint256).max);
+
         IERC20(vault).approve(ROLLUP_PROCESSOR, type(uint256).max);
     }
 
