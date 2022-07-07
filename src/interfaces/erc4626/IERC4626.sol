@@ -1,4 +1,4 @@
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IERC4626 is IERC20 {
     //Mints   shares of Vault to receiver by depositing exact amount of underlying tokens.
