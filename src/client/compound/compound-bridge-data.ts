@@ -1,7 +1,9 @@
 import { EthAddress } from "@aztec/barretenberg/address";
-import { JsonRpcProvider, Provider } from "@ethersproject/providers";
+import { EthereumProvider } from "@aztec/barretenberg/blockchain";
+import { Provider } from "@ethersproject/providers";
 import { BigNumber } from "ethers";
 import { ICERC20__factory, IComptroller, IComptroller__factory, IERC20__factory } from "../../../typechain-types";
+import { createWeb3Provider } from "../aztec/provider";
 import {
   AssetValue,
   AuxDataConfig,
@@ -20,11 +22,8 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     this.ethersProvider = this.comptrollerContract.provider;
   }
 
-  // TODO: use generic provider instead of ether's one
-  // static create(provider: EthereumProvider) {
-  static create(provider: JsonRpcProvider) {
-    // const ethersProvider = createWeb3Provider(provider);
-    const ethersProvider = provider;
+  static create(provider: EthereumProvider) {
+    const ethersProvider = createWeb3Provider(provider);
     const comptrollerContract = IComptroller__factory.connect(
       "0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B",
       ethersProvider,
@@ -133,7 +132,7 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     if (underlyingAsset.assetType === AztecAssetType.ETH) {
       marketSize = await this.ethersProvider.getBalance(cTokenAddress);
     } else {
-      marketSize = await IERC20__factory.connect(outputAssetA.erc20Address, this.ethersProvider).balanceOf(
+      marketSize = await IERC20__factory.connect(underlyingAsset.erc20Address, this.ethersProvider).balanceOf(
         cTokenAddress,
       );
     }
