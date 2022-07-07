@@ -6,7 +6,6 @@ describe("compound lending bridge data", () => {
   let compoundBridgeData: CompoundBridgeData;
 
   let ethAsset: AztecAsset;
-  let wethAsset: AztecAsset;
   let cethAsset: AztecAsset;
   let emptyAsset: AztecAsset;
 
@@ -19,11 +18,6 @@ describe("compound lending bridge data", () => {
       id: 1n,
       assetType: AztecAssetType.ETH,
       erc20Address: "0x0",
-    };
-    wethAsset = {
-      id: 2n,
-      assetType: AztecAssetType.ERC20,
-      erc20Address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
     };
     cethAsset = {
       id: 3n,
@@ -61,6 +55,21 @@ describe("compound lending bridge data", () => {
     )[0];
     // TODO: mock response and make the test more specific
     expect(expectedOutput).toBeGreaterThan(0);
+  });
+
+  it("should correctly compute expected yield when minting", async () => {
+    const expectedYield = (
+      await compoundBridgeData.getExpectedYield(ethAsset, emptyAsset, cethAsset, emptyAsset, 0n, 0n)
+    )[0];
+    // TODO: mock response and make the test more specific
+    expect(expectedYield).toBeGreaterThan(0);
+  });
+
+  it("should compute expected yield to be 0 when redeeming", async () => {
+    const expectedYield = (
+      await compoundBridgeData.getExpectedYield(cethAsset, emptyAsset, ethAsset, emptyAsset, 1n, 0n)
+    )[0];
+    expect(expectedYield).toBe(0);
   });
 
   it("should correctly compute market size", async () => {

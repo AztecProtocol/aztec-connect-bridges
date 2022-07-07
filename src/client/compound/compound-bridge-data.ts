@@ -42,8 +42,6 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     },
   ];
 
-  // NOTE: getAuxData not implemented because the method will not be relevant if use generic ERC4626 vault with wrappers
-
   async getAuxData(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
@@ -79,6 +77,32 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
       const cToken = ICERC20__factory.connect(inputAssetA.erc20Address, this.ethersProvider);
       const exchangeRateStored = await cToken.exchangeRateStored();
       return [BigNumber.from(inputValue).mul(exchangeRateStored).div(this.expScale).toBigInt()];
+    } else {
+      throw "Invalid auxData";
+    }
+  }
+
+  async getExpectedYield(
+    inputAssetA: AztecAsset,
+    inputAssetB: AztecAsset,
+    outputAssetA: AztecAsset,
+    outputAssetB: AztecAsset,
+    auxData: bigint,
+    precision: bigint,
+  ): Promise<number[]> {
+    // Not taking into account how the deposited funds will change the yield
+    if (auxData === 0n) {
+      // Minting
+      // The approximate number of blocks per year that is assumed by the interest rate model
+      const blocksPerYear = 2102400;
+      const supplyRatePerBlock = await ICERC20__factory.connect(
+        outputAssetA.erc20Address,
+        this.ethersProvider,
+      ).supplyRatePerBlock();
+      return [supplyRatePerBlock.mul(blocksPerYear).toNumber() / 10 ** 16];
+    } else if (auxData === 1n) {
+      // Redeeming
+      return [0];
     } else {
       throw "Invalid auxData";
     }
