@@ -5,7 +5,10 @@
 
 ## How to contribute
 
-This repo has been built with Foundry. Given the inter-connected nature of Aztec Connect Bridges with existing mainnet protocols, we decided Foundry / forge offered the best support for testing. This repo should make debugging, mainnet-forking, impersonation and gas profiling simple. It makes sense to test Solidity contracts with Solidty not with the added complication of Ethers / Typescript.
+This repo has been built with Foundry.
+Given the interconnected nature of Aztec Connect Bridges with existing mainnet protocols, we decided Foundry / forge offered the best support for testing.
+This repo should make debugging, mainnet-forking, impersonation and gas profiling simple.
+It makes sense to test Solidity contracts with Solidity, not with the added complication of Ethers / Typescript.
 
 ## Writing a bridge
 
@@ -14,19 +17,49 @@ It is done entirely in Solidity and without any knowledge of the underlying cryp
 Users of your bridge will get the full benefits of ironclad privacy and 10-30x gas savings.
 Simply follow the steps below to get started:
 
-1. Fork / clone this repository.
-2. All bridges need to be submitted via PRs to this repo; we expect developers to include the following as part of their PR and for a grant payment:
-   1. A solidity bridge that interfaces with the protocol you are bridging (e.g AAVE),
-   2. tests in Solidity that test the bridge with production values and the deployed protocol that is currently on mainnet (you should test a range of assets and edge cases and use Forge's fuzzing abilities),
-   3. implementation of the Typescript `bridge-data.ts` class that tells a frontend developer how to use your bridge.
-   4. an explanation of the flows your bridge supports should be included as `spec.md`,
-   5. [NatSpec](https://docs.soliditylang.org/en/develop/natspec-format.html) documentation of all the functions in all the contracts which are to be deployed on mainnet.
+1. Fork / clone this repository:
 
-Before submitting a PR for review make sure that the following is true:
+   `git clone git@github.com:AztecProtocol/aztec-connect-bridges.git`
+
+2. Install dependencies and build the repo:
+   ```
+      cd aztec-connect-bridges
+      yarn
+      git submodule update --init
+      yarn setup
+   ```
+3. Copy and rename the following folders (e.g. rename example to uniswap):
+
+   ```
+   src/bridges/example
+   src/test/example
+   src/client/example
+   ```
+
+4. Implement the bridges and tests. See the [example bridge](https://github.com/AztecProtocol/aztec-connect-bridges/blob/master/src/bridges/example/ExampleBridge.sol) and [example bridge tests](https://github.com/AztecProtocol/aztec-connect-bridges/tree/master/src/test/bridges/example) for more details. For a more complex example check out other bridges in this repository.
+
+5. Debug your bridge:
+
+   `forge test --match-contract YourBridge -vvv`
+
+6. Gas-profile your contract:
+
+   `forge test --match-contract YourBridge --gas-report`
+
+All bridges need to be submitted via PRs to this repo.
+To receive a grant payment we expect the following work to be done:
+
+1. A solidity bridge that interfaces with the protocol you are bridging to (e.g AAVE),
+2. tests in Solidity that test the bridge with production values and the deployed protocol that is currently on mainnet (you should test a range of assets, edge cases and use [Forge's fuzzing abilities](https://book.getfoundry.sh/forge/fuzz-testing.html)),
+3. implementation of the Typescript `bridge-data.ts` class that tells a frontend developer how to use your bridge.
+4. an explanation of the flows your bridge supports should be included as `spec.md`,
+5. [NatSpec](https://docs.soliditylang.org/en/develop/natspec-format.html) documentation of all the functions in all the contracts which are to be deployed on mainnet.
+
+Before submitting a PR for a review make sure that the following is true:
 
 1. All the tests you wrote pass (`forge test --match-contract TestName`),
 2. there are no linting errors (`yarn lint`),
-3. your branch has been as been rebased against the head of the `master` branch (**_not merged_**),
+3. your branch has been rebased against the head of the `master` branch (**_not merged_**, if you are not sure how to rebase check out [this article](https://blog.verslu.is/git/git-rebase/)),
 4. the diff contains only changes related to the PR description,
 5. NatSpec documentation has already been written.
 
@@ -39,85 +72,16 @@ Before submitting a PR for review make sure that the following is true:
 | [AceOfZkBridge](https://etherscan.io/address/0x0eb7F9464060289fE4FDDFDe2258f518c6347a70)    | 4   | [Ace of ZK NFT](https://opensea.io/assets/ethereum/0xe56b526e532804054411a470c49715c531cfd485/16) | Not used              | Not used                                                   | Not used               |                                               | No    | A bridge to send the Ace of ZK to the rollup processor contract.                                              |
 | [CurveStEthBridge](https://etherscan.io/address/0x0031130c56162e00A7e9C01eE4147b11cbac8776) | 5   | ETH (0) or wstETH (2)                                                                             | Not used              | wsthETH (2) or ETH (0) - will be opposite of `inputAssetA` | Not used               | Not used                                      | No    | A DeFiBridge for trading between Eth and wstEth using curve and the stEth wrapper.                            |
 
-## Getting started
+## Testing methodology
 
-Clone the repo with:
+This repo includes an Infura key that allows forking from mainnet.
+We have included helpers to make testing easier (see [example bridge tests](https://github.com/AztecProtocol/aztec-connect-bridges/tree/master/src/test/bridges/example)).
 
-`git clone git@github.com:AztecProtocol/aztec-connect-bridges.git`
+In production a bridge is called by a user creating a client side proof via the Aztec SDK.
+These transaction proofs are sent to a rollup provider for aggregation.
+The rollup provider then sends the aggregate rollup proof with the sum of all users' proofs for a given `bridgeId` to your bridge contract.
 
-Build the repo with:
-
-```
-cd aztec-connect-bridges
-yarn
-git submodule update --init
-yarn setup
-
-```
-
-Copy and rename the following folders to the bridge you are building:
-
-```
-src/bridges/example
-src/test/example
-src/client/example
-
-```
-
-To test run:
-
-```
-yarn test --match-contract YourBridge
-```
-
-To get a gas report run:
-
-```
-yarn test --match-contract YourBridge --gas-report
-```
-
-To debug:
-
-```
-yarn test --match-contract YourBridge -vvvv
-```
-
-## Testing methodolgy
-
-This repo includes an Infura key that allows forking from mainnet. We have included some helpers to make testing easier.
-
-In production a bridge is called by a user creating a client side proof via the Aztec SDK. These transaction proofs are sent to a rollup provider for aggregation. The rollup provider then sends the aggregate rollup proof with the sum of all users' proofs for a given `bridgeId` to your bridge contract.
-
-A `bridgeId` consists of the below schema. The rollup contract uses this to construct the function parameters to pass into your bridge contract. It calls your bridge with a fixed amount of gas via a `delegateCall` via the `DefiBridgeProxy.sol` contract.
-
-To test a bridge, we have added a `MockRollupProcessor` that simulates a rollup. You can call this in your tests by simply calling `rollupContract.convert()` with the deconstructed `bridgeId` fields.
-
-In production, the rollup contract will supply `inputValue` of both input assets and use the `interactionNonce` as a globally unique ID. For testing you may provide this value.
-
-The rollup contract will send `inputValue` of `inputAssetA` and `inputAssetB` ahead of the call to convert.
-In production, the rollup contract has these tokens as they are the users' funds.
-For testing use the `deal` method from the [forge-std](https://github.com/foundry-rs/forge-std)'s `Test` class (see [Example.t.sol](https://github.com/AztecProtocol/aztec-connect-bridges/blob/master/src/test/example/Example.t.sol) for details).
-This method prefunds the rollup with sufficient tokens to enable the transfer.
-
-After extending the `Test` class simply call:
-
-```solidity
-  deal(address(dai), address(rollupProcessor), amount);
-```
-
-This will set the balance of the rollup to the amount required.
-
-## Sending Tokens Back to the Rollup
-
-The rollup contract expects a bridge to have approved for transfer by the `rollupAddress` the ERC20 tokens that are returned via `outputValueA` or `outputValueB` for a given asset. The `DeFiBridgeProxy.sol` will attempt to recover by calling `transferFrom(bridgeAddress, rollupAddress, amount)` for these values once `bridge.convert()` or `bridge.finalise()` have executed.
-
-ETH is returned to the rollup from a bridge by calling the payable function with a `msg.value` `rollupContract.receiveETH(uint256 interactionNonce)`. You must also set the `outputValue` of the corresponding `outputAsset` to be the amount of ETH sent.
-
-This repo supports TypeChain so all Typescript bindings will be auto generated and added to the `typechain-types` folder. See the example tests for more info.
-
-### Bridge ID
-
-A bridgeId uniquely defines the expected inputs/outputs of a DeFi interaction.
+A `bridgeId` uniquely defines the expected inputs/outputs of a DeFi interaction.
 It is a `uint256` that represents a bit-string containing multiple fields.
 When unpacked its data is used to create a BridgeData struct in the rollup processor contract.
 
@@ -143,6 +107,47 @@ Bit Config Definition:
 | 3   | secondOutputAssetVirtual |
 | 4   | secondInputValid         |
 | 5   | secondOutputValid        |
+
+The rollup contract uses this to construct the function parameters to pass into your bridge contract (via `convert(...)` function).
+It calls your bridge with a fixed amount of gas via a `delegateCall` via the `DefiBridgeProxy.sol` contract.
+
+We decided to have 2 separate approaches of bridge testing:
+
+1. In the first one it is expected that you call convert function directly on the bridge contract.
+   This allows for simple debugging because execution traces are simple.
+   Disadvantage of this approach is that you have take care of transferring tokens to and from the bridge (this is handle by the DefiBridgeProxy contract in the production environment).
+   This type of test can be considered to be a unit test and an example of such a test is [here](https://github.com/AztecProtocol/aztec-connect-bridges/blob/master/src/test/bridges/example/ExampleUnit.t.sol).
+
+2. In the second approach we construct a `bridgeId`, we mock proof data and verifier's response and we pass this data directly to the RollupProcessor's `processRollup(...)` function.
+   The purpose of this test is to test the bridge in an environment that is as close to the final deployment as possible without spinning up all the rollup infrastructure (sequencer, proof generator etc.).
+   This test can be considered an end-to-end test of the bridge and an example of such a test is [here](https://github.com/AztecProtocol/aztec-connect-bridges/blob/master/src/test/bridges/example/ExampleE2E.t.sol).
+
+In production, the rollup contract will supply `_inputValue` of both input assets and use the `_interactionNonce` as a globally unique ID.
+For testing, you may provide this value.
+
+The rollup contract will send `_inputValue` of `_inputAssetA` and `_inputAssetB` ahead of the call to convert.
+In production, the rollup contract already has these tokens as they are the users' funds.
+For testing use the `deal` method from the [forge-std](https://github.com/foundry-rs/forge-std)'s `Test` class (see [Example.t.sol](https://github.com/AztecProtocol/aztec-connect-bridges/blob/master/src/test/example/Example.t.sol) for details).
+This method prefunds the rollup with sufficient tokens to enable the transfer.
+
+After extending the `Test` class simply call:
+
+```solidity
+  deal(address(dai), address(rollupProcessor), amount);
+```
+
+This will set the balance of the rollup to the amount required.
+
+## Sending Tokens Back to the Rollup
+
+The rollup contract expects a bridge to have approved for transfer by the `rollupAddress` the ERC20 tokens that are returned via `outputValueA` or `outputValueB` for a given asset.
+The `DeFiBridgeProxy` will attempt to recover the tokens by calling `transferFrom(bridgeAddress, rollupAddress, amount)` for these values once `bridge.convert()` or `bridge.finalise()` have executed (in production and in end-to-end tests).
+In unit tests it is expected that you transfer these tokens on your own.
+
+ETH is returned to the rollup from a bridge by calling the payable function with a `msg.value` `rollupContract.receiveETH(uint256 interactionNonce)`.
+You must also set the `outputValue` of the corresponding `outputAsset` (A or B) to be the amount of ETH sent.
+
+This repo supports TypeChain so all Typescript bindings will be auto generated and added to the `typechain-types` folder.
 
 ### bridge-data.ts
 
