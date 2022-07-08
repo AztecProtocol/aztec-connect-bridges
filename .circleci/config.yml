@@ -28,6 +28,12 @@ jobs:
             yarn config set script-shell /bin/bash
             yarn formatting:check
       - run:
+          name: Check Linting Errors
+          shell: /bin/bash
+          command: |
+            yarn config set script-shell /bin/bash
+            yarn lint:check
+      - run:
           name: Test Contracts
           shell: /bin/bash
           command: |
