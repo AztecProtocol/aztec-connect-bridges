@@ -9,15 +9,26 @@ This repo has been built with Foundry. Given the inter-connected nature of Aztec
 
 ## Writing a bridge
 
-Developing a bridge is simple and permissionless. It is done entirely in Solidity and without any knowledge of the underlying cryptography Aztec uses. Users of your bridge will get the full benefits of ironclad privacy and 10-30x gas savings. Simply follow the steps below to get started.
+Developing a bridge is simple and permissionless.
+It is done entirely in Solidity and without any knowledge of the underlying cryptography Aztec uses.
+Users of your bridge will get the full benefits of ironclad privacy and 10-30x gas savings.
+Simply follow the steps below to get started:
 
 1. Fork / clone this repository.
-2. All bridges need to be submitted via PRs to this repo; we expect developers to include the following as part of their PR and for a grant payment.
-3. Write a Solidity bridge that interfaces with the protocol you are bridging (e.g AAVE).
-4. Write tests in Solidity that test the bridge with production values and the deployed protocol that is currently on mainnet. You should test a range of assets and edge cases and use Forge's fuzzing abilities.
-5. Write an explanation of the flows your bridge supports to be included as `spec.md`.
-6. Implement the Typescript `bridge-data.ts` class that tells a frontend developer how to use your bridge.
-7. Deploy your bridge! Instructions coming soon.
+2. All bridges need to be submitted via PRs to this repo; we expect developers to include the following as part of their PR and for a grant payment:
+   1. A solidity bridge that interfaces with the protocol you are bridging (e.g AAVE),
+   2. tests in Solidity that test the bridge with production values and the deployed protocol that is currently on mainnet (you should test a range of assets and edge cases and use Forge's fuzzing abilities),
+   3. implementation of the Typescript `bridge-data.ts` class that tells a frontend developer how to use your bridge.
+   4. an explanation of the flows your bridge supports should be included as `spec.md`,
+   5. [NatSpec](https://docs.soliditylang.org/en/develop/natspec-format.html) documentation of all the functions in all the contracts which are to be deployed on mainnet.
+
+Before submitting a PR for review make sure that the following is true:
+
+1. All the tests you wrote pass (`forge test --match-contract TestName`),
+2. there are no linting errors (`yarn lint`),
+3. your branch has been as been rebased against the head of the `master` branch (**_not merged_**),
+4. the diff contains only changes related to the PR description,
+5. NatSpec documentation has already been written.
 
 ## Deployed Bridge Info
 
