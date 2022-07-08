@@ -104,32 +104,34 @@ ETH is returned to the rollup from a bridge by calling the payable function with
 
 This repo supports TypeChain so all Typescript bindings will be auto generated and added to the `typechain-types` folder. See the example tests for more info.
 
-### Bridge ID Structure
+### Bridge ID
 
-```
-[^1]: Bridge ID is a 250-bit concatenation of the following data (starting at the most significant bit position):
+A bridgeId uniquely defines the expected inputs/outputs of a DeFi interaction.
+It is a `uint256` that represents a bit-string containing multiple fields.
+When unpacked its data is used to create a BridgeData struct in the rollup processor contract.
 
-| bit position | bit length | definition | description |
-| --- | --- | --- | --- |
-| 0 | 64 | `auxData` | custom auxiliary data for bridge-specific logic |
-| 64 | 32 | `bitConfig` | flags that describe asset types |
-| 96 | 32 | `openingNonce` | (optional) reference to a previous defi interaction nonce (used for virtual assets) |
-| 128 | 30 |  `outputAssetB` | asset id of 2nd output asset |
-| 158 | 30 | `outputAssetA` | asset id of 1st output asset |
-| 188 | 30 | `inputAsset` | asset id of 1st input asset |
-| 218 | 32 | `bridgeAddressId` | id of bridge smart contract address |
+Structure of the bit-string is as follows:
 
+| bit position | bit length | definition        | description                                     |
+| ------------ | ---------- | ----------------- | ----------------------------------------------- |
+| 8            | 64         | `auxData`         | custom auxiliary data for bridge-specific logic |
+| 72           | 32         | `bitConfig`       | flags that describe asset types                 |
+| 104          | 30         | `outputAssetB`    | asset id of 2nd output asset                    |
+| 134          | 30         | `outputAssetA`    | asset id of 1st output asset                    |
+| 164          | 30         | `inputAssetB`     | asset id of 1st input asset                     |
+| 194          | 30         | `inputAssetA`     | asset id of 1st input asset                     |
+| 224          | 32         | `bridgeAddressId` | id of bridge smart contract address             |
 
-Bit Config Definition
-| bit | meaning |
-| --- | --- |
-| 0   | firstInputAssetVirtual |
-| 1   | secondInputAssetVirtual |
-| 2   | firstOutputAssetVirtual |
+Bit Config Definition:
+
+| bit | meaning                  |
+| --- | ------------------------ |
+| 0   | firstInputAssetVirtual   |
+| 1   | secondInputAssetVirtual  |
+| 2   | firstOutputAssetVirtual  |
 | 3   | secondOutputAssetVirtual |
-| 4   | secondInputValid |
-| 5   | secondOutputValid |
-```
+| 4   | secondInputValid         |
+| 5   | secondOutputValid        |
 
 ### bridge-data.ts
 
