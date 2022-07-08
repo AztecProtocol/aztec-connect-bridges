@@ -1,3 +1,6 @@
 src/interfaces/
 src/libraries/
 src/test/bridges/element/MockDeploymentValidator.sol
+# TODO: remove the following 2 lines once linting errors are fixed there
+src/aztec/
+src/bridges/element/

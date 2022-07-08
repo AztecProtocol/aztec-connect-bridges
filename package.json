@@ -16,14 +16,12 @@
     "test:pinned": "yarn test:pinned:14000000 && yarn test:pinned:14970000 && yarn test:pinned:14972000",
     "test:contracts:block": "forge test --fork-block-number",
     "cast": "cast",
-    "test:contracts": "forge test --no-match-contract 'Element|Set|StabilityPoolBridge' --no-match-test 'testRedistribution' -vvv && yarn test:pinned",
+    "test:contracts": "forge test --no-match-contract 'Element|Set|StabilityPoolBridge|AceOfZk' --no-match-test 'testRedistribution' -vvv && yarn test:pinned",
     "build": "yarn clean && yarn compile:typechain && yarn compile:client-dest",
-    "lint": "yarn formatting && yarn solhint",
-    "lint:check": "yarn formatting:check && yarn solhint:check",
     "formatting": "yarn prettier --write .",
     "formatting:check": "prettier --check .",
-    "solhint": "yarn solhint:check --fix",
-    "solhint:check": "solhint --config ./.solhint.json \"src/**/*.sol\""
+    "lint": "yarn lint:check --fix",
+    "lint:check": "solhint --config ./.solhint.json \"src/**/*.sol\""
   },
   "dependencies": {
     "@aztec/barretenberg": "2.1.26",
