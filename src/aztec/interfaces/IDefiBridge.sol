@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2022 Spilsbury Holdings Ltd
+// Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
 import {AztecTypes} from "../libraries/AztecTypes.sol";
@@ -33,25 +33,25 @@ interface IDefiBridge {
      */
 
     // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy. It receives the aggregate sum of all users funds for the input assets.
-    // @param AztecAsset inputAssetA a struct detailing the first input asset, this will always be set
-    // @param AztecAsset inputAssetB an optional struct detailing the second input asset, this is used for repaying borrows and should be virtual
-    // @param AztecAsset outputAssetA a struct detailing the first output asset, this will always be set
-    // @param AztecAsset outputAssetB a struct detailing an optional second output asset
-    // @param uint256 inputValue, the total amount input, if there are two input assets, equal amounts of both assets will have been input
-    // @param uint256 interactionNonce a globally unique identifier for this DeFi interaction. This is used as the assetId if one of the output assets is virtual
-    // @param uint64 auxData other data to be passed into the bridge contract (slippage / nftID etc)
+    // @param AztecAsset _inputAssetA a struct detailing the first input asset, this will always be set
+    // @param AztecAsset _inputAssetB an optional struct detailing the second input asset, this is used for repaying borrows and should be virtual
+    // @param AztecAsset _outputAssetA a struct detailing the first output asset, this will always be set
+    // @param AztecAsset _outputAssetB a struct detailing an optional second output asset
+    // @param uint256 _inputValue, the total amount input, if there are two input assets, equal amounts of both assets will have been input
+    // @param uint256 _interactionNonce a globally unique identifier for this DeFi interaction. This is used as the assetId if one of the output assets is virtual
+    // @param uint64 _auxData other data to be passed into the bridge contract (slippage / nftID etc)
     // @return uint256 outputValueA the amount of outputAssetA returned from this interaction, should be 0 if async
     // @return uint256 outputValueB the amount of outputAssetB returned from this interaction, should be 0 if async or bridge only returns 1 asset.
     // @return bool isAsync a flag to toggle if this bridge interaction will return assets at a later date after some third party contract has interacted with it via finalise()
     function convert(
-        AztecTypes.AztecAsset calldata inputAssetA,
-        AztecTypes.AztecAsset calldata inputAssetB,
-        AztecTypes.AztecAsset calldata outputAssetA,
-        AztecTypes.AztecAsset calldata outputAssetB,
-        uint256 inputValue,
-        uint256 interactionNonce,
-        uint64 auxData,
-        address rollupBeneficiary
+        AztecTypes.AztecAsset calldata _inputAssetA,
+        AztecTypes.AztecAsset calldata _inputAssetB,
+        AztecTypes.AztecAsset calldata _outputAssetA,
+        AztecTypes.AztecAsset calldata _outputAssetB,
+        uint256 _inputValue,
+        uint256 _interactionNonce,
+        uint64 _auxData,
+        address _rollupBeneficiary
     )
         external
         payable
@@ -62,22 +62,22 @@ interface IDefiBridge {
         );
 
     // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy. It receives the aggregate sum of all users funds for the input assets.
-    // @param AztecAsset inputAssetA a struct detailing the first input asset, this will always be set
-    // @param AztecAsset inputAssetB an optional struct detailing the second input asset, this is used for repaying borrows and should be virtual
-    // @param AztecAsset outputAssetA a struct detailing the first output asset, this will always be set
-    // @param AztecAsset outputAssetB a struct detailing an optional second output asset
-    // @param uint256 interactionNonce
-    // @param uint64 auxData other data to be passed into the bridge contract (slippage / nftID etc)
+    // @param AztecAsset _inputAssetA a struct detailing the first input asset, this will always be set
+    // @param AztecAsset _inputAssetB an optional struct detailing the second input asset, this is used for repaying borrows and should be virtual
+    // @param AztecAsset _outputAssetA a struct detailing the first output asset, this will always be set
+    // @param AztecAsset _outputAssetB a struct detailing an optional second output asset
+    // @param uint256 _interactionNonce
+    // @param uint64 _auxData other data to be passed into the bridge contract (slippage / nftID etc)
     // @return uint256 outputValueA the return value of output asset A
     // @return uint256 outputValueB optional return value of output asset B
     // @dev this function should have a modifier on it to ensure it can only be called by the Rollup Contract
     function finalise(
-        AztecTypes.AztecAsset calldata inputAssetA,
-        AztecTypes.AztecAsset calldata inputAssetB,
-        AztecTypes.AztecAsset calldata outputAssetA,
-        AztecTypes.AztecAsset calldata outputAssetB,
-        uint256 interactionNonce,
-        uint64 auxData
+        AztecTypes.AztecAsset calldata _inputAssetA,
+        AztecTypes.AztecAsset calldata _inputAssetB,
+        AztecTypes.AztecAsset calldata _outputAssetA,
+        AztecTypes.AztecAsset calldata _outputAssetB,
+        uint256 _interactionNonce,
+        uint64 _auxData
     )
         external
         payable
