@@ -6,16 +6,20 @@
 ## How to contribute
 
 This repo has been built with Foundry.
-Given the interconnected nature of Aztec Connect Bridges with existing mainnet protocols, we decided Foundry / forge offered the best support for testing.
+Given the interconnected nature of Aztec Connect Bridges with existing mainnet protocols, we decided Foundry / Forge offered the best support for testing.
 This repo should make debugging, mainnet-forking, impersonation and gas profiling simple.
 It makes sense to test Solidity contracts with Solidity, not with the added complication of Ethers / Typescript.
 
 ## Writing a bridge
 
-Developing a bridge is simple and permissionless.
-It is done entirely in Solidity and without any knowledge of the underlying cryptography Aztec uses.
+Developing a bridge is simple.
+It is done entirely in Solidity and no knowledge of cryptography underpinning Aztec Connect is required.
 Users of your bridge will get the full benefits of ironclad privacy and 10-30x gas savings.
-Simply follow the steps below to get started:
+
+> Note: Currently adding a new bridge or asset to Aztec Connect is permissioned and requires our approval.
+> Once Aztec Connect leaves beta this won't be the case anymore and developing a bridge will become completely permissionless.
+
+To get started follow the steps bellow:
 
 1. Fork / clone this repository:
 
