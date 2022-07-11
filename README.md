@@ -87,28 +87,28 @@ A `bridgeId` uniquely defines the expected inputs/outputs of a DeFi interaction.
 It is a `uint256` that represents a bit-string containing multiple fields.
 When unpacked its data is used to create a BridgeData struct in the rollup processor contract.
 
-Structure of the bit-string is as follows:
+Structure of the bit-string is as follows (starting at the least significant bit):
 
 | bit position | bit length | definition        | description                                     |
 | ------------ | ---------- | ----------------- | ----------------------------------------------- |
-| 8            | 64         | `auxData`         | custom auxiliary data for bridge-specific logic |
-| 72           | 32         | `bitConfig`       | flags that describe asset types                 |
-| 104          | 30         | `outputAssetB`    | asset id of 2nd output asset                    |
-| 134          | 30         | `outputAssetA`    | asset id of 1st output asset                    |
-| 164          | 30         | `inputAssetB`     | asset id of 1st input asset                     |
-| 194          | 30         | `inputAssetA`     | asset id of 1st input asset                     |
-| 224          | 32         | `bridgeAddressId` | id of bridge smart contract address             |
+| 0            | 32         | `bridgeAddressId` | id of bridge smart contract address             |
+| 32           | 30         | `inputAssetA`     | asset id of 1st input asset                     |
+| 62           | 30         | `inputAssetB`     | asset id of 1st input asset                     |
+| 92           | 30         | `outputAssetA`    | asset id of 1st output asset                    |
+| 122          | 30         | `outputAssetB`    | asset id of 2nd output asset                    |
+| 152          | 32         | `bitConfig`       | flags that describe asset types                 |
+| 184          | 64         | `auxData`         | custom auxiliary data for bridge-specific logic |
 
 Bit Config Definition:
 
-| bit | meaning                  |
-| --- | ------------------------ |
-| 0   | firstInputAssetVirtual   |
-| 1   | secondInputAssetVirtual  |
-| 2   | firstOutputAssetVirtual  |
-| 3   | secondOutputAssetVirtual |
-| 4   | secondInputValid         |
-| 5   | secondOutputValid        |
+| bit | meaning           |
+| --- | ----------------- |
+| 0   | secondInputInUse  |
+| 1   | secondOutputInUse |
+
+> Note 1: Last 8 bits of `bridgeId` bit-string are wasted because the circuits don't support values of full 256 bits (248 is the largest multiple of 8 that we can use).
+
+> Note 2: `bitConfig` is 32 bits large even though we only use 2 bits because we need it to be future proofed (e.g. we might add NFT support, and we would need new bit flag for that).
 
 The rollup contract uses this to construct the function parameters to pass into your bridge contract (via `convert(...)` function).
 It calls your bridge with a fixed amount of gas via a `delegateCall` via the `DefiBridgeProxy.sol` contract.
