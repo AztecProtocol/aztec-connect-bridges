@@ -2,7 +2,14 @@ import { EthAddress } from "@aztec/barretenberg/address";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
 import { BigNumber } from "ethers";
-import { ICERC20__factory, IComptroller__factory, IERC20__factory } from "../../../typechain-types";
+import {
+  ICERC20__factory,
+  IComptroller,
+  IComptroller__factory,
+  IERC20__factory,
+  IRollupProcessor,
+  IRollupProcessor__factory,
+} from "../../../typechain-types";
 import { createWeb3Provider } from "../aztec/provider";
 import {
   AssetValue,
@@ -14,13 +21,23 @@ import {
 } from "../bridge-data";
 
 export class CompoundBridgeData implements BridgeDataFieldGetters {
-  expScale = 10n ** 18n;
+  readonly expScale = 10n ** 18n;
+
   allMarkets?: EthAddress[];
 
-  private constructor(private ethersProvider: Web3Provider) {}
+  private constructor(
+    private ethersProvider: Web3Provider,
+    private comptroller: IComptroller,
+    private rollupProcessor: IRollupProcessor,
+  ) {}
 
   static create(provider: EthereumProvider) {
-    return new CompoundBridgeData(createWeb3Provider(provider));
+    const ethersProvider = createWeb3Provider(provider);
+    return new CompoundBridgeData(
+      createWeb3Provider(provider),
+      IComptroller__factory.connect("0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B", ethersProvider),
+      IRollupProcessor__factory.connect("0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455", ethersProvider),
+    );
   }
 
   auxDataConfig: AuxDataConfig[] = [
@@ -39,6 +56,13 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
     const allMarkets = await this.getAllMarkets();
+
+    if (!(await this.isSupportedAsset(inputAssetA))) {
+      throw "inputAssetA not supported";
+    }
+    if (!(await this.isSupportedAsset(outputAssetA))) {
+      throw "outputAssetA not supported";
+    }
 
     if (allMarkets.some(addr => addr.toString() == inputAssetA.erc20Address)) {
       return [1n];
@@ -135,13 +159,16 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     ];
   }
 
+  private async isSupportedAsset(asset: AztecAsset): Promise<boolean> {
+    if (asset.assetType == AztecAssetType.ETH) return true;
+
+    const assetAddress = EthAddress.fromString(await this.rollupProcessor.getSupportedAsset(asset.id));
+    return assetAddress.equals(EthAddress.fromString(asset.erc20Address));
+  }
+
   private async getAllMarkets(): Promise<EthAddress[]> {
     if (!this.allMarkets) {
-      const allMarketsString = await IComptroller__factory.connect(
-        "0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B",
-        this.ethersProvider,
-      ).getAllMarkets();
-      this.allMarkets = allMarketsString.map(stringAddr => {
+      this.allMarkets = (await this.comptroller.getAllMarkets()).map(stringAddr => {
         return EthAddress.fromString(stringAddr);
       });
     }

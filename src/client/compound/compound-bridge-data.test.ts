@@ -6,6 +6,8 @@ import {
   IComptroller__factory,
   IERC20,
   IERC20__factory,
+  IRollupProcessor,
+  IRollupProcessor__factory,
 } from "../../../typechain-types";
 import { AztecAsset, AztecAssetType } from "../bridge-data";
 import { CompoundBridgeData } from "./compound-bridge-data";
@@ -20,6 +22,7 @@ type Mockify<T> = {
 
 describe("compound lending bridge data", () => {
   let comptrollerContract: Mockify<IComptroller>;
+  let rollupProcessorContract: Mockify<IRollupProcessor>;
   let cerc20Contract: Mockify<ICERC20>;
   let erc20Contract: Mockify<IERC20>;
 
@@ -31,22 +34,22 @@ describe("compound lending bridge data", () => {
 
   beforeAll(() => {
     ethAsset = {
-      id: 1n,
+      id: 0n,
       assetType: AztecAssetType.ETH,
       erc20Address: "0x0",
     };
     cethAsset = {
-      id: 3n,
+      id: 10n, // Asset has not yet been registered on RollupProcessor so this id is random
       assetType: AztecAssetType.ERC20,
       erc20Address: "0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5",
     };
     daiAsset = {
-      id: 4n,
+      id: 1n,
       assetType: AztecAssetType.ERC20,
       erc20Address: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
     };
     cdaiAsset = {
-      id: 5n,
+      id: 11n, // Asset has not yet been registered on RollupProcessor so this id is random
       assetType: AztecAssetType.ERC20,
       erc20Address: "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643",
     };
@@ -65,6 +68,13 @@ describe("compound lending bridge data", () => {
       getAllMarkets: jest.fn().mockResolvedValue(allMarkets),
     };
     IComptroller__factory.connect = () => comptrollerContract as any;
+
+    rollupProcessorContract = {
+      ...rollupProcessorContract,
+      getSupportedAsset: jest.fn().mockResolvedValue(cethAsset.erc20Address),
+    };
+    IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
+
     const compoundBridgeData = CompoundBridgeData.create({} as any);
 
     // Test the code using mocked controller
@@ -80,11 +90,64 @@ describe("compound lending bridge data", () => {
       getAllMarkets: jest.fn().mockResolvedValue(allMarkets),
     };
     IComptroller__factory.connect = () => comptrollerContract as any;
+
+    rollupProcessorContract = {
+      ...rollupProcessorContract,
+      getSupportedAsset: jest.fn().mockResolvedValue(cethAsset.erc20Address),
+    };
+    IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
+
     const compoundBridgeData = CompoundBridgeData.create({} as any);
 
     // Test the code using mocked controller
     const auxDataRedeem = await compoundBridgeData.getAuxData(cethAsset, emptyAsset, ethAsset, emptyAsset);
     expect(auxDataRedeem[0]).toBe(1n);
+  });
+
+  it("should throw when getting auxData for unsupported inputAssetA", async () => {
+    // Setup mocks
+    const allMarkets = [cethAsset.erc20Address];
+    comptrollerContract = {
+      ...comptrollerContract,
+      getAllMarkets: jest.fn().mockResolvedValue(allMarkets),
+    };
+    IComptroller__factory.connect = () => comptrollerContract as any;
+
+    rollupProcessorContract = {
+      ...rollupProcessorContract,
+      getSupportedAsset: jest.fn().mockResolvedValue("0xdAC17F958D2ee523a2206206994597C13D831ec7"), // random address
+    };
+    IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
+
+    const compoundBridgeData = CompoundBridgeData.create({} as any);
+
+    expect.assertions(1);
+    await expect(compoundBridgeData.getAuxData(cethAsset, emptyAsset, ethAsset, emptyAsset)).rejects.toEqual(
+      "inputAssetA not supported",
+    );
+  });
+
+  it("should throw when getting auxData for unsupported outputAssetA", async () => {
+    // Setup mocks
+    const allMarkets = [cethAsset.erc20Address];
+    comptrollerContract = {
+      ...comptrollerContract,
+      getAllMarkets: jest.fn().mockResolvedValue(allMarkets),
+    };
+    IComptroller__factory.connect = () => comptrollerContract as any;
+
+    rollupProcessorContract = {
+      ...rollupProcessorContract,
+      getSupportedAsset: jest.fn().mockResolvedValue("0xdAC17F958D2ee523a2206206994597C13D831ec7"), // random address
+    };
+    IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
+
+    const compoundBridgeData = CompoundBridgeData.create({} as any);
+
+    expect.assertions(1);
+    await expect(compoundBridgeData.getAuxData(ethAsset, emptyAsset, cethAsset, emptyAsset)).rejects.toEqual(
+      "outputAssetA not supported",
+    );
   });
 
   it("should correctly compute expected output when minting", async () => {
