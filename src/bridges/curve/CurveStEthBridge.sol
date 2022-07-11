@@ -102,7 +102,7 @@ contract CurveStEthBridge is BridgeBase {
      * @notice Swaps eth to stEth through curve and wrap the stEth into wstEth
      * @dev Reverts if `_outputAsset` is not wstEth
      * @param _inputValue The amount of token that is deposited
-     * @param _minDy Smallest acceptable dy
+     * @param _minDy Smallest acceptable dy (amount of stEth received from curve)
      * @param _outputAsset The asset that the DeFi interaction specify as output, must be wstEth
      * @return outputValue The amount of wstEth received from the interaction
      */
@@ -130,7 +130,7 @@ contract CurveStEthBridge is BridgeBase {
      * @dev Reverts if `_outputAsset` is not eth
      * @param _inputValue The amount of token that is deposited
      * @param _outputAsset The asset that the DeFi interaction specify as output, must be eth
-     * @param _minDy Smallest acceptable dy
+     * @param _minDy Smallest acceptable dy (amount of eth to receive from curve)
      * @return outputValue The amount of eth received from the interaction
      */
     function _unwrapETH(
