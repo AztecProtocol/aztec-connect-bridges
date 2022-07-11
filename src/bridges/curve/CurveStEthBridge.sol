@@ -60,7 +60,7 @@ contract CurveStEthBridge is BridgeBase {
      * @param _outputAssetA The output asset (eth or wstEth) opposite `_inputAssetB`
      * @param _inputValue The amount of token deposited
      * @param _interactionNonce The nonce of the DeFi interaction, used when swapping wstEth -> eth
-     * @param _auxData Minimum acceptable price per 1 unit of _inputAssetA multiplied by MIN_PRICE_SCALE
+    * @param _auxData For eth->wstEth, the minimum acceptable amount of stEth per 1 eth, for wstEth->eth, the minimum acceptable amount of eth per 1 wstEth. 
      * @return outputValueA The amount of `_outputAssetA` that the RollupProcessor should pull
      */
     function convert(
