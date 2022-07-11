@@ -2,19 +2,21 @@
   "extends": "solhint:recommended",
   "rules": {
     "compiler-version": ["error", ">=0.8.4"],
-    "func-visibility": ["warn", { "ignoreConstructors": true }],
+    "func-visibility": ["error", { "ignoreConstructors": true }],
     "no-empty-blocks": "off",
+    "no-unused-vars": ["error"],
+    "state-visibility": ["error"],
     "not-rely-on-time": "off",
-    "const-name-snakecase": ["warn", { "treatImmutableVarAsConstant": true }],
-    "var-name-mixedcase": ["warn", { "treatImmutableVarAsConstant": true }],
-    "error-name-mixedcase": ["warn"],
-    "private-func-leading-underscore": ["warn"],
-    "private-vars-no-leading-underscore": ["warn"],
-    "func-param-name-leading-underscore": ["warn"],
-    "func-param-name-mixedcase": ["warn"],
-    "custom-error-over-require": ["warn"],
-    "strict-override": ["warn"],
-    "strict-import": ["warn"],
-    "ordering": ["warn"]
+    "const-name-snakecase": ["error", { "treatImmutableVarAsConstant": true }],
+    "var-name-mixedcase": ["error", { "treatImmutableVarAsConstant": true }],
+    "error-name-mixedcase": ["error"],
+    "private-func-leading-underscore": ["error"],
+    "private-vars-no-leading-underscore": ["error"],
+    "func-param-name-leading-underscore": ["error"],
+    "func-param-name-mixedcase": ["error"],
+    "custom-error-over-require": ["error"],
+    "strict-override": ["error"],
+    "strict-import": ["error"],
+    "ordering": ["error"]
   }
 }
