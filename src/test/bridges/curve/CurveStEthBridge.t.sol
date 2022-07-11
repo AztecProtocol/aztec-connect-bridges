@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -112,7 +113,7 @@ contract CurveStEthBridgeTest is BridgeTestBase {
 
         // Making minDy bigger than expected minDy to cause the swap to fail
         uint256 minDy = _computeEthToWST(depositAmount) + 1e17;
-        uint64 minPrice = uint64((minDy * bridge.MIN_PRICE_SCALE()) / depositAmount);
+        uint64 minPrice = uint64((minDy * bridge.PRECISION()) / depositAmount);
 
         vm.prank(address(ROLLUP_PROCESSOR));
         vm.expectRevert("Exchange resulted in fewer coins than expected");
@@ -125,7 +126,7 @@ contract CurveStEthBridgeTest is BridgeTestBase {
 
         // Making minDy bigger than expected minDy to cause the swap to fail
         uint256 minDy = _computeWSTHToEth(depositAmount) + 1e17;
-        uint64 minPrice = uint64((minDy * bridge.MIN_PRICE_SCALE()) / depositAmount);
+        uint64 minPrice = uint64((minDy * bridge.PRECISION()) / depositAmount);
 
         vm.prank(address(ROLLUP_PROCESSOR));
         vm.expectRevert("Exchange resulted in fewer coins than expected");
@@ -157,7 +158,7 @@ contract CurveStEthBridgeTest is BridgeTestBase {
 
         uint256 wstEthIncrease = _computeEthToWST(_depositAmount);
         // Set minPrice in such a way that computed minDy is equal to wstEthIncrease
-        uint64 minPrice = uint64((wstEthIncrease * bridge.MIN_PRICE_SCALE()) / _depositAmount);
+        uint64 minPrice = uint64((wstEthIncrease * bridge.PRECISION()) / _depositAmount);
 
         uint256 bridgeId = encodeBridgeId(id, ethAsset, emptyAsset, wstETHAsset, emptyAsset, minPrice);
         vm.expectEmit(true, true, false, true);
@@ -180,14 +181,14 @@ contract CurveStEthBridgeTest is BridgeTestBase {
 
         uint256 expectedEth = _computeWSTHToEth(_depositAmount);
         // Set minPrice in such a way that computed minDy is equal to expectedEth
-        uint64 minPrice = uint64((expectedEth * bridge.MIN_PRICE_SCALE()) / _depositAmount);
+        uint64 minPrice = uint64((expectedEth * bridge.PRECISION()) / _depositAmount);
 
         uint256 bridgeId = encodeBridgeId(id, wstETHAsset, emptyAsset, ethAsset, emptyAsset, minPrice);
         vm.expectEmit(true, true, false, true);
         emit DefiBridgeProcessed(bridgeId, getNextNonce(), _depositAmount, expectedEth, 0, true, "");
         sendDefiRollup(bridgeId, _depositAmount);
 
-        assertEq(address(ROLLUP_PROCESSOR).balance, beforeETHBalance + expectedEth, "ETH balance not maching");
+        assertEq(address(ROLLUP_PROCESSOR).balance, beforeETHBalance + expectedEth, "ETH balance not matching");
         assertEq(
             WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)),
             beforeWstEthBalance - _depositAmount,

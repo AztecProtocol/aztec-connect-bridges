@@ -29,8 +29,7 @@ contract CurveStEthBridge is BridgeBase {
     IWstETH public constant WRAPPED_STETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
     ICurvePool public constant CURVE_POOL = ICurvePool(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022);
 
-    // Constant by which min price is scaled
-    uint256 public constant MIN_PRICE_SCALE = 1e18;
+    uint256 public constant PRECISION = 1e18;
 
     // Indexes of the assets in the curve pool
     int128 private constant CURVE_ETH_INDEX = 0;
@@ -60,7 +59,8 @@ contract CurveStEthBridge is BridgeBase {
      * @param _outputAssetA The output asset (eth or wstEth) opposite `_inputAssetB`
      * @param _inputValue The amount of token deposited
      * @param _interactionNonce The nonce of the DeFi interaction, used when swapping wstEth -> eth
-    * @param _auxData For eth->wstEth, the minimum acceptable amount of stEth per 1 eth, for wstEth->eth, the minimum acceptable amount of eth per 1 wstEth. 
+     * @param _auxData For eth->wstEth, the minimum acceptable amount of stEth per 1 eth, for wstEth->eth, the minimum
+     *                 acceptable amount of eth per 1 wstEth.
      * @return outputValueA The amount of `_outputAssetA` that the RollupProcessor should pull
      */
     function convert(
@@ -91,7 +91,7 @@ contract CurveStEthBridge is BridgeBase {
             revert ErrorLib.InvalidInputA();
         }
 
-        uint256 minDy = (_inputValue * _auxData) / MIN_PRICE_SCALE;
+        uint256 minDy = (_inputValue * _auxData) / PRECISION;
 
         outputValueA = isETHInput
             ? _wrapETH(_inputValue, _outputAssetA, minDy)
