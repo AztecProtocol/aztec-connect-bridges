@@ -38,7 +38,7 @@ contract Testtoken is ERC20 {
     }
 }
 
-contract BiDCATest_unit is Test {
+contract BiDCATestUnit is Test {
     using SafeERC20 for IERC20;
     using SafeERC20 for ERC20;
 
@@ -59,9 +59,9 @@ contract BiDCATest_unit is Test {
     IERC20 internal assetA;
     IERC20 internal assetB;
 
-    AztecTypes.AztecAsset emptyAsset;
-    AztecTypes.AztecAsset aztecAssetA;
-    AztecTypes.AztecAsset aztecAssetB;
+    AztecTypes.AztecAsset internal emptyAsset;
+    AztecTypes.AztecAsset internal aztecAssetA;
+    AztecTypes.AztecAsset internal aztecAssetB;
 
     receive() external payable {}
 
@@ -522,6 +522,7 @@ contract BiDCATest_unit is Test {
                 0,
                 0
             );
+            assertEq(acc, outputValueA, "OutputValue A not matching");
             assertEq(outputValueB, 0, "Outputvalue B not zero");
             assertTrue(interactionComplete, "Interaction failed");
             emit log_named_decimal_uint("B bal", assetB.balanceOf(address(bridge)), 18);
@@ -539,6 +540,7 @@ contract BiDCATest_unit is Test {
                 1,
                 0
             );
+            assertEq(acc, outputValueA, "OutputValue A not matching");
             assertEq(outputValueB, 0, "Outputvalue B not zero");
             assertTrue(interactionComplete, "Interaction failed");
             emit log_named_decimal_uint("A bal", assetA.balanceOf(address(bridge)), 18);
@@ -549,7 +551,7 @@ contract BiDCATest_unit is Test {
     }
 
     // Test a flow with 1 DCA position over 7 days, ff 2 days into the run, offer enough to match
-    function testFlow1_7DCA_2days_MoreThanEnough() public {
+    function testFlow17DCA2daysMoreThanEnough() public {
         uint256 price = bridge.getPrice();
         bridge.pokeNextTicks(10);
 
@@ -636,7 +638,7 @@ contract BiDCATest_unit is Test {
     }
 
     // Test a flow with 2 DCA position over 7 days, ff 2 days into the run, offer enough to match
-    function testFlow2_7DCA_2days_MoreThanEnough() public {
+    function testFlow27DCA2daysMoreThanEnough() public {
         // Using the same price throughout this flow.
         uint256 price = bridge.getPrice();
         bridge.pokeNextTicks(10);
@@ -747,7 +749,7 @@ contract BiDCATest_unit is Test {
     }
 
     // Test a flow with 1 DCA position over 7 days, ff 8 days into the run, offer enough to match
-    function testFlow1_7DCA_8days_MoreThanEnough() public {
+    function testFlow17DCA8daysMoreThanEnough() public {
         uint256 price = bridge.getPrice();
         bridge.pokeNextTicks(10);
         uint256 startTick = block.timestamp / bridge.TICK_SIZE();
@@ -821,7 +823,7 @@ contract BiDCATest_unit is Test {
     }
 
     // Test a flow with 1 DCA position over 7 days, ff 8 days into the run, offer too little to match
-    function testFlow1_7DCA_8days_OfferTooLittle() public {
+    function testFlow17DCA8daysOfferTooLittle() public {
         uint256 price = bridge.getPrice();
         bridge.pokeNextTicks(10);
         uint256 startTick = block.timestamp / bridge.TICK_SIZE();
