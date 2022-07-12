@@ -43,9 +43,9 @@ contract VaultBridge is BridgeBase {
         AztecTypes.AztecAsset memory outputAssetA,
         AztecTypes.AztecAsset memory outputAssetB,
         uint256 totalInputValue,
-        uint256 interactionNonce,
-        uint64 auxData,
-        address rollupBeneficiary
+        uint256,
+        uint64,
+        address
     )
         external
         payable
