@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2022 Spilsbury Holdings Ltd
+// Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -17,7 +17,7 @@ contract SetUnitTest is Test {
     IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     IERC20 public constant DPI = IERC20(0x1494CA1F11D487c2bBe4543E90080AeBa4BA3C2b);
 
-    AztecTypes.AztecAsset internal empty;
+    AztecTypes.AztecAsset internal emptyAsset;
 
     address private rollupProcessor;
 
@@ -45,12 +45,12 @@ contract SetUnitTest is Test {
     function testInvalidCaller() public {
         vm.prank(address(124));
         vm.expectRevert(ErrorLib.InvalidCaller.selector);
-        bridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
     function test0InputValue() public {
         vm.expectRevert(ErrorLib.InvalidInput.selector);
-        bridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
     function testSetBridge() public {
@@ -96,9 +96,9 @@ contract SetUnitTest is Test {
         // Call bridge's convert function
         (uint256 outputValueA, , ) = bridge.convert(
             inputAsset,
-            empty,
+            emptyAsset,
             outputAsset,
-            empty,
+            emptyAsset,
             depositAmountDai,
             0,
             0,
@@ -138,9 +138,9 @@ contract SetUnitTest is Test {
 
         (uint256 outputValueA, , ) = bridge.convert(
             inputAsset,
-            empty,
+            emptyAsset,
             outputAsset,
-            empty,
+            emptyAsset,
             depositAmountEth,
             0,
             0,
@@ -178,9 +178,9 @@ contract SetUnitTest is Test {
         // Call bridge's convert function
         (uint256 outputValueA, , ) = bridge.convert(
             inputAsset,
-            empty,
+            emptyAsset,
             outputAsset,
-            empty,
+            emptyAsset,
             depositAmountDpi,
             0,
             0,
@@ -224,9 +224,9 @@ contract SetUnitTest is Test {
 
         (uint256 outputValueA, , ) = bridge.convert(
             inputAsset,
-            empty,
+            emptyAsset,
             outputAsset,
-            empty,
+            emptyAsset,
             depositAmountDpi,
             0,
             0,
