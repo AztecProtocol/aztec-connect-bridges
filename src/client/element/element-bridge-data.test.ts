@@ -2,11 +2,11 @@ import { ChainProperties, ElementBridgeData } from "./element-bridge-data";
 import { BigNumber } from "ethers";
 import { randomBytes } from "crypto";
 import {
-  RollupProcessor,
+  IRollupProcessor,
   ElementBridge,
   IVault,
   ElementBridge__factory,
-  RollupProcessor__factory,
+  IRollupProcessor__factory,
   IVault__factory,
 } from "../../../typechain-types";
 import { BridgeId } from "@aztec/barretenberg/bridge_id";
@@ -44,7 +44,7 @@ interface Interaction {
 const interactions: { [key: number]: Interaction } = {};
 
 describe("element bridge data", () => {
-  let rollupContract: Mockify<RollupProcessor>;
+  let rollupContract: Mockify<IRollupProcessor>;
   let elementBridge: Mockify<ElementBridge>;
   let balancerContract: Mockify<IVault>;
   const now = Math.floor(Date.now() / 1000);
@@ -129,12 +129,12 @@ describe("element bridge data", () => {
   const createElementBridgeData = (
     element: ElementBridge = elementBridge as any,
     balancer: IVault = balancerContract as any,
-    rollup: RollupProcessor = rollupContract as any,
+    rollup: IRollupProcessor = rollupContract as any,
     chainProperties: ChainProperties = { eventBatchSize: 10 },
   ) => {
     ElementBridge__factory.connect = () => element as any;
     IVault__factory.connect = () => balancer as any;
-    RollupProcessor__factory.connect = () => rollup as any;
+    IRollupProcessor__factory.connect = () => rollup as any;
     return ElementBridgeData.create({} as any, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO, chainProperties); // can pass in dummy values here as the above factories do all of the work
   };
 
