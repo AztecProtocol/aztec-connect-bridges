@@ -87,6 +87,8 @@ contract BiDCATest_unit is Test {
 
         vm.deal(address(bridge), 0);
         vm.label(address(bridge), "Bridge");
+
+        movePrice(0, 1e18);
     }
 
     function testRounding(uint128 _a, uint96 _price) public {
@@ -142,7 +144,6 @@ contract BiDCATest_unit is Test {
             }
 
             {
-                movePrice(1e18, 0);
                 // Deposit with asset A
                 bridge.convert(
                     _aFirst ? aztecAssetA : aztecAssetB,
@@ -158,7 +159,7 @@ contract BiDCATest_unit is Test {
                 vm.warp(block.timestamp + timediff * 1 days);
             }
             {
-                movePrice(1e18, 0);
+                refreshTs();
                 // Deposit2
                 bridge.convert(
                     _aFirst ? aztecAssetB : aztecAssetA,
@@ -1425,14 +1426,17 @@ contract BiDCATest_unit is Test {
     function movePrice(uint256 _amountAToB, uint256 _amountBToA) public {
         ISwapRouter uniRouter = bridge.UNI_ROUTER();
 
+        address user = address(0xdead);
+        vm.startPrank(user);
+
         if (_amountAToB > 0) {
-            deal(address(assetA), address(this), _amountAToB);
+            deal(address(assetA), user, _amountAToB);
             assetA.approve(address(uniRouter), type(uint256).max);
 
             uint256 b = uniRouter.exactInput(
                 ISwapRouter.ExactInputParams({
                     path: abi.encodePacked(address(assetA), uint24(100), USDC, uint24(500), address(assetB)),
-                    recipient: address(this),
+                    recipient: user,
                     deadline: block.timestamp,
                     amountIn: _amountAToB,
                     amountOutMinimum: 0
@@ -1444,13 +1448,13 @@ contract BiDCATest_unit is Test {
         }
 
         if (_amountBToA > 0) {
-            deal(address(assetB), address(this), _amountBToA);
+            deal(address(assetB), user, _amountBToA);
             assetB.approve(address(uniRouter), type(uint256).max);
 
             uint256 a = uniRouter.exactInput(
                 ISwapRouter.ExactInputParams({
                     path: abi.encodePacked(address(assetB), uint24(500), USDC, uint24(100), address(assetA)),
-                    recipient: address(this),
+                    recipient: user,
                     deadline: block.timestamp,
                     amountIn: _amountBToA,
                     amountOutMinimum: 0
@@ -1459,5 +1463,6 @@ contract BiDCATest_unit is Test {
             uint256 price = (_amountBToA * 1e18 + a - 1) / a;
             setPrice(price);
         }
+        vm.stopPrank();
     }
 }
