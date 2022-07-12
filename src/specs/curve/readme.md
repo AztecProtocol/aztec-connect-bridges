@@ -22,7 +22,7 @@ There are two flows of Curve stEth Bridge, namely deposits and withdraws.
 
 ### Deposit
 
-If the bridge receives `eth` as the input token it will swap it on Curve to get `stEth` (NOTICE: it accepts any slippage), and wrap it to `wstEth` before return the tuple `(wstEthAmount, 0, false)` and the rollup pulls the `wstEth` tokens.
+If the bridge receives `eth` as the input token it will swap it on Curve to get `stEth` (NOTICE: a minimum steth/eth price is passed in the auxdata), and wrap it to `wstEth` before return the tuple `(wstEthAmount, 0, false)` and the rollup pulls the `wstEth` tokens.
 
 The gas cost E2E for a deposit is ~250K, this is including the transfers to/from the Rollup Processor.
 
@@ -32,7 +32,8 @@ The gas cost E2E for a deposit is ~250K, this is including the transfers to/from
 
 ### Withdrawal
 
-If the bridge receives `wstEth` as the input token, it will unwrap them to `stEth` before going to curve, where it will swap it (NOTICE: it accepts any slippage). It will then transfer the eth received to the `ROLLUP_PROCESSOR` for the given `interactionNonce`.
+If the bridge receives `wstEth` as the input token, it will unwrap them to `stEth` before going to curve, where it will swap it (NOTICE: a minimum eth/wsteth is passed in the auxdata). 
+It will then transfer the eth received to the `ROLLUP_PROCESSOR` for the given `interactionNonce`.
 
 The gas cost E2E for a withdraw is ~250K, this is including the transfers to/from the Rollup Processor.
 
@@ -44,8 +45,6 @@ The gas cost E2E for a withdraw is ~250K, this is including the transfers to/fro
 ### General Properties for both deposit and withdrawal
 
 - The bridge is synchronous, and will always return `isAsync = false`.
-
-- The bridge does not use an `auxData`
 
 - _Note_: Because `stEth` is rebasing, we wrap/unwrap it to `wstEth` (wrapped staked ether). This is to ensure that values are as expected when exiting from or transferring within the Rollup.
 
