@@ -5,9 +5,9 @@ pragma solidity >=0.8.4;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IWETH} from "../../../interfaces/IWETH.sol";
-import {ISwapRouter} from "../../../interfaces/uniswapv3/ISwapRouter.sol";
-import {BiDCABridge_op} from "./BiDCABridge_op.sol";
+import {IWETH} from "../../interfaces/IWETH.sol";
+import {ISwapRouter} from "../../interfaces/uniswapv3/ISwapRouter.sol";
+import {BiDCABridge} from "./BiDCABridge.sol";
 
 interface IChainlinkOracle {
     function latestRoundData()
@@ -22,7 +22,7 @@ interface IChainlinkOracle {
         );
 }
 
-contract UniswapDCABridge_op is BiDCABridge_op {
+contract UniswapDCABridge is BiDCABridge {
     using SafeERC20 for IERC20;
 
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
@@ -40,7 +40,7 @@ contract UniswapDCABridge_op is BiDCABridge_op {
         address _assetB,
         uint256 _tickSize,
         address _oracle
-    ) BiDCABridge_op(_rollupProcessor, _assetA, _assetB, _tickSize) {
+    ) BiDCABridge(_rollupProcessor, _assetA, _assetB, _tickSize) {
         ORACLE = IChainlinkOracle(_oracle);
 
         IERC20(_assetA).safeApprove(address(UNI_ROUTER), type(uint256).max);
@@ -92,7 +92,7 @@ contract UniswapDCABridge_op is BiDCABridge_op {
         return (aFlow, bFlow);
     }
 
-    function getPrice() public virtual override(BiDCABridge_op) returns (uint256) {
+    function getPrice() public virtual override(BiDCABridge) returns (uint256) {
         (, int256 answer, , uint256 updatedAt, ) = ORACLE.latestRoundData();
         if (updatedAt + MAX_AGE < block.timestamp) {
             revert("Too old");
