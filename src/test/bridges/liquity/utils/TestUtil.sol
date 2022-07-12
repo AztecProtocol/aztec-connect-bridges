@@ -5,8 +5,6 @@ pragma solidity >=0.8.4;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AztecTypes} from "../../../../aztec/libraries/AztecTypes.sol";
 import {Test} from "forge-std/Test.sol";
-import {DefiBridgeProxy} from "../../../../aztec/DefiBridgeProxy.sol";
-import {RollupProcessor} from "../../../../aztec/RollupProcessor.sol";
 
 import {MockPriceFeed} from "./MockPriceFeed.sol";
 import {IPriceFeed} from "../../../../interfaces/liquity/IPriceFeed.sol";
