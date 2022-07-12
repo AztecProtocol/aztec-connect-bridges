@@ -13,10 +13,14 @@ import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
 
 /**
- * @notice Very rough draft reference implementation of DCA
+ * @notice Initial abstract implementation of "Dollar" Cost Averaging.
+ * Supports bidirectional "selling", e.g., A -> B and B -> A in same bridge
+ * Will match internal orders first, before allowing external parties to trade.
+ * @dev Built for assets with 18 decimals precision
+ * @dev A contract that inherits must handle the case for forcing a swap through a DEX.
  * @dev DO NOT USE THIS IS PRODUCTION, UNFINISHED CODE.
+ * @author Lasse Herskind (LHerskind on GitHub).
  */
-
 abstract contract BiDCABridge is BridgeBase {
     using SafeERC20 for IERC20;
 
@@ -72,7 +76,7 @@ abstract contract BiDCABridge is BridgeBase {
     uint32 public oldestTickAvailableA;
     uint32 public lastTickAvailableB;
 
-    // day => Tick
+    // tick id => Tick
     mapping(uint256 => Tick) public ticks;
     // nonce => DCA
     mapping(uint256 => DCA) public dcas;
@@ -93,17 +97,36 @@ abstract contract BiDCABridge is BridgeBase {
 
     receive() external payable {}
 
+    /**
+     * @notice Helper used to poke storage from next tick and `_ticks` forwards
+     * @param _ticks The number of ticks to poke
+     */
     function pokeNextTicks(uint256 _ticks) public {
         uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
         pokeTicks(nextTick, _ticks);
     }
 
+    /**
+     * @notice Helper used to poke storage of ticks to make deposits more consistent in gas usage
+     * @dev First sstore is very expensive, so by doing it as this, we can prepare it before deposit
+     * @param _startTick The first tick to poke
+     * @param _ticks The number of ticks to poke
+     */
     function pokeTicks(uint256 _startTick, uint256 _ticks) public {
         for (uint256 i = _startTick; i < _startTick + _ticks; i++) {
             ticks[i].poke++;
         }
     }
 
+    /**
+     * @notice Rebalances ticks using internal values first, then with externally provided assets.
+     * Ticks are balanced internally using the price at the specific tick (either stored in tick, or interpolated).
+     * Leftover assets are sold using current price to fill as much of the offer as possible.
+     * @param _offerA The amount of asset A that is offered for sale to the bridge
+     * @param _offerB The amount of asset B that is offered for sale to the bridge
+     * @return flowA The flow of asset A from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
+     * @return flowB The flow of asset B from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
+     */
     function rebalanceAndfill(uint256 _offerA, uint256 _offerB) public returns (int256, int256) {
         (int256 flowA, int256 flowB, , ) = _rebalanceAndfill(_offerA, _offerB, getPrice(), false);
         if (flowA > 0) {
@@ -214,10 +237,17 @@ abstract contract BiDCABridge is BridgeBase {
     }
 
     /**
-     * @notice The brice of A in B, e.g., 0.1 would mean 10 A = 1 B
+     * @notice The brice of A in B, e.g., 10 would mean 1 A = 10 B
+     * @return priceAToB measured with precision 1e18
      */
     function getPrice() public virtual returns (uint256);
 
+    /**
+     * @notice Computes the value of `_amount` A tokens in B tokens
+     * @param _amount The amount of A tokens
+     * @param _priceAToB The price of A tokens in B
+     * @param _up Flag to round up, if true rounding up, otherwise rounding down
+     */
     function assetAInAssetB(
         uint256 _amount,
         uint256 _priceAToB,
@@ -229,6 +259,12 @@ abstract contract BiDCABridge is BridgeBase {
         return (_amount * _priceAToB) / 1e18;
     }
 
+    /**
+     * @notice Computes the value of `_amount` A tokens in B tokens
+     * @param _amount The amount of A tokens
+     * @param _priceAToB The price of A tokens in B
+     * @param _up Flag to round up, if true rounding up, otherwise rounding down
+     */
     function assetBInAssetA(
         uint256 _amount,
         uint256 _priceAToB,
@@ -240,14 +276,29 @@ abstract contract BiDCABridge is BridgeBase {
         return (_amount * 1e18) / _priceAToB;
     }
 
-    function getTick(uint256 _day) public view returns (Tick memory) {
-        return ticks[_day];
+    /**
+     * @notice Helper to fetch the tick at `_tick`
+     * @param _tick The tick to fetch
+     * @return The Tick sturcture
+     */
+    function getTick(uint256 _tick) public view returns (Tick memory) {
+        return ticks[_tick];
     }
 
+    /**
+     * @notice Helper to fetch the DCA at `_nonce`
+     * @param _nonce The DCA to fetch
+     * @return The DCA sturcture
+     */
     function getDCA(uint256 _nonce) public view returns (DCA memory) {
         return dcas[_nonce];
     }
 
+    /**
+     * @notice Helper to compute the amount of available tokens (not taking rebalancing into account)
+     * @return availableA The amount of token A that is available
+     * @return availableB The amount of token B that is available
+     */
     function getAvailable() public view returns (uint256 availableA, uint256 availableB) {
         uint256 start = _lastUsedTick(oldestTickAvailableA, lastTickAvailableB);
         uint256 lastTick = block.timestamp / TICK_SIZE;
@@ -257,6 +308,12 @@ abstract contract BiDCABridge is BridgeBase {
         }
     }
 
+    /**
+     * @notice Helper to get the amount of accumulated tokens for a specific DCA (and a flag for finalisation readiness)
+     * @param _nonce The DCA to fetch
+     * @return accumulated The amount of assets accumulated
+     * @return ready A flag that is true if the accumulation has completed, false otherwise
+     */
     function getAccumulated(uint256 _nonce) public view returns (uint256 accumulated, bool ready) {
         DCA storage dca = dcas[_nonce];
         uint256 start = dca.start;
@@ -276,6 +333,13 @@ abstract contract BiDCABridge is BridgeBase {
         }
     }
 
+    /**
+     * @notice Create a new DCA position starting at next tick and accumulates the available assets to the future ticks.
+     * @param _nonce The interaction nonce
+     * @param _amount The amount of assets deposited
+     * @param _ticks The number of ticks that the position span
+     * @param _assetA A flag that is true if input asset is assetA and false otherwise.
+     */
     function _deposit(
         uint256 _nonce,
         uint256 _amount,
@@ -293,7 +357,7 @@ abstract contract BiDCABridge is BridgeBase {
         ticks[nextTick - 1].priceAToB = _toU128(getPrice());
         ticks[nextTick - 1].priceUpdated = _toU32(block.timestamp);
 
-        uint240 tickAmount = _toU240(_amount / _ticks);
+        uint256 tickAmount = _amount / _ticks;
         for (uint256 i = nextTick; i < nextTick + _ticks; i++) {
             if (_assetA) {
                 ticks[i].availableA += _toU120(tickAmount);
@@ -310,9 +374,19 @@ abstract contract BiDCABridge is BridgeBase {
     }
 
     /**
-     * @notice Rebalances and trades into unfilled ticks.
-     * Will rebalance based on own assets first, before allowing the ticks to be filled by external assets
+     * @notice Rebalances ticks using internal values first, then with externally provided assets.
+     * Ticks are balanced internally using the price at the specific tick (either stored in tick, or interpolated).
+     * Leftover assets are sold using current price to fill as much of the offer as possible.
+     * @param _offerA The amount of asset A that is offered for sale to the bridge
+     * @param _offerB The amount of asset B that is offered for sale to the bridge
+     * @param _currentPrice The current price
+     * @param _self A flag that is true if rebalancing with self, e.g., swapping available funds with dex and rebalancing, and false otherwise
+     * @return flowA The flow of asset A from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
+     * @return flowB The flow of asset B from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
+     * @return availableA The amount of asset A that is available after the rebalancing
+     * @return availableB The amount of asset B that is available after the rebalancing
      */
+
     function _rebalanceAndfill(
         uint256 _offerA,
         uint256 _offerB,
@@ -415,9 +489,6 @@ abstract contract BiDCABridge is BridgeBase {
                 }
             }
 
-            // Only a problem when we are trading between assets we have ourselves.
-            // Below is used to trade with external parties. Note that if own available assets are used, there are nothing ensuring that we have the assets that is matched.
-
             // If there is still available B, use the offer with A to buy it
             if (vars.offerAInB > 0 && tick.availableB > 0) {
                 uint128 amountBSold = _toU128(vars.offerAInB);
@@ -484,6 +555,12 @@ abstract contract BiDCABridge is BridgeBase {
         return (flowA, flowB, vars.availableA, vars.availableB);
     }
 
+    /**
+     * @notice Computes the earliest tick where we had nothing available
+     * @param _lastTickA The oldest tick with no available A
+     * @param _lastTickB The oldest tick with no available B
+     * @return The oldest tick with available assets
+     */
     function _lastUsedTick(uint256 _lastTickA, uint256 _lastTickB) internal pure returns (uint256) {
         uint256 start;
         if (_lastTickA == 0 && _lastTickB == 0) {
@@ -509,13 +586,6 @@ abstract contract BiDCABridge is BridgeBase {
             revert("Overflow");
         }
         return uint120(_a);
-    }
-
-    function _toU240(uint256 _a) internal pure returns (uint240) {
-        if (_a > type(uint240).max) {
-            revert("Overflow");
-        }
-        return uint240(_a);
     }
 
     function _toU32(uint256 _a) internal pure returns (uint32) {

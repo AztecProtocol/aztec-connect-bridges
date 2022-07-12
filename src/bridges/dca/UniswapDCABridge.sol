@@ -22,11 +22,16 @@ interface IChainlinkOracle {
         );
 }
 
+/**
+ * @notice DCA bridge that uses chainlink as oracle and can force rebalances through uniswap
+ */
 contract UniswapDCABridge is BiDCABridge {
     using SafeERC20 for IERC20;
 
-    address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    uint160 private constant SQRT_PRICE_LIMIT_X96 = 1461446703485210103287273052203988822378723970341;
+    address internal constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address internal constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+
+    uint160 internal constant SQRT_PRICE_LIMIT_X96 = 1461446703485210103287273052203988822378723970341;
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     uint256 public constant MAX_AGE = 1 days; // Heartbeat of oracle is 24 hours.
@@ -40,13 +45,22 @@ contract UniswapDCABridge is BiDCABridge {
         address _assetB,
         uint256 _tickSize,
         address _oracle
-    ) BiDCABridge(_rollupProcessor, _assetA, _assetB, _tickSize) {
+    ) BiDCABridge(_rollupProcessor, DAI, address(WETH), _tickSize) {
         ORACLE = IChainlinkOracle(_oracle);
 
         IERC20(_assetA).safeApprove(address(UNI_ROUTER), type(uint256).max);
         IERC20(_assetB).safeApprove(address(UNI_ROUTER), type(uint256).max);
     }
 
+    /**
+     * @notice Rebalances within ticks, then accross ticks, and finally, take the remaining funds to uniswap
+     * where it is traded for the opposite, and used to rebalance completely
+     * @dev Uses a specific path for the assets to do the swap
+     * @dev Slippage protection through the chainlink oracle, as a base price
+     * @dev Can be quite gas intensive as it will loop multiple times over the ticks to fill orders.
+     * @return aFlow The flow of token A
+     * @return bFlow The flow of token B
+     */
     function rebalanceAndFillUniswap() public returns (int256, int256) {
         uint256 oraclePrice = getPrice();
         (int256 aFlow, int256 bFlow, uint256 a, uint256 b) = _rebalanceAndfill(0, 0, oraclePrice, true);
@@ -92,6 +106,11 @@ contract UniswapDCABridge is BiDCABridge {
         return (aFlow, bFlow);
     }
 
+    /**
+     * @notice Fetch the price from the chainlink oracle.
+     * @dev Reverts if the price is stale or negative
+     * @return Price
+     */
     function getPrice() public virtual override(BiDCABridge) returns (uint256) {
         (, int256 answer, , uint256 updatedAt, ) = ORACLE.latestRoundData();
         if (updatedAt + MAX_AGE < block.timestamp) {
