@@ -2,7 +2,7 @@
 
 ## What does the bridge do? Why build it?
 
-The bridge deposits swaps `eth` to `stEth` using curve to get a staked eth derivative that earns a yield from staking rewards at the beaconchain. We build it to allow users to earn yield on their eth.
+The bridge swaps `eth` to `stEth` using curve to get a staked eth derivative that earns a yield from staking rewards at the beaconchain. We build it to allow users to earn yield on their eth.
 
 ## What protocol(s) does the bridge interact with ?
 
@@ -61,4 +61,4 @@ No, the bridge is immutable without any admin role.
 
 ## Does the bridge maintain state?
 
-No, the bridge don't maintain a state. However, it keep an insignificant amount of token (dust) in the bridge to reduce gas-costs of future transactions. By having dust, we don't need to do a `sstore` from `0` to `non-zero`.
+No, the bridge don't maintain a state. However, it keeps an insignificant amount of token (dust) in the bridge to reduce gas-costs of future transactions. By having dust, we don't need to do a `sstore` from `0` to `non-zero`.
