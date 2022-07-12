@@ -6,8 +6,8 @@ import {Test} from "forge-std/Test.sol";
 import {stdStorage} from "forge-std/Test.sol";
 import {StdStorage} from "forge-std/Test.sol";
 
-import {DefiBridgeProxy} from "../../../aztec/DefiBridgeProxy.sol";
-import {RollupProcessor} from "../../../aztec/RollupProcessor.sol";
+import {DefiBridgeProxy} from "./aztecmocks/DefiBridgeProxy.sol";
+import {RollupProcessor} from "./aztecmocks/RollupProcessor.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ElementBridge} from "../../../bridges/element/ElementBridge.sol";
@@ -19,6 +19,7 @@ import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 
+// @dev Note: these tests are deprecated and will be replaced once Element v2 is released
 contract ElementTest is Test {
     using stdStorage for StdStorage;
 

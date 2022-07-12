@@ -2,12 +2,12 @@ import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, Solidity
 import {
   ElementBridge,
   IVault,
-  RollupProcessor,
+  IRollupProcessor,
   ElementBridge__factory,
   IVault__factory,
-  RollupProcessor__factory,
+  IRollupProcessor__factory,
 } from "../../../typechain-types";
-import { AsyncDefiBridgeProcessedEvent } from "../../../typechain-types/RollupProcessor";
+import { AsyncDefiBridgeProcessedEvent } from "../../../typechain-types/IRollupProcessor";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { createWeb3Provider } from "../aztec/provider";
 import { EthAddress } from "@aztec/barretenberg/address";
@@ -75,7 +75,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   private constructor(
     private elementBridgeContract: ElementBridge,
     private balancerContract: IVault,
-    private rollupContract: RollupProcessor,
+    private rollupContract: IRollupProcessor,
     private chainProperties: ChainProperties,
   ) {}
 
@@ -88,7 +88,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   ) {
     const ethersProvider = createWeb3Provider(provider);
     const elementBridgeContract = ElementBridge__factory.connect(elementBridgeAddress.toString(), ethersProvider);
-    const rollupContract = RollupProcessor__factory.connect(rollupContractAddress.toString(), ethersProvider);
+    const rollupContract = IRollupProcessor__factory.connect(rollupContractAddress.toString(), ethersProvider);
     const vaultContract = IVault__factory.connect(balancerAddress.toString(), ethersProvider);
     return new ElementBridgeData(elementBridgeContract, vaultContract, rollupContract, chainProperties);
   }

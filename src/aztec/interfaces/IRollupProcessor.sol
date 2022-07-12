@@ -4,6 +4,30 @@ pragma solidity >=0.8.4;
 
 interface IRollupProcessor {
     /*----------------------------------------
+      EVENTS
+      ----------------------------------------*/
+    event OffchainData(uint256 indexed rollupId, uint256 chunk, uint256 totalChunks, address sender);
+    event RollupProcessed(uint256 indexed rollupId, bytes32[] nextExpectedDefiHashes, address sender);
+    event DefiBridgeProcessed(
+        uint256 indexed encodedInteraction,
+        uint256 indexed nonce,
+        uint256 totalInputValue,
+        uint256 totalOutputValueA,
+        uint256 totalOutputValueB,
+        bool result,
+        bytes errorReason
+    );
+    event AsyncDefiBridgeProcessed(uint256 indexed encodedInteraction, uint256 indexed nonce, uint256 totalInputValue);
+    event Deposit(uint256 indexed assetId, address indexed depositorAddress, uint256 depositValue);
+    event WithdrawError(bytes errorReason);
+    event AssetAdded(uint256 indexed assetId, address indexed assetAddress, uint256 assetGasLimit);
+    event BridgeAdded(uint256 indexed bridgeAddressId, address indexed bridgeAddress, uint256 bridgeGasLimit);
+    event RollupProviderUpdated(address indexed providerAddress, bool valid);
+    event VerifierUpdated(address indexed verifierAddress);
+    event Paused(address account);
+    event Unpaused(address account);
+
+    /*----------------------------------------
       MUTATING FUNCTIONS
       ----------------------------------------*/
 
