@@ -49,7 +49,7 @@ contract SetUnitTest is Test {
     }
 
     function test0InputValue() public {
-        vm.expectRevert(IssuanceBridge.ZeroInputValue.selector);
+        vm.expectRevert(ErrorLib.InvalidInput.selector);
         bridge.convert(empty, empty, empty, empty, 0, 0, 0, address(0));
     }
 
