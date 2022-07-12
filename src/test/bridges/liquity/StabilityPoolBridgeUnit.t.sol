@@ -59,7 +59,7 @@ contract StabilityPoolBridgeUnitTest is TestUtil {
             AztecTypes.AztecAssetType.ERC20
         );
 
-        // Transfer SPB back to the bridge
+        // Transfer StabilityPoolBridge accounting token (SPB) back to the bridge
         IERC20(inputAssetA.erc20Address).transfer(address(bridge), inputValue);
 
         // Withdraw LUSD from StabilityPool through the bridge

@@ -24,6 +24,7 @@ contract TroveBridgeUnitTest is TestUtil {
 
     IHintHelpers private constant HINT_HELPERS = IHintHelpers(0xE84251b93D9524E0d2e621Ba7dc7cb3579F997C0);
     address private constant STABILITY_POOL = 0x66017D22b0f8556afDd19FC67041899Eb65a21bb;
+    address private constant LQTY_STAKING_CONTRACT = 0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d;
     IBorrowerOperations public constant BORROWER_OPERATIONS =
         IBorrowerOperations(0x24179CD81c9e782A4096035f7eC97fB8B783e007);
     ITroveManager public constant TROVE_MANAGER = ITroveManager(0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2);
@@ -65,7 +66,7 @@ contract TroveBridgeUnitTest is TestUtil {
         vm.label(address(bridge.USDC_ETH_POOL()), "USDC_ETH_POOL");
         vm.label(address(LIQUITY_PRICE_FEED), "LIQUITY_PRICE_FEED");
         vm.label(STABILITY_POOL, "STABILITY_POOL");
-        vm.label(0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d, "LQTY_STAKING_CONTRACT");
+        vm.label(LQTY_STAKING_CONTRACT, "LQTY_STAKING_CONTRACT");
 
         // Set LUSD bridge balance to 1 WEI
         // Necessary for the optimization based on EIP-1087 to work!
@@ -293,7 +294,8 @@ contract TroveBridgeUnitTest is TestUtil {
             AztecTypes.AztecAssetType.ERC20
         );
 
-        // inputValue is equal to rollupProcessor TB balance --> we want to repay the debt in full
+        // inputValue is equal to rollupProcessor's TroveBridge accounting token (TB) balance --> we want to repay
+        // the debt in full
         uint256 inputValue = bridge.balanceOf(rollupProcessor);
         // Transfer TB to the bridge
         IERC20(inputAssetA.erc20Address).transfer(address(bridge), inputValue);

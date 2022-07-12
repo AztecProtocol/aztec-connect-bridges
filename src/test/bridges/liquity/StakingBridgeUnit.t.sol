@@ -74,7 +74,7 @@ contract StakingBridgeUnitTest is TestUtil {
             address(0)
         );
 
-        // Check the total supply of SPB token is 0
+        // Check the total supply of StakingBridge accounting token (SB) token is 0
         assertEq(bridge.totalSupply(), 0);
 
         // Transfer the funds back from the bridge to the rollup processor
