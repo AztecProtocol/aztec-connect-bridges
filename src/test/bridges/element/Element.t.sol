@@ -7,7 +7,7 @@ import {stdStorage} from "forge-std/Test.sol";
 import {StdStorage} from "forge-std/Test.sol";
 
 import {DefiBridgeProxy} from "./aztecmocks/DefiBridgeProxy.sol";
-import {RollupProcessor} from "./aztecmocks//RollupProcessor.sol";
+import {RollupProcessor} from "./aztecmocks/RollupProcessor.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ElementBridge} from "../../../bridges/element/ElementBridge.sol";
