@@ -3,10 +3,9 @@
 pragma solidity >=0.8.4;
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {UniswapDCABridge} from "../../../bridges/dca/reference/UniswapDCABridge.sol";
-import {UniswapDCABridge_op} from "../../../bridges/dca/optim/UniswapDCABridge_op.sol";
+import {UniswapDCABridge} from "../../../bridges/dca/UniswapDCABridge.sol";
 
-contract TestDCABridge is UniswapDCABridge_op {
+contract TestDCABridge is UniswapDCABridge {
     using SafeERC20 for IERC20;
 
     constructor(
@@ -15,7 +14,7 @@ contract TestDCABridge is UniswapDCABridge_op {
         address _assetB,
         uint256 _tickSize,
         address _oracle
-    ) UniswapDCABridge_op(_rollupProcessor, _assetA, _assetB, _tickSize, _oracle) {}
+    ) UniswapDCABridge(_rollupProcessor, _assetA, _assetB, _tickSize, _oracle) {}
 
     function rebalanceTest(
         uint256 _a,
