@@ -19,7 +19,7 @@ import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 
-// @dev Notre: these tests are deprecated and will be replaced once Element v2 is released
+// @dev Note: these tests are deprecated and will be replaced once Element v2 is released
 contract ElementTest is Test {
     using stdStorage for StdStorage;
 
