@@ -15,6 +15,8 @@ import {UniswapDCABridge} from "../../../bridges/dca/reference/UniswapDCABridge.
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {IWETH} from "../../../interfaces/IWETH.sol";
 
+import {ISwapRouter} from "../../../interfaces/uniswapv3/ISwapRouter.sol";
+
 import {TestDCABridge} from "./TestDCABridge.sol";
 
 /**
@@ -42,6 +44,16 @@ contract BiDCATest_unit is Test {
     using SafeERC20 for IERC20;
     using SafeERC20 for ERC20;
 
+    struct Sums {
+        uint256 summedA;
+        uint256 summedAInv;
+        uint256 summedB;
+        uint256 summedBInv;
+    }
+
+    address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    uint160 private constant SQRT_PRICE_LIMIT_X96 = 1461446703485210103287273052203988822378723970341;
+
     IWETH internal constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     address internal constant ORACLE = 0x773616E4d11A78F511299002da57A0a94577F1f4;
 
@@ -58,19 +70,10 @@ contract BiDCATest_unit is Test {
     function receiveEthFromBridge(uint256 _interactionNonce) public payable {}
 
     function setUp() public {
-        Testtoken a = new Testtoken("TokenA", "A", 18);
-        Testtoken b = new Testtoken("TokenB", "B", 18);
-
-        vm.label(address(a), "TokenA");
-        vm.label(address(b), "TokenB");
-
-        bridge = new TestDCABridge(address(this), address(a), address(b), 1 days, ORACLE);
-        vm.deal(address(bridge), 0);
-        vm.label(address(bridge), "Bridge");
-
-        assetA = IERC20(address(a));
-        assetB = IERC20(address(b));
-
+        // Preparation
+        assetA = IERC20(address(0x6B175474E89094C44Da98b954EedeAC495271d0F));
+        assetB = IERC20(address(WETH));
+        bridge = new TestDCABridge(address(this), address(assetA), address(assetB), 1 days, ORACLE);
         aztecAssetA = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: address(assetA),
@@ -81,6 +84,11 @@ contract BiDCATest_unit is Test {
             erc20Address: address(assetB),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
+        vm.label(address(assetA), "DAI");
+        vm.label(address(assetB), "WETH");
+
+        vm.deal(address(bridge), 0);
+        vm.label(address(bridge), "Bridge");
     }
 
     function testRounding(uint128 _a, uint96 _price) public {
@@ -120,26 +128,8 @@ contract BiDCATest_unit is Test {
         uint8 _timediff,
         uint8 _ff
     ) public {
-        {
-            // Preparation
-            assetA = IERC20(address(0x6B175474E89094C44Da98b954EedeAC495271d0F));
-            assetB = IERC20(address(WETH));
-            bridge = new TestDCABridge(address(this), address(assetA), address(assetB), 1 days, ORACLE);
-            aztecAssetA = AztecTypes.AztecAsset({
-                id: 1,
-                erc20Address: address(assetA),
-                assetType: AztecTypes.AztecAssetType.ERC20
-            });
-            aztecAssetB = AztecTypes.AztecAsset({
-                id: 2,
-                erc20Address: address(assetB),
-                assetType: AztecTypes.AztecAssetType.ERC20
-            });
-        }
-
-        uint256 deposit1 = bound(_deposit1, 0.1e18, 1e24);
-        uint256 deposit2 = bound(_deposit2, 0.1e18, 1e24);
-        // The price we have from the oracle, might not match perfectly what we can actually get from uniswap.
+        uint256 deposit1 = bound(_deposit1, 0.1e18, !_aFirst ? 1000e18 : 1e24);
+        uint256 deposit2 = bound(_deposit2, 0.1e18, _aFirst ? 1000e18 : 1e24);
         uint256 priceBefore = bridge.getPrice();
 
         {
@@ -154,6 +144,7 @@ contract BiDCATest_unit is Test {
             }
 
             {
+                movePrice(1e18, 0);
                 // Deposit with asset A
                 bridge.convert(
                     _aFirst ? aztecAssetA : aztecAssetB,
@@ -169,6 +160,7 @@ contract BiDCATest_unit is Test {
                 vm.warp(block.timestamp + timediff * 1 days);
             }
             {
+                movePrice(1e18, 0);
                 // Deposit2
                 bridge.convert(
                     _aFirst ? aztecAssetB : aztecAssetA,
@@ -185,9 +177,8 @@ contract BiDCATest_unit is Test {
             }
         }
 
-        // Update the price to get more assetB for every assetA.
-        setPrice(bridge.getPrice() * 2);
-
+        // Swap 1000 assetB for asset A. Will increase the value of asset A
+        movePrice(0, 1000 ether);
         bridge.rebalanceAndFillUniswap();
 
         {
@@ -209,11 +200,11 @@ contract BiDCATest_unit is Test {
 
                 if (_aFirst) {
                     uint256 aToBDirect = bridge.assetAInAssetB(deposit1, priceBefore, false);
-                    assertGt(outputValueA, aToBDirect, "Received too little");
+                    assertGt(outputValueA, aToBDirect, "0 Received too little");
                     assetB.safeTransferFrom(address(bridge), address(this), outputValueA);
                 } else {
                     uint256 bToADirect = bridge.assetBInAssetA(deposit1, priceBefore, false);
-                    assertLt(outputValueA, bToADirect, "Received too much A");
+                    assertLt(outputValueA, bToADirect, "0 Received too much A");
                     assetA.safeTransferFrom(address(bridge), address(this), outputValueA);
                 }
             } else {
@@ -242,11 +233,11 @@ contract BiDCATest_unit is Test {
                 assertTrue(interactionComplete, "Interaction failed");
                 if (!_aFirst) {
                     uint256 aToBDirect = bridge.assetAInAssetB(deposit2, priceBefore, false);
-                    assertGt(outputValueA, aToBDirect, "Received too little");
+                    assertGt(outputValueA, aToBDirect, "1 Received too little");
                     assetB.safeTransferFrom(address(bridge), address(this), outputValueA);
                 } else {
                     uint256 bToADirect = bridge.assetBInAssetA(deposit2, priceBefore, false);
-                    assertLt(outputValueA, bToADirect, "Received too much A");
+                    assertLt(outputValueA, bToADirect, "1 Received too much A");
                     assetA.safeTransferFrom(address(bridge), address(this), outputValueA);
                 }
             } else {
@@ -276,28 +267,18 @@ contract BiDCATest_unit is Test {
         uint256 _deposit2,
         bool _aFirst
     ) public {
-        {
-            // Preparation
-            assetA = IERC20(address(0x6B175474E89094C44Da98b954EedeAC495271d0F));
-            assetB = IERC20(address(WETH));
-            bridge = new TestDCABridge(address(this), address(assetA), address(assetB), 1 days, ORACLE);
-            aztecAssetA = AztecTypes.AztecAsset({
-                id: 1,
-                erc20Address: address(assetA),
-                assetType: AztecTypes.AztecAssetType.ERC20
-            });
-            aztecAssetB = AztecTypes.AztecAsset({
-                id: 0,
-                erc20Address: address(0),
-                assetType: AztecTypes.AztecAssetType.ETH
-            });
-        }
-
         uint256 deposit1 = bound(_deposit1, 0.1e18, 1e21);
         uint256 deposit2 = bound(_deposit2, 0.1e18, 1e21);
         uint256 priceBefore = bridge.getPrice();
 
+        aztecAssetB = AztecTypes.AztecAsset({
+            id: 0,
+            erc20Address: address(0),
+            assetType: AztecTypes.AztecAssetType.ETH
+        });
+
         {
+            refreshTs();
             // Deposit with asset A
             bridge.convert{value: _aFirst ? 0 : deposit1}(
                 _aFirst ? aztecAssetA : aztecAssetB,
@@ -315,6 +296,7 @@ contract BiDCATest_unit is Test {
             vm.warp(block.timestamp + 1 days);
         }
         {
+            refreshTs();
             // Deposit2
             bridge.convert{value: _aFirst ? deposit2 : 0}(
                 _aFirst ? aztecAssetB : aztecAssetA,
@@ -332,9 +314,8 @@ contract BiDCATest_unit is Test {
             vm.warp(block.timestamp + 9 days);
         }
 
-        // Update the price to get more assetB for every assetA
-        setPrice((bridge.getPrice() * 13) / 10);
-
+        // Swap 1000 assetB for asset A. Will increase the value of asset A
+        movePrice(0, 1000 ether);
         bridge.rebalanceAndFillUniswap();
 
         {
@@ -421,6 +402,7 @@ contract BiDCATest_unit is Test {
             deal(address(assetA), address(bridge), aDeposit);
             vm.warp(block.timestamp + 1 days);
 
+            refreshTs();
             bridge.convert(aztecAssetB, emptyAsset, aztecAssetA, emptyAsset, bDeposit, 1, 7, address(0));
             deal(address(assetB), address(bridge), bDeposit);
             vm.warp(block.timestamp + 9 days);
@@ -612,6 +594,7 @@ contract BiDCATest_unit is Test {
         uint256 dealAmount = 10e18;
         deal(address(assetB), address(this), dealAmount);
         assetB.approve(address(bridge), type(uint256).max);
+        refreshTs();
         (int256 a, int256 b) = bridge.rebalanceAndfill(0, dealAmount);
 
         {
@@ -632,7 +615,7 @@ contract BiDCATest_unit is Test {
                 TestDCABridge.Tick memory tick = bridge.getTick(startTick + i);
                 assertEq(tick.availableA, 0, "Available A not matching");
                 assertEq(tick.availableB, 0, "Available B not matching");
-                assertEq(tick.priceAToB, 0, "Price not matching");
+                assertEq(tick.priceAToB, i == 2 ? price : 0, "Price not matching");
                 assertEq(tick.assetAToB.sold, userBought, "AToB sold not matching");
                 assertEq(
                     tick.assetAToB.bought,
@@ -663,6 +646,7 @@ contract BiDCATest_unit is Test {
         // Deposit 700 A for selling over 7 days
         bridge.convert(aztecAssetA, emptyAsset, aztecAssetB, emptyAsset, 700 ether, 0, 7, address(0));
         vm.warp(block.timestamp + 1 days);
+        refreshTs();
         bridge.convert(aztecAssetA, emptyAsset, aztecAssetB, emptyAsset, 1400 ether, 1, 7, address(0));
         deal(address(assetA), address(bridge), 2100 ether);
 
@@ -710,6 +694,7 @@ contract BiDCATest_unit is Test {
 
         deal(address(assetB), address(this), 1000 ether);
         assetB.approve(address(bridge), type(uint256).max);
+        refreshTs();
         (int256 a, int256 b) = bridge.rebalanceAndfill(0, 10 ether);
 
         {
@@ -734,11 +719,12 @@ contract BiDCATest_unit is Test {
                 assertEq(tick.assetBToA.bought, 0, "AToB bought not matching");
             }
             for (uint256 i = 2; i < 4; i++) {
+                emit log_uint(i);
                 // Check tick[i]
                 TestDCABridge.Tick memory tick = bridge.getTick(startTick + i);
                 assertEq(tick.availableA, 0, "Available A not matching");
                 assertEq(tick.availableB, 0, "Available B not matching");
-                assertEq(tick.priceAToB, 0, "Price not matching");
+                assertEq(tick.priceAToB, i == 3 ? price : 0, "Price not matching");
                 assertEq(tick.assetAToB.sold, 300e18, "AToB sold not matching");
                 assertEq(tick.assetAToB.bought, bridge.assetAInAssetB(300e18, price, true), "AToB bought not matching");
                 assertEq(tick.assetBToA.sold, 0, "BToA sold not matching");
@@ -802,6 +788,7 @@ contract BiDCATest_unit is Test {
 
         deal(address(assetB), address(this), 1000 ether);
         assetB.approve(address(bridge), type(uint256).max);
+        refreshTs();
         (int256 a, int256 b) = bridge.rebalanceAndfill(0, 10 ether);
 
         {
@@ -875,6 +862,7 @@ contract BiDCATest_unit is Test {
 
         deal(address(assetB), address(this), 1000 ether);
         assetB.approve(address(bridge), type(uint256).max);
+        refreshTs();
         (int256 a, int256 b) = bridge.rebalanceAndfill(0, 0.15 ether);
 
         {
@@ -946,7 +934,6 @@ contract BiDCATest_unit is Test {
     }
 
     function testBiFlowPerfectMatchERC20() public {
-        // TODO: Implement different prices over range, e.g., diff price each day.
         uint256 price = bridge.getPrice();
         bridge.pokeNextTicks(10);
         uint256 startTick = block.timestamp / bridge.TICK_SIZE();
@@ -1001,6 +988,7 @@ contract BiDCATest_unit is Test {
             }
         }
 
+        refreshTs();
         (int256 a, int256 b) = bridge.rebalanceAndfill(0, 0);
 
         {
@@ -1072,18 +1060,14 @@ contract BiDCATest_unit is Test {
     }
 
     function testBiFlowPerfectMatchEth() public {
-        bridge = new TestDCABridge(address(this), address(assetA), address(WETH), 1 days, ORACLE);
-
-        assetB = IERC20(WETH);
+        uint256 price = bridge.getPrice();
+        uint256 _b = bridge.assetAInAssetB(700e18, price, true);
 
         aztecAssetB = AztecTypes.AztecAsset({
             id: 0,
             erc20Address: address(0),
             assetType: AztecTypes.AztecAssetType.ETH
         });
-
-        uint256 price = bridge.getPrice();
-        uint256 _b = bridge.assetAInAssetB(700e18, price, true);
 
         bridge.pokeNextTicks(10);
         uint256 startTick = block.timestamp / bridge.TICK_SIZE();
@@ -1129,6 +1113,7 @@ contract BiDCATest_unit is Test {
             }
         }
 
+        refreshTs();
         (int256 a, int256 b) = bridge.rebalanceAndfill(0, 0);
 
         {
@@ -1211,6 +1196,7 @@ contract BiDCATest_unit is Test {
 
         vm.warp(block.timestamp + 1 days);
 
+        refreshTs();
         bridge.convert(aztecAssetB, emptyAsset, aztecAssetA, emptyAsset, 0.7 ether, 1, 7, address(0));
         deal(address(assetB), address(bridge), 0.7e18);
 
@@ -1265,13 +1251,17 @@ contract BiDCATest_unit is Test {
         }
 
         // Some calls rebalance
-        (int256 a, int256 b) = bridge.rebalanceAndfill(0, 0);
+        movePrice(1e18, 0); // This is probably better for full cover, but why does it mess with the bridge accounting :eyes:
 
         {
+            (int256 a, int256 b) = bridge.rebalanceAndfill(0, 0);
             // Check rabalance output values
             assertEq(a, 0 ether, "User did not buy 0 tokens");
             assertEq(b, 0 ether, "User did not sell 0 eth");
         }
+
+        Sums memory sums;
+
         {
             {
                 // Check tick[1]
@@ -1285,10 +1275,26 @@ contract BiDCATest_unit is Test {
                 assertEq(tick.assetBToA.bought, 0, "AToB bought not matching");
             }
             for (uint256 i = 2; i < 8; i++) {
-                uint256 _a = bridge.assetBInAssetA(0.1e18, price, false);
+                // Because of the price change, need to interpolate
+                uint256 interpolatedPrice;
+                {
+                    TestDCABridge.Tick memory tick = bridge.getTick(startTick + 1);
+                    int256 slope = (int256(bridge.getPrice()) - int256(uint256(tick.priceAToB))) /
+                        int256(block.timestamp - uint256(tick.priceUpdated));
+                    uint256 dt = (startTick + i) *
+                        bridge.TICK_SIZE() +
+                        bridge.TICK_SIZE() /
+                        2 -
+                        uint256(tick.priceUpdated);
+                    interpolatedPrice = uint256(int256(uint256(tick.priceAToB)) + slope * int256(dt));
+                }
+                uint256 _a = bridge.assetBInAssetA(0.1e18, interpolatedPrice, false);
+                sums.summedA += _a;
+                sums.summedB += 0.1e18;
+                sums.summedBInv += bridge.assetAInAssetB(200e18 - _a, bridge.getPrice(), true);
                 // Check tick[i]
                 TestDCABridge.Tick memory tick = bridge.getTick(startTick + i);
-                assertEq(tick.availableA, 200e18 - _a, "Available A not matching");
+                assertEq(tick.availableA, 200e18 - _a, "Available A not matching 2<8");
                 assertEq(tick.availableB, 0, "Available B not matching");
                 assertEq(tick.priceAToB, 0, "Price not matching");
                 assertEq(tick.assetAToB.sold, _a, "AToB sold not matching");
@@ -1307,24 +1313,24 @@ contract BiDCATest_unit is Test {
         {
             // Check the accumulated value of DCA(1)
             (uint256 accumulated, bool ready) = bridge.getAccumulated(1);
-            uint256 _a = bridge.assetBInAssetA(0.1e18, price, false) * 6;
-            assertEq(accumulated, _a, "Accumulated not matching");
+            assertEq(accumulated, sums.summedA, "Accumulated not matching");
             assertFalse(ready, "Is ready");
         }
 
         // Someone comes in an rebalance the alst by selling eth to the bridge;
         deal(address(assetB), address(this), 1 ether);
         assetB.approve(address(bridge), 1 ether);
-        (int256 a2, int256 b2) = bridge.rebalanceAndfill(0, 1 ether);
         {
-            // Check rabalance output values
-            uint256 _a = bridge.assetBInAssetA(0.1e18, price, false);
-            uint256 aBought = 200e18 + 6 * (200e18 - _a);
-            uint256 _b = bridge.assetAInAssetB(200e18 - _a, price, true);
-            uint256 bSold = bridge.assetAInAssetB(200e18, price, true) + 6 * _b;
+            (int256 a2, int256 b2) = bridge.rebalanceAndfill(0, 1 ether);
+            price = bridge.getPrice();
 
-            assertEq(a2, -int256(aBought), "User did not buy matching tokens");
-            assertEq(b2, int256(bSold), "User did not sell matching tokens");
+            assertEq(a2, -int256(1400e18 - sums.summedA), "User did not buy matching tokens");
+            // 200 A from the day before, rest across split.
+            assertEq(
+                b2,
+                int256(sums.summedBInv + bridge.assetAInAssetB(200e18, price, true)),
+                "User did not sell matching tokens"
+            );
         }
 
         {
@@ -1337,9 +1343,8 @@ contract BiDCATest_unit is Test {
                 0,
                 0
             );
-            uint256 __a = bridge.assetBInAssetA(0.1e18, price, false);
-            uint256 _b = 0.1e18 + bridge.assetAInAssetB(200e18 - __a, price, true);
-            uint256 expectedOutputA = bridge.assetAInAssetB(200e18, price, false) + 6 * _b;
+            uint256 _b = bridge.assetAInAssetB(200e18, price, true);
+            uint256 expectedOutputA = sums.summedB + sums.summedBInv + _b;
 
             assertEq(outputValueA, expectedOutputA, "OutputValue A not matching");
             assertEq(outputValueB, 0, "Outputvalue B not zero");
@@ -1404,12 +1409,57 @@ contract BiDCATest_unit is Test {
         return tick;
     }
 
+    function refreshTs() public {
+        (, int256 answer, , , ) = bridge.ORACLE().latestRoundData();
+        bytes memory returnValue = abi.encode(uint80(0), answer, uint256(0), block.timestamp, uint80(0));
+        vm.mockCall(ORACLE, "", returnValue);
+    }
+
     function setPrice(uint256 _newPrice) public {
-        bytes memory returnValue = abi.encode(uint80(0), int256(_newPrice), uint256(0), uint256(0), uint80(0));
+        bytes memory returnValue = abi.encode(uint80(0), int256(_newPrice), uint256(0), block.timestamp, uint80(0));
         vm.mockCall(ORACLE, "", returnValue);
 
         emit log_named_decimal_uint("Setting Price", _newPrice, 18);
 
         assertEq(bridge.getPrice(), _newPrice, "Price not updated correctly");
+    }
+
+    function movePrice(uint256 _amountAToB, uint256 _amountBToA) public {
+        ISwapRouter uniRouter = bridge.UNI_ROUTER();
+
+        if (_amountAToB > 0) {
+            deal(address(assetA), address(this), _amountAToB);
+            assetA.approve(address(uniRouter), type(uint256).max);
+
+            uint256 b = uniRouter.exactInput(
+                ISwapRouter.ExactInputParams({
+                    path: abi.encodePacked(address(assetA), uint24(100), USDC, uint24(500), address(assetB)),
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: _amountAToB,
+                    amountOutMinimum: 0
+                })
+            );
+
+            uint256 price = (b * 1e18) / _amountAToB;
+            setPrice(price);
+        }
+
+        if (_amountBToA > 0) {
+            deal(address(assetB), address(this), _amountBToA);
+            assetB.approve(address(uniRouter), type(uint256).max);
+
+            uint256 a = uniRouter.exactInput(
+                ISwapRouter.ExactInputParams({
+                    path: abi.encodePacked(address(assetB), uint24(500), USDC, uint24(100), address(assetA)),
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: _amountBToA,
+                    amountOutMinimum: 0
+                })
+            );
+            uint256 price = (_amountBToA * 1e18 + a - 1) / a;
+            setPrice(price);
+        }
     }
 }
