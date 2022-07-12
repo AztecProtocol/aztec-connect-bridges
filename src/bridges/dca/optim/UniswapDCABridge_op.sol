@@ -24,13 +24,13 @@ interface IChainlinkOracle {
 
 contract UniswapDCABridge_op is BiDCABridge_op {
     using SafeERC20 for IERC20;
-    bool public constant IS_TESTING = true;
+
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     uint160 private constant SQRT_PRICE_LIMIT_X96 = 1461446703485210103287273052203988822378723970341;
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     uint256 public constant MAX_AGE = 1 days; // Heartbeat of oracle is 24 hours.
-    uint256 public constant SLIPPAGE = 10000; // Basis points
+    uint256 public constant SLIPPAGE = 100; // Basis points
 
     IChainlinkOracle public immutable ORACLE;
 
@@ -48,16 +48,12 @@ contract UniswapDCABridge_op is BiDCABridge_op {
     }
 
     function rebalanceAndFillUniswap() public returns (int256, int256) {
-        // Gaswise not ideal. But somewhat understandable.
         uint256 oraclePrice = getPrice();
         (int256 aFlow, int256 bFlow, uint256 a, uint256 b) = _rebalanceAndfill(0, 0, oraclePrice, true);
-        //(uint256 a, uint256 b) = getAvailable();
 
         if (a > 0 && b > 0) {
             (aFlow, bFlow, a, b) = _rebalanceAndfill(a, b, oraclePrice, true);
         }
-
-        //(a, b) = getAvailable();
 
         if (a > 0) {
             // Trade all A to B using uniswap. Then compute the price using output of that price, rounding DOWN as the price passed rebalance. Rounding DOWN ensures that B received / price >= A available
@@ -98,7 +94,7 @@ contract UniswapDCABridge_op is BiDCABridge_op {
 
     function getPrice() public virtual override(BiDCABridge_op) returns (uint256) {
         (, int256 answer, , uint256 updatedAt, ) = ORACLE.latestRoundData();
-        if (!IS_TESTING && updatedAt + MAX_AGE < block.timestamp) {
+        if (updatedAt + MAX_AGE < block.timestamp) {
             revert("Too old");
         }
 

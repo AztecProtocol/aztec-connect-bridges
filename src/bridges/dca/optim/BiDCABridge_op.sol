@@ -17,53 +17,8 @@ import {IWETH} from "../../../interfaces/IWETH.sol";
  * @dev DO NOT USE THIS IS PRODUCTION, UNFINISHED CODE.
  */
 
-library Muldiv {
-    // Used when computing how much you get
-    function mulDivDown(
-        uint256 x,
-        uint256 y,
-        uint256 denominator
-    ) internal pure returns (uint256 z) {
-        assembly {
-            // Store x * y in z for now.
-            z := mul(x, y)
-
-            // Equivalent to require(denominator != 0 && (x == 0 || (x * y) / x == y))
-            if iszero(and(iszero(iszero(denominator)), or(iszero(x), eq(div(z, x), y)))) {
-                revert(0, 0)
-            }
-
-            // Divide z by the denominator.
-            z := div(z, denominator)
-        }
-    }
-
-    // Used when computing how much to pay
-    function mulDivUp(
-        uint256 x,
-        uint256 y,
-        uint256 denominator
-    ) internal pure returns (uint256 z) {
-        assembly {
-            // Store x * y in z for now.
-            z := mul(x, y)
-
-            // Equivalent to require(denominator != 0 && (x == 0 || (x * y) / x == y))
-            if iszero(and(iszero(iszero(denominator)), or(iszero(x), eq(div(z, x), y)))) {
-                revert(0, 0)
-            }
-
-            // First, divide z - 1 by the denominator and add 1.
-            // We allow z - 1 to underflow if z is 0, because we multiply the
-            // end result by 0 if z is zero, ensuring we return 0 if z is zero.
-            z := mul(iszero(iszero(z)), add(div(sub(z, 1), denominator), 1))
-        }
-    }
-}
-
 abstract contract BiDCABridge_op is BridgeBase {
     using SafeERC20 for IERC20;
-    using Muldiv for uint256;
 
     error PositionAlreadyExists();
 
@@ -269,9 +224,9 @@ abstract contract BiDCABridge_op is BridgeBase {
         bool _up
     ) public pure returns (uint256) {
         if (_up) {
-            return _amount.mulDivUp(_priceAToB, 1e18);
+            return (_amount * _priceAToB + 1e18 - 1) / 1e18;
         }
-        return _amount.mulDivDown(_priceAToB, 1e18);
+        return (_amount * _priceAToB) / 1e18;
     }
 
     function assetBInAssetA(
@@ -280,9 +235,9 @@ abstract contract BiDCABridge_op is BridgeBase {
         bool _up
     ) public pure returns (uint256) {
         if (_up) {
-            return _amount.mulDivUp(1e18, _priceAToB);
+            return (_amount * 1e18 + _priceAToB - 1) / _priceAToB;
         }
-        return _amount.mulDivDown(1e18, _priceAToB);
+        return (_amount * 1e18) / _priceAToB;
     }
 
     function getTick(uint256 _day) public view returns (Tick memory) {
@@ -334,7 +289,7 @@ abstract contract BiDCABridge_op is BridgeBase {
         if (!_assetA && lastTickAvailableB == 0) {
             lastTickAvailableB = _toU32(nextTick);
         }
-        // Update prices of today
+        // Update prices of last tick, might be 1 second in the past.
         ticks[nextTick - 1].priceAToB = _toU128(getPrice());
         ticks[nextTick - 1].priceUpdated = _toU32(block.timestamp);
 
@@ -397,6 +352,9 @@ abstract contract BiDCABridge_op is BridgeBase {
         vars.offerBInA = assetBInAssetA(_offerB, vars.currentPrice, false);
 
         uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
+        // Update the latest tick, might be 1 second in the past.
+        ticks[nextTick - 1].priceAToB = _toU128(vars.currentPrice);
+        ticks[nextTick - 1].priceUpdated = _toU32(block.timestamp);
         for (uint256 i = oldestTick; i < nextTick; i++) {
             // Load a cache
             Tick memory tick = ticks[i];
