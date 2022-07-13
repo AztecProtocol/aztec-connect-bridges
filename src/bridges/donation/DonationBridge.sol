@@ -9,6 +9,10 @@ import {BridgeBase} from "../base/BridgeBase.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 
+/**
+ * @notice Bridge that allows users to collectively donate funds to an L1 address
+ * @author Lasse Herskind (LHerskind on GitHub)
+ */
 contract DonationBridge is BridgeBase {
     using SafeERC20 for IERC20;
 
@@ -16,11 +20,19 @@ contract DonationBridge is BridgeBase {
 
     event ListedDonee(address donee, uint64 index);
 
+    // Starts at 1 to revert if users forget to provide auxdata.
     uint64 public nextDonee = 1;
+
+    // Maps id to a donee
     mapping(uint64 => address) public donees;
 
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
+    /**
+     * @notice Lists a new Donee on the bridge
+     * @param _donee The address to add as a donee
+     * @return id The id of the new donee
+     */
     function listDonee(address _donee) public returns (uint256) {
         uint64 id = nextDonee++;
         donees[id] = _donee;
@@ -28,6 +40,12 @@ contract DonationBridge is BridgeBase {
         return id;
     }
 
+    /**
+     * @notice Transfers `_inputAssetA` to `donees[_auxData]`
+     * @param _inputAssetA The asset to donate
+     * @param _inputValue The amount to donate
+     * @param _auxData The id of the donee
+     */
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata,
@@ -43,7 +61,7 @@ contract DonationBridge is BridgeBase {
         override(BridgeBase)
         onlyRollup
         returns (
-            uint256 outputValueA,
+            uint256,
             uint256,
             bool
         )
