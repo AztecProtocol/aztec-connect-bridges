@@ -1,11 +1,7 @@
-cache
+cache/
 out/
-node_modules
-yarn.lock
-package-lock.json
+node_modules/
 artifacts/
 yarn-error.log
-contracts
 client-dest/
-types/
 typechain-types/

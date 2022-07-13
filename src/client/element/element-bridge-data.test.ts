@@ -1,20 +1,19 @@
-import { ChainProperties, ElementBridgeData } from './element-bridge-data';
-import { BigNumber } from 'ethers';
-import { randomBytes } from 'crypto';
+import { ChainProperties, ElementBridgeData } from "./element-bridge-data";
+import { BigNumber } from "ethers";
+import { randomBytes } from "crypto";
 import {
-  RollupProcessor,
+  IRollupProcessor,
   ElementBridge,
   IVault,
   ElementBridge__factory,
-  RollupProcessor__factory,
+  IRollupProcessor__factory,
   IVault__factory,
-} from '../../../typechain-types';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { AztecAssetType } from '../bridge-data';
-import { AddressZero } from '@ethersproject/constants';
-import { EthAddress } from '@aztec/barretenberg/address';
+} from "../../../typechain-types";
+import { BridgeId } from "@aztec/barretenberg/bridge_id";
+import { AztecAssetType } from "../bridge-data";
+import { EthAddress } from "@aztec/barretenberg/address";
 
-jest.mock('../aztec/provider', () => ({
+jest.mock("../aztec/provider", () => ({
   createWeb3Provider: jest.fn(),
 }));
 
@@ -22,7 +21,7 @@ type Mockify<T> = {
   [P in keyof T]: jest.Mock;
 };
 
-const randomAddress = () => `0x${randomBytes(20).toString('hex')}`;
+const randomAddress = () => `0x${randomBytes(20).toString("hex")}`;
 
 const tranche1DeploymentBlockNumber = 45n;
 const tranche2DeploymentBlockNumber = 87n;
@@ -44,8 +43,8 @@ interface Interaction {
 
 const interactions: { [key: number]: Interaction } = {};
 
-describe('element bridge data', () => {
-  let rollupContract: Mockify<RollupProcessor>;
+describe("element bridge data", () => {
+  let rollupContract: Mockify<IRollupProcessor>;
   let elementBridge: Mockify<ElementBridge>;
   let balancerContract: Mockify<IVault>;
   const now = Math.floor(Date.now() / 1000);
@@ -130,36 +129,38 @@ describe('element bridge data', () => {
   const createElementBridgeData = (
     element: ElementBridge = elementBridge as any,
     balancer: IVault = balancerContract as any,
-    rollup: RollupProcessor = rollupContract as any,
+    rollup: IRollupProcessor = rollupContract as any,
     chainProperties: ChainProperties = { eventBatchSize: 10 },
   ) => {
     ElementBridge__factory.connect = () => element as any;
     IVault__factory.connect = () => balancer as any;
-    RollupProcessor__factory.connect = () => rollup as any;
+    IRollupProcessor__factory.connect = () => rollup as any;
     return ElementBridgeData.create({} as any, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO, chainProperties); // can pass in dummy values here as the above factories do all of the work
   };
 
-  it('should return the correct amount of interest', async () => {
+  it("should return the correct amount of interest", async () => {
     const elementBridgeData = createElementBridgeData();
     interactions[56] = {
       quantityPT: BigNumber.from(outputValue),
       expiry: BigNumber.from(expiration1),
-      trancheAddress: '',
+      trancheAddress: "",
       finalised: false,
       failed: false,
     } as Interaction;
+    const totalInput = defiEvents.find(x => x.nonce === 56)!.totalInputValue;
+    const userShareDivisor = 2n;
     const defiEvent = getDefiEvent(56)!;
-    const [daiValue] = await elementBridgeData.getInteractionPresentValue(56n);
+    const [daiValue] = await elementBridgeData.getInteractionPresentValue(56n, totalInput / userShareDivisor);
     const delta = outputValue - defiEvent.totalInputValue;
-    const scalingFactor = elementBridgeData.scalingFactor;
-    const ratio = ((BigInt(now) - startDate) * scalingFactor) / (expiration1 - startDate);
-    const out = defiEvent.totalInputValue + (delta * ratio) / scalingFactor;
+    const timeElapsed = BigInt(now) - startDate;
+    const fullTime = expiration1 - startDate;
+    const out = defiEvent.totalInputValue + (delta * timeElapsed) / fullTime;
 
-    expect(daiValue.amount).toStrictEqual(out);
+    expect(daiValue.amount).toStrictEqual(out / userShareDivisor);
     expect(Number(daiValue.assetId)).toStrictEqual(bridge1.inputAssetIdA);
   });
 
-  it('should return the correct amount of interest for multiple interactions', async () => {
+  it("should return the correct amount of interest for multiple interactions", async () => {
     const elementBridgeData = createElementBridgeData();
     const testInteraction = async (nonce: number) => {
       const defiEvent = getDefiEvent(nonce)!;
@@ -167,18 +168,22 @@ describe('element bridge data', () => {
       interactions[nonce] = {
         quantityPT: BigNumber.from(10n * 10n ** 18n),
         expiry: BigNumber.from(bridgeId.auxData),
-        trancheAddress: '',
+        trancheAddress: "",
         finalised: false,
         failed: false,
       } as Interaction;
+      const totalInput = defiEvents.find(x => x.nonce === nonce)!.totalInputValue;
+      const userShareDivisor = 2n;
 
-      const [daiValue] = await elementBridgeData.getInteractionPresentValue(BigInt(nonce));
+      const [daiValue] = await elementBridgeData.getInteractionPresentValue(
+        BigInt(nonce),
+        totalInput / userShareDivisor,
+      );
       const delta = interactions[nonce].quantityPT.toBigInt() - defiEvent.totalInputValue;
-      const scalingFactor = elementBridgeData.scalingFactor;
-      const ratio = ((BigInt(now) - startDate) * scalingFactor) / (BigInt(bridgeId.auxData) - startDate);
-      const out = defiEvent.totalInputValue + (delta * ratio) / scalingFactor;
-
-      expect(daiValue.amount).toStrictEqual(out);
+      const timeElapsed = BigInt(now) - startDate;
+      const fullTime = BigInt(bridgeId.auxData) - startDate;
+      const out = defiEvent.totalInputValue + (delta * timeElapsed) / fullTime;
+      expect(daiValue.amount).toStrictEqual(out / userShareDivisor);
       expect(Number(daiValue.assetId)).toStrictEqual(bridgeId.inputAssetIdA);
     };
     await testInteraction(56);
@@ -191,19 +196,19 @@ describe('element bridge data', () => {
     await testInteraction(190);
   });
 
-  it('requesting the present value of an unknown interaction should return empty values', async () => {
+  it("requesting the present value of an unknown interaction should return empty values", async () => {
     const elementBridgeData = createElementBridgeData();
-    const values = await elementBridgeData.getInteractionPresentValue(57n);
+    const values = await elementBridgeData.getInteractionPresentValue(57n, 0n);
     expect(values).toStrictEqual([]);
   });
 
-  it('should return the correct expiration of the tranche', async () => {
+  it("should return the correct expiration of the tranche", async () => {
     const endDate = Math.floor(Date.now() / 1000) + 86400 * 60;
     elementBridge = {
       interactions: jest.fn().mockImplementation(async () => {
         return {
           quantityPT: BigNumber.from(1),
-          trancheAddress: '',
+          trancheAddress: "",
           expiry: BigNumber.from(endDate),
           finalised: false,
           failed: false,
@@ -221,16 +226,16 @@ describe('element bridge data', () => {
     expect(expiration).toBe(BigInt(endDate));
   });
 
-  it('should return the correct yield of the tranche', async () => {
+  it("should return the correct yield of the tranche", async () => {
     const now = Math.floor(Date.now() / 1000);
     const expiry = BigInt(now + 86400 * 30);
-    const trancheAddress = '0x90ca5cef5b29342b229fb8ae2db5d8f4f894d652';
-    const poolId = '0x90ca5cef5b29342b229fb8ae2db5d8f4f894d6520002000000000000000000b5';
+    const trancheAddress = "0x90ca5cef5b29342b229fb8ae2db5d8f4f894d652";
+    const poolId = "0x90ca5cef5b29342b229fb8ae2db5d8f4f894d6520002000000000000000000b5";
     const interest = BigInt(1e16);
     const inputValue = BigInt(10e18),
       elementBridge = {
-        hashAssetAndExpiry: jest.fn().mockResolvedValue('0xa'),
-        pools: jest.fn().mockResolvedValue([trancheAddress, '', poolId]),
+        hashAssetAndExpiry: jest.fn().mockResolvedValue("0xa"),
+        pools: jest.fn().mockResolvedValue([trancheAddress, "", poolId]),
         provider: {
           getBlockNumber: jest.fn().mockResolvedValue(200),
           getBlock: jest.fn().mockResolvedValue({ timestamp: +now.toString(), number: 200 }),
@@ -252,22 +257,22 @@ describe('element bridge data', () => {
     const output = await elementBridgeData.getExpectedYield(
       {
         assetType: AztecAssetType.ERC20,
-        erc20Address: 'test',
+        erc20Address: "test",
         id: 1n,
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: AddressZero,
+        erc20Address: EthAddress.ZERO.toString(),
         id: 0n,
       },
       {
         assetType: AztecAssetType.ERC20,
-        erc20Address: 'test',
+        erc20Address: "test",
         id: 1n,
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: AddressZero,
+        erc20Address: EthAddress.ZERO.toString(),
         id: 0n,
       },
       expiry,
@@ -284,14 +289,14 @@ describe('element bridge data', () => {
     expect(output[0]).toBe(percent);
   });
 
-  it('should return the correct market size for a given tranche', async () => {
+  it("should return the correct market size for a given tranche", async () => {
     const expiry = BigInt(Date.now() + 86400 * 30);
     const tokenAddress = randomAddress();
-    const poolId = '0x90ca5cef5b29342b229fb8ae2db5d8f4f894d6520002000000000000000000b5';
+    const poolId = "0x90ca5cef5b29342b229fb8ae2db5d8f4f894d6520002000000000000000000b5";
     const tokenBalance = 10e18,
       elementBridge = {
-        hashAssetAndExpiry: jest.fn().mockResolvedValue('0xa'),
-        pools: jest.fn().mockResolvedValue([tokenAddress, '', poolId]),
+        hashAssetAndExpiry: jest.fn().mockResolvedValue("0xa"),
+        pools: jest.fn().mockResolvedValue([tokenAddress, "", poolId]),
         provider: {
           getBlockNumber: jest.fn().mockResolvedValue(200),
           getBlock: jest.fn().mockResolvedValue({ timestamp: +now.toString(), number: 200 }),
@@ -311,22 +316,22 @@ describe('element bridge data', () => {
     const marketSize = await elementBridgeData.getMarketSize(
       {
         assetType: AztecAssetType.ERC20,
-        erc20Address: 'test',
+        erc20Address: "test",
         id: 1n,
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: AddressZero,
+        erc20Address: EthAddress.ZERO.toString(),
         id: 0n,
       },
       {
         assetType: AztecAssetType.ERC20,
-        erc20Address: 'test',
+        erc20Address: "test",
         id: 1n,
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: AddressZero,
+        erc20Address: EthAddress.ZERO.toString(),
         id: 0n,
       },
       expiry,

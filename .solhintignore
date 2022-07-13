@@ -1,0 +1,8 @@
+src/interfaces/
+src/libraries/
+src/test/bridges/element/MockDeploymentValidator.sol
+# TODO: remove the following 2 lines once the bridge is deprecated
+src/bridges/element/
+src/test/bridges/element/aztecmocks
+# TODO: remove the following line once linting rules are unified between internal and this repo
+src/aztec/interfaces/IRollupProcessor.sol

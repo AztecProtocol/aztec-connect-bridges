@@ -1,18 +1,17 @@
-import { AddressZero } from '@ethersproject/constants';
-import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
+import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from "../bridge-data";
 import {
   ElementBridge,
   IVault,
-  RollupProcessor,
+  IRollupProcessor,
   ElementBridge__factory,
   IVault__factory,
-  RollupProcessor__factory,
-} from '../../../typechain-types';
-import { AsyncDefiBridgeProcessedEvent } from '../../../typechain-types/RollupProcessor';
-import { EthereumProvider } from '@aztec/barretenberg/blockchain';
-import { createWeb3Provider } from '../aztec/provider';
-import { EthAddress } from '@aztec/barretenberg/address';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+  IRollupProcessor__factory,
+} from "../../../typechain-types";
+import { AsyncDefiBridgeProcessedEvent } from "../../../typechain-types/IRollupProcessor";
+import { EthereumProvider } from "@aztec/barretenberg/blockchain";
+import { createWeb3Provider } from "../aztec/provider";
+import { EthAddress } from "@aztec/barretenberg/address";
+import { BridgeId } from "@aztec/barretenberg/bridge_id";
 
 export type BatchSwapStep = {
   poolId: string;
@@ -54,7 +53,7 @@ function divide(a: bigint, b: bigint, precision: bigint) {
   return (a * precision) / b;
 }
 
-const decodeEvent = async (event: AsyncDefiBridgeProcessedEvent) => {
+const decodeEvent = async (event: AsyncDefiBridgeProcessedEvent): Promise<EventBlock> => {
   const {
     args: [bridgeId, nonce, totalInputValue],
   } = event;
@@ -76,7 +75,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   private constructor(
     private elementBridgeContract: ElementBridge,
     private balancerContract: IVault,
-    private rollupContract: RollupProcessor,
+    private rollupContract: IRollupProcessor,
     private chainProperties: ChainProperties,
   ) {}
 
@@ -89,7 +88,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   ) {
     const ethersProvider = createWeb3Provider(provider);
     const elementBridgeContract = ElementBridge__factory.connect(elementBridgeAddress.toString(), ethersProvider);
-    const rollupContract = RollupProcessor__factory.connect(rollupContractAddress.toString(), ethersProvider);
+    const rollupContract = IRollupProcessor__factory.connect(rollupContractAddress.toString(), ethersProvider);
     const vaultContract = IVault__factory.connect(balancerAddress.toString(), ethersProvider);
     return new ElementBridgeData(elementBridgeContract, vaultContract, rollupContract, chainProperties);
   }
@@ -120,9 +119,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   }
 
   private async getCurrentBlock() {
-    const currentBlockNumber = await this.elementBridgeContract.provider.getBlockNumber();
-    const currentBlock = await this.elementBridgeContract.provider.getBlock(currentBlockNumber);
-    return currentBlock;
+    return this.elementBridgeContract.provider.getBlock("latest");
   }
 
   private async findDefiEventForNonce(interactionNonce: bigint) {
@@ -181,7 +178,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   // @dev which define how much a given interaction is worth in terms of Aztec asset ids.
   // @param bigint interactionNonce the interaction nonce to return the value for
 
-  async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
+  async getInteractionPresentValue(interactionNonce: bigint, inputValue: bigint): Promise<AssetValue[]> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
     if (interaction === undefined) {
       return [];
@@ -201,13 +198,14 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     const totalInterest = endValue.toBigInt() - defiEvent.totalInputValue;
     const elapsedTime = BigInt(now - defiEvent.timestamp);
     const totalTime = exitTimestamp.toBigInt() - BigInt(defiEvent.timestamp);
-    const timeRatio = divide(elapsedTime, totalTime, this.scalingFactor);
-    const accruedInterst = (totalInterest * timeRatio) / this.scalingFactor;
+    const accruedInterest = (totalInterest * elapsedTime) / totalTime;
+    const totalPresentValue = defiEvent.totalInputValue + accruedInterest;
+    const userPresentValue = (totalPresentValue * inputValue) / defiEvent.totalInputValue;
 
     return [
       {
         assetId: BigInt(BridgeId.fromBigInt(defiEvent.bridgeId).inputAssetIdA),
-        amount: defiEvent.totalInputValue + accruedInterst,
+        amount: userPresentValue,
       },
     ];
   }
@@ -256,7 +254,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
       start: 0,
       length: 64,
       solidityType: SolidityType.uint64,
-      description: 'Unix Timestamp of the tranch expiry',
+      description: "Unix Timestamp of the tranch expiry",
     },
   ];
 
@@ -286,8 +284,8 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     const trancheAddress = pool.trancheAddress;
 
     const funds: FundManagement = {
-      sender: AddressZero,
-      recipient: AddressZero,
+      sender: EthAddress.ZERO.toString(),
+      recipient: EthAddress.ZERO.toString(),
       fromInternalBalance: false,
       toInternalBalance: false,
     };
@@ -297,7 +295,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
       assetInIndex: 0,
       assetOutIndex: 1,
       amount: precision.toString(),
-      userData: '0x',
+      userData: "0x",
     };
 
     const deltas = await this.balancerContract.queryBatchSwap(
