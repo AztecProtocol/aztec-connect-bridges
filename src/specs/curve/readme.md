@@ -32,7 +32,7 @@ The gas cost E2E for a deposit is ~250K, this is including the transfers to/from
 
 ### Withdrawal
 
-If the bridge receives `wstEth` as the input token, it will unwrap them to `stEth` before going to curve, where it will swap it (NOTICE: a minimum eth/wsteth is passed in the auxdata). 
+If the bridge receives `wstEth` as the input token, it will unwrap them to `stEth` before going to curve, where it will swap it (NOTICE: a minimum eth/wsteth is passed in the auxdata).
 It will then transfer the eth received to the `ROLLUP_PROCESSOR` for the given `interactionNonce`.
 
 The gas cost E2E for a withdraw is ~250K, this is including the transfers to/from the Rollup Processor.
