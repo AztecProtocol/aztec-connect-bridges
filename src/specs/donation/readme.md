@@ -18,8 +18,9 @@ The bridge are forwarding 30K gas to the receipient receive function if transfer
 
 ## How can the accounting of the bridge be impacted by interactions performed by other parties than the bridge? Example, if borrowing, how does it handle liquidations etc.
 
-The bridge can only be impacted by other parties, if a donation is made to a unlisted id.
-If this is the case, someone can list donees until they hit the id and get the donation themselves.
+The bridge can only be impacted by other parties, if a donation is made to an, at the time, unlisted id.
+The expected behaviour from the user perspective would be that the transaction reverts, but it is possible for a searcher (MEV) to frontrun the defi-interaction and list itself as Donee on the bridge to match the id.
+In this case, the searcher would get the funds instead of a revert and refund to the rollup.
 
 ## What functions are available in [/src/client](./client)?
 
