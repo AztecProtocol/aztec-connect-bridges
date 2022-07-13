@@ -205,10 +205,10 @@ abstract contract BridgeTestBase is Test {
         encodedId = _bridgeId & MASK_THIRTY_TWO_BITS;
 
         // Input assets
-        encodedId = encodedId | ((_inputAssetA.id & MASK_THIRTY_BITS) << INPUT_ASSET_ID_A_SHIFT);
-        encodedId = encodedId | ((_inputAssetB.id & MASK_THIRTY_BITS) << INPUT_ASSET_ID_B_SHIFT);
-        encodedId = encodedId | ((_outputAssetA.id & MASK_THIRTY_BITS) << OUTPUT_ASSET_ID_A_SHIFT);
-        encodedId = encodedId | ((_outputAssetB.id & MASK_THIRTY_BITS) << OUTPUT_ASSET_ID_B_SHIFT);
+        encodedId = encodedId | (_encodeAsset(_inputAssetA) << INPUT_ASSET_ID_A_SHIFT);
+        encodedId = encodedId | (_encodeAsset(_inputAssetB) << INPUT_ASSET_ID_B_SHIFT);
+        encodedId = encodedId | (_encodeAsset(_outputAssetA) << OUTPUT_ASSET_ID_A_SHIFT);
+        encodedId = encodedId | (_encodeAsset(_outputAssetB) << OUTPUT_ASSET_ID_B_SHIFT);
 
         // Aux data
         encodedId = encodedId | ((_auxData & MASK_SIXTY_FOUR_BITS) << AUX_DATA_SHIFT);
@@ -272,6 +272,13 @@ abstract contract BridgeTestBase is Test {
         );
 
         vm.mockCall(ROLLUP_PROCESSOR.verifier(), "", abi.encode(true));
+    }
+
+    function _encodeAsset(AztecTypes.AztecAsset memory _asset) private pure returns (uint256) {
+        if (_asset.assetType == AztecTypes.AztecAssetType.VIRTUAL) {
+            return (_asset.id & MASK_THIRTY_BITS) | VIRTUAL_ASSET_ID_FLAG;
+        }
+        return _asset.id & MASK_THIRTY_BITS;
     }
 
     /**
