@@ -16,6 +16,7 @@ import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 contract DonationBridge is BridgeBase {
     using SafeERC20 for IERC20;
 
+    error InvalidDoneeAddress();
     error EthTransferFailed();
 
     event ListedDonee(address donee, uint64 index);
@@ -34,6 +35,7 @@ contract DonationBridge is BridgeBase {
      * @return id The id of the new donee
      */
     function listDonee(address _donee) public returns (uint256) {
+        if (_donee == address(0)) revert InvalidDoneeAddress();
         uint64 id = nextDonee++;
         donees[id] = _donee;
         emit ListedDonee(_donee, id);

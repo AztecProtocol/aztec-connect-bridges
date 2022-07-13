@@ -12,6 +12,7 @@ import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {DonationBridge} from "../../../bridges/donation/DonationBridge.sol";
 
 contract DonationBridgeE2ETest is BridgeTestBase {
+    error InvalidDoneeAddress();
     error EthTransferFailed();
 
     address private constant DONEE = address(0xdead);
@@ -30,6 +31,7 @@ contract DonationBridgeE2ETest is BridgeTestBase {
 
     address[] internal tokens = [LUSD, DAI, WETH, LQTY, USDC, USDT];
 
+    // Transferring eth to `address(this)` will run the following, costing much more gas than expected
     receive() external payable {
         uint256 a = 0;
         while (a < 10000) {
@@ -82,7 +84,6 @@ contract DonationBridgeE2ETest is BridgeTestBase {
 
             uint256 doneeBalanceBefore = token.balanceOf(DONEE);
 
-            // Asset will be used as if it was eth.
             uint256 bridgeId = encodeBridgeId(
                 bridgeAddressId,
                 getRealAztecAsset(address(token)),
@@ -140,5 +141,10 @@ contract DonationBridgeE2ETest is BridgeTestBase {
         bytes memory err = abi.encodePacked(ErrorLib.InvalidInputA.selector);
         emit DefiBridgeProcessed(bridgeId, getNextNonce(), _amount, 0, 0, false, err);
         sendDefiRollup(bridgeId, _amount);
+    }
+
+    function testInvalidDoneeAddress() public {
+        vm.expectRevert(InvalidDoneeAddress.selector);
+        bridge.listDonee(address(0));
     }
 }
