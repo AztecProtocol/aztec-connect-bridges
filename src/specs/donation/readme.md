@@ -23,7 +23,7 @@ If this is the case, someone can list donees until they hit the id and get the d
 
 ## What functions are available in [/src/client](./client)?
 
-While there is a client class, it is of little use, as the bridge newer expects to receive anything back.
+While there is a client class, it is of little use, as the bridge never expects to receive anything back.
 
 ## Is this contract upgradable? If so, what are the restrictions on upgradability?
 
@@ -31,5 +31,5 @@ The contract is immutable and have no admin controls at all.
 
 ## Does this bridge maintain state? If so, what is stored and why?
 
-The bridge maintain a append-only mapping of donees.
+The bridge maintains an append-only mapping of donees.
 The mapping is used to allow passing the receipient through the auxdata (64 bits).
