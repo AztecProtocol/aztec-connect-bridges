@@ -128,7 +128,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
       await this.elementBridgeContract.getTrancheDeploymentBlockNumber(interactionNonce),
     );
     // start with the last block being the current block
-    let lastBlock = await this.getCurrentBlock();
+    const lastBlock = await this.getCurrentBlock();
     let latestBlockNumber = lastBlock.number;
     // try and find previously stored events that encompass the nonce we are looking for
     // also if we find the exact nonce then just return the stored data
@@ -347,7 +347,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     return BigInt(interaction.expiry.toString());
   }
 
-  async hasFinalised(interactionNonce: bigint): Promise<Boolean> {
+  async hasFinalised(interactionNonce: bigint): Promise<boolean> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
     return interaction.finalised;
   }

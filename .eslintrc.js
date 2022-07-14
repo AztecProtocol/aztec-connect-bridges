@@ -1,8 +1,8 @@
 module.exports = {
   root: true,
   parser: "@typescript-eslint/parser",
-  plugins: ["@typescript-eslint"],
-  extends: ["eslint:recommended", "plugin:@typescript-eslint/recommended", "prettier/@typescript-eslint"],
+  plugins: ["@typescript-eslint", "prettier"],
+  extends: ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
   env: {
     node: true,
   },
@@ -12,7 +12,7 @@ module.exports = {
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/no-empty-function": "off",
     "no-constant-condition": "off",
-    camelcase: 2,
+    camelcase: 1,
   },
   ignorePatterns: ["node_modules", "dest*", "dist", "*.js", ".eslintrc"],
 };
