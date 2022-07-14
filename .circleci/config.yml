@@ -48,13 +48,13 @@ jobs:
             export PATH=/home/circleci/.forge/bin:$PATH
             yarn test:contracts
       - run:
-          name: Test Client
+          name: Test Clients
           shell: /bin/bash
           command: |
             yarn config set script-shell /bin/bash
             export PATH=/home/circleci/.foundry/bin:$PATH
             export PATH=/home/circleci/.forge/bin:$PATH
-            yarn test:client
+            yarn test:clients
       - run:
           name: Build
           shell: /bin/bash
