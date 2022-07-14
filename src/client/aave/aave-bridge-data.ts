@@ -62,14 +62,14 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
   async getUnderlyingAndEntering(
     inputAssetA: AztecAsset,
     outputAssetA: AztecAsset,
-  ): Promise<{ underlyingAsset: string; entering: boolean }> {
-    const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+  ): Promise<{ underlyingAsset: EthAddress; entering: boolean }> {
+    const WETH = EthAddress.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
 
-    let underlyingAsset: string;
+    let underlyingAsset: EthAddress;
     let entering: boolean;
 
     if (inputAssetA.assetType == AztecAssetType.ETH || outputAssetA.assetType == AztecAssetType.ETH) {
-      if ((await this.aaveLendingBridgeContract.underlyingToZkAToken(WETH)) == EthAddress.ZERO.toString()) {
+      if ((await this.aaveLendingBridgeContract.underlyingToZkAToken(WETH.toString())) == EthAddress.ZERO.toString()) {
         throw "ETH is not listed";
       }
     }
@@ -81,12 +81,16 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
       underlyingAsset = WETH;
       entering = false;
     } else {
-      const candidateOut = await this.aaveLendingBridgeContract.underlyingToZkAToken(inputAssetA.erc20Address);
+      const candidateOut = await this.aaveLendingBridgeContract.underlyingToZkAToken(
+        inputAssetA.erc20Address.toString(),
+      );
       if (candidateOut != EthAddress.ZERO.toString()) {
         underlyingAsset = inputAssetA.erc20Address;
         entering = true;
       } else {
-        const candidateIn = await this.aaveLendingBridgeContract.underlyingToZkAToken(outputAssetA.erc20Address);
+        const candidateIn = await this.aaveLendingBridgeContract.underlyingToZkAToken(
+          outputAssetA.erc20Address.toString(),
+        );
         if (candidateIn != EthAddress.ZERO.toString()) {
           underlyingAsset = outputAssetA.erc20Address;
           entering = false;
@@ -108,7 +112,9 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
   ): Promise<bigint[]> {
     const { entering, underlyingAsset } = await this.getUnderlyingAndEntering(inputAssetA, outputAssetA);
 
-    const normalizer: bigint = (await this.lendingPoolContract.getReserveNormalizedIncome(underlyingAsset)).toBigInt();
+    const normalizer: bigint = (
+      await this.lendingPoolContract.getReserveNormalizedIncome(underlyingAsset.toString())
+    ).toBigInt();
     const precision = 10n ** 27n;
 
     if (entering) {
@@ -137,7 +143,7 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
     }
 
     // Not taking into account how the deposited funds will change the yield
-    const reserveData = await this.lendingPoolContract.getReserveData(underlyingAsset);
+    const reserveData = await this.lendingPoolContract.getReserveData(underlyingAsset.toString());
     const rate = reserveData.currentLiquidityRate.toBigInt();
     const apr = Number(rate / 10n ** 25n) / 100;
 
@@ -152,7 +158,7 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
     auxData: bigint,
   ): Promise<AssetValue[]> {
     const { underlyingAsset } = await this.getUnderlyingAndEntering(inputAssetA, outputAssetA);
-    const reserveData = await this.lendingPoolContract.getReserveData(underlyingAsset);
+    const reserveData = await this.lendingPoolContract.getReserveData(underlyingAsset.toString());
     const token = IERC20__factory.connect(reserveData.aTokenAddress, this.aaveLendingBridgeContract.provider);
 
     return [

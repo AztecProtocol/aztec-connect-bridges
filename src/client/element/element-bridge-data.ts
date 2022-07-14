@@ -242,7 +242,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
-    const assetExpiries = await this.elementBridgeContract.getAssetExpiries(inputAssetA.erc20Address);
+    const assetExpiries = await this.elementBridgeContract.getAssetExpiries(inputAssetA.erc20Address.toString());
     if (assetExpiries && assetExpiries.length) {
       return assetExpiries.map(a => a.toBigInt());
     }
@@ -278,7 +278,10 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     auxData: bigint,
     precision: bigint,
   ): Promise<number[]> {
-    const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(inputAssetA.erc20Address, auxData);
+    const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(
+      inputAssetA.erc20Address.toString(),
+      auxData,
+    );
     const pool = await this.elementBridgeContract.pools(assetExpiryHash);
     const poolId = pool.poolId;
     const trancheAddress = pool.trancheAddress;
@@ -301,7 +304,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     const deltas = await this.balancerContract.queryBatchSwap(
       SwapType.SwapExactIn,
       [step],
-      [inputAssetA.erc20Address, trancheAddress],
+      [inputAssetA.erc20Address.toString(), trancheAddress],
       funds,
     );
 
@@ -328,7 +331,10 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     outputAssetB: AztecAsset,
     auxData: bigint,
   ): Promise<AssetValue[]> {
-    const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(inputAssetA.erc20Address, auxData);
+    const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(
+      inputAssetA.erc20Address.toString(),
+      auxData,
+    );
     const pool = await this.elementBridgeContract.pools(assetExpiryHash);
     const poolId = pool.poolId;
     const tokenBalances = await this.balancerContract.getPoolTokens(poolId);

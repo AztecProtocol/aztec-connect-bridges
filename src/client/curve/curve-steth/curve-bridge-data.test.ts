@@ -44,17 +44,17 @@ describe("curve steth bridge data", () => {
     ethAsset = {
       id: 1n,
       assetType: AztecAssetType.ETH,
-      erc20Address: "0x0",
+      erc20Address: EthAddress.ZERO,
     };
     wstETHAsset = {
       id: 2n,
       assetType: AztecAssetType.ERC20,
-      erc20Address: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+      erc20Address: EthAddress.fromString("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"),
     };
     emptyAsset = {
       id: 0n,
       assetType: AztecAssetType.NOT_USED,
-      erc20Address: "0x0",
+      erc20Address: EthAddress.ZERO,
     };
   });
 
