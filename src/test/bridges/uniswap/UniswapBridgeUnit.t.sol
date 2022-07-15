@@ -39,7 +39,7 @@ contract UniswapBridgeUnitTest is Test {
 
         // Use the label cheat-code to mark addresses in the traces
         vm.label(address(bridge), "Swap Bridge");
-        vm.label(address(bridge.UNI_ROUTER()), "Uni Router");
+        vm.label(address(bridge.ROUTER()), "Uni Router");
         vm.label(LUSD, "LUSD");
         vm.label(DAI, "DAI");
         vm.label(WETH, "WETH");

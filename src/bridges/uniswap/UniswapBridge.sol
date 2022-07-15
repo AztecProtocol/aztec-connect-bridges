@@ -83,7 +83,7 @@ contract UniswapBridge is BridgeBase {
     // @dev Event which is emitted when the output token doesn't implement decimals().
     event DefaultDecimalsWarning();
 
-    ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+    ISwapRouter public constant ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     // Addresses of middle tokens
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -135,8 +135,8 @@ contract UniswapBridge is BridgeBase {
             address tokenIn = _tokensIn[i];
             // Using safeApprove(...) instead of approve(...) and first setting the allowance to 0 because underlying
             // can be Tether
-            IERC20(tokenIn).safeApprove(address(UNI_ROUTER), 0);
-            IERC20(tokenIn).safeApprove(address(UNI_ROUTER), type(uint256).max);
+            IERC20(tokenIn).safeApprove(address(ROUTER), 0);
+            IERC20(tokenIn).safeApprove(address(ROUTER), type(uint256).max);
             unchecked {
                 ++i;
             }
@@ -203,7 +203,7 @@ contract UniswapBridge is BridgeBase {
 
         if (path.percentage1 != 0) {
             // Swap using the first swap path
-            outputValueA = UNI_ROUTER.exactInput{value: inputIsEth ? inputValueSplitPath1 : 0}(
+            outputValueA = ROUTER.exactInput{value: inputIsEth ? inputValueSplitPath1 : 0}(
                 ISwapRouter.ExactInputParams({
                     path: path.splitPath1,
                     recipient: address(this),
@@ -217,7 +217,7 @@ contract UniswapBridge is BridgeBase {
         if (path.percentage2 != 0) {
             // Swap using the second swap path
             uint256 inputValueSplitPath2 = _inputValue - inputValueSplitPath1;
-            outputValueA += UNI_ROUTER.exactInput{value: inputIsEth ? inputValueSplitPath2 : 0}(
+            outputValueA += ROUTER.exactInput{value: inputIsEth ? inputValueSplitPath2 : 0}(
                 ISwapRouter.ExactInputParams({
                     path: path.splitPath2,
                     recipient: address(this),
@@ -249,10 +249,10 @@ contract UniswapBridge is BridgeBase {
      * @notice A function which encodes path to a format expected in _auxData of this.convert(...)
      * @param _amountIn - Amount of tokenIn to swap
      * @param _minAmountOut - Amount of tokenOut to receive
-     * @param _tokenIn - Address of _tokenIn
+     * @param _tokenIn - Address of _tokenIn (@dev used only to fetch decimals)
      * @param _splitPath1 - Split path to encode
      * @param _splitPath2 - Split path to encode
-     * @return encodedMinPrice - Min acceptable encoded in a format used in this bridge.
+     * @return Path encoded in a format expected in _auxData of this.convert(...)
      * @dev This function is not optimized and is expected to be used on frontend and in tests.
      * @dev Reverts when min price is bigger than max encodeable value.
      */
