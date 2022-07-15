@@ -406,4 +406,58 @@ contract UniswapBridgeUnitTest is Test {
             address(0)
         );
     }
+
+    function testQuote(uint80 _swapAmount) public {
+        // Trying to swap anywhere from 0.1 ETH to 10 thousand ETH
+        uint256 swapAmount = bound(_swapAmount, 1e17, 1e22);
+
+        uint64 encodedPath = bridge.encodePath(
+            swapAmount,
+            0,
+            WETH,
+            emptySplitPath,
+            UniswapBridge.SplitPath(100, 500, USDC, 100, address(0), 3000)
+        );
+
+        address[] memory tokensIn = new address[](1);
+        tokensIn[0] = WETH;
+
+        address[] memory tokensOut = new address[](1);
+        tokensOut[0] = GUSD;
+
+        bridge.preApproveTokens(tokensIn, tokensOut);
+
+        // Define input and output assets
+        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
+            id: 2,
+            erc20Address: WETH,
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+
+        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset({
+            id: 4,
+            erc20Address: GUSD,
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+
+        uint256 quote = bridge.quote(swapAmount, inputAssetA.erc20Address, encodedPath, outputAssetA.erc20Address);
+
+        deal(WETH, address(bridge), swapAmount);
+
+        (uint256 outputValueA, , ) = bridge.convert(
+            inputAssetA,
+            emptyAsset,
+            outputAssetA,
+            emptyAsset,
+            swapAmount,
+            0,
+            encodedPath,
+            address(0)
+        );
+
+        IERC20(outputAssetA.erc20Address).transferFrom(address(bridge), rollupProcessor, outputValueA);
+
+        assertGt(outputValueA, 0);
+        assertEq(outputValueA, quote);
+    }
 }

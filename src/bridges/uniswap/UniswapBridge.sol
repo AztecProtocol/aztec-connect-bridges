@@ -11,6 +11,7 @@ import {ErrorLib} from "../base/ErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {ISwapRouter} from "../../interfaces/uniswapv3/ISwapRouter.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
+import {IQuoter} from "../../interfaces/uniswapv3/IQuoter.sol";
 
 /**
  * @title Aztec Connect Bridge for swapping on Uniswap v3
@@ -84,6 +85,7 @@ contract UniswapBridge is BridgeBase {
     event DefaultDecimalsWarning();
 
     ISwapRouter public constant ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+    IQuoter public constant QUOTER = IQuoter(0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6);
 
     // Addresses of middle tokens
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -272,6 +274,34 @@ contract UniswapBridge is BridgeBase {
                     (_encodeSplitPath(_splitPath1) << SPLIT_PATH_BIT_LENGTH) +
                     _encodeSplitPath(_splitPath2)
             );
+    }
+
+    /**
+     * @notice A function which encodes path to a format expected in _auxData of this.convert(...)
+     * @param _amountIn - Amount of tokenIn to swap
+     * @param _tokenIn - Address of _tokenIn (@dev used only to fetch decimals)
+     * @param _path - Split path to encode
+     * @param _tokenOut - Address of _tokenIn (@dev used only to fetch decimals)
+     * @return amountOut -
+     */
+    function quote(
+        uint256 _amountIn,
+        address _tokenIn,
+        uint64 _path,
+        address _tokenOut
+    ) external returns (uint256 amountOut) {
+        Path memory path = _decodePath(_tokenIn, _path, _tokenOut);
+        uint256 inputValueSplitPath1 = (_amountIn * path.percentage1) / 100;
+
+        if (path.percentage1 != 0) {
+            // Swap using the first swap path
+            amountOut += QUOTER.quoteExactInput(path.splitPath1, inputValueSplitPath1);
+        }
+
+        if (path.percentage2 != 0) {
+            // Swap using the second swap path
+            amountOut += QUOTER.quoteExactInput(path.splitPath2, _amountIn - inputValueSplitPath1);
+        }
     }
 
     /**
