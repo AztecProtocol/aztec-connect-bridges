@@ -14,20 +14,16 @@ import {IUniswapV3Factory} from"@uniswap/v3-core/contracts/interfaces/IUniswapV3
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
 import {IAaveLeverageModule} from './interfaces/IAaveLeverageModule.sol';
-import {ICurvePool} from './interfaces/ICurvePool.sol';
 import {IWeth} from './interfaces/IWeth.sol';
 import {IExchangeIssue} from './interfaces/IExchangeIssue.sol';
 import {ISetToken} from './interfaces/ISetToken.sol';
 import {AggregatorV3Interface} from '../../bridges/indexcoop/interfaces/AggregatorV3Interface.sol';
-
-import '../../../lib/forge-std/src/Test.sol';
 
 /** 
 * @title icETH Bridge
 * @dev A smart contract responsible for buying and selling icETH with ETH etther through selling/buying from 
 * a DEX or by issuing/redeeming icEth set tokens.
 */
-
 contract IndexBridgeContract is IDefiBridge {
     using SafeMath for uint256;
 
@@ -74,7 +70,6 @@ contract IndexBridgeContract is IDefiBridge {
     * is always returned when issuing icETH since the issuing function in ExchangeIssuance
     * requires an exact output amount rather than input. 
     */
-
     function convert(
         AztecTypes.AztecAsset calldata inputAssetA,
         AztecTypes.AztecAsset calldata inputAssetB,
@@ -157,7 +152,6 @@ contract IndexBridgeContract is IDefiBridge {
     * function for encoding details.
     * @return outputValueA - Amount of ETH to return to the Rollupprocessor
     */
-
     function getEth(
         uint256 totalInputValue,
         uint64 auxData,
@@ -177,7 +171,6 @@ contract IndexBridgeContract is IDefiBridge {
                 and colInEth will lose precision. Dito in ExchangeIssuance.
               */
             if (totalInputValue < 1e18) revert InputTooSmall();
-
 
             minAmountOut = getAmountBasedOnRedeem(totalInputValue, oracleLimit).mul(maxSlip).div(1e4);
     
@@ -249,7 +242,6 @@ contract IndexBridgeContract is IDefiBridge {
     * function for encoding details.
     * @return outputValueA - Amount of icETH to return to the Rollupprocessor
     */
-
     function getIcEth(
         uint256 totalInputValue,
         uint64 auxData,
@@ -293,7 +285,6 @@ contract IndexBridgeContract is IDefiBridge {
             outputValueA = ISetToken(ICETH).balanceOf(address(this));
             outputValueB = address(this).balance;
 
-
             ISetToken(ICETH).approve(ROLLUP_PROCESSOR, outputValueA);
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueB}(interactionNonce);
 
@@ -319,7 +310,7 @@ contract IndexBridgeContract is IDefiBridge {
                 deadline: block.timestamp,
                 amountIn: totalInputValue,
                 amountOutMinimum: minAmountOut,
-                sqrtPriceLimitX96: 0
+                sqrtPriceLimitX96: 0 
             });
 
             outputValueA = ISwapRouter(UNIV3_ROUTER).exactInputSingle(params);
@@ -338,8 +329,7 @@ contract IndexBridgeContract is IDefiBridge {
     * @param quoteToken - Address of tokens to be recevied 
     * @return amountOut - Amount received of quoteToken
     */
-    
-    function getAmountBasedOnTwap(
+    function getAmountBasedOnTwap( 
         uint256 amountIn, 
         address baseToken, 
         address quoteToken, 
@@ -393,8 +383,8 @@ contract IndexBridgeContract is IDefiBridge {
         }
     }
 
-    // From v3-peripher/contracts/libraries/OracleLibrary.sol using modified Fullmath and Tickmath for 0.8.x
-    function getQuoteAtTick(
+    // From v3-peripher/contracts/libraries/OracleLibrary.sol using modified Fullmath and Tickmath for 0.8.x @audit add natspec
+    function getQuoteAtTick( 
         int24 tick, 
         uint128 baseAmount,
         address baseToken,
@@ -422,40 +412,45 @@ contract IndexBridgeContract is IDefiBridge {
 
     /**
     * @dev Calculates the amount of ETH received from redeeming icETH by taking out a  
-    * flashloan of WETH to pay back debt. STETH price based on Lido's Oracle.
+    * flashloan of WETH to pay back debt. Chainlink oracle is used for the ETH/stETH price.
     *
     * @param setAmount - Amount of icETH to redeem 
     * @return Expcted amount of ETH returned from redeeming 
     */
-
-    function getAmountBasedOnRedeem(uint256 setAmount, uint64 oracleLimit) internal returns (uint256) {
-
+    function getAmountBasedOnRedeem(
+        uint256 setAmount, 
+        uint64 oracleLimit
+        ) 
+        internal 
+        returns (uint256)
+    {
         ( , int256 intPrice, , , ) = AggregatorV3Interface(CHAINLINK_STETH_ETH).latestRoundData();
         uint256 price = uint256(intPrice);
+
         if (price < uint256(oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
 
+        IAaveLeverageModule(AAVE_LEVERAGE_MODULE).sync(ISetToken(ICETH));
         IExchangeIssue.LeveragedTokenData memory issueInfo = IExchangeIssue(EXISSUE).getLeveragedTokenData(
             ISetToken(ICETH), 
             setAmount, 
             true
         );        
 
-        IAaveLeverageModule(AAVE_LEVERAGE_MODULE).sync(ISetToken(ICETH));
         uint256 debtOwed = issueInfo.debtAmount.mul(1.0009 ether).div(1e18);
         uint256 colInEth = issueInfo.collateralAmount.mul(price).div(1e18); 
 
-        return colInEth - issueInfo.debtAmount;
+        return colInEth - debtOwed;
     }
 
     /**
-    * @dev Issue icETH with a requirment of a minimum returned tokens 
-    * based on Lido's Oracle, cost of flashloan and auxData provided by users. 
+    * @dev Calculates the amount of icETH issued based on the
+    * oracle price of stETH and the cost of the flashloan.
     *
-    * @param totalInputValue - Total amount of ETH used to issue icETH 
-    * @return outputValueA - Amount of icETH to return to the Rollupprocessor
+    * @param totalInputValue - Total amount of ETH used to issue icETH.
+    * @param oracleLimit - The upper limit of ETH/stETH that is acceptable.
+    * @return Amount of icETH issued .
     */
-
-    function getAmountBasedOnIssue(
+    function getAmountBasedOnIssue( 
         uint256 totalInputValue, 
         uint64 oracleLimit
         )
@@ -464,8 +459,10 @@ contract IndexBridgeContract is IDefiBridge {
     {
         ( , int256 intPrice, , , ) = AggregatorV3Interface(CHAINLINK_STETH_ETH).latestRoundData();
         uint256 price = uint256(intPrice);
+
         if (price > uint256(oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
 
+        IAaveLeverageModule(AAVE_LEVERAGE_MODULE).sync(ISetToken(ICETH));
         IExchangeIssue.LeveragedTokenData memory data = IExchangeIssue(EXISSUE).getLeveragedTokenData(
             ISetToken(ICETH),
             1e18,
@@ -473,12 +470,12 @@ contract IndexBridgeContract is IDefiBridge {
         );
 
         uint256 costOfOneIc = (data.collateralAmount.
-            mul(1.0009 ether).
+            mul(1.0009 ether). // Cost of flashlaon
             div(1e18).
-            mul(price).
+            mul(price). // Convert to ETH 
             div(1e18) 
             )
-            - data.debtAmount
+            - data.debtAmount 
         ;
 
        return totalInputValue.mul(1e18).div(costOfOneIc);
@@ -499,7 +496,6 @@ contract IndexBridgeContract is IDefiBridge {
     * minimum discrepency to 1%, maxSlip should be 9900.
     *
     */
-
     function decodeAuxdata(uint64 encoded) internal pure returns (
         uint64 flowSelector, 
         uint64 maxSlip, 

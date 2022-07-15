@@ -80,15 +80,14 @@ contract IndexTest is Test {
         ROLLUP_PROCESSOR = address(rollupProcessor);
     }
 
-
-    // ===== Testsing that buying/issuing and redeeming/seling returns the expected amount ======
-
+    // ===== Testing that buying/issuing and redeeming/seling returns the expected amount ======
     function testIssueSet(uint256 inputValue) public {
         inputValue = bound(inputValue, 1e18, 500 ether);
 
         uint64 flowSelector = 1;
-        uint64 maxSlipAux = 9900; //maxSlip is has 4 decimals
-        uint64 oracleLimit = 9850; // stETH/ETH price in 4 decimals e.g. max price from oracle 985 
+        uint64 maxSlipAux = 9800; //maxSlip is has 4 decimals
+        uint64 oracleLimit = 9850; // ETH/stETH upper limit  
+
         uint64 auxData = encodeAuxdataThree(flowSelector, maxSlipAux, oracleLimit);
 
         (uint256 newICETH, uint256 returnedEth) = issueSet(inputValue, auxData);
@@ -100,12 +99,12 @@ contract IndexTest is Test {
     function testBuySet(uint256 inputValue) public {
         inputValue = bound(inputValue, 1 ether, 500 ether);
 
-        uint64 flowSelector = 3;
+        uint64 flowSelector = 5;
         uint64 maxSlipAux = 9900; //maxSlip is has 4 decimals
         uint64 oracleLimit = 9500; // max icETH/ETH price acceptable
         uint64 auxData = encodeAuxdataThree(flowSelector, maxSlipAux, oracleLimit);
 
-        uint24 uniFee = 3000;
+        uint24 uniFee = 500;
         bytes memory path = abi.encodePacked(WETH, uniFee);
         path = abi.encodePacked(path, ICETH);
 
@@ -128,26 +127,37 @@ contract IndexTest is Test {
     function testRedeemSet(uint256 inputValue) public{
         inputValue = bound(inputValue, 1e18, 500 ether);
 
-        uint64 maxSlipAux = 9900; //maxSlip is has 4 decimals
+        uint64 maxSlipAux = 9800; //maxSlip is has 4 decimals
         uint64 flowSelector = 1;
         uint64 oracleLimit = 9000; 
         uint64 auxData = encodeAuxdataThree(flowSelector, maxSlipAux, oracleLimit);
         uint256 minimumReceivedRedeem = getMinEth(inputValue, maxSlipAux);
 
-        uint256 newEth = redeemSet(inputValue, auxData);
+        uint256 receivedBasedOnQuoter = getEthBasedOnQuoter(inputValue); 
 
-        assertGe(newEth, minimumReceivedRedeem, "Received to little ETH from redeem");
+        if (receivedBasedOnQuoter < minimumReceivedRedeem) { 
+            // If stETH is depegging and the pool is unbalanced
+            // swapping from stETH -> ETH can have a large price impact
+            // in that case we should revert        
+
+            bytes4 emptyBytes;
+            redeemSetExpectRevert(inputValue, auxData, bytes("Exchange resulted in fewer coins than expected"), emptyBytes);
+
+        } else{
+            uint256 newEth = redeemSet(inputValue, auxData);
+            assertGe(newEth, minimumReceivedRedeem, "Received to little ETH from redeem");
+        }
    } 
 
     function testSellSet(uint256 inputValue) public{
-        inputValue = bound(inputValue, 100, 500 ether);
-        
-        uint64 flowSelector = 3;
+        inputValue = bound(inputValue, 1000, 500 ether);
+
+        uint64 flowSelector = 5;
         uint64 maxSlipAux = 9900; //maxSlip is has 4 decimals
-        uint64 oracleLimit = 9000; 
+        uint64 oracleLimit = 8000; // min icETH/ETH price. Hisotrically ~0.81-1
         uint64 auxData = encodeAuxdataThree(flowSelector, maxSlipAux, oracleLimit);
 
-        uint24 uniFee = 3000;
+        uint24 uniFee = 500;
         bytes memory path = abi.encodePacked(ICETH, uniFee);
         path = abi.encodePacked(path, WETH);
         uint256 ethFromQuoter = IQuoter(UNIV3_QUOTER).quoteExactInput(path, inputValue);
@@ -228,11 +238,11 @@ contract IndexTest is Test {
 
     function testUnsafeTwapBuySet(uint256 inputValue) public {
         inputValue = bound(inputValue, 100, 500 ether);
-        uint64 flowSelector = 3;
+        uint64 flowSelector = 5;
         uint64 maxSlipAux = 9900; 
 
-        // Setting Oracle limit low enough to deem oracle price unsafe. 
-        uint64 oracleLimit = 9000; 
+        // Setting Oracle upper limit low enough to deem oracle price unsafe. 
+        uint64 oracleLimit = 7500; 
         uint64 auxData = encodeAuxdataThree(flowSelector, maxSlipAux, oracleLimit);
 
         bytes memory emptyBytes;
@@ -244,7 +254,7 @@ contract IndexTest is Test {
         uint64 flowSelector = 1;
         uint64 maxSlipAux = 9900; 
 
-        // Setting Oracle limit high enough to deem oracle price unsafe. 
+        // Setting Oracle lower limit high enough to deem oracle price unsafe. 
         uint64 oracleLimit = 9999; 
         uint64 auxData = encodeAuxdataThree(flowSelector, maxSlipAux, oracleLimit);
 
@@ -257,7 +267,7 @@ contract IndexTest is Test {
         uint64 flowSelector = 3;
         uint64 maxSlipAux = 9900; 
 
-        // Setting Oracle limit high enough to deem oracle price unsafe. 
+        // Setting Oracle lower limit high enough to deem oracle price unsafe. 
         uint64 oracleLimit = 9999; 
         uint64 auxData = encodeAuxdataThree(flowSelector, maxSlipAux, oracleLimit);
 
@@ -335,17 +345,33 @@ contract IndexTest is Test {
         ( , int256 intPrice, , , ) = AggregatorV3Interface(CHAINLINK_STETH_ETH).latestRoundData();
         uint256 price = uint256(intPrice);
 
+        IAaveLeverageModule(AAVE_LEVERAGE_MODULE).sync(ISetToken(ICETH));
         IExchangeIssue.LeveragedTokenData memory issueInfo = IExchangeIssue(EXISSUE).getLeveragedTokenData(
             ISetToken(ICETH), 
             setAmount, 
             true
         );        
 
-        IAaveLeverageModule(AAVE_LEVERAGE_MODULE).sync(ISetToken(ICETH));
         uint256 debtOwed = issueInfo.debtAmount.mul(1.0009 ether).div(1e18);
         uint256 colInEth = issueInfo.collateralAmount.mul(price).div(1e18); 
 
-        return (colInEth - issueInfo.debtAmount).mul(maxSlipAux).div(1e4);
+        return (colInEth - debtOwed).mul(maxSlipAux).div(1e4);
+    }
+
+
+    function getEthBasedOnQuoter(uint256 setAmount) internal returns (uint256) {
+
+        IAaveLeverageModule(AAVE_LEVERAGE_MODULE).sync(ISetToken(ICETH));
+        IExchangeIssue.LeveragedTokenData memory issueInfo = IExchangeIssue(EXISSUE).getLeveragedTokenData(
+            ISetToken(ICETH), 
+            setAmount, 
+            true
+        );        
+
+        uint256 debtOwed = issueInfo.debtAmount.mul(1.0009 ether).div(1e18);
+        uint256 colInEth = ICurvePool(CURVE).get_dy(1,0, issueInfo.collateralAmount); 
+
+        return (colInEth - debtOwed);
     }
 
     function getMinIceth(
@@ -355,10 +381,10 @@ contract IndexTest is Test {
         internal 
         returns (uint256 minIcToReceive)
     {
-        
         ( , int256 intPrice, , , ) = AggregatorV3Interface(CHAINLINK_STETH_ETH).latestRoundData();
         uint256 price = uint256(intPrice);
 
+        IAaveLeverageModule(AAVE_LEVERAGE_MODULE).sync(ISetToken(ICETH));
         IExchangeIssue.LeveragedTokenData memory data = IExchangeIssue(EXISSUE).getLeveragedTokenData(
             ISetToken(ICETH),
             1e18,
@@ -403,7 +429,6 @@ contract IndexTest is Test {
         );
 
         int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
-
         int24 arithmeticmeanTick = int24(tickCumulativesDelta / int32(secondsAgo)); 
         
         if (
@@ -558,13 +583,14 @@ contract IndexTest is Test {
         hoax(HOAX_ADDRESS);
         IERC20(ICETH).transfer(address(indexBridge), inputValue);
 
+        hoax(ROLLUP_PROCESSOR);
+
         if (revertSelector == 0){
             vm.expectRevert(revertMessage);
         } else {
             vm.expectRevert(revertSelector);
         } 
 
-        hoax(ROLLUP_PROCESSOR);
         indexBridge.convert(
             icethAztecAssetA,
             empty,
