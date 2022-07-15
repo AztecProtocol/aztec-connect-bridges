@@ -22,6 +22,7 @@ contract UniswapBridgeUnitTest is Test {
     IQuoter public constant QUOTER = IQuoter(0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6);
 
     AztecTypes.AztecAsset internal emptyAsset;
+    UniswapBridge.SplitPath internal emptySplitPath;
 
     address private rollupProcessor;
     UniswapBridge private bridge;
@@ -36,7 +37,7 @@ contract UniswapBridgeUnitTest is Test {
         // Set ETH balance to 0 for clarity
         vm.deal(address(bridge), 0);
 
-        // Use the label cheatcode to mark addresses in the traces
+        // Use the label cheat-code to mark addresses in the traces
         vm.label(address(bridge), "Swap Bridge");
         vm.label(address(bridge.UNI_ROUTER()), "Uni Router");
         vm.label(LUSD, "LUSD");
@@ -206,17 +207,17 @@ contract UniswapBridgeUnitTest is Test {
     function testSwapHighToLowDecimals(uint80 _swapAmount) public {
         // Trying to swap anywhere from 0.1 ETH to 10 thousand ETH
         uint256 swapAmount = bound(_swapAmount, 1e17, 1e22);
-        uint256 tokenInDecimals = 18;
 
         uint256 quote = QUOTER.quoteExactInput(
             abi.encodePacked(WETH, uint24(500), USDC, uint24(3000), GUSD),
             swapAmount
         );
-        uint256 desiredMinPrice = bridge.computeEncodedMinPrice(swapAmount, quote, tokenInDecimals);
-
-        uint64 encodedPath = uint64(
-            (desiredMinPrice << bridge.SPLIT_PATHS_BIT_LENGTH()) +
-                (bridge.encodeSplitPath(UniswapBridge.SplitPath(100, 500, USDC, 100, address(0), 3000)))
+        uint64 encodedPath = bridge.encodePath(
+            swapAmount,
+            quote,
+            WETH,
+            emptySplitPath,
+            UniswapBridge.SplitPath(100, 500, USDC, 100, address(0), 3000)
         );
 
         address[] memory tokensIn = new address[](1);
@@ -261,14 +262,14 @@ contract UniswapBridgeUnitTest is Test {
     function testSwapLowToHighDecimals(uint48 _swapAmount) public {
         // Trying to swap anywhere from 1 USDC to 10 million USDC
         uint256 swapAmount = bound(_swapAmount, 1e6, 1e13);
-        uint256 tokenInDecimals = 6;
 
         uint256 quote = QUOTER.quoteExactInput(abi.encodePacked(USDC, uint24(500), WETH), swapAmount);
-        uint256 desiredMinPrice = bridge.computeEncodedMinPrice(swapAmount, quote, tokenInDecimals);
-
-        uint64 encodedPath = uint64(
-            (desiredMinPrice << bridge.SPLIT_PATHS_BIT_LENGTH()) +
-                (bridge.encodeSplitPath(UniswapBridge.SplitPath(100, 100, address(0), 100, address(0), 500)))
+        uint64 encodedPath = bridge.encodePath(
+            swapAmount,
+            quote,
+            USDC,
+            emptySplitPath,
+            UniswapBridge.SplitPath(100, 100, address(0), 100, address(0), 500)
         );
 
         address[] memory tokensIn = new address[](1);
@@ -313,14 +314,14 @@ contract UniswapBridgeUnitTest is Test {
     function testSwapLowToHighDecimalsUSDT(uint48 _swapAmount) public {
         // Trying to swap anywhere from 1 USDT to 1 million USDT
         uint256 swapAmount = bound(_swapAmount, 1e6, 1e12);
-        uint256 tokenInDecimals = 6;
 
         uint256 quote = QUOTER.quoteExactInput(abi.encodePacked(USDT, uint24(500), WETH), swapAmount);
-        uint256 desiredMinPrice = bridge.computeEncodedMinPrice(swapAmount, quote, tokenInDecimals);
-
-        uint64 encodedPath = uint64(
-            (desiredMinPrice << bridge.SPLIT_PATHS_BIT_LENGTH()) +
-                (bridge.encodeSplitPath(UniswapBridge.SplitPath(100, 100, address(0), 100, address(0), 500)))
+        uint64 encodedPath = bridge.encodePath(
+            swapAmount,
+            quote,
+            USDT,
+            emptySplitPath,
+            UniswapBridge.SplitPath(100, 100, address(0), 100, address(0), 500)
         );
 
         address[] memory tokensIn = new address[](1);

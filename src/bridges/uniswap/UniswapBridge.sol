@@ -267,10 +267,10 @@ contract UniswapBridge is BridgeBase {
 
         return
             uint64(
-                (computeEncodedMinPrice(_amountIn, _minAmountOut, IERC20Metadata(_tokenIn).decimals()) <<
+                (_computeEncodedMinPrice(_amountIn, _minAmountOut, IERC20Metadata(_tokenIn).decimals()) <<
                     SPLIT_PATHS_BIT_LENGTH) +
-                    (encodeSplitPath(_splitPath1) << SPLIT_PATH_BIT_LENGTH) +
-                    encodeSplitPath(_splitPath2)
+                    (_encodeSplitPath(_splitPath1) << SPLIT_PATH_BIT_LENGTH) +
+                    _encodeSplitPath(_splitPath2)
             );
     }
 
@@ -283,11 +283,11 @@ contract UniswapBridge is BridgeBase {
      * @dev This function is not optimized and is expected to be used on frontend and in tests.
      * @dev Reverts when min price is bigger than max encodeable value.
      */
-    function computeEncodedMinPrice(
+    function _computeEncodedMinPrice(
         uint256 _amountIn,
         uint256 _minAmountOut,
         uint256 _tokenInDecimals
-    ) public pure returns (uint256 encodedMinPrice) {
+    ) internal pure returns (uint256 encodedMinPrice) {
         uint256 minPrice = (_minAmountOut * 10**_tokenInDecimals) / _amountIn;
         // 2097151 = 2**21 - 1 --> this number and its multiples of 10 can be encoded without precision loss
         if (minPrice <= 2097151) {
@@ -312,14 +312,15 @@ contract UniswapBridge is BridgeBase {
      * @dev In place of unused middle tokens and address(0). When fee tier is unused place there any valid value. This
      *      value gets ignored.
      */
-    function encodeSplitPath(SplitPath calldata _path) public pure returns (uint256) {
+    function _encodeSplitPath(SplitPath calldata _path) internal pure returns (uint256) {
+        if (_path.percentage == 0) return 0;
         return
             (_path.percentage << 12) +
-            (encodeFeeTier(_path.fee1) << 10) +
-            (encodeMiddleToken(_path.token1) << 7) +
-            (encodeFeeTier(_path.fee2) << 5) +
-            (encodeMiddleToken(_path.token2) << 2) +
-            (encodeFeeTier(_path.fee3));
+            (_encodeFeeTier(_path.fee1) << 10) +
+            (_encodeMiddleToken(_path.token1) << 7) +
+            (_encodeFeeTier(_path.fee2) << 5) +
+            (_encodeMiddleToken(_path.token2) << 2) +
+            (_encodeFeeTier(_path.fee3));
     }
 
     /**
@@ -327,7 +328,7 @@ contract UniswapBridge is BridgeBase {
      * @param _feeTier - Fee tier in bps
      * @return Encoded fee tier (in the last 2 bits of uint)
      */
-    function encodeFeeTier(uint256 _feeTier) public pure returns (uint256) {
+    function _encodeFeeTier(uint256 _feeTier) internal pure returns (uint256) {
         if (_feeTier == 100) {
             // Binary number 00
             return 0;
@@ -352,7 +353,7 @@ contract UniswapBridge is BridgeBase {
      * @param _token - Token address
      * @return encodedToken - Encoded token (in the last 3 bits of uint256)
      */
-    function encodeMiddleToken(address _token) public pure returns (uint256 encodedToken) {
+    function _encodeMiddleToken(address _token) internal pure returns (uint256 encodedToken) {
         if (_token == address(0)) {
             // unused token
             return 0;

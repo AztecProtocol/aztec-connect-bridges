@@ -26,9 +26,28 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
         this.preApproveTokens(tokensIn, tokensOut);
     }
 
+    function testEncodePath() public {
+        //            500     3000    3000
+        // PATH1 LUSD -> USDC -> WETH -> LQTY   70% of input 1000110 01 010 10 001 10
+        //            500    3000    3000
+        // PATH2 LUSD -> DAI -> WETH -> LQTY    30% of input 0011110 01 100 10 001 10
+        // MIN PRICE: significand 2000000, exponent 12
+        // 111101000010010000000 01100 | 1000110 01 010 10 001 10 | 0011110 01 100 10 001 10
+        uint64 referenceEncodedPath = 0xF42403232A31E646;
+        uint64 encodedPath = this.encodePath(
+            100e18,
+            200e18,
+            LUSD,
+            SplitPath(70, 500, USDC, 3000, WETH, 3000),
+            SplitPath(30, 500, DAI, 3000, WETH, 3000)
+        );
+
+        assertEq(encodedPath, referenceEncodedPath, "Encoded path is not equal to reference");
+    }
+
     function testEncodeMinPriceForValuesWithoutPrecisionLoss(uint24 _price) public {
         uint256 price = bound(_price, 0, 2**21 - 1);
-        uint256 encodedMinPrice = this.computeEncodedMinPrice(1, price, 0);
+        uint256 encodedMinPrice = _computeEncodedMinPrice(1, price, 0);
         uint256 decodedMinPrice = _decodeMinPrice(encodedMinPrice);
         assertEq(decodedMinPrice, price);
     }
@@ -36,7 +55,7 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
     function testMinPriceNever0DueToPrecisionLoss(uint24 _price, uint8 _decimals) public {
         uint256 decimals = bound(_decimals, 0, 24);
         uint256 price = bound(_price, 1, maxMinPrice / 10**decimals);
-        uint256 encodedMinPrice = this.computeEncodedMinPrice(1, price, decimals);
+        uint256 encodedMinPrice = _computeEncodedMinPrice(1, price, decimals);
         uint256 decodedMinPrice = _decodeMinPrice(encodedMinPrice);
         assertGt(decodedMinPrice, 0);
     }
@@ -50,7 +69,7 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
         uint256 price = bound(_price, 1, maxMinPrice / 10**decimals);
         uint256 quote = _inputValue * price;
 
-        uint256 encodedMinPrice = this.computeEncodedMinPrice(1, price, decimals);
+        uint256 encodedMinPrice = _computeEncodedMinPrice(1, price, decimals);
         uint256 decodedMinPrice = _decodeMinPrice(encodedMinPrice);
         uint256 amountOutMinimum = (_inputValue * decodedMinPrice) / 10**decimals;
 
@@ -58,7 +77,7 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
     }
 
     function testEncodeMinPriceDoesntRevertAndDecodesToMax() public {
-        uint256 encoded = this.computeEncodedMinPrice(1, maxMinPrice, 0);
+        uint256 encoded = _computeEncodedMinPrice(1, maxMinPrice, 0);
         assertEq(encoded, maxEncodedMinPrice, "Encoded price doesn't equal max encoded price");
         uint256 decoded = _decodeMinPrice(uint64(encoded));
         assertEq(
@@ -70,7 +89,7 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
 
     function testEncodeMinPriceRevertsForPriceBiggerThanBoundry() public {
         vm.expectRevert(UniswapBridge.Overflow.selector);
-        this.computeEncodedMinPrice(1, maxMinPrice + 1, 0);
+        _computeEncodedMinPrice(1, maxMinPrice + 1, 0);
     }
 
     function testDecodePath() public {
@@ -116,22 +135,6 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
         assertEq(path.percentage2, 100, "Incorrect percentage 2");
         assertEq(string(path.splitPath2), string(referenceSplitPath2), "Split path 2 incorrectly encoded");
         assertEq(path.minPrice, 2031142 * 10**27);
-    }
-
-    function testEncodeSplitPath() public {
-        // 100 %   500 USDC 3000 WETH 3000
-        // 1100100 01  010  10   001  10
-        uint256 referenceEncodedSplitPath = 0x64546; // split path encoded by "hand"
-        uint256 encodedSplitPath = this.encodeSplitPath(UniswapBridge.SplitPath(100, 500, USDC, 3000, WETH, 3000));
-        assertEq(referenceEncodedSplitPath, encodedSplitPath, "Reference and received split paths do not match");
-    }
-
-    function testEncodeSplitPathOneMiddleTokenUsed() public {
-        // 70%     500 USDC 100  ---- 3000
-        // 1000110 01  010  00   000  10
-        uint256 referenceEncodedSplitPath = 0x46502; // split path encoded by "hand"
-        uint256 encodedSplitPath = this.encodeSplitPath(UniswapBridge.SplitPath(70, 500, USDC, 100, address(0), 3000));
-        assertEq(referenceEncodedSplitPath, encodedSplitPath, "Reference and received split paths do not match");
     }
 
     function testDecodeSplitPathAllMiddleTokensUsed() public {
