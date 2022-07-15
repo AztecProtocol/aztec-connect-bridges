@@ -216,7 +216,7 @@ contract UniswapBridgeUnitTest is Test {
 
         uint64 encodedPath = uint64(
             (desiredMinPrice << bridge.SPLIT_PATHS_BIT_LENGTH()) +
-                (bridge.encodeSplitPath(100, 500, USDC, 100, address(0), 3000))
+                (bridge.encodeSplitPath(UniswapBridge.SplitPath(100, 500, USDC, 100, address(0), 3000)))
         );
 
         address[] memory tokensIn = new address[](1);
@@ -268,7 +268,7 @@ contract UniswapBridgeUnitTest is Test {
 
         uint64 encodedPath = uint64(
             (desiredMinPrice << bridge.SPLIT_PATHS_BIT_LENGTH()) +
-                (bridge.encodeSplitPath(100, 100, address(0), 100, address(0), 500))
+                (bridge.encodeSplitPath(UniswapBridge.SplitPath(100, 100, address(0), 100, address(0), 500)))
         );
 
         address[] memory tokensIn = new address[](1);
@@ -320,7 +320,7 @@ contract UniswapBridgeUnitTest is Test {
 
         uint64 encodedPath = uint64(
             (desiredMinPrice << bridge.SPLIT_PATHS_BIT_LENGTH()) +
-                (bridge.encodeSplitPath(100, 100, address(0), 100, address(0), 500))
+                (bridge.encodeSplitPath(UniswapBridge.SplitPath(100, 100, address(0), 100, address(0), 500)))
         );
 
         address[] memory tokensIn = new address[](1);

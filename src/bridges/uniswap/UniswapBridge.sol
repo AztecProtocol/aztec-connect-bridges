@@ -71,6 +71,15 @@ contract UniswapBridge is BridgeBase {
         uint256 minPrice; // Minimum acceptable price
     }
 
+    struct SplitPath {
+        uint256 percentage; // Percentage of swap amount to send through this split path
+        uint256 fee1; // 1st pool fee
+        address token1; // Address of the 1st pool's output token
+        uint256 fee2; // 2nd pool fee
+        address token2; // Address of the 2nd pool's output token
+        uint256 fee3; // 3rd pool fee
+    }
+
     // @dev Event which is emitted when the output token doesn't implement decimals().
     event DefaultDecimalsWarning();
 
@@ -237,6 +246,35 @@ contract UniswapBridge is BridgeBase {
     }
 
     /**
+     * @notice A function which encodes path to a format expected in _auxData of this.convert(...)
+     * @param _amountIn - Amount of tokenIn to swap
+     * @param _minAmountOut - Amount of tokenOut to receive
+     * @param _tokenIn - Address of _tokenIn
+     * @param _splitPath1 - Split path to encode
+     * @param _splitPath2 - Split path to encode
+     * @return encodedMinPrice - Min acceptable encoded in a format used in this bridge.
+     * @dev This function is not optimized and is expected to be used on frontend and in tests.
+     * @dev Reverts when min price is bigger than max encodeable value.
+     */
+    function encodePath(
+        uint256 _amountIn,
+        uint256 _minAmountOut,
+        address _tokenIn,
+        SplitPath calldata _splitPath1,
+        SplitPath calldata _splitPath2
+    ) external view returns (uint64) {
+        if (_splitPath1.percentage + _splitPath2.percentage != 100) revert InvalidPercentageAmounts();
+
+        return
+            uint64(
+                (computeEncodedMinPrice(_amountIn, _minAmountOut, IERC20Metadata(_tokenIn).decimals()) <<
+                    SPLIT_PATHS_BIT_LENGTH) +
+                    (encodeSplitPath(_splitPath1) << SPLIT_PATH_BIT_LENGTH) +
+                    encodeSplitPath(_splitPath2)
+            );
+    }
+
+    /**
      * @notice A function which computes min price and encodes it in the format used in this bridge.
      * @param _amountIn - Amount of tokenIn to swap
      * @param _minAmountOut - Amount of tokenOut to receive
@@ -249,7 +287,7 @@ contract UniswapBridge is BridgeBase {
         uint256 _amountIn,
         uint256 _minAmountOut,
         uint256 _tokenInDecimals
-    ) external pure returns (uint256 encodedMinPrice) {
+    ) public pure returns (uint256 encodedMinPrice) {
         uint256 minPrice = (_minAmountOut * 10**_tokenInDecimals) / _amountIn;
         // 2097151 = 2**21 - 1 --> this number and its multiples of 10 can be encoded without precision loss
         if (minPrice <= 2097151) {
@@ -269,31 +307,19 @@ contract UniswapBridge is BridgeBase {
 
     /**
      * @notice A function which encodes a split path.
-     * @param _percentage - Percentage of swap amount to send through this split path
-     * @param _fee1 - 1st pool fee
-     * @param _token1 - Address of the 1st pool's output token
-     * @param _fee2 - 2nd pool fee
-     * @param _token2 - Address of the 2nd pool's output token
-     * @param _fee3 - 3rd pool fee
+     * @param _path - Split path to encode
      * @return Encoded split path (in the last 19 bits of uint)
      * @dev In place of unused middle tokens and address(0). When fee tier is unused place there any valid value. This
      *      value gets ignored.
      */
-    function encodeSplitPath(
-        uint256 _percentage,
-        uint256 _fee1,
-        address _token1,
-        uint256 _fee2,
-        address _token2,
-        uint256 _fee3
-    ) external pure returns (uint256) {
+    function encodeSplitPath(SplitPath calldata _path) public pure returns (uint256) {
         return
-            (_percentage << 12) +
-            (encodeFeeTier(_fee1) << 10) +
-            (encodeMiddleToken(_token1) << 7) +
-            (encodeFeeTier(_fee2) << 5) +
-            (encodeMiddleToken(_token2) << 2) +
-            (encodeFeeTier(_fee3));
+            (_path.percentage << 12) +
+            (encodeFeeTier(_path.fee1) << 10) +
+            (encodeMiddleToken(_path.token1) << 7) +
+            (encodeFeeTier(_path.fee2) << 5) +
+            (encodeMiddleToken(_path.token2) << 2) +
+            (encodeFeeTier(_path.fee3));
     }
 
     /**

@@ -122,7 +122,7 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
         // 100 %   500 USDC 3000 WETH 3000
         // 1100100 01  010  10   001  10
         uint256 referenceEncodedSplitPath = 0x64546; // split path encoded by "hand"
-        uint256 encodedSplitPath = this.encodeSplitPath(100, 500, USDC, 3000, WETH, 3000);
+        uint256 encodedSplitPath = this.encodeSplitPath(UniswapBridge.SplitPath(100, 500, USDC, 3000, WETH, 3000));
         assertEq(referenceEncodedSplitPath, encodedSplitPath, "Reference and received split paths do not match");
     }
 
@@ -130,7 +130,7 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
         // 70%     500 USDC 100  ---- 3000
         // 1000110 01  010  00   000  10
         uint256 referenceEncodedSplitPath = 0x46502; // split path encoded by "hand"
-        uint256 encodedSplitPath = this.encodeSplitPath(70, 500, USDC, 100, address(0), 3000);
+        uint256 encodedSplitPath = this.encodeSplitPath(UniswapBridge.SplitPath(70, 500, USDC, 100, address(0), 3000));
         assertEq(referenceEncodedSplitPath, encodedSplitPath, "Reference and received split paths do not match");
     }
 
