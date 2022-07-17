@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 pragma solidity >=0.8.4;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -14,12 +15,18 @@ pragma solidity >=0.8.4;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 >>>>>>> 70661815 (add notional bridge)
+=======
+// Copyright 2022 Spilsbury Holdings Ltd
+pragma solidity >=0.8.4;
+
+>>>>>>> ec73562e (add notional)
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {IWrappedfCashFactory} from "./interfaces/notional/IWrappedfCashFactory.sol";
 import {IWrappedfCash} from "./interfaces/notional/IWrappedfCash.sol";
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
@@ -137,6 +144,16 @@ contract NotionalBridgeContract is BridgeBase {
      * this will be 0.
      */
 >>>>>>> 70661815 (add notional bridge)
+=======
+
+contract NotionalBridgeContract is BridgeBase {
+    IWrappedfCashFactory public fcashFactory;
+    mapping(address => uint16) public currencyIds;
+    constructor(address _rollupProcessor, address _fcashFactory) BridgeBase(_rollupProcessor) {
+        fcashFactory = IWrappedfCashFactory(_fcashFactory);
+    }
+
+>>>>>>> ec73562e (add notional)
     function convert(
         AztecTypes.AztecAsset memory _inputAssetA,
         AztecTypes.AztecAsset memory,
@@ -146,6 +163,7 @@ contract NotionalBridgeContract is BridgeBase {
         uint256 _interactionNonce,
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         uint64 _auxData,
 =======
         uint64 auxData,
@@ -153,6 +171,9 @@ contract NotionalBridgeContract is BridgeBase {
 =======
         uint64 _auxData,
 >>>>>>> 70661815 (add notional bridge)
+=======
+        uint64 auxData,
+>>>>>>> ec73562e (add notional)
         address
     )
         external
@@ -164,6 +185,7 @@ contract NotionalBridgeContract is BridgeBase {
             uint256,
             bool
         )
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -193,6 +215,8 @@ contract NotionalBridgeContract is BridgeBase {
             ERC20(_outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, outputValueA);
         } else if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
 =======
+=======
+>>>>>>> ec73562e (add notional)
     {   
         if (currencyIds[_inputAssetA.address] != 0) {
             (,outputValueA) = _enter(_inputAssetA.address, _inputValue, uint40(maturity));
@@ -202,6 +226,7 @@ contract NotionalBridgeContract is BridgeBase {
         if (_outputAssetA.assetType == AztecTypes.ERC20){
             IERC20(_outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, outputValueA);
         } else if(_outputAssetA.assetType == AztecAssetType.ETH) {
+<<<<<<< HEAD
 >>>>>>> 37be3094 (add notional)
 =======
             outputValueA = _enter(_inputAssetA.erc20Address, _outputAssetA.erc20Address, currencyId, _inputValue, maturity);
@@ -212,10 +237,13 @@ contract NotionalBridgeContract is BridgeBase {
             ERC20(_outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, outputValueA);
         } else if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
 >>>>>>> 70661815 (add notional bridge)
+=======
+>>>>>>> ec73562e (add notional)
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
         }
     }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -405,6 +433,24 @@ contract NotionalBridgeContract is BridgeBase {
     }
 
 <<<<<<< HEAD
+=======
+    function _enter(
+        address inputToken,
+        uint256 amount,
+        uint40 maturity
+    ) internal returns (address, uint256) {
+        uint16 currencyId = currencyIds[inputToken];
+        IWrappedfCash fcash = fcashFactory.computeAddress(currencyId, maturity);
+        IERC20(inputToken).approve(fcash, amount);
+        if (inputToken == address(0)){
+            fcash.mintViaUnderlying(amount, amount, address(this), 5e9){value: amount};
+        } else {
+            fcash.mintViaUnderlying(amount, amount, address(this), 5e9);
+        }
+        return (fcash, amount);
+    }
+
+>>>>>>> ec73562e (add notional)
     function _exit(address inputToken, uint256 amount) internal returns (address, uint256) {
         (IERC20 underlyingToken, ) = IWrappedfCash(inputToken).getUnderlyingToken();
         bool isETH = address(underlyingToken) == address(0);
@@ -412,6 +458,7 @@ contract NotionalBridgeContract is BridgeBase {
         IWrappedfCash(inputToken).redeemToUnderlying(amount, address(this), 0);
         uint256 currBalance = isETH? address(this).balance : underlyingToken.balanceOf(address(this));
         return (address(underlyingToken), currBalance - prevBalance);
+<<<<<<< HEAD
 >>>>>>> 37be3094 (add notional)
 =======
 
@@ -437,5 +484,7 @@ contract NotionalBridgeContract is BridgeBase {
             revert ErrorLib.InvalidInputA();
         }
 >>>>>>> 70661815 (add notional bridge)
+=======
+>>>>>>> ec73562e (add notional)
     }
 }
