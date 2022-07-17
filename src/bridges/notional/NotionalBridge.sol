@@ -1,13 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-only
+<<<<<<< HEAD
 pragma solidity >=0.8.4;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+=======
+// Copyright 2022 Spilsbury Holdings Ltd
+pragma solidity >=0.8.4;
+
+>>>>>>> 37be3094 (add notional)
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {IWrappedfCashFactory} from "./interfaces/notional/IWrappedfCashFactory.sol";
 import {IWrappedfCash} from "./interfaces/notional/IWrappedfCash.sol";
+<<<<<<< HEAD
 import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {WETH9} from "./interfaces/WETH9.sol";
 import {CToken} from "./interfaces/CToken.sol";
@@ -62,6 +69,16 @@ contract NotionalBridgeContract is BridgeBase {
      * @param _auxData For entering the market, this will be the market maturity. For exitng the market,
      * this will be 0.
      */
+=======
+
+contract NotionalBridgeContract is BridgeBase {
+    IWrappedfCashFactory public fcashFactory;
+    mapping(address => uint16) public currencyIds;
+    constructor(address _rollupProcessor, address _fcashFactory) BridgeBase(_rollupProcessor) {
+        fcashFactory = IWrappedfCashFactory(_fcashFactory);
+    }
+
+>>>>>>> 37be3094 (add notional)
     function convert(
         AztecTypes.AztecAsset memory _inputAssetA,
         AztecTypes.AztecAsset memory,
@@ -69,7 +86,11 @@ contract NotionalBridgeContract is BridgeBase {
         AztecTypes.AztecAsset memory,
         uint256 _inputValue,
         uint256 _interactionNonce,
+<<<<<<< HEAD
         uint64 _auxData,
+=======
+        uint64 auxData,
+>>>>>>> 37be3094 (add notional)
         address
     )
         external
@@ -81,6 +102,7 @@ contract NotionalBridgeContract is BridgeBase {
             uint256,
             bool
         )
+<<<<<<< HEAD
     {
         uint40 maturity = uint40(_auxData);
         _validateInput(maturity, _inputAssetA.erc20Address, _outputAssetA.erc20Address);
@@ -104,10 +126,22 @@ contract NotionalBridgeContract is BridgeBase {
         if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
             ERC20(_outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, outputValueA);
         } else if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+=======
+    {   
+        if (currencyIds[_inputAssetA.address] != 0) {
+            (,outputValueA) = _enter(_inputAssetA.address, _inputValue, uint40(maturity));
+        } else{
+            (,outputValueA) =  _exit(_inputAssetA.address, _inputValue);
+        }
+        if (_outputAssetA.assetType == AztecTypes.ERC20){
+            IERC20(_outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, outputValueA);
+        } else if(_outputAssetA.assetType == AztecAssetType.ETH) {
+>>>>>>> 37be3094 (add notional)
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
         }
     }
 
+<<<<<<< HEAD
     /**
      * @notice Helper functon to compute the fcash amount
      * @dev If the token is a ctoken, then we need to convert the amount to its underlying in 8 decimals
@@ -224,5 +258,30 @@ contract NotionalBridgeContract is BridgeBase {
             }
             revert ErrorLib.InvalidInputA();
         }
+=======
+    function _enter(
+        address inputToken,
+        uint256 amount,
+        uint40 maturity
+    ) internal returns (address, uint256) {
+        uint16 currencyId = currencyIds[inputToken];
+        IWrappedfCash fcash = fcashFactory.computeAddress(currencyId, maturity);
+        IERC20(inputToken).approve(fcash, amount);
+        if (inputToken == address(0)){
+            fcash.mintViaUnderlying(amount, amount, address(this), 5e9){value: amount};
+        } else {
+            fcash.mintViaUnderlying(amount, amount, address(this), 5e9);
+        }
+        return (fcash, amount);
+    }
+
+    function _exit(address inputToken, uint256 amount) internal returns (address, uint256) {
+        (IERC20 underlyingToken, ) = IWrappedfCash(inputToken).getUnderlyingToken();
+        bool isETH = address(underlyingToken) == address(0);
+        uint256 prevBalance =  isETH? address(this).balance : underlyingToken.balanceOf(address(this));
+        IWrappedfCash(inputToken).redeemToUnderlying(amount, address(this), 0);
+        uint256 currBalance = isETH? address(this).balance : underlyingToken.balanceOf(address(this));
+        return (address(underlyingToken), currBalance - prevBalance);
+>>>>>>> 37be3094 (add notional)
     }
 }
