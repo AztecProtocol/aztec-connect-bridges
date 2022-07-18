@@ -1,4 +1,4 @@
-# Spec for Lido Bridge
+# Spec for Uniswap Bridge
 
 ## What does the bridge do? Why build it?
 
@@ -12,14 +12,14 @@ The bridge interacts with [Uniswap v3](https://docs.uniswap.org/protocol/introdu
 ## What is the flow of the bridge?
 
 There is only 1 flow in the bridge.
-In this flow `inputAssetA` is swapped for `outputAssetA` along the path specified in `_auxData`
+In this flow `_inputAssetA` is swapped for `_outputAssetA` along the path specified in `_auxData`
 
 **Edge cases**:
 
 - Interaction might revert in case the minimum acceptable price is set too high or the price of the output asset moves up before the interaction settles.
 - Users might get sandwiched in case the minimum acceptable price is set too low or the price of the output token goes down before the interaction settles making the users lose positive slippage.
 
-### General Properties for both deposit and withdrawal
+### General Properties of convert(...) function
 
 - The bridge is synchronous, and will always return `isAsync = false`.
 
@@ -36,9 +36,5 @@ No, the bridge is immutable without any admin role.
 ## Does the bridge maintain state?
 
 No, the bridge doesn't maintain a state.
-However, it keeps an insignificant amount of tokens (dust) in the bridge to reduce gas-costs of future transactions (in case the DUST was send to the bridge).
+However, it keeps an insignificant amount of tokens (dust) in the bridge to reduce gas-costs of future transactions (in case the DUST was sent to the bridge).
 By having a dust, we don't need to do a `sstore` from `0` to `non-zero`.
-
-## Is the contract upgradeable?
-
-No, the bridge is immutable without any admin role.
