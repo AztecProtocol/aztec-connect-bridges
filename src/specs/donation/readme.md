@@ -1,4 +1,4 @@
-# Aztec Connect Bridges Specification Template
+# Spec for Donation Bridge (Group Withdraw)
 
 ## What does this bridge do? Why did you build it?
 
