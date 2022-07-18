@@ -26,6 +26,7 @@ contract YearnBridge is BridgeBase {
     address public constant WETH = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     error InvalidOutputANotLatest();
+    error InvalidWETHAmount();
 
 
     /**
@@ -88,7 +89,9 @@ contract YearnBridge is BridgeBase {
         )
     {
         if (_auxData == 0) {
-            if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
+            if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) {
+                revert ErrorLib.InvalidOutputA();
+            }
 
             if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 outputValueA = _zapETH(msg.value, _outputAssetA);
@@ -98,7 +101,9 @@ contract YearnBridge is BridgeBase {
                 revert ErrorLib.InvalidInputA();
             }
         } else if (_auxData == 1) {
-            if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidInputA();
+            if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) {
+                revert ErrorLib.InvalidInputA();
+            }
 
             if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 outputValueA = _unzapETH(_inputValue, _interactionNonce, _inputAssetA);
@@ -126,12 +131,10 @@ contract YearnBridge is BridgeBase {
         IYearnVault vault = IYearnVault(_outputAssetA.erc20Address);
         address underlyingToken = vault.token();
         if (underlyingToken != WETH) {
-            //Error: not a yvETH vault
             revert ErrorLib.InvalidOutputA();
         }
 
         if (_outputAssetA.erc20Address != YEARN_REGISTRY.latestVault(underlyingToken)) {
-            //Error: not the latest vault for ETH
             revert InvalidOutputANotLatest();
         }
 
@@ -158,7 +161,7 @@ contract YearnBridge is BridgeBase {
         }
         uint256 wethAmount = vault.withdraw(_inputValue);
         if (wethAmount == 0) {
-            revert ErrorLib.InvalidInputA();
+            revert InvalidWETHAmount();
         }
         IWETH(WETH).withdraw(wethAmount);
         outputValue = address(this).balance;
