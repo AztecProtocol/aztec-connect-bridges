@@ -42,7 +42,6 @@ interface Interaction {
 const interactions: { [key: number]: Interaction } = {};
 
 describe("element bridge data", () => {
-  let rollupContract: Mockify<IRollupProcessor>;
   let elementBridge: Mockify<ElementBridge>;
   let balancerContract: Mockify<IVault>;
   const now = Math.floor(Date.now() / 1000);
@@ -96,7 +95,7 @@ describe("element bridge data", () => {
     },
   } as any;
 
-  rollupContract = {
+  const rollupContract: Mockify<IRollupProcessor> = {
     queryFilter: jest.fn().mockImplementation((filter: any, from: number, to: number) => {
       const nonce = filter.interactionNonce;
       const [defiEvent] = getDefiEvents(nonce, from, to);

@@ -79,7 +79,7 @@ export interface BridgeDataFieldGetters {
   */
   getExpiration?(interactionNonce: bigint): Promise<bigint>;
 
-  hasFinalised?(interactionNonce: bigint): Promise<Boolean>;
+  hasFinalised?(interactionNonce: bigint): Promise<boolean>;
 
   /*
   @dev This function should be implemented for all bridges are stateful. It should return the expected value 1 year from now of outputAssetA and outputAssetB
