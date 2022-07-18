@@ -11,7 +11,8 @@ import { AsyncDefiBridgeProcessedEvent } from "../../../typechain-types/IRollupP
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { createWeb3Provider } from "../aztec/provider";
 import { EthAddress } from "@aztec/barretenberg/address";
-import { BridgeId } from "@aztec/barretenberg/bridge_id";
+// TODO: simply import BridgeCallData once the name is changed on defi-bridge-project
+import { BridgeId as BridgeCallData } from "@aztec/barretenberg/bridge_id";
 
 export type BatchSwapStep = {
   poolId: string;
@@ -44,7 +45,7 @@ export type ChainProperties = {
 interface EventBlock {
   nonce: bigint;
   blockNumber: number;
-  bridgeId: bigint;
+  encodedBridgeCallData: bigint;
   totalInputValue: bigint;
   timestamp: number;
 }
@@ -55,13 +56,13 @@ function divide(a: bigint, b: bigint, precision: bigint) {
 
 const decodeEvent = async (event: AsyncDefiBridgeProcessedEvent): Promise<EventBlock> => {
   const {
-    args: [bridgeId, nonce, totalInputValue],
+    args: [encodedBridgeCallData, nonce, totalInputValue],
   } = event;
   const block = await event.getBlock();
   const newEventBlock = {
     nonce: nonce.toBigInt(),
     blockNumber: block.number,
-    bridgeId: bridgeId.toBigInt(),
+    encodedBridgeCallData: encodedBridgeCallData.toBigInt(),
     totalInputValue: totalInputValue.toBigInt(),
     timestamp: block.timestamp,
   };
@@ -204,7 +205,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
 
     return [
       {
-        assetId: BigInt(BridgeId.fromBigInt(defiEvent.bridgeId).inputAssetIdA),
+        assetId: BigInt(BridgeCallData.fromBigInt(defiEvent.encodedBridgeCallData).inputAssetIdA),
         amount: userPresentValue,
       },
     ];
