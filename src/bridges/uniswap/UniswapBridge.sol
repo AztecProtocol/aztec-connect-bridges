@@ -18,7 +18,7 @@ import {IQuoter} from "../../interfaces/uniswapv3/IQuoter.sol";
  * @author Jan Benes (@benesjan on Github and Telegram)
  * @notice You can use this contract to swap tokens on Uniswap v3 along complex paths.
  * @dev Encoding of a path allows for up to 2 split paths (see the definition bellow) and up to 3 pools (2 middle
- *      tokens) in a each split path. A path is encoded in _auxData parameter passed to the convert method. _auxData
+ *      tokens) in each split path. A path is encoded in _auxData parameter passed to the convert method. _auxData
  *      carry 64 bits of information. Along with split paths there is a minimum price encoded in auxData.
  *
  *      Each split path takes 19 bits. Minimum price is encoded in 26 bits. Values are placed in the data as follows:
