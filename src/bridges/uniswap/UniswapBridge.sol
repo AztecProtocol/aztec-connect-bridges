@@ -11,6 +11,7 @@ import {ErrorLib} from "../base/ErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {ISwapRouter} from "../../interfaces/uniswapv3/ISwapRouter.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
+import {IQuoter} from "../../interfaces/uniswapv3/IQuoter.sol";
 
 /**
  * @title Aztec Connect Bridge for swapping on Uniswap v3
@@ -71,10 +72,20 @@ contract UniswapBridge is BridgeBase {
         uint256 minPrice; // Minimum acceptable price
     }
 
+    struct SplitPath {
+        uint256 percentage; // Percentage of swap amount to send through this split path
+        uint256 fee1; // 1st pool fee
+        address token1; // Address of the 1st pool's output token
+        uint256 fee2; // 2nd pool fee
+        address token2; // Address of the 2nd pool's output token
+        uint256 fee3; // 3rd pool fee
+    }
+
     // @dev Event which is emitted when the output token doesn't implement decimals().
     event DefaultDecimalsWarning();
 
-    ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+    ISwapRouter public constant ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+    IQuoter public constant QUOTER = IQuoter(0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6);
 
     // Addresses of middle tokens
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -126,8 +137,8 @@ contract UniswapBridge is BridgeBase {
             address tokenIn = _tokensIn[i];
             // Using safeApprove(...) instead of approve(...) and first setting the allowance to 0 because underlying
             // can be Tether
-            IERC20(tokenIn).safeApprove(address(UNI_ROUTER), 0);
-            IERC20(tokenIn).safeApprove(address(UNI_ROUTER), type(uint256).max);
+            IERC20(tokenIn).safeApprove(address(ROUTER), 0);
+            IERC20(tokenIn).safeApprove(address(ROUTER), type(uint256).max);
             unchecked {
                 ++i;
             }
@@ -194,7 +205,7 @@ contract UniswapBridge is BridgeBase {
 
         if (path.percentage1 != 0) {
             // Swap using the first swap path
-            outputValueA = UNI_ROUTER.exactInput{value: inputIsEth ? inputValueSplitPath1 : 0}(
+            outputValueA = ROUTER.exactInput{value: inputIsEth ? inputValueSplitPath1 : 0}(
                 ISwapRouter.ExactInputParams({
                     path: path.splitPath1,
                     recipient: address(this),
@@ -208,7 +219,7 @@ contract UniswapBridge is BridgeBase {
         if (path.percentage2 != 0) {
             // Swap using the second swap path
             uint256 inputValueSplitPath2 = _inputValue - inputValueSplitPath1;
-            outputValueA += UNI_ROUTER.exactInput{value: inputIsEth ? inputValueSplitPath2 : 0}(
+            outputValueA += ROUTER.exactInput{value: inputIsEth ? inputValueSplitPath2 : 0}(
                 ISwapRouter.ExactInputParams({
                     path: path.splitPath2,
                     recipient: address(this),
@@ -237,6 +248,63 @@ contract UniswapBridge is BridgeBase {
     }
 
     /**
+     * @notice A function which encodes path to a format expected in _auxData of this.convert(...)
+     * @param _amountIn - Amount of tokenIn to swap
+     * @param _minAmountOut - Amount of tokenOut to receive
+     * @param _tokenIn - Address of _tokenIn (@dev used only to fetch decimals)
+     * @param _splitPath1 - Split path to encode
+     * @param _splitPath2 - Split path to encode
+     * @return Path encoded in a format expected in _auxData of this.convert(...)
+     * @dev This function is not optimized and is expected to be used on frontend and in tests.
+     * @dev Reverts when min price is bigger than max encodeable value.
+     */
+    function encodePath(
+        uint256 _amountIn,
+        uint256 _minAmountOut,
+        address _tokenIn,
+        SplitPath calldata _splitPath1,
+        SplitPath calldata _splitPath2
+    ) external view returns (uint64) {
+        if (_splitPath1.percentage + _splitPath2.percentage != 100) revert InvalidPercentageAmounts();
+
+        return
+            uint64(
+                (_computeEncodedMinPrice(_amountIn, _minAmountOut, IERC20Metadata(_tokenIn).decimals()) <<
+                    SPLIT_PATHS_BIT_LENGTH) +
+                    (_encodeSplitPath(_splitPath1) << SPLIT_PATH_BIT_LENGTH) +
+                    _encodeSplitPath(_splitPath2)
+            );
+    }
+
+    /**
+     * @notice A function which encodes path to a format expected in _auxData of this.convert(...)
+     * @param _amountIn - Amount of tokenIn to swap
+     * @param _tokenIn - Address of _tokenIn (@dev used only to fetch decimals)
+     * @param _path - Split path to encode
+     * @param _tokenOut - Address of _tokenIn (@dev used only to fetch decimals)
+     * @return amountOut -
+     */
+    function quote(
+        uint256 _amountIn,
+        address _tokenIn,
+        uint64 _path,
+        address _tokenOut
+    ) external returns (uint256 amountOut) {
+        Path memory path = _decodePath(_tokenIn, _path, _tokenOut);
+        uint256 inputValueSplitPath1 = (_amountIn * path.percentage1) / 100;
+
+        if (path.percentage1 != 0) {
+            // Swap using the first swap path
+            amountOut += QUOTER.quoteExactInput(path.splitPath1, inputValueSplitPath1);
+        }
+
+        if (path.percentage2 != 0) {
+            // Swap using the second swap path
+            amountOut += QUOTER.quoteExactInput(path.splitPath2, _amountIn - inputValueSplitPath1);
+        }
+    }
+
+    /**
      * @notice A function which computes min price and encodes it in the format used in this bridge.
      * @param _amountIn - Amount of tokenIn to swap
      * @param _minAmountOut - Amount of tokenOut to receive
@@ -245,11 +313,11 @@ contract UniswapBridge is BridgeBase {
      * @dev This function is not optimized and is expected to be used on frontend and in tests.
      * @dev Reverts when min price is bigger than max encodeable value.
      */
-    function computeEncodedMinPrice(
+    function _computeEncodedMinPrice(
         uint256 _amountIn,
         uint256 _minAmountOut,
         uint256 _tokenInDecimals
-    ) external pure returns (uint256 encodedMinPrice) {
+    ) internal pure returns (uint256 encodedMinPrice) {
         uint256 minPrice = (_minAmountOut * 10**_tokenInDecimals) / _amountIn;
         // 2097151 = 2**21 - 1 --> this number and its multiples of 10 can be encoded without precision loss
         if (minPrice <= 2097151) {
@@ -269,31 +337,20 @@ contract UniswapBridge is BridgeBase {
 
     /**
      * @notice A function which encodes a split path.
-     * @param _percentage - Percentage of swap amount to send through this split path
-     * @param _fee1 - 1st pool fee
-     * @param _token1 - Address of the 1st pool's output token
-     * @param _fee2 - 2nd pool fee
-     * @param _token2 - Address of the 2nd pool's output token
-     * @param _fee3 - 3rd pool fee
+     * @param _path - Split path to encode
      * @return Encoded split path (in the last 19 bits of uint)
      * @dev In place of unused middle tokens and address(0). When fee tier is unused place there any valid value. This
      *      value gets ignored.
      */
-    function encodeSplitPath(
-        uint256 _percentage,
-        uint256 _fee1,
-        address _token1,
-        uint256 _fee2,
-        address _token2,
-        uint256 _fee3
-    ) external pure returns (uint256) {
+    function _encodeSplitPath(SplitPath calldata _path) internal pure returns (uint256) {
+        if (_path.percentage == 0) return 0;
         return
-            (_percentage << 12) +
-            (encodeFeeTier(_fee1) << 10) +
-            (encodeMiddleToken(_token1) << 7) +
-            (encodeFeeTier(_fee2) << 5) +
-            (encodeMiddleToken(_token2) << 2) +
-            (encodeFeeTier(_fee3));
+            (_path.percentage << 12) +
+            (_encodeFeeTier(_path.fee1) << 10) +
+            (_encodeMiddleToken(_path.token1) << 7) +
+            (_encodeFeeTier(_path.fee2) << 5) +
+            (_encodeMiddleToken(_path.token2) << 2) +
+            (_encodeFeeTier(_path.fee3));
     }
 
     /**
@@ -301,7 +358,7 @@ contract UniswapBridge is BridgeBase {
      * @param _feeTier - Fee tier in bps
      * @return Encoded fee tier (in the last 2 bits of uint)
      */
-    function encodeFeeTier(uint256 _feeTier) public pure returns (uint256) {
+    function _encodeFeeTier(uint256 _feeTier) internal pure returns (uint256) {
         if (_feeTier == 100) {
             // Binary number 00
             return 0;
@@ -326,7 +383,7 @@ contract UniswapBridge is BridgeBase {
      * @param _token - Token address
      * @return encodedToken - Encoded token (in the last 3 bits of uint256)
      */
-    function encodeMiddleToken(address _token) public pure returns (uint256 encodedToken) {
+    function _encodeMiddleToken(address _token) internal pure returns (uint256 encodedToken) {
         if (_token == address(0)) {
             // unused token
             return 0;
