@@ -21,8 +21,6 @@ type Mockify<T> = {
   [P in keyof T]: jest.Mock;
 };
 
-const randomAddress = () => `0x${randomBytes(20).toString("hex")}`;
-
 const tranche1DeploymentBlockNumber = 45n;
 const tranche2DeploymentBlockNumber = 87n;
 
@@ -54,6 +52,7 @@ describe("element bridge data", () => {
   const bridge1 = new BridgeId(1, 4, 4, undefined, undefined, Number(expiration1));
   const bridge2 = new BridgeId(1, 5, 5, undefined, undefined, Number(expiration2));
   const outputValue = 10n * 10n ** 18n;
+  const testAddress = EthAddress.random();
 
   const defiEvents = [
     { bridgeId: bridge1.toBigInt(), nonce: 56, totalInputValue: 56n * 10n ** 16n, blockNumber: 59 } as DefiEvent,
@@ -257,22 +256,22 @@ describe("element bridge data", () => {
     const output = await elementBridgeData.getExpectedYield(
       {
         assetType: AztecAssetType.ERC20,
-        erc20Address: "test",
+        erc20Address: testAddress,
         id: 1n,
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: EthAddress.ZERO.toString(),
+        erc20Address: EthAddress.ZERO,
         id: 0n,
       },
       {
         assetType: AztecAssetType.ERC20,
-        erc20Address: "test",
+        erc20Address: testAddress,
         id: 1n,
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: EthAddress.ZERO.toString(),
+        erc20Address: EthAddress.ZERO,
         id: 0n,
       },
       expiry,
@@ -291,7 +290,7 @@ describe("element bridge data", () => {
 
   it("should return the correct market size for a given tranche", async () => {
     const expiry = BigInt(Date.now() + 86400 * 30);
-    const tokenAddress = randomAddress();
+    const tokenAddress = EthAddress.random().toString();
     const poolId = "0x90ca5cef5b29342b229fb8ae2db5d8f4f894d6520002000000000000000000b5";
     const tokenBalance = 10e18,
       elementBridge = {
@@ -316,22 +315,22 @@ describe("element bridge data", () => {
     const marketSize = await elementBridgeData.getMarketSize(
       {
         assetType: AztecAssetType.ERC20,
-        erc20Address: "test",
+        erc20Address: EthAddress.random(),
         id: 1n,
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: EthAddress.ZERO.toString(),
+        erc20Address: EthAddress.ZERO,
         id: 0n,
       },
       {
         assetType: AztecAssetType.ERC20,
-        erc20Address: "test",
+        erc20Address: testAddress,
         id: 1n,
       },
       {
         assetType: AztecAssetType.NOT_USED,
-        erc20Address: EthAddress.ZERO.toString(),
+        erc20Address: EthAddress.ZERO,
         id: 0n,
       },
       expiry,

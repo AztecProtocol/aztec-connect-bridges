@@ -64,9 +64,9 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
       throw "outputAssetA not supported";
     }
 
-    if (allMarkets.some(addr => addr.toString() == inputAssetA.erc20Address)) {
+    if (allMarkets.some(addr => addr.equals(inputAssetA.erc20Address))) {
       return [1n];
-    } else if (allMarkets.some(addr => addr.toString() == outputAssetA.erc20Address)) {
+    } else if (allMarkets.some(addr => addr.equals(outputAssetA.erc20Address))) {
       return [0n];
     } else {
       throw "Invalid input and/or output asset";
@@ -83,12 +83,12 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
   ): Promise<bigint[]> {
     if (auxData === 0n) {
       // Minting
-      const cToken = ICERC20__factory.connect(outputAssetA.erc20Address, this.ethersProvider);
+      const cToken = ICERC20__factory.connect(outputAssetA.erc20Address.toString(), this.ethersProvider);
       const exchangeRateStored = await cToken.exchangeRateStored();
       return [BigNumber.from(inputValue).mul(this.expScale).div(exchangeRateStored).toBigInt()];
     } else if (auxData === 1n) {
       // Redeeming
-      const cToken = ICERC20__factory.connect(inputAssetA.erc20Address, this.ethersProvider);
+      const cToken = ICERC20__factory.connect(inputAssetA.erc20Address.toString(), this.ethersProvider);
       const exchangeRateStored = await cToken.exchangeRateStored();
       return [BigNumber.from(inputValue).mul(exchangeRateStored).div(this.expScale).toBigInt()];
     } else {
@@ -110,7 +110,7 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
       // The approximate number of blocks per year that is assumed by the interest rate model
       const blocksPerYear = 2102400;
       const supplyRatePerBlock = await ICERC20__factory.connect(
-        outputAssetA.erc20Address,
+        outputAssetA.erc20Address.toString(),
         this.ethersProvider,
       ).supplyRatePerBlock();
       return [supplyRatePerBlock.mul(blocksPerYear).toNumber() / 10 ** 16];
@@ -145,11 +145,12 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
 
     let marketSize;
     if (underlyingAsset.assetType === AztecAssetType.ETH) {
-      marketSize = await this.ethersProvider.getBalance(cTokenAddress);
+      marketSize = await this.ethersProvider.getBalance(cTokenAddress.toString());
     } else {
-      marketSize = await IERC20__factory.connect(underlyingAsset.erc20Address, this.ethersProvider).balanceOf(
-        cTokenAddress,
-      );
+      marketSize = await IERC20__factory.connect(
+        underlyingAsset.erc20Address.toString(),
+        this.ethersProvider,
+      ).balanceOf(cTokenAddress.toString());
     }
     return [
       {
@@ -163,11 +164,12 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     if (asset.assetType == AztecAssetType.ETH) return true;
 
     const assetAddress = EthAddress.fromString(await this.rollupProcessor.getSupportedAsset(asset.id));
-    return assetAddress.equals(EthAddress.fromString(asset.erc20Address));
+    return assetAddress.equals(asset.erc20Address);
   }
 
   private async getAllMarkets(): Promise<EthAddress[]> {
     if (!this.allMarkets) {
+      // Load markets from Comptroller if they were not loaded in this class instance before
       this.allMarkets = (await this.comptroller.getAllMarkets()).map(stringAddr => {
         return EthAddress.fromString(stringAddr);
       });

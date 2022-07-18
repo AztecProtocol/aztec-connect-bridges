@@ -1,3 +1,4 @@
+import { EthAddress } from "@aztec/barretenberg/address";
 import { BigNumber } from "ethers";
 import {
   ICERC20,
@@ -36,33 +37,33 @@ describe("compound lending bridge data", () => {
     ethAsset = {
       id: 0n,
       assetType: AztecAssetType.ETH,
-      erc20Address: "0x0",
+      erc20Address: EthAddress.ZERO,
     };
     cethAsset = {
       id: 10n, // Asset has not yet been registered on RollupProcessor so this id is random
       assetType: AztecAssetType.ERC20,
-      erc20Address: "0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5",
+      erc20Address: EthAddress.fromString("0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5"),
     };
     daiAsset = {
       id: 1n,
       assetType: AztecAssetType.ERC20,
-      erc20Address: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+      erc20Address: EthAddress.fromString("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
     };
     cdaiAsset = {
       id: 11n, // Asset has not yet been registered on RollupProcessor so this id is random
       assetType: AztecAssetType.ERC20,
-      erc20Address: "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643",
+      erc20Address: EthAddress.fromString("0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643"),
     };
     emptyAsset = {
       id: 0n,
       assetType: AztecAssetType.NOT_USED,
-      erc20Address: "0x0",
+      erc20Address: EthAddress.ZERO,
     };
   });
 
   it("should correctly fetch auxData when minting", async () => {
     // Setup mocks
-    const allMarkets = [cethAsset.erc20Address];
+    const allMarkets = [cethAsset.erc20Address.toString()];
     comptrollerContract = {
       ...comptrollerContract,
       getAllMarkets: jest.fn().mockResolvedValue(allMarkets),
@@ -71,7 +72,7 @@ describe("compound lending bridge data", () => {
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn().mockResolvedValue(cethAsset.erc20Address),
+      getSupportedAsset: jest.fn().mockResolvedValue(cethAsset.erc20Address.toString()),
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
@@ -84,7 +85,7 @@ describe("compound lending bridge data", () => {
 
   it("should correctly fetch auxData when redeeming", async () => {
     // Setup mocks
-    const allMarkets = [cethAsset.erc20Address];
+    const allMarkets = [cethAsset.erc20Address.toString()];
     comptrollerContract = {
       ...comptrollerContract,
       getAllMarkets: jest.fn().mockResolvedValue(allMarkets),
@@ -93,7 +94,7 @@ describe("compound lending bridge data", () => {
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn().mockResolvedValue(cethAsset.erc20Address),
+      getSupportedAsset: jest.fn().mockResolvedValue(cethAsset.erc20Address.toString()),
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
@@ -106,7 +107,7 @@ describe("compound lending bridge data", () => {
 
   it("should throw when getting auxData for unsupported inputAssetA", async () => {
     // Setup mocks
-    const allMarkets = [cethAsset.erc20Address];
+    const allMarkets = [cethAsset.erc20Address.toString()];
     comptrollerContract = {
       ...comptrollerContract,
       getAllMarkets: jest.fn().mockResolvedValue(allMarkets),
@@ -115,7 +116,7 @@ describe("compound lending bridge data", () => {
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn().mockResolvedValue("0xdAC17F958D2ee523a2206206994597C13D831ec7"), // random address
+      getSupportedAsset: jest.fn().mockResolvedValue(EthAddress.random().toString()),
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
@@ -129,7 +130,7 @@ describe("compound lending bridge data", () => {
 
   it("should throw when getting auxData for unsupported outputAssetA", async () => {
     // Setup mocks
-    const allMarkets = [cethAsset.erc20Address];
+    const allMarkets = [cethAsset.erc20Address.toString()];
     comptrollerContract = {
       ...comptrollerContract,
       getAllMarkets: jest.fn().mockResolvedValue(allMarkets),
@@ -138,7 +139,7 @@ describe("compound lending bridge data", () => {
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn().mockResolvedValue("0xdAC17F958D2ee523a2206206994597C13D831ec7"), // random address
+      getSupportedAsset: jest.fn().mockResolvedValue(EthAddress.random().toString()),
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 

@@ -1,3 +1,5 @@
+import { EthAddress } from "@aztec/barretenberg/address";
+
 export interface AssetValue {
   assetId: bigint; // the Aztec AssetId (this can be queried from the rollup contract)
   amount: bigint;
@@ -24,7 +26,7 @@ export enum SolidityType {
 export interface AztecAsset {
   id: bigint;
   assetType: AztecAssetType;
-  erc20Address: string;
+  erc20Address: EthAddress;
 }
 
 export interface AuxDataConfig {
