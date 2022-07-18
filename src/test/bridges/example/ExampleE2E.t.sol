@@ -51,15 +51,15 @@ contract ExampleE2ETest is BridgeTestBase {
         deal(address(DAI), address(ROLLUP_PROCESSOR), _depositAmount);
 
         // Computes the encoded data for the specific bridge interaction
-        uint256 bridgeId = encodeBridgeId(id, daiAsset, emptyAsset, daiAsset, emptyAsset, 0);
+        uint256 bridgeCallData = encodeBridgeCallData(id, daiAsset, emptyAsset, daiAsset, emptyAsset, 0);
 
         // Use cheatcodes to look for event matching 2 first indexed values and data
         vm.expectEmit(true, true, false, true);
         // Second part of cheatcode, emit the event that we are to match against.
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), _depositAmount, _depositAmount, 0, true, "");
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, _depositAmount, 0, true, "");
 
         // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
-        sendDefiRollup(bridgeId, _depositAmount);
+        sendDefiRollup(bridgeCallData, _depositAmount);
 
         // Check that the balance of the rollup is same as before interaction (bridge just sends funds back)
         assertEq(_depositAmount, DAI.balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
@@ -69,10 +69,10 @@ contract ExampleE2ETest is BridgeTestBase {
         // Use cheatcodes to look for event matching 2 first indexed values and data
         vm.expectEmit(true, true, false, true);
         // Second part of cheatcode, emit the event that we are to match against.
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), secondDeposit, secondDeposit, 0, true, "");
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), secondDeposit, secondDeposit, 0, true, "");
 
         // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
-        sendDefiRollup(bridgeId, secondDeposit);
+        sendDefiRollup(bridgeCallData, secondDeposit);
 
         // Check that the balance of the rollup is same as before interaction (bridge just sends funds back)
         assertEq(_depositAmount, DAI.balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");

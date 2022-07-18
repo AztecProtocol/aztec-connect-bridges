@@ -95,13 +95,13 @@ contract UniswapBridgeE2ETest is BridgeTestBase {
         quote += QUOTER.quoteExactInput(referenceSplitPath2, swapAmount - swapAmountSplitPath1);
 
         // Computes the encoded data for the specific bridge interaction
-        uint256 bridgeId = encodeBridgeId(id, lusdAsset, emptyAsset, lqtyAsset, emptyAsset, encodedPath);
+        uint256 bridgeCallData = encodeBridgeCallData(id, lusdAsset, emptyAsset, lqtyAsset, emptyAsset, encodedPath);
 
         vm.expectEmit(true, true, false, true);
         // Second part of cheatcode, emit the event that we are to match against.
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), swapAmount, quote, 0, true, "");
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), swapAmount, quote, 0, true, "");
 
         // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
-        sendDefiRollup(bridgeId, swapAmount);
+        sendDefiRollup(bridgeCallData, swapAmount);
     }
 }
