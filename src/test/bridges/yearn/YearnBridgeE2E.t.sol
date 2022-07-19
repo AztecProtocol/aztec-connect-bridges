@@ -12,8 +12,10 @@ import {IYearnRegistry} from "../../../interfaces/yearn/IYearnRegistry.sol";
 import {YearnBridge} from "../../../bridges/yearn/YearnBridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
-contract YearnBridgeE2ETest is BridgeTestBase {
+contract YearnBridgeE2ETest is BridgeTestBase {    
     using SafeERC20 for IERC20;
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
 
     struct Balances {
         uint256 underlyingBefore;
@@ -124,8 +126,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         uint256 _redeemAmount
     ) internal {
         uint256 availableDepositLimit = IYearnVault(_vault).availableDepositLimit();
-        vm.assume(_depositAmount > 1);
-        vm.assume(_depositAmount < availableDepositLimit);
+        vm.assume(_depositAmount > 1 && _depositAmount < availableDepositLimit);
 
         address underlyingToken = IYearnVault(_vault).token();
         _addSupportedIfNotAdded(underlyingToken);
@@ -140,8 +141,19 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         uint256 outputAssetABefore = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR)); 
 
         // Computes the encoded data for the specific bridge interaction
-        uint256 bridgeId = encodeBridgeId(id, depositInputAssetA, emptyAsset, depositOutputAssetA, emptyAsset, 0);
-        sendDefiRollup(bridgeId, _depositAmount);
+        uint256 bridgeCallData = encodeBridgeCallData(id, depositInputAssetA, emptyAsset, depositOutputAssetA, emptyAsset, 0);
+        vm.expectEmit(true, true, false, false); //Log 1 -> transfer _depositAmount from ROLLUP_PROCESSOR to bridge 
+        emit Transfer(address(ROLLUP_PROCESSOR), address(bridge), _depositAmount);
+        vm.expectEmit(true, true, false, false); //Log 2 -> transfer _receiveAmount from 0 to bridge 
+        emit Transfer(address(0), address(bridge), _depositAmount);
+        vm.expectEmit(true, true, false, false); //Log 3 -> transfer _depositAmount from bridge to vault
+        emit Transfer(address(bridge), address(_vault), _depositAmount);
+        vm.expectEmit(true, true, false, false); //Log 4 -> transfer _receiveAmount from bridge to rollup 
+        emit Transfer(address(bridge), address(ROLLUP_PROCESSOR), _depositAmount);
+        vm.expectEmit(true, true, false, false); //Log 5 -> Validate DefiBridge
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, _depositAmount, 0, true, "");
+        sendDefiRollup(bridgeCallData, _depositAmount);
+
         uint256 inputAssetAMid = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 outputAssetAMid = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
         assertEq(inputAssetAMid, inputAssetABefore - _depositAmount, "erc20 bal don't match after deposit");
@@ -149,8 +161,20 @@ contract YearnBridgeE2ETest is BridgeTestBase {
 
         //Exit
         vm.assume(_redeemAmount > 1 && _redeemAmount <= outputAssetAMid);
-        uint256 outBridgeId = encodeBridgeId(id, depositOutputAssetA, emptyAsset, depositInputAssetA, emptyAsset, 1);
-        sendDefiRollup(outBridgeId, _redeemAmount);
+        bridgeCallData = encodeBridgeCallData(id, depositOutputAssetA, emptyAsset, depositInputAssetA, emptyAsset, 1);
+
+        vm.expectEmit(true, true, false, false); //Log 1 -> transfer _redeemAmount from Rollup to bridge
+        emit Transfer(address(ROLLUP_PROCESSOR), address(bridge), _redeemAmount);
+        vm.expectEmit(true, true, false, false); //Log 2 -> transfer _redeemAmount from bridge to 0 (burn yvTokens)
+        emit Transfer(address(bridge), address(0), _redeemAmount);
+        vm.expectEmit(true, true, false, false); //Log 3 -> transfer _redeemAmount from vault to bridge
+        emit Transfer(address(_vault), address(bridge), _redeemAmount);
+        vm.expectEmit(true, true, false, false); //Log 4 -> transfer _redeemAmount from bridge to Rollup
+        emit Transfer(address(bridge), address(ROLLUP_PROCESSOR), _redeemAmount);
+        vm.expectEmit(true, true, false, false); //Log 5 -> Validate DefiBridge
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _redeemAmount, _redeemAmount, 1, true, "");
+
+        sendDefiRollup(bridgeCallData, _redeemAmount);
         uint256 inputAssetAAfter = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 outputAssetAAfter = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
         assertGt(inputAssetAAfter, inputAssetAMid, "erc20 bal don't match after withdrawal");
@@ -176,9 +200,9 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         uint256 inputAssetABefore = address(ROLLUP_PROCESSOR).balance;
         uint256 outputAssetABefore = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR)); 
 
-        // Computes the encoded data for the specific bridge interaction
-        uint256 bridgeId = encodeBridgeId(id, depositInputAssetA, emptyAsset, depositOutputAssetA, emptyAsset, 0);
-        sendDefiRollup(bridgeId, _depositAmount);
+        uint256 bridgeCallData = encodeBridgeCallData(id, depositInputAssetA, emptyAsset, depositOutputAssetA, emptyAsset, 0);
+        sendDefiRollup(bridgeCallData, _depositAmount);
+
         uint256 inputAssetAMid = address(ROLLUP_PROCESSOR).balance;
         uint256 outputAssetAMid = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
         assertEq(inputAssetAMid, inputAssetABefore - _depositAmount, "deposit eth - input asset balance too high");
@@ -187,7 +211,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
 
         //Exit
         vm.assume(_redeemAmount > 1 && _redeemAmount <= outputAssetAMid);
-        uint256 outBridgeId = encodeBridgeId(id, depositOutputAssetA, emptyAsset, depositInputAssetA, emptyAsset, 1);
+        uint256 outBridgeId = encodeBridgeCallData(id, depositOutputAssetA, emptyAsset, depositInputAssetA, emptyAsset, 1);
         sendDefiRollup(outBridgeId, _redeemAmount);
         uint256 inputAssetAAfter = address(ROLLUP_PROCESSOR).balance;
         uint256 outputAssetAAfter = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));

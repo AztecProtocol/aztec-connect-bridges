@@ -73,7 +73,7 @@ contract YearnBridgeUnitTest is Test {
         bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 1, 0, 0, address(0));
     }
 
-    function testInvalidOutputAssetETH() public {
+    function testInvalidNoValueETH() public {
         AztecTypes.AztecAsset memory depositInputAssetA = AztecTypes.AztecAsset({
             id: 0,
             erc20Address: address(0),
@@ -86,7 +86,7 @@ contract YearnBridgeUnitTest is Test {
         });
 
         vm.prank(rollupProcessor);
-        vm.expectRevert(YearnBridge.InvalidOutputANotLatest.selector);
+        vm.expectRevert(YearnBridge.InvalidWETHAmount.selector);
         bridge.convert(depositInputAssetA, emptyAsset, depositOutputAssetA, emptyAsset, 100, 0, 0, address(0));
     }
 

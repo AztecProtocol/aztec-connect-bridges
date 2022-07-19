@@ -13,7 +13,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
- * @title Aztec Connect Bridge for depositing on Uniswap v3
+ * @title Aztec Connect Bridge for depositing on Yearn
  * @author Majorfi
  * @notice You can use this contract to deposit tokens on compatible Yearn Vaults
  * @dev This bridge demonstrates the flow of assets in the convert function. This bridge simply returns what has been
@@ -27,7 +27,7 @@ contract YearnBridge is BridgeBase {
 
     error InvalidOutputANotLatest();
     error InvalidWETHAmount();
-
+    error InvalidOutputVault();
 
     /**
      * @notice Set address of rollup processor
@@ -100,7 +100,7 @@ contract YearnBridge is BridgeBase {
             if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 outputValueA = _zapETH(msg.value, _outputAssetA);
             } else if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
-                outputValueA = _depositERC20(_inputValue, _inputAssetA, _outputAssetA);
+                outputValueA = IYearnVault(_outputAssetA.erc20Address).deposit(_inputValue);
             } else {
                 revert ErrorLib.InvalidInputA();
             }
@@ -112,7 +112,7 @@ contract YearnBridge is BridgeBase {
             if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 outputValueA = _unzapETH(_inputValue, _interactionNonce, _inputAssetA);
             } else if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
-                outputValueA = _withdrawERC20(_inputValue, _inputAssetA, _outputAssetA);
+                outputValueA = IYearnVault(_inputAssetA.erc20Address).withdraw(_inputValue);
             } else {
                 revert ErrorLib.InvalidOutputA();
             }
@@ -137,12 +137,12 @@ contract YearnBridge is BridgeBase {
         if (underlyingToken != WETH) {
             revert ErrorLib.InvalidOutputA();
         }
-        if (_outputAssetA.erc20Address != YEARN_REGISTRY.latestVault(underlyingToken)) {
-            revert InvalidOutputANotLatest();
-        }
 
         IWETH(WETH).deposit{value: _inputValue}();
         uint256 _amount = IERC20(WETH).balanceOf(address(this));
+        if (_amount == 0) {
+            revert InvalidWETHAmount();
+        }
 
         yVault.deposit(_amount);
         outputValue = IERC20(address(yVault)).balanceOf(address(this));
@@ -168,48 +168,10 @@ contract YearnBridge is BridgeBase {
         if (wethAmount == 0) {
             revert InvalidWETHAmount();
         }
+
         IWETH(WETH).withdraw(wethAmount);
         outputValue = address(this).balance;
         IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValue}(_interactionNonce);
-    }
-
-    /**
-     * @notice Deposit an ERC20 token to the latest compatible vault.
-     * @dev You can only deposit to the latest version of the vault
-     * @param _inputValue - amount to deposit
-     * @param _inputAssetA - Data about the token to deposit
-     * @param _inputAssetA - Data about the token to receive
-     */
-    function _depositERC20(
-        uint256 _inputValue,
-        AztecTypes.AztecAsset memory _inputAssetA,
-        AztecTypes.AztecAsset memory _outputAssetA
-    ) private returns (uint256 outputValue) {
-        IYearnVault yVault = IYearnVault(YEARN_REGISTRY.latestVault(_inputAssetA.erc20Address));
-        if (address(yVault) != _outputAssetA.erc20Address) {
-            revert ErrorLib.InvalidOutputA();
-        }
-        
-        outputValue = yVault.deposit(_inputValue);
-    }
-
-    /**
-     * @notice Withdraw a specified amount of shares from the specified vault.
-     * @param _inputValue - amount to deposit
-     * @param _inputAssetA - Data about the token to deposit
-     * @param _inputAssetA - Data about the token to receive
-     */
-    function _withdrawERC20(
-        uint256 _inputValue,
-        AztecTypes.AztecAsset memory _inputAssetA,
-        AztecTypes.AztecAsset memory _outputAssetA
-    ) private returns (uint256 outputValue) {
-        IYearnVault yVault = IYearnVault(_inputAssetA.erc20Address);
-        if (yVault.token() != _outputAssetA.erc20Address) {
-            revert ErrorLib.InvalidOutputA();
-        }
-
-        outputValue = yVault.withdraw(_inputValue);
     }
 
     /**
