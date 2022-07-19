@@ -4,7 +4,6 @@ import { Web3Provider } from "@ethersproject/providers";
 import { createWeb3Provider } from "../aztec/provider";
 import { BigNumber, utils } from "ethers";
 import {
-  AssetValue,
   AuxDataConfig,
   AztecAsset,
   AztecAssetType,
@@ -134,26 +133,23 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     throw "Invalid auxData";
   }
 
-  getCurrentYield?(interactionNonce: bigint): Promise<number[]>;
-  getExpectedYield?(
+  async getExpectedYield?(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
     inputValue: bigint,
-  ): Promise<number[]>;
-
-  // getExpiration?(interactionNonce: bigint): Promise<bigint>;
-  // hasFinalised?(interactionNonce: bigint): Promise<Boolean>;
-  // lPAuxData?(data: bigint[]): Promise<bigint[]>;
-  // getMarketSize?(
-  //   inputAssetA: AztecAsset,
-  //   inputAssetB: AztecAsset,
-  //   outputAssetA: AztecAsset,
-  //   outputAssetB: AztecAsset,
-  //   auxData: bigint,
-  // ): Promise<AssetValue[]>;
+  ): Promise<number[]> {
+    const yvTokenAddress = await this.yRegistry.latestVault(inputAssetA.erc20Address);
+    const allVaults = await (await fetch("https://api.yearn.finance/v1/chains/1/vaults/all")).json();
+    const currentVault = allVaults.find((vault) => vault.address.toLowerCase() == yvTokenAddress.toLowerCase());
+    if (!currentVault) {
+      const grossAPR = currentVault.apy.gross_apr;
+      return [grossAPR * 100, 0];;
+    }
+    return [0, 0];
+  };
 
   private async isSupportedAsset(asset: AztecAsset): Promise<boolean> {
     if (asset.assetType == AztecAssetType.ETH) return true;
