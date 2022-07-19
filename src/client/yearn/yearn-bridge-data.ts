@@ -103,7 +103,7 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
 
     if (auxData === 0n && inputAssetA.assetType == AztecAssetType.ERC20) {
       //Standard Deposit
-      const yvTokenAddress = await this.yRegistry.latestVault(inputAssetA.erc20Address);
+      const yvTokenAddress = await this.yRegistry.latestVault(inputAssetA.erc20Address.toString());
       const yvTokenContract = IYearnVault__factory.connect(yvTokenAddress, this.ethersProvider);
       const decimals = await yvTokenContract.decimals();
       const pricePerShare = utils.formatUnits(await yvTokenContract.pricePerShare(), decimals);
@@ -135,7 +135,7 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     auxData: bigint,
     inputValue: bigint,
   ): Promise<number[]> {
-    const yvTokenAddress = await this.yRegistry.latestVault(inputAssetA.erc20Address);
+    const yvTokenAddress = await this.yRegistry.latestVault(inputAssetA.erc20Address.toString());
     const allVaults = await (await fetch("https://api.yearn.finance/v1/chains/1/vaults/all")).json();
     const currentVault = allVaults.find(vault => vault.address.toLowerCase() == yvTokenAddress.toLowerCase());
     if (!currentVault) {
@@ -157,7 +157,7 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     const allUnderlying: EthAddress[] = this.allUnderlying || [];
     if (!this.allVaults) {
       const numTokens = await this.yRegistry.numTokens();
-      for (let index = 0; index < numTokens; index++) {
+      for (let index = 0; index < Number(numTokens); index++) {
         const token = await this.yRegistry.tokens(index);
         const vault = await this.yRegistry.latestVault(token);
         allVaults.push(EthAddress.fromString(vault));
