@@ -211,7 +211,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     ];
   }
 
-  async getCurrentYield(interactionNonce: bigint): Promise<number[]> {
+  async getInteractionAPR(interactionNonce: bigint): Promise<number[]> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
     if (interaction === undefined) {
       return [];
@@ -265,19 +265,19 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
-    precision: bigint,
+    inputValue: bigint,
   ): Promise<bigint[]> {
     // bridge is async the third parameter represents this
     return [BigInt(0), BigInt(0), BigInt(1)];
   }
 
-  async getExpectedYield(
+  async getAPR(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
-    precision: bigint,
+    inputValue: bigint,
   ): Promise<number[]> {
     const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(
       inputAssetA.erc20Address.toString(),
@@ -298,7 +298,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
       poolId,
       assetInIndex: 0,
       assetOutIndex: 1,
-      amount: precision.toString(),
+      amount: inputValue.toString(),
       userData: "0x",
     };
 
@@ -316,10 +316,10 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     const timeToExpiration = auxData - BigInt(latestBlock.timestamp);
 
     const YEAR = 60n * 60n * 24n * 365n;
-    const interest = -outputAssetAValue.toBigInt() - precision;
+    const interest = -outputAssetAValue.toBigInt() - inputValue;
     const scaledOutput = divide(interest, timeToExpiration, this.scalingFactor);
     const yearlyOutput = (scaledOutput * YEAR) / this.scalingFactor;
-    const percentageScaled = divide(yearlyOutput, precision, this.scalingFactor);
+    const percentageScaled = divide(yearlyOutput, inputValue, this.scalingFactor);
     const percentage2sf = (percentageScaled * 10000n) / this.scalingFactor;
 
     return [Number(percentage2sf) / 100];
