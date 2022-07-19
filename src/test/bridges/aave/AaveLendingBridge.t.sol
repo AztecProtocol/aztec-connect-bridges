@@ -677,10 +677,10 @@ contract AaveLendingTest is BridgeTestBase {
         uint256 scaledDiffZk = depositAmount.mulDiv(1e27, index);
         uint256 expectedScaledBalanceAfter = balanceBefore.rollupZk + scaledDiffZk;
 
-        uint256 bridgeId = encodeBridgeId(id, inputAsset, emptyAsset, outputAsset, emptyAsset, 0);
+        uint256 bridgeCallData = encodeBridgeCallData(id, inputAsset, emptyAsset, outputAsset, emptyAsset, 0);
         vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), depositAmount, scaledDiffZk, 0, true, "");
-        sendDefiRollup(bridgeId, depositAmount);
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), depositAmount, scaledDiffZk, 0, true, "");
+        sendDefiRollup(bridgeCallData, depositAmount);
 
         Balances memory balanceAfter = _getBalances();
 
@@ -733,10 +733,10 @@ contract AaveLendingTest is BridgeTestBase {
         uint256 scaledDiffZk = depositAmount.mulDiv(1e27, index);
         uint256 expectedScaledBalanceAfter = balanceBefore.rollupZk + scaledDiffZk;
 
-        uint256 bridgeId = encodeBridgeId(id, inputAsset, emptyAsset, outputAsset, emptyAsset, 0);
+        uint256 bridgeCallData = encodeBridgeCallData(id, inputAsset, emptyAsset, outputAsset, emptyAsset, 0);
         vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), depositAmount, scaledDiffZk, 0, true, "");
-        sendDefiRollup(bridgeId, depositAmount);
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), depositAmount, scaledDiffZk, 0, true, "");
+        sendDefiRollup(bridgeCallData, depositAmount);
 
         Balances memory balanceAfter = _getBalances();
 
@@ -793,10 +793,10 @@ contract AaveLendingTest is BridgeTestBase {
         vars.innerATokenWithdraw = withdrawAmount.mulDiv(vars.index, 1e27);
         vars.expectedScaledBalanceAfter = balanceBefore.rollupZk - withdrawAmount;
 
-        uint256 bridgeId = encodeBridgeId(id, inputAsset, emptyAsset, outputAsset, emptyAsset, 0);
+        uint256 bridgeCallData = encodeBridgeCallData(id, inputAsset, emptyAsset, outputAsset, emptyAsset, 0);
         vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), withdrawAmount, vars.innerATokenWithdraw, 0, true, "");
-        sendDefiRollup(bridgeId, withdrawAmount);
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), withdrawAmount, vars.innerATokenWithdraw, 0, true, "");
+        sendDefiRollup(bridgeCallData, withdrawAmount);
 
         Balances memory balanceAfter = _getBalances();
 
@@ -847,10 +847,10 @@ contract AaveLendingTest is BridgeTestBase {
         vars.innerATokenWithdraw = withdrawAmount.mulDiv(vars.index, 1e27);
         vars.expectedScaledBalanceAfter = balanceBefore.rollupZk - withdrawAmount;
 
-        uint256 bridgeId = encodeBridgeId(id, inputAsset, emptyAsset, outputAsset, emptyAsset, 0);
+        uint256 bridgeCallData = encodeBridgeCallData(id, inputAsset, emptyAsset, outputAsset, emptyAsset, 0);
         vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), withdrawAmount, vars.innerATokenWithdraw, 0, true, "");
-        sendDefiRollup(bridgeId, withdrawAmount);
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), withdrawAmount, vars.innerATokenWithdraw, 0, true, "");
+        sendDefiRollup(bridgeCallData, withdrawAmount);
 
         Balances memory balanceAfter = _getBalances();
 

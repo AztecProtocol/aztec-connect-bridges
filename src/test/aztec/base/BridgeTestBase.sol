@@ -23,9 +23,9 @@ abstract contract BridgeTestBase is Test {
     error INVALID_ASSET_ADDRESS();
     error INVALID_LINKED_TOKEN_ADDRESS();
     error INVALID_LINKED_BRIDGE_ADDRESS();
-    error INVALID_BRIDGE_ID();
+    error INVALID_BRIDGE_ID(); // TODO: replace with INVALID_BRIDGE_CALL_DATA() once rollup processor is redeployed
     error INVALID_BRIDGE_ADDRESS();
-    error BRIDGE_ID_IS_INCONSISTENT();
+    error BRIDGE_ID_IS_INCONSISTENT(); // TODO: replace with INCONSISTENT_BRIDGE_CALL_DATA()
     error BRIDGE_WITH_IDENTICAL_INPUT_ASSETS(uint256 inputAssetId);
     error BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS(uint256 outputAssetId);
     error ZERO_TOTAL_INPUT_VALUE();
@@ -69,7 +69,7 @@ abstract contract BridgeTestBase is Test {
     event OffchainData(uint256 indexed rollupId, uint256 chunk, uint256 totalChunks, address sender);
     event RollupProcessed(uint256 indexed rollupId, bytes32[] nextExpectedDefiHashes, address sender);
     event DefiBridgeProcessed(
-        uint256 indexed bridgeId,
+        uint256 indexed bridgeCallData,
         uint256 indexed nonce,
         uint256 totalInputValue,
         uint256 totalOutputValueA,
@@ -77,7 +77,7 @@ abstract contract BridgeTestBase is Test {
         bool result,
         bytes errorReason
     );
-    event AsyncDefiBridgeProcessed(uint256 indexed bridgeId, uint256 indexed nonce, uint256 totalInputValue);
+    event AsyncDefiBridgeProcessed(uint256 indexed bridgeCallData, uint256 indexed nonce, uint256 totalInputValue);
     event Deposit(uint256 indexed assetId, address indexed depositorAddress, uint256 depositValue);
     event WithdrawError(bytes errorReason);
     event AssetAdded(uint256 indexed assetId, address indexed assetAddress, uint256 assetGasLimit);
@@ -184,50 +184,50 @@ abstract contract BridgeTestBase is Test {
     }
 
     /**
-     * @notice Helper function to encode datapoints into a bridge Id
-     * @dev For more info see the rollup implementatin at "rollup.aztec.eth" that decodes
-     * @param _bridgeId id of the specific bridge (index in supportedBridge + 1)
+     * @notice Helper function to encode bridge call data into a bit-string
+     * @dev For more info see the rollup implementation at "rollup.aztec.eth" that decodes
+     * @param _bridgeAddressId id of the specific bridge (index in supportedBridge + 1)
      * @param _inputAssetA The first input asset
      * @param _inputAssetB The second input asset
      * @param _outputAssetA The first output asset
      * @param _outputAssetB The second output asset
      * @param _auxData Auxiliary data that is passed to the bridge
-     * @return encodedId - The encoded bitmap containing it and other relevant data
+     * @return encodedBridgeCallData - The encoded bitmap containing encoded information about the call
      */
-    function encodeBridgeId(
-        uint256 _bridgeId,
+    function encodeBridgeCallData(
+        uint256 _bridgeAddressId,
         AztecTypes.AztecAsset memory _inputAssetA,
         AztecTypes.AztecAsset memory _inputAssetB,
         AztecTypes.AztecAsset memory _outputAssetA,
         AztecTypes.AztecAsset memory _outputAssetB,
         uint256 _auxData
-    ) public pure returns (uint256 encodedId) {
-        encodedId = _bridgeId & MASK_THIRTY_TWO_BITS;
+    ) public pure returns (uint256 encodedBridgeCallData) {
+        encodedBridgeCallData = _bridgeAddressId & MASK_THIRTY_TWO_BITS;
 
         // Input assets
-        encodedId = encodedId | (_encodeAsset(_inputAssetA) << INPUT_ASSET_ID_A_SHIFT);
-        encodedId = encodedId | (_encodeAsset(_inputAssetB) << INPUT_ASSET_ID_B_SHIFT);
-        encodedId = encodedId | (_encodeAsset(_outputAssetA) << OUTPUT_ASSET_ID_A_SHIFT);
-        encodedId = encodedId | (_encodeAsset(_outputAssetB) << OUTPUT_ASSET_ID_B_SHIFT);
+        encodedBridgeCallData = encodedBridgeCallData | (_encodeAsset(_inputAssetA) << INPUT_ASSET_ID_A_SHIFT);
+        encodedBridgeCallData = encodedBridgeCallData | (_encodeAsset(_inputAssetB) << INPUT_ASSET_ID_B_SHIFT);
+        encodedBridgeCallData = encodedBridgeCallData | (_encodeAsset(_outputAssetA) << OUTPUT_ASSET_ID_A_SHIFT);
+        encodedBridgeCallData = encodedBridgeCallData | (_encodeAsset(_outputAssetB) << OUTPUT_ASSET_ID_B_SHIFT);
 
         // Aux data
-        encodedId = encodedId | ((_auxData & MASK_SIXTY_FOUR_BITS) << AUX_DATA_SHIFT);
+        encodedBridgeCallData = encodedBridgeCallData | ((_auxData & MASK_SIXTY_FOUR_BITS) << AUX_DATA_SHIFT);
 
         // bitconfig
         uint256 bitConfig = (_inputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED ? 1 : 0) |
             (_outputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED ? 2 : 0);
-        encodedId = encodedId | (bitConfig << BITCONFIG_SHIFT);
+        encodedBridgeCallData = encodedBridgeCallData | (bitConfig << BITCONFIG_SHIFT);
     }
 
     /**
      * @notice Helper function for processing a rollup with a specific bridge and `_inputValue`
      * @dev will impersonate the rollup processor and update rollup state
-     * @param _encodedBridgeId The encoded bridge id for the action, e.g., output from `encodeBridgeId()`
+     * @param _encodedBridgeCallData The encoded bridge call data for the action, e.g., output from `encodeBridgeCallData()`
      * @param _inputValue The value of inputAssetA and inputAssetB to transfer to the bridge
      */
-    function sendDefiRollup(uint256 _encodedBridgeId, uint256 _inputValue) public {
+    function sendDefiRollup(uint256 _encodedBridgeCallData, uint256 _inputValue) public {
         _prepareRollup();
-        bytes memory proofData = _getProofData(_encodedBridgeId, _inputValue);
+        bytes memory proofData = _getProofData(_encodedBridgeCallData, _inputValue);
 
         vm.prank(ROLLUP_PROVIDER);
         ROLLUP_PROCESSOR.processRollup(proofData, "");
@@ -283,11 +283,15 @@ abstract contract BridgeTestBase is Test {
 
     /**
      * @notice Helper function to generate a mock rollup proof that calls a specific bridge with `_inputValue`
-     * @param _encodedBridgeId The encoded call, e.g., output from `encodeBridgeId()`
+     * @param _encodedBridgeCallData The encoded call, e.g., output from `encodeBridgeCallData()`
      * @param _inputValue The amount of inputAssetA and inputAssetB to transfer to the defi bridge.
      * @return res The bytes of the encoded mock proof.
      */
-    function _getProofData(uint256 _encodedBridgeId, uint256 _inputValue) private view returns (bytes memory res) {
+    function _getProofData(uint256 _encodedBridgeCallData, uint256 _inputValue)
+        private
+        view
+        returns (bytes memory res)
+    {
         uint256 nextRollupId_ = nextRollupId;
 
         /* solhint-disable no-inline-assembly */
@@ -299,7 +303,7 @@ abstract contract BridgeTestBase is Test {
             mstore(res, length)
             mstore(add(res, 0x20), nextRollupId_)
             mstore(add(res, 0x60), mul(nextRollupId_, 2))
-            mstore(add(res, 0x180), _encodedBridgeId)
+            mstore(add(res, 0x180), _encodedBridgeCallData)
             mstore(add(res, 0x580), _inputValue)
 
             // Mock values

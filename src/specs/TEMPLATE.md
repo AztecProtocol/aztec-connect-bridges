@@ -19,7 +19,7 @@ You can view an example spec [here](#add-link).
    - For each interaction define:
      - All input tokens, including [AztecType](https://github.com/AztecProtocol/aztec-connect-bridges/blob/master/src/aztec/libraries/AztecTypes.sol) info
      - All output tokens, including [AztecType](https://github.com/AztecProtocol/aztec-connect-bridges/blob/master/src/aztec/libraries/AztecTypes.sol) info
-     - All relevant bridge ids (may fill in after deployment)
+     - All relevant bridge address ids (may fill in after deployment)
      - use of auxData
      - gas usage
      - cases that that would make the interaction revert (low liquidity etc)

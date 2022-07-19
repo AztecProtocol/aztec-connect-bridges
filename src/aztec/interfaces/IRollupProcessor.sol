@@ -9,7 +9,7 @@ interface IRollupProcessor {
     event OffchainData(uint256 indexed rollupId, uint256 chunk, uint256 totalChunks, address sender);
     event RollupProcessed(uint256 indexed rollupId, bytes32[] nextExpectedDefiHashes, address sender);
     event DefiBridgeProcessed(
-        uint256 indexed encodedInteraction,
+        uint256 indexed encodedBridgeCallData,
         uint256 indexed nonce,
         uint256 totalInputValue,
         uint256 totalOutputValueA,
@@ -17,7 +17,11 @@ interface IRollupProcessor {
         bool result,
         bytes errorReason
     );
-    event AsyncDefiBridgeProcessed(uint256 indexed encodedInteraction, uint256 indexed nonce, uint256 totalInputValue);
+    event AsyncDefiBridgeProcessed(
+        uint256 indexed encodedBridgeCallData,
+        uint256 indexed nonce,
+        uint256 totalInputValue
+    );
     event Deposit(uint256 indexed assetId, address indexed depositorAddress, uint256 depositValue);
     event WithdrawError(bytes errorReason);
     event AssetAdded(uint256 indexed assetId, address indexed assetAddress, uint256 assetGasLimit);

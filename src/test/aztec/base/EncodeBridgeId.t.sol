@@ -5,7 +5,7 @@ pragma solidity >=0.8.4;
 import {AztecTypes} from "./../../../aztec/libraries/AztecTypes.sol";
 import {BridgeTestBase} from "./BridgeTestBase.sol";
 
-contract EncodeBridgeIdTest is BridgeTestBase {
+contract EncodeBridgeCallDataTest is BridgeTestBase {
     uint256 private constant VIRTUAL_ASSET_ID_FLAG_SHIFT = 29;
     uint256 private constant VIRTUAL_ASSET_ID_FLAG = 0x20000000; // 2 ** 29
 

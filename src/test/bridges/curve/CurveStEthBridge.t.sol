@@ -160,10 +160,10 @@ contract CurveStEthBridgeTest is BridgeTestBase {
         // Set minPrice in such a way that computed minDy is equal to wstEthIncrease
         uint64 minPrice = uint64((wstEthIncrease * bridge.PRECISION()) / _depositAmount);
 
-        uint256 bridgeId = encodeBridgeId(id, ethAsset, emptyAsset, wstETHAsset, emptyAsset, minPrice);
+        uint256 bridgeCallData = encodeBridgeCallData(id, ethAsset, emptyAsset, wstETHAsset, emptyAsset, minPrice);
         vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), _depositAmount, wstEthIncrease, 0, true, "");
-        sendDefiRollup(bridgeId, _depositAmount);
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, wstEthIncrease, 0, true, "");
+        sendDefiRollup(bridgeCallData, _depositAmount);
 
         assertEq(address(ROLLUP_PROCESSOR).balance, beforeETHBalance - _depositAmount, "ETH balance not matching");
         assertEq(
@@ -183,10 +183,10 @@ contract CurveStEthBridgeTest is BridgeTestBase {
         // Set minPrice in such a way that computed minDy is equal to expectedEth
         uint64 minPrice = uint64((expectedEth * bridge.PRECISION()) / _depositAmount);
 
-        uint256 bridgeId = encodeBridgeId(id, wstETHAsset, emptyAsset, ethAsset, emptyAsset, minPrice);
+        uint256 bridgeCallData = encodeBridgeCallData(id, wstETHAsset, emptyAsset, ethAsset, emptyAsset, minPrice);
         vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), _depositAmount, expectedEth, 0, true, "");
-        sendDefiRollup(bridgeId, _depositAmount);
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, expectedEth, 0, true, "");
+        sendDefiRollup(bridgeCallData, _depositAmount);
 
         assertEq(address(ROLLUP_PROCESSOR).balance, beforeETHBalance + expectedEth, "ETH balance not matching");
         assertEq(
