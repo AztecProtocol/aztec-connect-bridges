@@ -96,13 +96,13 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     }
   }
 
-  async getExpectedYield(
+  async getAPR(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
-    precision: bigint,
+    inputValue: bigint,
   ): Promise<number[]> {
     // Not taking into account how the deposited funds will change the yield
     if (auxData === 0n) {

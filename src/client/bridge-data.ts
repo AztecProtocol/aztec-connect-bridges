@@ -99,6 +99,7 @@ export interface BridgeDataFieldGetters {
   hasFinalised?(interactionNonce: bigint): Promise<boolean>;
 
   /*
+  @notice This function computes annual percentage return (APR) for given assets, auxData and inputValue
   @dev This function should be implemented for all bridges that are stateful
   @param inputAssetA A struct detailing the first input asset
   @param inputAssetB A struct detailing the second input asset
@@ -106,9 +107,10 @@ export interface BridgeDataFieldGetters {
   @param outputAssetB A struct detailing the second output asset
   @param auxData Arbitrary data to be passed into the bridge contract (slippage / nftID etc)
   @param inputValue Amount of inputAssetA (and inputAssetB if used) provided on input
-  @return The expected value 1 year from now of outputAssetA and outputAssetB
+  @return The expected APR of outputAssetA and outputAssetB if used (e.g. for Lido the return value would currently
+          be [3.9])
   */
-  getExpectedYield?(
+  getAPR?(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
@@ -136,9 +138,10 @@ export interface BridgeDataFieldGetters {
   ): Promise<AssetValue[]>;
 
   /*
+  @notice This function computes annual percentage return (APR) for a given interaction
   @dev This function should be implemented for all async yield bridges
   @param interactionNonce A globally unique identifier of a given DeFi interaction
-  @return Current yield of the given interaction
+  @return APR based on the information of a given interaction (e.g. token amounts after finalisation etc.)
   */
-  getCurrentYield?(interactionNonce: bigint): Promise<number[]>;
+  getInteractionAPR?(interactionNonce: bigint): Promise<number[]>;
 }

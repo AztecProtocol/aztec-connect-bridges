@@ -126,13 +126,13 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
     }
   }
 
-  async getExpectedYield(
+  async getAPR(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
-    precision: bigint,
+    inputValue: bigint,
   ): Promise<number[]> {
     const YEAR = 60n * 60n * 24n * 365n;
 

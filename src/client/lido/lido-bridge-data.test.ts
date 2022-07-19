@@ -162,14 +162,7 @@ describe("lido bridge data", () => {
 
     lidoBridgeData = createLidoBridgeData(wstethContract as any, curvePoolContract as any, lidoOracleContract as any);
 
-    const output = await lidoBridgeData.getExpectedYield(
-      wstETHAsset,
-      emptyAsset,
-      ethAsset,
-      emptyAsset,
-      0n,
-      depositAmount,
-    );
+    const output = await lidoBridgeData.getAPR(wstETHAsset, emptyAsset, ethAsset, emptyAsset, 0n, depositAmount);
     expect(expectedOutput).toBe(output[0]);
   });
 });

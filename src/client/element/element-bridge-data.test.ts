@@ -252,7 +252,7 @@ describe("element bridge data", () => {
       balancerContract as any,
       rollupContract as any,
     );
-    const output = await elementBridgeData.getExpectedYield(
+    const output = await elementBridgeData.getAPR(
       {
         assetType: AztecAssetType.ERC20,
         erc20Address: testAddress,

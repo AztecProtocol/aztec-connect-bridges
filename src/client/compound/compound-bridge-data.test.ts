@@ -193,9 +193,7 @@ describe("compound lending bridge data", () => {
     const compoundBridgeData = CompoundBridgeData.create({} as any);
 
     // Test the code using mocked controller
-    const expectedYield = (
-      await compoundBridgeData.getExpectedYield(ethAsset, emptyAsset, cethAsset, emptyAsset, 0n, 0n)
-    )[0];
+    const expectedYield = (await compoundBridgeData.getAPR(ethAsset, emptyAsset, cethAsset, emptyAsset, 0n, 0n))[0];
     expect(expectedYield).toBe(0.0710926465392);
   });
 
@@ -209,9 +207,7 @@ describe("compound lending bridge data", () => {
     const compoundBridgeData = CompoundBridgeData.create({} as any);
 
     // Test the code using mocked controller
-    const expectedYield = (
-      await compoundBridgeData.getExpectedYield(cethAsset, emptyAsset, ethAsset, emptyAsset, 1n, 0n)
-    )[0];
+    const expectedYield = (await compoundBridgeData.getAPR(cethAsset, emptyAsset, ethAsset, emptyAsset, 1n, 0n))[0];
     expect(expectedYield).toBe(0);
   });
 

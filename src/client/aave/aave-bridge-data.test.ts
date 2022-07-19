@@ -168,7 +168,7 @@ describe("aave lending bridge data", () => {
 
     aaveBridgeData = createAaveBridgeData(lendingPoolContract as any, aaveLendingBridgeContract as any);
 
-    const output = await aaveBridgeData.getExpectedYield(ethAsset, emptyAsset, zkAsset, emptyAsset, 0n, depositAmount);
+    const output = await aaveBridgeData.getAPR(ethAsset, emptyAsset, zkAsset, emptyAsset, 0n, depositAmount);
 
     expect(output[0]).toBe(0.03);
   });
@@ -209,7 +209,7 @@ describe("aave lending bridge data", () => {
 
     aaveBridgeData = createAaveBridgeData(lendingPoolContract as any, aaveLendingBridgeContract as any);
 
-    const output = await aaveBridgeData.getExpectedYield(zkAsset, emptyAsset, ethAsset, emptyAsset, 0n, depositAmount);
+    const output = await aaveBridgeData.getAPR(zkAsset, emptyAsset, ethAsset, emptyAsset, 0n, depositAmount);
 
     expect(output[0]).toBe(0);
   });
