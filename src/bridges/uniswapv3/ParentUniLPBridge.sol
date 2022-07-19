@@ -8,21 +8,22 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 
-import {INonfungiblePositionManager} from "./interfaces/INonfungiblePositionManager.sol";
-import {IUniswapV3Factory} from "./interfaces/IUniswapV3Factory.sol";
-import {IUniswapV3Pool} from "./interfaces/IUniswapV3Pool.sol";
-import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
-import {IWETH9} from "./interfaces/IWETH9.sol";
+import {INonfungiblePositionManager} from "../../interfaces/uniswapv3/INonfungiblePositionManager.sol";
+import {IUniswapV3Factory} from "../../interfaces/uniswapv3/IUniswapV3Factory.sol";
+import {IUniswapV3Pool} from "../../interfaces/uniswapv3/IUniswapV3Pool.sol";
+import {ISwapRouter} from "../../interfaces/uniswapv3/ISwapRouter.sol";
+import {IWETH9} from "../../interfaces/uniswapv3/IWETH9.sol";
 
-import {PeripheryImmutableState} from "./base/PeripheryImmutableState.sol";
-import {LiquidityManagement} from "./base/LiquidityManagement.sol";
+import {PeripheryImmutableState} from "../../interfaces/uniswapv3/base/PeripheryImmutableState.sol";
+import {LiquidityManagement} from "../../interfaces/uniswapv3/base/LiquidityManagement.sol";
+import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
+import {LiquidityAmounts} from "../../libraries/uniswapv3/LiquidityAmounts.sol";
+import {TransferHelper} from "../../libraries/uniswapv3/TransferHelper.sol";
+import {TickMath} from "../../libraries/uniswapv3/TickMath.sol";
 
-import {LiquidityAmounts} from "./libraries/LiquidityAmounts.sol";
-import {TransferHelper} from "./libraries/TransferHelper.sol";
-import {TickMath} from "./libraries/TickMath.sol";
-import {console} from "../../../lib/forge-std/src/console.sol";
+//import {console} from "../../../lib/forge-std/src/console.sol";
 
-contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
+contract ParentUniLPBridge is LiquidityManagement, IERC721Receiver {
     using SafeERC20 for IERC20;
 
     struct Deposit {
@@ -39,39 +40,19 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
 
     error IncorrectSpacing();
     error InsufficientLiquidity();
+    error InvalidOutputs();
 
     mapping(uint256 => Deposit) public deposits; //interaction nonce -> deposit struct
 
-    /* 
-        IMMUTABLE VARIABLES
-    */
-
-    address public immutable OWNER;
     IRollupProcessor public immutable ROLLUP_PROCESSOR;
-    ISwapRouter public immutable SWAP_ROUTER;
-    INonfungiblePositionManager public immutable NONFUNGIBLE_POSITION_MANAGER;
-    IUniswapV3Factory public immutable UNISWAP_FACTORY;
-    IWETH9 public immutable WETH;
+    ISwapRouter public immutable SWAP_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+    INonfungiblePositionManager public immutable NONFUNGIBLE_POSITION_MANAGER =
+        INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
+    IUniswapV3Factory public immutable UNISWAP_FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+    IWETH9 public immutable WETH = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
-    /* 
-        NOT USED IN PRODUCTION, FOR TESTING PURPOSES ONLY
-    */
-
-    //bytes public originalCode;
-
-    constructor(
-        address _rollupProcessor,
-        address _router,
-        address _nonfungiblePositionManager,
-        address _factory,
-        address _weth
-    ) public PeripheryImmutableState(_factory, _weth) {
-        NONFUNGIBLE_POSITION_MANAGER = INonfungiblePositionManager(_nonfungiblePositionManager);
+    constructor(address _rollupProcessor) public PeripheryImmutableState(address(UNISWAP_FACTORY), address(WETH)) {
         ROLLUP_PROCESSOR = IRollupProcessor(_rollupProcessor);
-        SWAP_ROUTER = ISwapRouter(_router);
-        WETH = IWETH9(_weth);
-        UNISWAP_FACTORY = IUniswapV3Factory(_factory);
-        OWNER = msg.sender;
     }
 
     function onERC721Received(
@@ -212,7 +193,6 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
         // get liquidity data for tokenId
         // amount0Min and amount1Min are price slippage checks
         // if the amount received after burning is not greater than these minimums, transaction will fail
-        //console.log(liquidity, "input liq");
 
         INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager
             .DecreaseLiquidityParams({
@@ -225,22 +205,13 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
 
         (uint256 amount0Out, uint256 amount1Out) = NONFUNGIBLE_POSITION_MANAGER.decreaseLiquidity(params);
 
-        //console.log(amount0Out, amount1Out, "decrease");
-
         {
             (withdraw0, withdraw1) = _collect(
                 deposits[_interactionNonce].tokenId,
                 uint128(amount0Out),
                 uint128(amount1Out)
             );
-
-            //take care of dust
-            //_sweepDust(interactionNonce, amount0Out, amount1Out, redeemed0, redeemed1);
         }
-
-        //send liquidity back to owner
-        //_approveTo(interactionNonce, amount0, amount1, address(rollupProcessor) );
-        //bridge accounting
 
         if (deposits[_interactionNonce].liquidity < _liquidity) revert InsufficientLiquidity();
         deposits[_interactionNonce].liquidity = deposits[_interactionNonce].liquidity - _liquidity;
@@ -270,9 +241,6 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
         uint128 _in0,
         uint128 _in1
     ) internal returns (uint256 amount0, uint256 amount1) {
-        // Caller must own the ERC721 position
-        // set amount0Max and amount1Max to uint256.max to collect all fees
-        // alternatively can set recipient to msg.sender and avoid another transaction in `sendToOwner`
         INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams({
             tokenId: _tokenId,
             recipient: address(this),
@@ -281,7 +249,6 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
         });
 
         (amount0, amount1) = NONFUNGIBLE_POSITION_MANAGER.collect(params);
-        //console.log(amount0, amount1, "collect");
     }
 
     /**
@@ -373,18 +340,12 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
         uint256 amount0;
         uint256 amount1;
 
-        //console.log("reached minting");
-
         {
             uint256 tokenId;
             (tokenId, liquidity, amount0, amount1) = NONFUNGIBLE_POSITION_MANAGER.mint(params);
-            //console.log(amount0, amount1, "mint");
-            //console.log("passed minting");
             _createDeposit(tokenId, _interactionNonce, amount0, amount1, _fee);
-            //console.log("passed deposit creation");
         }
 
-        //console.log("reached refunding");
         // Remove allowance and refund in both assets.
         if (amount0 < _amount0ToMint) {
             TransferHelper.safeApprove(_token0, address(NONFUNGIBLE_POSITION_MANAGER), 0);
@@ -441,5 +402,22 @@ contract UniswapV3Bridge is LiquidityManagement, IERC721Receiver {
         refundedAmount = SWAP_ROUTER.exactInputSingle(swapParams);
 
         IERC20(tokenIn).safeDecreaseAllowance(address(SWAP_ROUTER), 0);
+    }
+
+    /**
+     * @notice this function is used to check whether an AztecAsset is an ERC20 or ETH.
+     * @dev If it is ETH,
+     * then the underlying ETH is wrapped and the function returns the WETH address (since inputAsset.erc20Address returns 0 if
+     * the underlying is ETH).
+     * @param _inputAsset The Aztec input asset
+     * @return address the address of the asset, WETH if it is ETH, else erc20 address
+     */
+    function _handleETHReturnAddress(AztecTypes.AztecAsset calldata _inputAsset) internal returns (address) {
+        if (_inputAsset.assetType == AztecTypes.AztecAssetType.ETH) {
+            WETH.deposit{value: address(this).balance}();
+            return address(WETH);
+        } else {
+            return _inputAsset.erc20Address;
+        }
     }
 }

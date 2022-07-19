@@ -2,13 +2,13 @@
 pragma solidity >=0.6.10 <=0.8.10;
 pragma abicoder v2;
 
-import "../interfaces/IUniswapV3Factory.sol";
-import "../interfaces/callback/IUniswapV3MintCallback.sol";
-import "../libraries/TickMath.sol";
+import "../IUniswapV3Factory.sol";
+import "../callback/IUniswapV3MintCallback.sol";
+import "../../../libraries/uniswapv3/TickMath.sol";
 
-import "../libraries/PoolAddress.sol";
-import "../libraries/CallbackValidation.sol";
-import "../libraries/LiquidityAmounts.sol";
+import "../../../libraries/uniswapv3/PoolAddress.sol";
+import "../../../libraries/uniswapv3/CallbackValidation.sol";
+import "../../../libraries/uniswapv3/LiquidityAmounts.sol";
 
 import "./PeripheryPayments.sol";
 import "./PeripheryImmutableState.sol";

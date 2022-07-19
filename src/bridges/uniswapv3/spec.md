@@ -4,7 +4,7 @@
 
 
 These are the Aztec Connect bridges for Uniswap V3 Liquidity Provision. There is a main bridge, the SyncUniswapV3Bridge, and a 
-secondary bridge, the AsyncUniswapV3Bridge. The main bridge handles standard LPing where two assets are provided, and an NFT representing the position is returned, while the secondary bridge is used for range orders. which is just LPing outside the current tick range. See : 
+secondary bridge, the UniRangeOrderBridge. The main bridge handles standard LPing where two assets are provided, and an NFT representing the position is returned, while the secondary bridge is used for range orders. which is just LPing outside the current tick range. See : 
 https://docs.uniswap.org/protocol/concepts/V3-overview/range-orders#:~:text=In%20typical%20order%20book%20markets,liquidity%20within%20a%20specific%20range.
 
 The flows for the two bridges are presented as follows:
@@ -46,7 +46,7 @@ Redemption flow:
 
 The virtual input proves ownership of a position via the "deposits" mapping which is a uint256 -> Deposit struct mapping, where the uint256 is an interaction nonce. The virtual input's id , which is the nonce, is inputted, the bridge checks the mapping, and redeems liquidity based on the tokenId recorded in the Deposit struct. The assets returned correspond to the two real outputs.
 
-AsyncUniswapV3Bridge: 
+UniRangeOrderBridge: 
 There are two flows: the minting/range order flow, and the redemption flow.
 
 Minting/range order flow:

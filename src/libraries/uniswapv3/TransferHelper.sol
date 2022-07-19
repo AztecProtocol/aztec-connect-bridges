@@ -1,7 +1,7 @@
 pragma solidity >=0.6.10 <=0.8.10;
 pragma abicoder v2;
 
-import "../interfaces/IERC20.sol";
+import "../../interfaces/uniswapv3/IERC20.sol";
 
 library TransferHelper {
     /// @notice Transfers tokens from the targeted address to the given destination

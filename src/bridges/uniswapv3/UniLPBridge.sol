@@ -4,19 +4,17 @@ pragma solidity >=0.8.4;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
-import {UniswapV3Bridge, TransferHelper, ISwapRouter} from "./UniswapV3Bridge.sol";
-import {IUniswapV3Pool} from "./interfaces/IUniswapV3Pool.sol";
+import {ParentUniLPBridge, TransferHelper, ISwapRouter} from "./ParentUniLPBridge.sol";
+import {IUniswapV3Pool} from "../../interfaces/uniswapv3/IUniswapV3Pool.sol";
 import {IDefiBridge} from "../../aztec/interfaces/IDefiBridge.sol";
 import {console} from "../../../lib/forge-std/src/console.sol";
+import {ErrorLib} from "../base/ErrorLib.sol";
 
-contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
+contract UniLPBridge is IDefiBridge, ParentUniLPBridge {
     using SafeERC20 for IERC20;
 
-    /*
-        STRUCTS AND ENUMS
-    */
+    error InvalidRefund();
 
     //used as a record for MINT_PT1 & MINT_P2
     struct MintFunding {
@@ -24,31 +22,9 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         uint256 amount;
     }
 
-    error InvalidCaller();
-    error InvalidOutputs();
-    error InvalidRefund();
-    /* 
-        IMMUTABLES
-    */
-
-    /* 
-        MUTABLE VARIABLES
-    */
-
     mapping(uint256 => MintFunding) public syncMintFundingMap; //interaction nonce -> MintFunding struct for MINT_PT1 interactions
 
-    modifier onlyRollup() {
-        if (msg.sender != address(ROLLUP_PROCESSOR)) revert InvalidCaller();
-        _;
-    }
-
-    constructor(
-        address _rollupProcessor,
-        address _router,
-        address _nonfungiblePositionManager,
-        address _factory,
-        address _wEth
-    ) public UniswapV3Bridge(_rollupProcessor, _router, _nonfungiblePositionManager, _factory, _wEth) {}
+    constructor(address _rollupProcessor) public ParentUniLPBridge(_rollupProcessor) {}
 
     /**
      * @notice  packs _auxData for front end user
@@ -60,7 +36,6 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
      * @param _fee the fee tier of the pool
      * @return _auxData the packed _auxData
      */
-
     function packData(
         int24 _tickLower,
         int24 _tickUpper,
@@ -81,7 +56,6 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
      * @param _a The uint64 to be unpacked
      * @return b the uint24 or uint16
      */
-
     function unpackFirst24Bits(uint64 _a) public pure returns (uint24 b) {
         b = uint24(_a >> 40);
     }
@@ -92,26 +66,6 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
 
     function unpackLast16Bits(uint64 _a) public pure returns (uint16 b) {
         b = uint16(_a);
-    }
-
-    /**
-     * @notice this function is used to check whether an AztecAsset is an ERC20 or ETH.
-     * @dev If it is ETH,
-     * then the underlying ETH is wrapped and the function returns the WETH address (since inputAsset.erc20Address returns 0 if
-     * the underlying is ETH). Otherwise it returns 0.
-     * @param _inputAsset The uint64 to be unpacked
-     * @return address the address of the asset, WETH if it is ETH, else erc20 address, or 0 if it is neither
-     */
-
-    function _checkForType(AztecTypes.AztecAsset calldata _inputAsset) internal returns (address) {
-        if (_inputAsset.assetType == AztecTypes.AztecAssetType.ETH) {
-            WETH.deposit{value: msg.value}();
-            return address(WETH);
-        } else if (_inputAsset.assetType == AztecTypes.AztecAssetType.ERC20) {
-            return _inputAsset.erc20Address;
-        } else {
-            return address(0); //return the 0 address as a substitute for false
-        }
     }
 
     /**
@@ -127,7 +81,6 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
      * @return outputValueA output of _outputAssetA
      * @return outputValueB output of _outputAssetB
      */
-
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata _inputAssetB,
@@ -149,7 +102,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
     {
         //require(inputValue == 0, "ZERO");
 
-        if (!(msg.sender == address(ROLLUP_PROCESSOR) || msg.sender == address(this))) revert InvalidCaller();
+        if (msg.sender != address(ROLLUP_PROCESSOR)) revert ErrorLib.InvalidCaller();
 
         //INTERACTION TYPE 1
         //1 real 1 not used
@@ -157,34 +110,38 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
 
         if (
             _outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED &&
-            _checkForType(_inputAssetA) != address(0) &&
+            (_inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 ||
+                _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) &&
             _inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED &&
             _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
         ) {
             //sanity check
-            address inputAddress = _checkForType(_inputAssetA);
+            address inputAddress = _handleETHReturnAddress(_inputAssetA);
 
             //state changes
+            //deposit funds
             syncMintFundingMap[_interactionNonce] = MintFunding({token: inputAddress, amount: _inputValue});
             //_outputAssetA.id = _interactionNonce;
             //_outputAssetA.erc20Address = inputAddress;
             outputValueA = _inputValue;
-            //            console.log("finished");
         }
         //INTERACTION TYPE 2
         //1 real 1 virtual
         //1 virtual 1 real (refund)
         else if (
             _inputAssetB.assetType == AztecTypes.AztecAssetType.VIRTUAL &&
-            _checkForType(_inputAssetA) != address(0) &&
+            (_inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 ||
+                _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) &&
             _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL &&
-            _checkForType(_outputAssetB) != address(0)
+            (_outputAssetB.assetType == AztecTypes.AztecAssetType.ERC20 ||
+                _outputAssetB.assetType == AztecTypes.AztecAssetType.ETH)
         ) {
             //minting LP position
             //sanity checks + variable instantiation
-            address inputAddress = _checkForType(_inputAssetA);
-            address refundAddress = _checkForType(_outputAssetB); // this asset is used for refunds
+            address inputAddress = _handleETHReturnAddress(_inputAssetA);
+            address refundAddress = _handleETHReturnAddress(_outputAssetB); // this asset is used for refunds
 
+            //constrain refund to be one of the tokens
             if (!(inputAddress == refundAddress || refundAddress == syncMintFundingMap[_inputAssetB.id].token))
                 revert InvalidRefund();
 
@@ -202,15 +159,17 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         //1 virtual 1 real (the second pair)
         else if (
             _inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED &&
-            _checkForType(_inputAssetA) != address(0) &&
+            (_inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 ||
+                _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) &&
             _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL &&
-            _checkForType(_outputAssetB) != address(0)
+            (_outputAssetB.assetType == AztecTypes.AztecAssetType.ERC20 ||
+                _outputAssetB.assetType == AztecTypes.AztecAssetType.ETH)
         ) {
             //sanity check
             //note: _outputAssetB's address is assumed to be the secondary address necessary to retrieve the pool, but also for
             //any refunds , if necessary
-            address inputAddress = _checkForType(_inputAssetA);
-            address outputAddress = _checkForType(_outputAssetB);
+            address inputAddress = _handleETHReturnAddress(_inputAssetA);
+            address outputAddress = _handleETHReturnAddress(_outputAssetB);
 
             (outputValueA, outputValueB) = _convertMintBySwap(
                 inputAddress,
@@ -224,37 +183,47 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         //1 virtual 1 not used
         //1 real 1 real
         else if (
-            _checkForType(_outputAssetA) != address(0) &&
+            (_outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 ||
+                _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) &&
             _inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED &&
             _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL &&
-            _checkForType(_outputAssetB) != address(0)
+            (_outputAssetB.assetType == AztecTypes.AztecAssetType.ERC20 ||
+                _outputAssetB.assetType == AztecTypes.AztecAssetType.ETH)
         ) {
             //withdrawing LP
 
             //sanity check
             uint256 id = _inputAssetA.id; //avoid stack too deep
-            address tokenA = _checkForType(_outputAssetA);
-            address tokenB = _checkForType(_outputAssetB);
+            address tokenA = _handleETHReturnAddress(_outputAssetA);
+            address tokenB = _handleETHReturnAddress(_outputAssetB);
 
-            console.log(tokenA, tokenB);
             {
                 // less storage reads
                 address token0 = deposits[id].token0;
                 address token1 = deposits[id].token1;
-                console.log(token0, token1);
+                //sanity check: constrain the outputs to equal the tokens of the actual LP position.
                 bool validArgs = (tokenA == token0 && token1 == tokenB) || (tokenB == token0 && token1 == tokenA);
                 if (!validArgs) revert InvalidOutputs();
             }
 
             //state changes
+            //actual withdrawal via uniswap is done here
             (outputValueA, outputValueB) = _withdraw(id, uint128(_inputValue));
             //done because _decreaseLiquidity spits out amount0 amount1 and A && B not necessariy == token0 && token1
             if (!(tokenA == deposits[id].token0)) {
                 (outputValueA, outputValueB) = (outputValueB, outputValueA);
             }
 
-            IERC20(tokenA).safeIncreaseAllowance(address(ROLLUP_PROCESSOR), outputValueA);
-            IERC20(tokenB).safeIncreaseAllowance(address(ROLLUP_PROCESSOR), outputValueB);
+            //note: if the one of the tokens here is WETH, the rollupProcessor will
+            //receive approval for the WETH amount but then also receive ETH in
+            //receiveEthFromBridge. Proabbly not a problem but it's a sort of double counting of sorts?
+            //worth noting
+
+            TransferHelper.safeApprove(tokenA, address(ROLLUP_PROCESSOR), 0);
+            TransferHelper.safeApprove(tokenB, address(ROLLUP_PROCESSOR), 0);
+            TransferHelper.safeApprove(tokenA, address(ROLLUP_PROCESSOR), outputValueA);
+            TransferHelper.safeApprove(tokenB, address(ROLLUP_PROCESSOR), outputValueB);
+
             if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 WETH.withdraw(outputValueA);
                 ROLLUP_PROCESSOR.receiveEthFromBridge{value: outputValueA}(_interactionNonce);
@@ -278,7 +247,6 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
      * @return outputValueA outputvalueA , liquidity minted
      * @return outputValueB outputvalueb, the refund
      */
-
     function _convertMintPart2(
         address _input,
         address _refund,
@@ -287,10 +255,7 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         uint256 _inputValue,
         uint64 _params
     ) internal returns (uint256 outputValueA, uint256 outputValueB) {
-        {
-            //address pool = uniswapFactory.getPool(inputAddress, syncMintFundingMap[_inputAssetB.id].token, uint24(fee) )
-            //require(pool != address(0), "NONEXISTENT_POOL");
-        }
+        //no require check to make sure pool exists because uniswap will revert
 
         address[] memory token = new address[](2);
 
@@ -317,7 +282,6 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             fee = uint24(unpackLast16Bits(_params));
             int24 tickLower = int24(unpackFirst24Bits(_params));
             int24 tickUpper = int24(unpackSecond24Bits(_params));
-            //console.log("minting");
             (outputValueA, refund0, refund1) = _mintNewPosition(
                 token[0],
                 token[1],
@@ -332,18 +296,15 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
 
         //refunding
         if ((refund1 > 0 && _refund == token[0]) || (refund0 > 0 && _refund == token[1])) {
-            //console.log("refunding");
             outputValueB = token[0] == _refund ? refund0 : refund1;
             uint256 amountOut = _refundConversion(refund0, refund1, _refund, token[0], token[1], fee);
             outputValueB = outputValueB + amountOut;
         }
 
-        //console.log("passed");
-        //note: we need to destroy record of MINT_PT1 funding to avoid virtual asset re-use
+        //we need to destroy record of MINT_PT1 funding to avoid virtual asset re-use
         syncMintFundingMap[_id].amount = 0;
 
         //approve rollupProcessor to receive refund
-
         TransferHelper.safeApprove(_refund, address(ROLLUP_PROCESSOR), outputValueB);
     }
 
@@ -358,7 +319,6 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
      * @return outputValueA the liquidity minted
      * @return outputValueB the refund if any
      */
-
     function _convertMintBySwap(
         address _input,
         address _output,
@@ -369,8 +329,8 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         uint256[] memory amounts = new uint256[](2);
         uint24 fee = uint24(unpackLast16Bits(_params));
 
+        //swap half of input
         {
-            console.log("before swap");
             TransferHelper.safeApprove(_input, address(SWAP_ROUTER), _inputValue / 2);
             ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
                 tokenIn: _input,
@@ -385,11 +345,8 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
 
             uint256 amountOut = SWAP_ROUTER.exactInputSingle(swapParams);
 
-            console.log("after swap");
             amounts[0] = _input < _output ? _inputValue / 2 : amountOut;
             amounts[1] = _input < _output ? amountOut : _inputValue / 2;
-            //            console.log(amounts[0], "amount0");
-            //            console.log(amounts[1], "amount1");
         }
 
         //_outputAssetA.id = _interactionNonce;
@@ -415,6 +372,14 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         }
 
         //refunding
+        //due to bridge limitations only 1 token can be specified as the asset in which refunds are received
+        //But a refund of two assets at the same time is possible and moreover we don't want the user to accidentally
+        //specify token0 as the refund but all the refund is in token1 and they don't receive it.
+        //so instead the bridge checks that any and all refunds are to be converted if necessary by swap
+        //to the designated refund asset. it then adds to this outputValueB.
+        //the defiBridgeProxy will call recoverTokens and the user should receive the refund.
+        //this approach is naive and the user will incur slippage and fees as well. so it would be smarter
+        //for them to simulate offchain to make sure they only receive a refund in one token or none.
         if ((refund1 > 0 && _output == token0) || (refund0 > 0 && _output == token1)) {
             outputValueB = token0 == _output ? refund0 : refund1;
             amounts[0] = _refundConversion(refund0, refund1, _output, token0, token1, fee);
@@ -422,10 +387,6 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         }
 
         TransferHelper.safeApprove(_output, address(ROLLUP_PROCESSOR), outputValueB);
-    }
-
-    function canFinalise(uint256 _interactionNonce) external view onlyRollup returns (bool) {
-        return false;
     }
 
     function finalise(
@@ -444,6 +405,6 @@ contract SyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             bool interactionComplete
         )
     {
-        revert("NOT_ASYNC");
+        revert ErrorLib.AsyncDisabled();
     }
 }

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.6.10 <=0.8.10;
 
-import "../interfaces/IERC20.sol";
+import "../IERC20.sol";
 
-import "../interfaces/IWETH9.sol";
+import "../IWETH9.sol";
 
-import "../libraries/TransferHelper.sol";
+import "../../../libraries/uniswapv3/TransferHelper.sol";
 
 import "./PeripheryImmutableState.sol";
 

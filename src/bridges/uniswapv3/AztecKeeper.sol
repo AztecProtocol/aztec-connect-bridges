@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.10 <=0.8.10;
 
-import "./interfaces/KeeperCompatibleInterface.sol";
-import {TickMath} from "./libraries/TickMath.sol";
+import "../../interfaces/uniswapv3/KeeperCompatibleInterface.sol";
+import {TickMath} from "../../libraries/uniswapv3/TickMath.sol";
 
 interface IUniswapV3Factory {
     function getPool(
-        address tokenA,
-        address tokenB,
-        uint24 fee
+        address _tokenA,
+        address _tokenB,
+        uint24 _fee
     ) external view returns (address pool);
 }
 
@@ -28,7 +28,7 @@ interface IUniswapV3Pool {
 }
 
 interface IDefiBridge {
-    function getDeposit(uint256 interactionNonce)
+    function getDeposit(uint256 _interactionNonce)
         external
         view
         returns (
@@ -45,7 +45,7 @@ interface IDefiBridge {
 }
 
 interface IRollupProcessor {
-    function processAsyncDefiInteraction(uint256 interactionNonce) external;
+    function processAsyncDefiInteraction(uint256 _interactionNonce) external;
 }
 
 contract AztecKeeper is KeeperCompatibleInterface {

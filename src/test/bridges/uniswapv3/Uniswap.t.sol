@@ -4,21 +4,19 @@ pragma experimental ABIEncoderV2;
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
-//import {console} from "../console.sol";
 import {console} from "../../../../lib/forge-std/src/console.sol";
 import {Vm} from "../../../../lib/forge-std/src/Vm.sol";
 
 // Example-specific imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {INonfungiblePositionManager} from "../../../bridges/uniswapv3/interfaces/INonfungiblePositionManager.sol";
-import {IUniswapV3Factory} from "../../../bridges/uniswapv3/interfaces/IUniswapV3Factory.sol";
-import {IUniswapV3Pool} from "../../../bridges/uniswapv3/interfaces/IUniswapV3Pool.sol";
-import {TickMath} from "../../../bridges/uniswapv3/libraries/TickMath.sol";
-import {SyncUniswapV3Bridge} from "../../../bridges/uniswapv3/SyncUniswapV3Bridge.sol";
-import {TransferHelper, ISwapRouter} from "../../../bridges/uniswapv3/UniswapV3Bridge.sol";
+import {INonfungiblePositionManager} from "../../../interfaces/uniswapv3/INonfungiblePositionManager.sol";
+import {IUniswapV3Factory} from "../../../interfaces/uniswapv3/IUniswapV3Factory.sol";
+import {IUniswapV3Pool} from "../../../interfaces/uniswapv3/IUniswapV3Pool.sol";
+import {TickMath} from "../../../libraries/uniswapv3/TickMath.sol";
+import {UniLPBridge} from "../../../bridges/uniswapv3/UniLPBridge.sol";
+import {TransferHelper, ISwapRouter} from "../../../bridges/uniswapv3/ParentUniLPBridge.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
-import {LiquidityAmounts} from "../../../bridges/uniswapv3/libraries/LiquidityAmounts.sol";
-import {AztecKeeper} from "../../../bridges/uniswapv3/AztecKeeper.sol";
+import {LiquidityAmounts} from "../../../libraries/uniswapv3/LiquidityAmounts.sol";
 
 contract UniswapTest is BridgeTestBase {
     IERC20 private constant DAI = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7);
@@ -30,7 +28,7 @@ contract UniswapTest is BridgeTestBase {
     address private constant QUOTER = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
     address private constant POOL = 0x4e68Ccd3E89f51C3074ca5072bbAC773960dFa36;
     address[] private tokens = [address(DAI), address(WETH), address(USDC)];
-    SyncUniswapV3Bridge private syncBridge;
+    UniLPBridge private syncBridge;
 
     uint256 private id;
 
@@ -42,17 +40,8 @@ contract UniswapTest is BridgeTestBase {
         vm.label(address(WETH), "WETH");
         vm.label(address(USDC), "USDC");
 
-        console.log("setup");
+        syncBridge = new UniLPBridge(address(ROLLUP_PROCESSOR));
 
-        syncBridge = new SyncUniswapV3Bridge(
-            address(ROLLUP_PROCESSOR),
-            ROUTER,
-            NONFUNGIBLE_POSITION_MANAGER,
-            FACTORY,
-            address(WETH)
-        );
-
-        console.log(address(syncBridge));
         vm.label(address(syncBridge), "SYNCBRIDGE");
         vm.prank(MULTI_SIG);
         ROLLUP_PROCESSOR.setSupportedBridge(address(syncBridge), 200000);
@@ -65,26 +54,23 @@ contract UniswapTest is BridgeTestBase {
             }
         }
 
-        console.log("dealing");
         vm.deal(address(syncBridge), uint256(10000));
         vm.deal(address(this), uint256(10000));
     }
 
     function testTwoPartMint(uint256 _deposit, uint256 _ethDeposit) public {
         //revert();
-
-        vm.assume(_deposit >= 1000000000000 && _ethDeposit >= 100000000000000);
+        _deposit = bound(_deposit, 1000000000000, 11090954464882723182754300279390208);
+        _ethDeposit = bound(_ethDeposit, 100000000000000, 218809284046322613163859525526366);
 
         //this is the point at which maxLiquidityPerTick is triggered. fair to say at this point the test is passing and this is
         //the logical upper boundary for the test range, as these numbers are something like 218 trillion eth and
-        //several hundred trillion DAI, or something else ridiculous
-        vm.assume(_deposit <= 11090954464882723182754300279390208 && _ethDeposit <= 218809284046322613163859525526366);
+        //several hundred trillion DAI, or something else extremely large
 
-        uint256 depositAmount = _deposit;
-        _setTokenBalance(address(DAI), address(syncBridge), depositAmount, 2);
-        uint256 wethDeposit = _ethDeposit;
-        _setTokenBalance(address(WETH), address(syncBridge), wethDeposit, 3);
-
+        //_setTokenBalance(address(DAI), address(syncBridge), _deposit, 2);
+        deal(address(DAI), address(syncBridge), _deposit);
+        //_setTokenBalance(address(WETH), address(syncBridge), wethDeposit, 3);
+        deal(address(WETH), address(syncBridge), _ethDeposit);
         uint256 virtualNoteAmount;
 
         vm.startPrank(address(ROLLUP_PROCESSOR));
@@ -95,7 +81,7 @@ contract UniswapTest is BridgeTestBase {
                 emptyAsset,
                 AztecTypes.AztecAsset({id: 1, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL}),
                 emptyAsset,
-                depositAmount,
+                _deposit,
                 1,
                 0,
                 address(0)
@@ -106,7 +92,7 @@ contract UniswapTest is BridgeTestBase {
             uint256 bridgeDAI = DAI.balanceOf(address(syncBridge));
             virtualNoteAmount = outputValueA;
 
-            assertEq(depositAmount, bridgeDAI, "Balances must match");
+            assertEq(_deposit, bridgeDAI, "Balances must match");
         }
 
         {
@@ -128,7 +114,7 @@ contract UniswapTest is BridgeTestBase {
                 AztecTypes.AztecAsset({id: 1, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL}),
                 AztecTypes.AztecAsset({id: 2, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL}),
                 AztecTypes.AztecAsset({id: 2, erc20Address: address(WETH), assetType: AztecTypes.AztecAssetType.ERC20}),
-                wethDeposit,
+                _ethDeposit,
                 2,
                 data,
                 address(0)
@@ -151,18 +137,12 @@ contract UniswapTest is BridgeTestBase {
 
     function testMintBySwap(uint256 _depositAmount) public {
         // revert();
-        vm.assume(_depositAmount != 0);
-        vm.assume(_depositAmount != 1); //this is necessary on top of the standard 0 boundary case because half of the depositAmount is
-        //swapped , and the calculation of depositAmount/2 as the amountIn results in 0  when depositAmount is 1.
-        vm.assume(_depositAmount >= 1000000000000);
-        //this is the point at which when the nonfungiblePositionManager's call to slot0() fails and the txn is reverted, presumably
+        //506840802329476492815900036 is the point at which when the nonfungiblePositionManager's call to slot0() fails and the txn is reverted, presumably
         //because there is some sort of error in sqrtPriceX96 after the massive swap ? regardless this number is greater than several quadrillion DAI,
         //so i feel this is a logical upper boundary
-        vm.assume(_depositAmount <= 506840802329476492815900036);
-        uint256 depositAmount = _depositAmount;
-        console.log("setting DAI balance");
-        _setTokenBalance(address(DAI), address(syncBridge), depositAmount, 2);
-
+        uint256 depositAmount = bound(_depositAmount, 1000000000000, 506840802329476492815900036);
+        //_setTokenBalance(address(DAI), address(syncBridge), depositAmount, 2);
+        deal(address(DAI), address(syncBridge), depositAmount);
         uint64 data;
         //pack params into data
 
@@ -199,10 +179,6 @@ contract UniswapTest is BridgeTestBase {
 
         (uint256 redeem0, uint256 redeem1) = _redeem(outputValueA, 2);
 
-        console.log("after redeem");
-        console.log(amount0, redeem0, "token0");
-        console.log(amount1, redeem1, "token1");
-
         _marginOfError(amount0, redeem0, amount1, redeem1, 100000 / 20);
 
         //Note (s)
@@ -230,7 +206,6 @@ contract UniswapTest is BridgeTestBase {
 
         //sometimes when 1 output is much less than the input , the other output is much larger than its original input
         //e.g. token0 input of 100, output of 99, but token1 input of 100 and output of 101
-        console.log((_redeem0 * scale) / _amount0, (_redeem1 * scale) / _amount1, "percents");
 
         uint256 sum = ((_redeem0 * scale) / _amount0) + ((_redeem1 * scale) / _amount1);
 
@@ -306,11 +281,5 @@ contract UniswapTest is BridgeTestBase {
         newTickUpper = _tickUpper % pool.tickSpacing() == 0
             ? _tickUpper
             : _tickUpper - (_tickUpper % pool.tickSpacing());
-    }
-
-    function _assumptions(uint256 _deposit) internal {
-        if (address(DAI) == 0xdAC17F958D2ee523a2206206994597C13D831ec7) {
-            vm.assume(_deposit <= 3769678424353192924097187526);
-        }
     }
 }

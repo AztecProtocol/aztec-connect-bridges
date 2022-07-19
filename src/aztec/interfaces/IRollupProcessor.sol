@@ -113,21 +113,4 @@ interface IRollupProcessor {
     function getSupportedAssets() external view returns (address[] memory, uint256[] memory);
 
     function getSupportedBridges() external view returns (address[] memory, uint256[] memory);
-
-    function convert(
-        address bridgeAddress,
-        AztecTypes.AztecAsset calldata inputAssetA,
-        AztecTypes.AztecAsset calldata inputAssetB,
-        AztecTypes.AztecAsset calldata outputAssetA,
-        AztecTypes.AztecAsset calldata outputAssetB,
-        uint256 totalInputValue,
-        uint256 interactionNonce,
-        uint256 auxInputData // (auxData)
-    )
-        external
-        returns (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool isAsync
-        );
 }

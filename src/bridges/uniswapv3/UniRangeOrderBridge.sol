@@ -6,58 +6,29 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
-import {TickMath} from "./libraries/TickMath.sol";
-import {IUniswapV3Pool} from "./interfaces/IUniswapV3Pool.sol";
-import {UniswapV3Bridge} from "./UniswapV3Bridge.sol";
+import {TickMath} from "../../libraries/uniswapv3/TickMath.sol";
+import {IUniswapV3Pool} from "../../interfaces/uniswapv3/IUniswapV3Pool.sol";
+import {ParentUniLPBridge} from "./ParentUniLPBridge.sol";
 import {IDefiBridge} from "../../aztec/interfaces/IDefiBridge.sol";
-import {IQuoter} from "./interfaces/IQuoter.sol";
+import {ErrorLib} from "../base/ErrorLib.sol";
+import {IQuoter} from "../../interfaces/uniswapv3/IQuoter.sol";
 import {console} from "../../../lib/forge-std/src/console.sol";
 
-contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
+contract UniRangeOrderBridge is IDefiBridge, ParentUniLPBridge {
     using SafeERC20 for IERC20;
 
-    /*
-        STRUCTS AND ENUMS
-    */
+    error InvalidRefund();
 
     struct AsyncOrder {
         bool finalisable;
         uint256 expiry;
     }
 
-    /* 
-        MUTABLE VARIABLES
-    */
-
     mapping(uint256 => AsyncOrder) public asyncOrders;
 
-    /* 
-        IMMUTABLES/CONSTANT
-    */
-
-    error InvalidCaller();
-    error InvalidInputB();
-    error InvalidRefund();
-    error InvalidOutputs();
-
-    IQuoter public immutable QUOTER;
     uint256 public constant MAGIC_NUMBER_DAYS = 60 * 60 * 24; //seconds in a day
 
-    modifier onlyRollup() {
-        if (msg.sender != address(ROLLUP_PROCESSOR)) revert InvalidCaller();
-        _;
-    }
-
-    constructor(
-        address _rollupProcessor,
-        address _router,
-        address _nonfungiblePositionManager,
-        address _factory,
-        address _wEth,
-        address _quoter
-    ) public UniswapV3Bridge(_rollupProcessor, _router, _nonfungiblePositionManager, _factory, _wEth) {
-        QUOTER = IQuoter(_quoter);
-    }
+    constructor(address _rollupProcessor) public ParentUniLPBridge(_rollupProcessor) {}
 
     /**
      * @notice  Function used to  set the finalisability of an order to true and withdraw liquidity
@@ -67,14 +38,11 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
      * @return amount0 the amount of token0 returned by withdrawal of liquidity
      * @return amount1 the amount of token1 returned by withdrawal of liquidity
      */
-
     function trigger(uint256 _interactionNonce) external returns (uint256 amount0, uint256 amount1) {
         //for keepers / bot operators to trigger limit orders if conditions are met
-
         if (_checkLimitConditions(_interactionNonce)) {
             asyncOrders[_interactionNonce].finalisable = true;
             (amount0, amount1) = _withdraw(_interactionNonce, deposits[_interactionNonce].liquidity);
-            //console.log(amount0, amount1, "amounts");
 
             //necessary?
             //require(amount0 == 0 || amount1 == 0 , "NOT_RANGE");
@@ -101,12 +69,10 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
      * @return amount0 the amount of token0 returned by withdrawal of liquidity
      * @return amount1 the amount of token1 returned by withdrawal of liquidity
      */
-
     function cancel(uint256 _interactionNonce) external returns (uint256 amount0, uint256 amount1) {
         if (asyncOrders[_interactionNonce].expiry >= block.timestamp) {
             asyncOrders[_interactionNonce].finalisable = true;
             (amount0, amount1) = _withdraw(_interactionNonce, deposits[_interactionNonce].liquidity);
-            //console.log(amount0, amount1, "amounts");
             //user may now call processAsyncDefiInteraction successfully
         }
     }
@@ -125,7 +91,6 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
      * @return outputValueB not used
      * @return isAsync set to true always
      */
-
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata _inputAssetB,
@@ -145,19 +110,17 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             bool isAsync
         )
     {
-        if (!(msg.sender == address(ROLLUP_PROCESSOR) || msg.sender == address(this))) revert InvalidCaller();
-        console.log("logging nonce", _interactionNonce);
+        if (msg.sender != address(ROLLUP_PROCESSOR)) revert ErrorLib.InvalidCaller();
 
         //Uniswap V3 range limit order
         isAsync = true;
         //sanity checks
-        if (_inputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED) revert InvalidInputB();
-        address input = _checkForType(_inputAssetA);
-        address output = _checkForType(_outputAssetA);
+        if (_inputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED) revert ErrorLib.InvalidInputB();
+        address input = _handleETHReturnAddress(_inputAssetA);
+        address output = _handleETHReturnAddress(_outputAssetA);
 
         //_outputAssetA is already output, this must be input then
-        if (input != _checkForType(_outputAssetB)) revert InvalidRefund();
-        //console.log("passed require checks");
+        if (input != _handleETHReturnAddress(_outputAssetB)) revert InvalidRefund();
 
         //address pool = uniswapFactory.getPool(input_address,output_address,fee);
         //require(pool != address(0), "NONEXISTENT_POOL");
@@ -169,8 +132,6 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
                 we use remaining 8 bits for days_to_cancel which is multiplied by MAGIC_NUMBER_DAY to get a timestamp of how many days
                 out the expiry is in uint256. 
             */
-
-        //console.log("reached auxData encoding");
 
         //fee should be in hundredths of a bip. 1 bip = 1/100, i.e. 1e^-6. fee will range from 0 to 100, we will multiply
         //by 100 to get the correct number. i.e. .3% is 3000, so 30 * 100
@@ -188,7 +149,6 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
             _interactionNonce
         );
 
-        //console.log("passed _mintNewPosition");
         uint8 daysToCancel = uint8(_auxData);
 
         asyncOrders[_interactionNonce] = AsyncOrder({
@@ -211,10 +171,9 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
      * @return outputValueA amountA returned to bridge
      * @return outputValueB amountB returned to bridge
      */
-
     function finalise(
-        AztecTypes.AztecAsset calldata _inputAssetA,
-        AztecTypes.AztecAsset calldata _inputAssetB,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata _outputAssetB,
         uint256 _interactionNonce,
@@ -223,20 +182,20 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         external
         payable
         override(IDefiBridge)
-        onlyRollup
         returns (
             uint256 outputValueA,
             uint256 outputValueB,
             bool interactionComplete
         )
     {
+        if (msg.sender != address(ROLLUP_PROCESSOR)) revert ErrorLib.InvalidCaller();
         //interactionComplete = false;
         if (asyncOrders[_interactionNonce].finalisable) {
             //withdrawing LP
 
             //sanity check
-            address tokenA = _checkForType(_outputAssetA);
-            address tokenB = _checkForType(_outputAssetB);
+            address tokenA = _handleETHReturnAddress(_outputAssetA);
+            address tokenB = _handleETHReturnAddress(_outputAssetB);
 
             {
                 // less storage reads
@@ -254,13 +213,15 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
                 (outputValueA, outputValueB) = (outputValueB, outputValueA);
             }
 
-            IERC20(tokenA).safeIncreaseAllowance(address(ROLLUP_PROCESSOR), outputValueA);
-            IERC20(tokenB).safeIncreaseAllowance(address(ROLLUP_PROCESSOR), outputValueB);
+            IERC20(tokenA).safeApprove(address(ROLLUP_PROCESSOR), 0);
+            IERC20(tokenB).safeApprove(address(ROLLUP_PROCESSOR), 0);
+            IERC20(tokenA).safeApprove(address(ROLLUP_PROCESSOR), outputValueA);
+            IERC20(tokenB).safeApprove(address(ROLLUP_PROCESSOR), outputValueB);
             // TODO: simplify this logic
-            if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+            if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 WETH.withdraw(outputValueA);
                 ROLLUP_PROCESSOR.receiveEthFromBridge{value: outputValueA}(_interactionNonce);
-            } else if (_inputAssetB.assetType == AztecTypes.AztecAssetType.ETH) {
+            } else if (_outputAssetB.assetType == AztecTypes.AztecAssetType.ETH) {
                 WETH.withdraw(outputValueB);
                 ROLLUP_PROCESSOR.receiveEthFromBridge{value: outputValueB}(_interactionNonce);
             }
@@ -273,10 +234,17 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         }
     }
 
-    function canFinalise(uint256 _interactionNonce) external view onlyRollup returns (bool) {
-        return asyncOrders[_interactionNonce].finalisable;
-    }
-
+    /**
+     * @notice  packs _auxData for front end user
+     * @dev The first 24 bits are tickLower. The second 24 are tickUpper. The 3rd 8 the pool's fee / 10.
+     * As a pool's fee ranges from 10 bps, 100 bps, 300 bps, and 1000 bps, there is no data loss and type conversion
+     * is acceptable.
+     * @param _tickLower the lower range of the position
+     * @param _tickUpper the upper range of the position
+     * @param _daysToCancel the time limit for the order / expiry
+     * @param _fee the fee tier of the pool
+     * @return data the packed _auxData
+     */
     function packData(
         int24 _tickLower,
         int24 _tickUpper,
@@ -298,17 +266,6 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
         return asyncOrders[_interactionNonce].expiry;
     }
 
-    function _checkForType(AztecTypes.AztecAsset calldata _inputAsset) internal returns (address) {
-        if (_inputAsset.assetType == AztecTypes.AztecAssetType.ETH) {
-            WETH.deposit{value: msg.value}();
-            return address(WETH);
-        } else if (_inputAsset.assetType == AztecTypes.AztecAssetType.ERC20) {
-            return _inputAsset.erc20Address;
-        } else {
-            revert("INVALID_INPUT");
-        }
-    }
-
     /**
      * @notice  Function used to check if limit conditions of an order have been met
      * @dev if the order is denominated by lower price space, it is a buy limit order, so
@@ -318,13 +275,11 @@ contract AsyncUniswapV3Bridge is IDefiBridge, UniswapV3Bridge {
      * @param _interactionNonce the nonce of the interaction
      * @return bool whether or not the limit conditions were met
      */
-
     function _checkLimitConditions(uint256 _interactionNonce) internal view returns (bool) {
         Deposit memory deposit = deposits[_interactionNonce];
         IUniswapV3Pool pool = IUniswapV3Pool(UNISWAP_FACTORY.getPool(deposit.token0, deposit.token1, deposit.fee));
         (uint160 sqrtPriceX96, , , , , , ) = pool.slot0();
         int24 currentTick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
-
         return (deposit.tickLower <= currentTick && currentTick <= deposit.tickUpper);
     }
 }
