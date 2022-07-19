@@ -89,15 +89,15 @@ contract YearnBridge is BridgeBase {
             bool
         )
     {
+        if (_inputValue == 0) {
+            revert ErrorLib.InvalidInputA();
+        }
         if (_auxData == 0) {
             if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) {
                 revert ErrorLib.InvalidOutputA();
             }
 
             if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
-                if (_inputValue == 0) {
-                    revert ErrorLib.InvalidInputA();
-                }
                 outputValueA = _zapETH(msg.value, _outputAssetA);
             } else if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
                 outputValueA = _depositERC20(_inputValue, _inputAssetA, _outputAssetA);

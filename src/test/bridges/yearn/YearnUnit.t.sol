@@ -70,7 +70,7 @@ contract YearnBridgeUnitTest is Test {
     function testInvalidOutputAsset() public {
         vm.prank(rollupProcessor);
         vm.expectRevert(ErrorLib.InvalidOutputA.selector);
-        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 1, 0, 0, address(0));
     }
 
     function testInvalidOutputAssetETH() public {
@@ -93,7 +93,7 @@ contract YearnBridgeUnitTest is Test {
     function testIncorrectAuxData() public {
         vm.prank(rollupProcessor);
         vm.expectRevert(ErrorLib.InvalidAuxData.selector);
-        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 2, address(0));
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 1, 0, 2, address(0));
     }
 
     // @dev In order to avoid overflows we set _depositAmount to be uint96 instead of uint256.
