@@ -23,9 +23,9 @@ abstract contract BridgeTestBase is Test {
     error INVALID_ASSET_ADDRESS();
     error INVALID_LINKED_TOKEN_ADDRESS();
     error INVALID_LINKED_BRIDGE_ADDRESS();
-    error INVALID_BRIDGE_CALL_DATA();
+    error INVALID_BRIDGE_ID(); // TODO: replace with INVALID_BRIDGE_CALL_DATA() once rollup processor is redeployed
     error INVALID_BRIDGE_ADDRESS();
-    error INCONSISTENT_BRIDGE_CALL_DATA();
+    error BRIDGE_ID_IS_INCONSISTENT(); // TODO: replace with INCONSISTENT_BRIDGE_CALL_DATA()
     error BRIDGE_WITH_IDENTICAL_INPUT_ASSETS(uint256 inputAssetId);
     error BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS(uint256 outputAssetId);
     error ZERO_TOTAL_INPUT_VALUE();
