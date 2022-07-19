@@ -57,9 +57,9 @@ contract VaultBridge is BridgeBase {
     {
         // // ### INITIALIZATION AND SANITY CHECKS
 
-        if (isValidPair(_outputAssetA.erc20Address, _inputAssetA.erc20Address)) {
+        if (_isValidPair(_outputAssetA.erc20Address, _inputAssetA.erc20Address)) {
             _outputValueA = _enter(_outputAssetA.erc20Address, _totalInputValue);
-        } else if (isValidPair(_inputAssetA.erc20Address, _outputAssetA.erc20Address)) {
+        } else if (_isValidPair(_inputAssetA.erc20Address, _outputAssetA.erc20Address)) {
             _outputValueA = _exit(_inputAssetA.erc20Address, _totalInputValue);
         } else {
             revert ErrorLib.InvalidInput();
@@ -114,7 +114,7 @@ contract VaultBridge is BridgeBase {
      */
     function _isValidPair(address _vault, address _asset) internal view returns (bool) {
         try IERC4626(_vault).asset() returns (IERC20 token) {
-            return address(_token) == _asset;
+            return address(token) == _asset;
         } catch {
             return false;
         }
