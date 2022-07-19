@@ -21,7 +21,7 @@ import {
 export class YearnBridgeData implements BridgeDataFieldGetters {
   allVaults?: EthAddress[];
   allUnderlying?: EthAddress[];
-  wETH: string = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+  wETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 
   constructor(
     private ethersProvider: Web3Provider,
@@ -146,10 +146,10 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     const currentVault = allVaults.find((vault) => vault.address.toLowerCase() == yvTokenAddress.toLowerCase());
     if (!currentVault) {
       const grossAPR = currentVault.apy.gross_apr;
-      return [grossAPR * 100, 0];;
+      return [grossAPR * 100, 0];
     }
     return [0, 0];
-  };
+  }
 
   private async isSupportedAsset(asset: AztecAsset): Promise<boolean> {
     if (asset.assetType == AztecAssetType.ETH) return true;
