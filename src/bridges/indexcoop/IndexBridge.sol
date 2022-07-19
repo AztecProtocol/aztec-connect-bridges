@@ -1,39 +1,35 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd
 pragma solidity >=0.6.10 <=0.8.10;
 pragma experimental ABIEncoderV2;
 
 import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
-import {IDefiBridge} from '../../interfaces/IDefiBridge.sol';
+import {BridgeBase} from "../base/BridgeBase.sol";
+import {ErrorLib} from "../base/ErrorLib.sol";
+import {AztecTypes} from '../../aztec/libraries/AztecTypes.sol';
+import {TickMath} from "../../libraries/uniswapv3/TickMath.sol";
+import {FullMath} from "../../libraries/uniswapv3/FullMath.sol";
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {AztecTypes} from '../../aztec/AztecTypes.sol';
-import {TickMath} from "../../bridges/uniswapv3/libraries/TickMath.sol";
-import {FullMath} from "../../bridges/uniswapv3/libraries/FullMath.sol";
-import {ISwapRouter} from '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
-import {IUniswapV3Factory} from"@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import {IRollupProcessor} from "../../interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
+import {ISwapRouter} from '../../interfaces/uniswapv3/ISwapRouter.sol';
+import {IUniswapV3Factory} from "../../interfaces/uniswapv3/IUniswapV3Factory.sol";
+import {IUniswapV3PoolDerivedState} from "../../interfaces/uniswapv3/pool/IUniswapV3PoolDerivedState.sol";
+
 import {IAaveLeverageModule} from './interfaces/IAaveLeverageModule.sol';
-import {IWeth} from './interfaces/IWeth.sol';
+import {IWETH} from '../../interfaces/IWETH.sol';
 import {IExchangeIssue} from './interfaces/IExchangeIssue.sol';
 import {ISetToken} from './interfaces/ISetToken.sol';
-import {AggregatorV3Interface} from '../../bridges/indexcoop/interfaces/AggregatorV3Interface.sol';
+import {AggregatorV3Interface} from './interfaces/AggregatorV3Interface.sol';
 
 /** 
 * @title icETH Bridge
 * @dev A smart contract responsible for buying and selling icETH with ETH etther through selling/buying from 
 * a DEX or by issuing/redeeming icEth set tokens.
 */
-contract IndexBridgeContract is IDefiBridge {
+contract IndexBridgeContract is BridgeBase {
     using SafeMath for uint256;
 
-    error IncorrectInput();
-    error IncorrectFlowSelector();
-    error InputTooSmall();
-    error InvalidCaller();
     error UnsafeOraclePrice();
 
-    address immutable ROLLUP_PROCESSOR;
     address immutable EXISSUE = 0xB7cc88A13586D862B97a677990de14A122b74598;
     address immutable CURVE = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
     address immutable WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -47,9 +43,7 @@ contract IndexBridgeContract is IDefiBridge {
     address immutable UNIV3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
     address immutable UNIV3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984; 
 
-    constructor(address _rollupProcessor) public {
-        ROLLUP_PROCESSOR = _rollupProcessor;
-    }
+    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
     receive() external payable {}
 
@@ -82,7 +76,8 @@ contract IndexBridgeContract is IDefiBridge {
     )
         external
         payable
-        override
+        override(BridgeBase)
+        onlyRollup
         returns (
             uint256 outputValueA,
             uint256 outputValueB,
@@ -91,7 +86,7 @@ contract IndexBridgeContract is IDefiBridge {
     {
         isAsync = false;
 
-        if (msg.sender != ROLLUP_PROCESSOR) revert InvalidCaller();
+        if (msg.sender != ROLLUP_PROCESSOR) revert ErrorLib.InvalidCaller();
 
         if ( // To buy/issue
             inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
@@ -117,7 +112,7 @@ contract IndexBridgeContract is IDefiBridge {
 
             outputValueA = getEth(totalInputValue, auxData, interactionNonce);
 
-        } else revert IncorrectInput();
+        } else revert ErrorLib.InvalidInput();
         
     }
 
@@ -170,7 +165,7 @@ contract IndexBridgeContract is IDefiBridge {
                 in flashloan calculations. In getAmountBasedOnRedeem() debtOWned
                 and colInEth will lose precision. Dito in ExchangeIssuance.
               */
-            if (totalInputValue < 1e18) revert InputTooSmall();
+            if (totalInputValue < 1e18) revert ErrorLib.InvalidInputAmount();
 
             minAmountOut = getAmountBasedOnRedeem(totalInputValue, oracleLimit).mul(maxSlip).div(1e4);
     
@@ -207,7 +202,7 @@ contract IndexBridgeContract is IDefiBridge {
                 uniFee = 3000;
             } else if (flowSelector == 5) {
                 uniFee = 500;
-            } else revert IncorrectFlowSelector();
+            } else revert ErrorLib.InvalidAuxData();
 
             // Using univ3 TWAP Oracle to get a lower bound on returned ETH.
             minAmountOut = getAmountBasedOnTwap(totalInputValue, ICETH, WETH, uniFee, oracleLimit).mul(maxSlip).div(1e4);
@@ -225,9 +220,8 @@ contract IndexBridgeContract is IDefiBridge {
             });
 
             outputValueA = ISwapRouter(UNIV3_ROUTER).exactInputSingle(params);
-            uint256 wethBalance = IWeth(WETH).balanceOf(address(this));
 
-            IWeth(WETH).withdraw(outputValueA);
+            IWETH(WETH).withdraw(outputValueA);
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(interactionNonce);
         }
     }
@@ -263,7 +257,7 @@ contract IndexBridgeContract is IDefiBridge {
                 and colInEth will lose precision. Dito in ExchangeIssuance.
               */
 
-            if (totalInputValue < 1e18) revert InputTooSmall();
+            if (totalInputValue < 1e18) revert ErrorLib.InvalidInputAmount();
 
             minAmountOut  = getAmountBasedOnIssue(totalInputValue, oracleLimit).mul(maxSlip).div(1e4);
 
@@ -295,11 +289,11 @@ contract IndexBridgeContract is IDefiBridge {
                 uniFee = 3000;
             } else if (flowSelector == 5) {
                 uniFee = 500;
-            } else revert IncorrectFlowSelector();
+            } else revert ErrorLib.InvalidAuxData();
             
             // Using univ3 TWAP Oracle to get a lower bound on returned ETH.
             minAmountOut = getAmountBasedOnTwap(totalInputValue, WETH, ICETH, uniFee, oracleLimit).mul(maxSlip).div(1e4);
-            IWeth(WETH).deposit{value: totalInputValue}();
+            IWETH(WETH).deposit{value: totalInputValue}();
             IERC20(WETH).approve(UNIV3_ROUTER, totalInputValue);
 
             ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
@@ -315,7 +309,7 @@ contract IndexBridgeContract is IDefiBridge {
 
             outputValueA = ISwapRouter(UNIV3_ROUTER).exactInputSingle(params);
             ISetToken(ICETH).approve(ROLLUP_PROCESSOR, outputValueA);
-        } else revert IncorrectInput();
+        } else revert ErrorLib.InvalidInput();
         
     }
 
@@ -337,6 +331,7 @@ contract IndexBridgeContract is IDefiBridge {
         uint64 oracleLimit
         ) 
         internal 
+        view
         returns (uint256 amountOut)
     { 
         address pool = IUniswapV3Factory(UNIV3_FACTORY).getPool(
@@ -352,7 +347,7 @@ contract IndexBridgeContract is IDefiBridge {
             secondsAgos[0] = secondsAgo;
             secondsAgos[1] = 0;
 
-            (int56[] memory tickCumulatives, ) = IUniswapV3Pool(pool).observe(
+            (int56[] memory tickCumulatives, ) = IUniswapV3PoolDerivedState(pool).observe(
                 secondsAgos
             );
 
