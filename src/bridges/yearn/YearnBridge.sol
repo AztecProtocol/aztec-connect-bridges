@@ -37,7 +37,6 @@ contract YearnBridge is BridgeBase {
 
     receive() external payable {}
 
-
     /**
      * @notice Set all the necessary approvals for all the latests vaults for the tokens supported by Yearn
      */
@@ -46,7 +45,8 @@ contract YearnBridge is BridgeBase {
         for (uint256 i; i < numTokens; ) {
             address token = YEARN_REGISTRY.tokens(i);
             address vault = YEARN_REGISTRY.latestVault(token);
-            _preApprove(vault);
+            _preApprove(vault, token);
+
             unchecked {
                 ++i;
             }
@@ -58,7 +58,8 @@ contract YearnBridge is BridgeBase {
      * @param _vault - vault address
      */
     function preApprove(address _vault) external {
-       _preApprove(_vault);
+        address token = IYearnVault(_vault).token();
+        _preApprove(_vault, token);
     }
 
     /**
@@ -94,6 +95,9 @@ contract YearnBridge is BridgeBase {
             }
 
             if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+                if (_inputValue == 0) {
+                    revert ErrorLib.InvalidInputA();
+                }
                 outputValueA = _zapETH(msg.value, _outputAssetA);
             } else if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
                 outputValueA = _depositERC20(_inputValue, _inputAssetA, _outputAssetA);
@@ -128,20 +132,20 @@ contract YearnBridge is BridgeBase {
         uint256 _inputValue,
         AztecTypes.AztecAsset memory _outputAssetA
     ) private returns (uint256 outputValue) {
-        IYearnVault vault = IYearnVault(_outputAssetA.erc20Address);
-        address underlyingToken = vault.token();
+        IYearnVault yVault = IYearnVault(_outputAssetA.erc20Address);
+        address underlyingToken = yVault.token();
         if (underlyingToken != WETH) {
             revert ErrorLib.InvalidOutputA();
         }
-
         if (_outputAssetA.erc20Address != YEARN_REGISTRY.latestVault(underlyingToken)) {
             revert InvalidOutputANotLatest();
         }
 
         IWETH(WETH).deposit{value: _inputValue}();
         uint256 _amount = IERC20(WETH).balanceOf(address(this));
-        vault.deposit(_amount);
-        outputValue = IERC20(address(vault)).balanceOf(address(this));
+
+        yVault.deposit(_amount);
+        outputValue = IERC20(address(yVault)).balanceOf(address(this));
     }
 
     /**
@@ -155,11 +159,12 @@ contract YearnBridge is BridgeBase {
         uint256 _interactionNonce,
         AztecTypes.AztecAsset memory _inputAssetA
     ) private returns (uint256 outputValue) {
-        IYearnVault vault = IYearnVault(_inputAssetA.erc20Address);
-        if (vault.token() != WETH) {
+        IYearnVault yVault = IYearnVault(_inputAssetA.erc20Address);
+        if (yVault.token() != WETH) {
             revert ErrorLib.InvalidInputA();
         }
-        uint256 wethAmount = vault.withdraw(_inputValue);
+
+        uint256 wethAmount = yVault.withdraw(_inputValue);
         if (wethAmount == 0) {
             revert InvalidWETHAmount();
         }
@@ -181,7 +186,10 @@ contract YearnBridge is BridgeBase {
         AztecTypes.AztecAsset memory _outputAssetA
     ) private returns (uint256 outputValue) {
         IYearnVault yVault = IYearnVault(YEARN_REGISTRY.latestVault(_inputAssetA.erc20Address));
-        if (address(yVault) != _outputAssetA.erc20Address) revert ErrorLib.InvalidOutputA();
+        if (address(yVault) != _outputAssetA.erc20Address) {
+            revert ErrorLib.InvalidOutputA();
+        }
+        
         outputValue = yVault.deposit(_inputValue);
     }
 
@@ -197,35 +205,34 @@ contract YearnBridge is BridgeBase {
         AztecTypes.AztecAsset memory _outputAssetA
     ) private returns (uint256 outputValue) {
         IYearnVault yVault = IYearnVault(_inputAssetA.erc20Address);
-        if (yVault.token() != _outputAssetA.erc20Address) revert ErrorLib.InvalidOutputA();
+        if (yVault.token() != _outputAssetA.erc20Address) {
+            revert ErrorLib.InvalidOutputA();
+        }
+
         outputValue = yVault.withdraw(_inputValue);
     }
 
     /**
      * @notice Perform all the necessary approvals for a given vault and its underlying.
-     * @param _vault - address of the vault to work with
+     * @param _vault - vault we are working with
+     * @param _token - address of the token to approve
      */
-    function _preApprove(address _vault) private {
-        IYearnVault yVault = IYearnVault(_vault);
-        IERC20 underlying = IERC20(yVault.token());
-
-        uint256 allowance = yVault.allowance(address(this), ROLLUP_PROCESSOR);
-        if (allowance < type(uint256).max) {
-            yVault.approve(ROLLUP_PROCESSOR, type(uint256).max - allowance);
-        }
-
+    function _preApprove(address _vault, address _token) private {
         // Using safeApprove(...) instead of approve(...) here because underlying can be Tether;
-        allowance = underlying.allowance(address(this), address(yVault));
+        uint256 allowance = IERC20(_token).allowance(address(this), _vault);
         if (allowance != type(uint256).max) {
             // Resetting allowance to 0 in order to avoid issues with USDT
-            underlying.safeApprove(address(yVault), 0);
-            underlying.safeApprove(address(yVault), type(uint256).max);
+            IERC20(_token).safeApprove(_vault, 0);
+            IERC20(_token).safeApprove(_vault, type(uint256).max);
         }
-        allowance = underlying.allowance(address(this), ROLLUP_PROCESSOR);
+
+        allowance = IERC20(_token).allowance(address(this), ROLLUP_PROCESSOR);
         if (allowance != type(uint256).max) {
             // Resetting allowance to 0 in order to avoid issues with USDT
-            underlying.safeApprove(ROLLUP_PROCESSOR, 0);
-            underlying.safeApprove(ROLLUP_PROCESSOR, type(uint256).max);
+            IERC20(_token).safeApprove(ROLLUP_PROCESSOR, 0);
+            IERC20(_token).safeApprove(ROLLUP_PROCESSOR, type(uint256).max);
         }
+
+        IERC20(_vault).approve(ROLLUP_PROCESSOR, type(uint256).max);
     }
 }

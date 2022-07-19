@@ -144,7 +144,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         sendDefiRollup(bridgeId, _depositAmount);
         uint256 inputAssetAMid = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 outputAssetAMid = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
-        assertEq(inputAssetAMid, inputAssetABefore - _depositAmount, "erc20 bal dont match after deposit");
+        assertEq(inputAssetAMid, inputAssetABefore - _depositAmount, "erc20 bal don't match after deposit");
         assertGt(outputAssetAMid, outputAssetABefore, "no change in output asset balance after deposit");
 
         //Exit
@@ -153,7 +153,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         sendDefiRollup(outBridgeId, _redeemAmount);
         uint256 inputAssetAAfter = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 outputAssetAAfter = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
-        assertGt(inputAssetAAfter, inputAssetAMid, "erc20 bal dont match after withdrawal");
+        assertGt(inputAssetAAfter, inputAssetAMid, "erc20 bal don't match after withdrawal");
         assertEq(outputAssetAAfter, outputAssetAMid - _redeemAmount, "no change in output asset balance after withdraw");
     }
 
