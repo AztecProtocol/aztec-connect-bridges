@@ -2,28 +2,31 @@
 
 ## What does the bridge do? Why build it?
 
-The bridge deposits some underlying token to it's compatible Yearn Vault, receiving `yvToken`, a staked underlying derivative that earns a yield from various strategies. We build it to allow users to earn yield on their tokens.
+The bridge deposits an ERC20 token into the corresponding Yearn Vault, and receives another ERC20 called yvToken that represents its deposit in the vault. 
+The tokens deposited into the vault are going to be invested using different strategies, with different capital allocations based on risk and profitability.
+This will accrue yield and will reflect it increasing the `pricePerShare` of the yvToken.
 
 ## What protocol(s) does the bridge interact with ?
 
-Yearn Bridge interacts with various protocols to provide the necessary functionality. The protocols used depend on the underlying token as some strategies are not compatible with some tokens. Strategies, and thus protocols, may be added or removed at any time.  
-The full list of strategies and protocols can be found [here](https://meta.yearn.finance/api/1/strategies/all) and [here](https://github.com/yearn/yearn-meta).
+The bridge interacts will only interact with Yearn Vaults.
 
 ## What is the flow of the bridge?
-Two main flows are used by the bridge, one for depositing tokens and one for withdrawing tokens.
+Users will use the bridge in two cases: deposit and withdraw.
 
 ### Deposit
-When the bridge receives a deposit request, we are using the Yearn Lens Registry contract ([here](https://etherscan.io/address/0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804#readContract)) in order to get the most recent Vault for the supplying underlying Token.  
-If the bridge receives `ETH` as the input token it will first wrap it to transform it to `wETH` as it is the expected ERC20 token for the `ETH` vaults at Yearn.  
+When the bridge receives a deposit request, we use Yearn Lens Registry contract ([here](https://etherscan.io/address/0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804#readContract)) to get the most recent Vault for the token to be deposited.
 
-Then, after some checks, we will deposit the supplied token to the vault and receive a number of shares matching our deposited amount.
+If the bridge receives `ETH` as the input token it will first wrap into `WETH` and then follow the same flow as any other ERC20.
+
+We check that `auxData` is correct (`0`), `inputValue` is greater that 0 and that the token is an ERC20. After that, the bridge calls the `deposit` function to send the tokens to the vault and receive yvTokens as a receipt for it.
 
 The gas cost for ERC20 deposit is ~230k.
 The gas cost for ETH deposit is ~118k.
 
 ### Withdrawal
-When the bridge receives a withdrawal request with a yvToken as `inputAssetA`, we will simply withdraw the supplied share amount of yvToken from the vault. Based on the difference of PricePerShare between the deposit and withdrawal, the amount of underlying token received should be increased.
-If the supplied `outputAssetA` is `eth` we will unwrap the underlying `wETH` token received to `ETH` native token before sending them to the `ROLLUP_PROCESSOR` for the given `interactionNonce`.
+When the bridge receives a withdrawal request with a yvToken as `inputAssetA`, the bridge calls the `withdraw` function of the contract. This will burn the yvTokens and send back the principal plus the yield accrued. The amount of underlying to be received is equal to the amount of yvTokens times `pricePerShare`.
+
+If the supplied `outputAssetA` is `ETH`, we follow the same flow as any other ERC20, and at the end we unwrap `WETH` into `ETH` before sending them to the `ROLLUP_PROCESSOR` for the given `interactionNonce`.
 
 The gas cost for ERC20 withdrawal is ~225k.
 The gas cost for ETH withdrawal is ~238k.
@@ -35,11 +38,12 @@ The gas cost for ETH withdrawal is ~238k.
 
 - The bridge uses `auxData` where `0` means `deposit` and `1` means `withdrawal`.
 
-- The Bridge perform token pre-approvals in the constructor to allow the all the required tokens to work correctly on the approval side. A function to approve a specific vault also exists for new Vaults. It is safe to do, as the bridge is not holding funds itself.
+- The bridge performs infinite token approvals in the constructor to allow all the required tokens. There's also a function to approve a specific Vault to handle new deployments. Infinite approvals are safe because the bridge doesn't hold any funds.
 
 ## Can tokens balances be impacted by external parties, if yes, how?
-The amount of shares received from the vault is not affected by external parties.
-However depending on the success or failure of the strategies, the Price Per Share of the vault may be impacted, increasing the amount of underlying token received on withdrawal if the strategies are successful, but decreasing it if the strategies are unsuccessful.
+The number of shares received from the vault is not affected by any external party.
+
+On withdrawal, the number of tokens received will depend on the `pricePerShare`, which is usually higher than when the user deposited. 
 
 ## Is the contract upgradeable?
 
@@ -47,4 +51,4 @@ No, the bridge is immutable without any admin role.
 
 ## Does the bridge maintain state?
 
-No, the bridge don't maintain a state.
+No, the bridge doesn't maintain a state.
