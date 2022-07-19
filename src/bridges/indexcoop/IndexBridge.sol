@@ -51,12 +51,12 @@ contract IndexBridgeContract is BridgeBase {
     * @notice Function that swaps between icETH and ETH.
     * @dev The flow of this functions is based on the type of input and output assets.
     *
-    * @param inputAssetA - ETH to buy/issue icETH, icETH to sell/redeem icETH.
-    * @param outputAssetA - icETH to buy/issue icETH, ETH to sell/redeem icETH. 
-    * @param outputAssetB - ETH to buy/issue icETH, empty to sell/redeem icETH. 
-    * @param totalInputValue - Total amount of ETH/icETH to be swapped for icETH/ETH
-    * @param interactionNonce - Globablly unique identifier for this bridge call
-    * @param auxData - Encodes flowSelector and maxSlip. See notes on the decodeAuxData 
+    * @param _inputAssetA - ETH to buy/issue icETH, icETH to sell/redeem icETH.
+    * @param _outputAssetA - icETH to buy/issue icETH, ETH to sell/redeem icETH. 
+    * @param _outputAssetB - ETH to buy/issue icETH, empty to sell/redeem icETH. 
+    * @param _totalInputValue - Total amount of ETH/icETH to be swapped for icETH/ETH
+    * @param _interactionNonce - Globablly unique identifier for this bridge call
+    * @param _auxData - Encodes flowSelector and maxSlip. See notes on the decodeAuxData 
     * function for encoding details.
     * @return outputValueA - Amount of icETH received when buying/issuing, Amount of ETH 
     * received when selling/redeeming.
@@ -65,13 +65,13 @@ contract IndexBridgeContract is BridgeBase {
     * requires an exact output amount rather than input. 
     */
     function convert(
-        AztecTypes.AztecAsset calldata inputAssetA,
-        AztecTypes.AztecAsset calldata inputAssetB,
-        AztecTypes.AztecAsset calldata outputAssetA,
-        AztecTypes.AztecAsset calldata outputAssetB,
-        uint256 totalInputValue,
-        uint256 interactionNonce,
-        uint64 auxData,
+        AztecTypes.AztecAsset calldata _inputAssetA,
+        AztecTypes.AztecAsset calldata _inputAssetB,
+        AztecTypes.AztecAsset calldata _outputAssetA,
+        AztecTypes.AztecAsset calldata _outputAssetB,
+        uint256 _totalInputValue,
+        uint256 _interactionNonce,
+        uint64 _auxData,
         address 
     )
         external
@@ -89,28 +89,28 @@ contract IndexBridgeContract is BridgeBase {
         if (msg.sender != ROLLUP_PROCESSOR) revert ErrorLib.InvalidCaller();
 
         if ( // To buy/issue
-            inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
-            inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED &&
-            outputAssetA.erc20Address == ICETH 
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
+            _inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED &&
+            _outputAssetA.erc20Address == ICETH 
             ) 
         {
 
-            (outputValueA, outputValueB) = getIcEth(
-                totalInputValue, 
-                auxData, 
-                interactionNonce, 
-                outputAssetB
+            (outputValueA, outputValueB) = _getIcEth(
+                _totalInputValue, 
+                _auxData, 
+                _interactionNonce, 
+                _outputAssetB
             );
 
         } else if (  // To sell/redeem  
-            inputAssetA.erc20Address == ICETH &&
-            inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED &&
-            outputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
-            outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED 
+            _inputAssetA.erc20Address == ICETH &&
+            _inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED &&
+            _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
+            _outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED 
             ) 
         {
 
-            outputValueA = getEth(totalInputValue, auxData, interactionNonce);
+            outputValueA = _getEth(_totalInputValue, _auxData, _interactionNonce);
 
         } else revert ErrorLib.InvalidInput();
         
@@ -141,21 +141,21 @@ contract IndexBridgeContract is BridgeBase {
     * @dev This function either redeems icETH for ETH or sells icETH for ETH on univ3 depending
     * on the expected eth returned.
     *
-    * @param totalInputValue - Total amount of icETH to be swapped/redeemed for ETH
-    * @param interactionNonce - Globablly unique identifier for this bridge call
-    * @param auxData - Encodes flowSelector and maxSlip. See notes on the decodeAuxData 
+    * @param _totalInputValue - Total amount of icETH to be swapped/redeemed for ETH
+    * @param _interactionNonce - Globablly unique identifier for this bridge call
+    * @param _auxData - Encodes flowSelector and maxSlip. See notes on the decodeAuxData 
     * function for encoding details.
     * @return outputValueA - Amount of ETH to return to the Rollupprocessor
     */
-    function getEth(
-        uint256 totalInputValue,
-        uint64 auxData,
-        uint256 interactionNonce
+    function _getEth(
+        uint256 _totalInputValue,
+        uint64 _auxData,
+        uint256 _interactionNonce
     ) 
         internal 
         returns (uint256 outputValueA) 
     {
-        (uint64 flowSelector, uint64 maxSlip, uint64 oracleLimit) = decodeAuxdata(auxData); 
+        (uint64 flowSelector, uint64 maxSlip, uint64 oracleLimit) = _decodeAuxdata(_auxData); 
 
         uint256 minAmountOut;  
         if (flowSelector == 1) //redeem icETH for ETH through the ExchangeIssuance contract
@@ -165,9 +165,9 @@ contract IndexBridgeContract is BridgeBase {
                 in flashloan calculations. In getAmountBasedOnRedeem() debtOWned
                 and colInEth will lose precision. Dito in ExchangeIssuance.
               */
-            if (totalInputValue < 1e18) revert ErrorLib.InvalidInputAmount();
+            if (_totalInputValue < 1e18) revert ErrorLib.InvalidInputAmount();
 
-            minAmountOut = getAmountBasedOnRedeem(totalInputValue, oracleLimit).mul(maxSlip).div(1e4);
+            minAmountOut = _getAmountBasedOnRedeem(_totalInputValue, oracleLimit).mul(maxSlip).div(1e4);
     
             // Creating a SwapData structure used to specify a path in a DEX in the ExchangeIssuance contract
             uint24[] memory fee;
@@ -182,39 +182,39 @@ contract IndexBridgeContract is BridgeBase {
                 IExchangeIssue.Exchange.Curve
             );
 
-            ISetToken(ICETH).approve(address(EXISSUE), totalInputValue);
+            ISetToken(ICETH).approve(address(EXISSUE), _totalInputValue);
             // Redeem icETH for eth
             IExchangeIssue(EXISSUE).redeemExactSetForETH(
                 ISetToken(ICETH),
-                totalInputValue,
+                _totalInputValue,
                 minAmountOut,
                 redeemData,
                 redeemData
             );
 
             outputValueA = address(this).balance;
-            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(interactionNonce);
+            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
 
         } else { //Sell icETH on univ3
 
-            uint24 uniFee;
+            uint24 _uniFee;
             if (flowSelector == 3) {
-                uniFee = 3000;
+                _uniFee = 3000;
             } else if (flowSelector == 5) {
-                uniFee = 500;
+                _uniFee = 500;
             } else revert ErrorLib.InvalidAuxData();
 
             // Using univ3 TWAP Oracle to get a lower bound on returned ETH.
-            minAmountOut = getAmountBasedOnTwap(totalInputValue, ICETH, WETH, uniFee, oracleLimit).mul(maxSlip).div(1e4);
+            minAmountOut = _getAmountBasedOnTwap(_totalInputValue, ICETH, WETH, _uniFee, oracleLimit).mul(maxSlip).div(1e4);
             
-            IERC20(ICETH).approve(UNIV3_ROUTER, totalInputValue);
+            IERC20(ICETH).approve(UNIV3_ROUTER, _totalInputValue);
             ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
                 tokenIn: ICETH,
                 tokenOut: WETH,
-                fee: uniFee,
+                fee: _uniFee,
                 recipient: address(this),
                 deadline: block.timestamp,
-                amountIn: totalInputValue,
+                amountIn: _totalInputValue,
                 amountOutMinimum: minAmountOut, 
                 sqrtPriceLimitX96: 0
             });
@@ -222,7 +222,7 @@ contract IndexBridgeContract is BridgeBase {
             outputValueA = ISwapRouter(UNIV3_ROUTER).exactInputSingle(params);
 
             IWETH(WETH).withdraw(outputValueA);
-            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(interactionNonce);
+            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
         }
     }
 
@@ -230,26 +230,26 @@ contract IndexBridgeContract is BridgeBase {
     * @dev This function either issues icETH  or buys icETH with ETH on univ3 depending
     * on the expected icETH returned.
     *
-    * @param totalInputValue - Total amount of icETH to be swapped/redeem for ETH
-    * @param interactionNonce - Globablly unique identifier for this bridge call
-    * @param auxData - Encodes flowSelector and maxSlip. See notes on the decodeAuxData 
+    * @param _totalInputValue - Total amount of icETH to be swapped/redeem for ETH
+    * @param _interactionNonce - Globablly unique identifier for this bridge call
+    * @param _auxData - Encodes flowSelector and maxSlip. See notes on the decodeAuxData 
     * function for encoding details.
     * @return outputValueA - Amount of icETH to return to the Rollupprocessor
     */
-    function getIcEth(
-        uint256 totalInputValue,
-        uint64 auxData,
-        uint256 interactionNonce,
-        AztecTypes.AztecAsset memory outputAssetB
+    function _getIcEth(
+        uint256 _totalInputValue,
+        uint64 _auxData,
+        uint256 _interactionNonce,
+        AztecTypes.AztecAsset memory _outputAssetB
         
     ) 
         internal 
         returns (uint256 outputValueA, uint256 outputValueB) 
     {
-        (uint64 flowSelector, uint64 maxSlip, uint64 oracleLimit) = decodeAuxdata(auxData); 
+        (uint64 flowSelector, uint64 maxSlip, uint64 oracleLimit) = _decodeAuxdata(_auxData); 
 
         uint256 minAmountOut;
-        if (flowSelector == 1 && outputAssetB.assetType == AztecTypes.AztecAssetType.ETH){ 
+        if (flowSelector == 1 && _outputAssetB.assetType == AztecTypes.AztecAssetType.ETH){ 
 
              /**
                 Inputs that are too small will result in a loss of precision
@@ -257,9 +257,9 @@ contract IndexBridgeContract is BridgeBase {
                 and colInEth will lose precision. Dito in ExchangeIssuance.
               */
 
-            if (totalInputValue < 1e18) revert ErrorLib.InvalidInputAmount();
+            if (_totalInputValue < 1e18) revert ErrorLib.InvalidInputAmount();
 
-            minAmountOut  = getAmountBasedOnIssue(totalInputValue, oracleLimit).mul(maxSlip).div(1e4);
+            minAmountOut  = _getAmountBasedOnIssue(_totalInputValue, oracleLimit).mul(maxSlip).div(1e4);
 
             uint24[] memory fee;
             address[] memory pathToSt = new address[](2);
@@ -269,7 +269,7 @@ contract IndexBridgeContract is BridgeBase {
                     pathToSt, fee, CURVE, IExchangeIssue.Exchange.Curve
             );
 
-            IExchangeIssue(EXISSUE).issueExactSetFromETH{value: totalInputValue}(
+            IExchangeIssue(EXISSUE).issueExactSetFromETH{value: _totalInputValue}(
                 ISetToken(ICETH),
                 minAmountOut,
                 issueData,
@@ -280,9 +280,9 @@ contract IndexBridgeContract is BridgeBase {
             outputValueB = address(this).balance;
 
             ISetToken(ICETH).approve(ROLLUP_PROCESSOR, outputValueA);
-            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueB}(interactionNonce);
+            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueB}(_interactionNonce);
 
-        } else if (outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED){
+        } else if (_outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED){
 
             uint24 uniFee;
             if (flowSelector == 3) {
@@ -292,9 +292,9 @@ contract IndexBridgeContract is BridgeBase {
             } else revert ErrorLib.InvalidAuxData();
             
             // Using univ3 TWAP Oracle to get a lower bound on returned ETH.
-            minAmountOut = getAmountBasedOnTwap(totalInputValue, WETH, ICETH, uniFee, oracleLimit).mul(maxSlip).div(1e4);
-            IWETH(WETH).deposit{value: totalInputValue}();
-            IERC20(WETH).approve(UNIV3_ROUTER, totalInputValue);
+            minAmountOut = _getAmountBasedOnTwap(_totalInputValue, WETH, ICETH, uniFee, oracleLimit).mul(maxSlip).div(1e4);
+            IWETH(WETH).deposit{value: _totalInputValue}();
+            IERC20(WETH).approve(UNIV3_ROUTER, _totalInputValue);
 
             ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
                 tokenIn: WETH,
@@ -302,7 +302,7 @@ contract IndexBridgeContract is BridgeBase {
                 fee: uniFee,
                 recipient: address(this),
                 deadline: block.timestamp,
-                amountIn: totalInputValue,
+                amountIn: _totalInputValue,
                 amountOutMinimum: minAmountOut,
                 sqrtPriceLimitX96: 0 
             });
@@ -318,17 +318,17 @@ contract IndexBridgeContract is BridgeBase {
     * @dev Based on v3-peripher/contracts/libraries/OracleLibrary.sol modified to 
     * explicilty convert uint32 to int32 to support 0.8.x
     *
-    * @param amountIn - Amount to be exchanged
-    * @param baseToken - Address of tokens to be exchanged
-    * @param quoteToken - Address of tokens to be recevied 
+    * @param _amountIn - Amount to be exchanged
+    * @param _baseToken - Address of tokens to be exchanged
+    * @param _quoteToken - Address of tokens to be recevied 
     * @return amountOut - Amount received of quoteToken
     */
-    function getAmountBasedOnTwap( 
-        uint256 amountIn, 
-        address baseToken, 
-        address quoteToken, 
-        uint24 uniFee, 
-        uint64 oracleLimit
+    function _getAmountBasedOnTwap( 
+        uint256 _amountIn, 
+        address _baseToken, 
+        address _quoteToken, 
+        uint24 _uniFee, 
+        uint64 _oracleLimit
         ) 
         internal 
         view
@@ -337,7 +337,7 @@ contract IndexBridgeContract is BridgeBase {
         address pool = IUniswapV3Factory(UNIV3_FACTORY).getPool(
             WETH,
             ICETH,
-            uniFee
+            _uniFee
         );
 
         {
@@ -360,48 +360,48 @@ contract IndexBridgeContract is BridgeBase {
                 arithmeticmeanTick--;
             }
 
-            amountOut = getQuoteAtTick(
+            amountOut = _getQuoteAtTick(
                 arithmeticmeanTick,
-                uint128(amountIn),
-                baseToken,
-                quoteToken
+                uint128(_amountIn),
+                _baseToken,
+                _quoteToken
             );
         }
 
         uint256 price;
-        if (baseToken == ICETH){
-            price = amountOut.mul(1e18).div(amountIn);
-            if (price < uint256(oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
+        if (_baseToken == ICETH){
+            price = amountOut.mul(1e18).div(_amountIn);
+            if (price < uint256(_oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
         } else {
-            price = amountIn.mul(1e18).div(amountOut);
-            if (price > uint256(oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
+            price = _amountIn.mul(1e18).div(amountOut);
+            if (price > uint256(_oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
         }
     }
 
     // From v3-peripher/contracts/libraries/OracleLibrary.sol using modified Fullmath and Tickmath for 0.8.x @audit add natspec
-    function getQuoteAtTick( 
-        int24 tick, 
-        uint128 baseAmount,
-        address baseToken,
-        address quoteToken
+    function _getQuoteAtTick( 
+        int24 _tick, 
+        uint128 _baseAmount,
+        address _baseToken,
+        address _quoteToken
     ) 
         internal 
         pure 
         returns (uint256 quoteAmount) 
     {
-        uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tick);
+        uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(_tick);
 
         // Calculate quoteAmount with better precision if it doesn't overflow when multiplied by itself
         if (sqrtRatioX96 <= type(uint128).max) {
             uint256 ratioX192 = uint256(sqrtRatioX96) * sqrtRatioX96;
-            quoteAmount = baseToken < quoteToken
-                ? FullMath.mulDiv(ratioX192, baseAmount, 1 << 192)
-                : FullMath.mulDiv(1 << 192, baseAmount, ratioX192);
+            quoteAmount = _baseToken < _quoteToken
+                ? FullMath.mulDiv(ratioX192, _baseAmount, 1 << 192)
+                : FullMath.mulDiv(1 << 192, _baseAmount, ratioX192);
         } else {
             uint256 ratioX128 = FullMath.mulDiv(sqrtRatioX96, sqrtRatioX96, 1 << 64);
-            quoteAmount = baseToken < quoteToken
-                ? FullMath.mulDiv(ratioX128, baseAmount, 1 << 128)
-                : FullMath.mulDiv(1 << 128, baseAmount, ratioX128);
+            quoteAmount = _baseToken < _quoteToken
+                ? FullMath.mulDiv(ratioX128, _baseAmount, 1 << 128)
+                : FullMath.mulDiv(1 << 128, _baseAmount, ratioX128);
         }
     }
 
@@ -409,12 +409,12 @@ contract IndexBridgeContract is BridgeBase {
     * @dev Calculates the amount of ETH received from redeeming icETH by taking out a  
     * flashloan of WETH to pay back debt. Chainlink oracle is used for the ETH/stETH price.
     *
-    * @param setAmount - Amount of icETH to redeem 
+    * @param _setAmount - Amount of icETH to redeem 
     * @return Expcted amount of ETH returned from redeeming 
     */
-    function getAmountBasedOnRedeem(
-        uint256 setAmount, 
-        uint64 oracleLimit
+    function _getAmountBasedOnRedeem(
+        uint256 _setAmount, 
+        uint64 _oracleLimit
         ) 
         internal 
         returns (uint256)
@@ -422,12 +422,12 @@ contract IndexBridgeContract is BridgeBase {
         ( , int256 intPrice, , , ) = AggregatorV3Interface(CHAINLINK_STETH_ETH).latestRoundData();
         uint256 price = uint256(intPrice);
 
-        if (price < uint256(oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
+        if (price < uint256(_oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
 
         IAaveLeverageModule(AAVE_LEVERAGE_MODULE).sync(ISetToken(ICETH));
         IExchangeIssue.LeveragedTokenData memory issueInfo = IExchangeIssue(EXISSUE).getLeveragedTokenData(
             ISetToken(ICETH), 
-            setAmount, 
+            _setAmount, 
             true
         );        
 
@@ -441,13 +441,13 @@ contract IndexBridgeContract is BridgeBase {
     * @dev Calculates the amount of icETH issued based on the
     * oracle price of stETH and the cost of the flashloan.
     *
-    * @param totalInputValue - Total amount of ETH used to issue icETH.
-    * @param oracleLimit - The upper limit of ETH/stETH that is acceptable.
+    * @param _totalInputValue - Total amount of ETH used to issue icETH.
+    * @param _oracleLimit - The upper limit of ETH/stETH that is acceptable.
     * @return Amount of icETH issued .
     */
-    function getAmountBasedOnIssue( 
-        uint256 totalInputValue, 
-        uint64 oracleLimit
+    function _getAmountBasedOnIssue( 
+        uint256 _totalInputValue, 
+        uint64 _oracleLimit
         )
         internal 
         returns (uint256)
@@ -455,7 +455,7 @@ contract IndexBridgeContract is BridgeBase {
         ( , int256 intPrice, , , ) = AggregatorV3Interface(CHAINLINK_STETH_ETH).latestRoundData();
         uint256 price = uint256(intPrice);
 
-        if (price > uint256(oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
+        if (price > uint256(_oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
 
         IAaveLeverageModule(AAVE_LEVERAGE_MODULE).sync(ISetToken(ICETH));
         IExchangeIssue.LeveragedTokenData memory data = IExchangeIssue(EXISSUE).getLeveragedTokenData(
@@ -473,7 +473,7 @@ contract IndexBridgeContract is BridgeBase {
             - data.debtAmount 
         ;
 
-       return totalInputValue.mul(1e18).div(costOfOneIc);
+       return _totalInputValue.mul(1e18).div(costOfOneIc);
     }
 
     /**
@@ -484,22 +484,22 @@ contract IndexBridgeContract is BridgeBase {
     *           flowSelector = 1 -> use ExchangeIssue contract to issue/redeem
     *           flowSelector = 3 -> use univ3 pool with a fee of 3000 to buy/sell
     *           flowSelector = 5 -> use univ3 pool with a fee of 500 buy/sell
-    * return oracleLimit - Sanity check on Oracle, lower bound on stETH/ETH when 
+    * return  oracleLimit - Sanity check on Oracle, lower bound on stETH/ETH when 
     * selling/redeeming icETH for ETH. Upper bound when buying/issuing icETH with ETH. 
     * return maxSlip - Used to specific maximal difference between the expected return based
     * on Oracle data and the received amount. maxSlip uses a decimal value of 4 e.g. to set the 
     * minimum discrepency to 1%, maxSlip should be 9900.
     *
     */
-    function decodeAuxdata(uint64 encoded) internal pure returns (
+    function _decodeAuxdata(uint64 _encoded) internal pure returns (
         uint64 flowSelector, 
         uint64 maxSlip, 
         uint64 oracleLimit
     ) {
 
-        maxSlip = encoded >> 48;
-        oracleLimit =  (encoded << 16) >> 48;
-        flowSelector = (encoded << 32) >> 32;
+        maxSlip = _encoded >> 48;
+        oracleLimit =  (_encoded << 16) >> 48;
+        flowSelector = (_encoded << 32) >> 32;
 
     }
 }
