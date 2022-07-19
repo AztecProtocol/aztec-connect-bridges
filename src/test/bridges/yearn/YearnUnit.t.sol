@@ -118,7 +118,7 @@ contract YearnBridgeUnitTest is Test {
         });
 
         // Deposit
-        (uint256 outputValueA,,) = bridge.convert(
+        (uint256 outputValueA, , ) = bridge.convert(
             depositInputAssetA,
             emptyAsset,
             depositOutputAssetA,
@@ -135,7 +135,7 @@ contract YearnBridgeUnitTest is Test {
         assertLt(daiBalanceMid, daiBalanceBefore, "DAI balance after is not less than before");
 
         // Withdraw
-        (uint256 outputValueA2,,) = bridge.convert(
+        (uint256 outputValueA2, , ) = bridge.convert(
             depositOutputAssetA,
             emptyAsset,
             depositInputAssetA,
@@ -174,7 +174,7 @@ contract YearnBridgeUnitTest is Test {
         });
 
         // Deposit
-        (uint256 outputValueA,,) = bridge.convert{value: _depositAmount}(
+        (uint256 outputValueA, , ) = bridge.convert{value: _depositAmount}(
             depositInputAssetA,
             emptyAsset,
             depositOutputAssetA,
@@ -191,7 +191,7 @@ contract YearnBridgeUnitTest is Test {
         assertLt(ethBalanceMid, ethBalanceBefore, "ETH balance after is not less than before");
 
         // Withdraw
-        (uint256 outputValueA2,,) = bridge.convert(
+        (uint256 outputValueA2, , ) = bridge.convert(
             depositOutputAssetA,
             emptyAsset,
             depositInputAssetA,

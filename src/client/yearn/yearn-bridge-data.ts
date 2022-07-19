@@ -3,13 +3,7 @@ import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
 import { createWeb3Provider } from "../aztec/provider";
 import { BigNumber, utils } from "ethers";
-import {
-  AuxDataConfig,
-  AztecAsset,
-  AztecAssetType,
-  BridgeDataFieldGetters,
-  SolidityType
-} from "../bridge-data";
+import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
 import {
   IYearnRegistry,
   IYearnRegistry__factory,
@@ -70,9 +64,9 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
 
     const inputAssetAIsUnderlying = allUnderlying.includes(inputAssetA.erc20Address);
     const outputAssetAIsVault = allVaults.includes(outputAssetA.erc20Address);
-    if(inputAssetAIsUnderlying && outputAssetAIsVault) {
+    if (inputAssetAIsUnderlying && outputAssetAIsVault) {
       return [0n]; // standard deposit
-    } else if(!inputAssetAIsUnderlying && !outputAssetAIsVault) {
+    } else if (!inputAssetAIsUnderlying && !outputAssetAIsVault) {
       return [1n]; // standard withdraw
     }
     throw "Invalid input and/or output asset";
@@ -143,7 +137,7 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
   ): Promise<number[]> {
     const yvTokenAddress = await this.yRegistry.latestVault(inputAssetA.erc20Address);
     const allVaults = await (await fetch("https://api.yearn.finance/v1/chains/1/vaults/all")).json();
-    const currentVault = allVaults.find((vault) => vault.address.toLowerCase() == yvTokenAddress.toLowerCase());
+    const currentVault = allVaults.find(vault => vault.address.toLowerCase() == yvTokenAddress.toLowerCase());
     if (!currentVault) {
       const grossAPR = currentVault.apy.gross_apr;
       return [grossAPR * 100, 0];

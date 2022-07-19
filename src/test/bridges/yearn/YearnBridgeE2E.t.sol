@@ -12,10 +12,8 @@ import {IYearnRegistry} from "../../../interfaces/yearn/IYearnRegistry.sol";
 import {YearnBridge} from "../../../bridges/yearn/YearnBridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
-contract YearnBridgeE2ETest is BridgeTestBase {    
+contract YearnBridgeE2ETest is BridgeTestBase {
     using SafeERC20 for IERC20;
-
-    event Transfer(address indexed from, address indexed to, uint256 value);
 
     struct Balances {
         uint256 underlyingBefore;
@@ -32,6 +30,8 @@ contract YearnBridgeE2ETest is BridgeTestBase {
 
     YearnBridge internal bridge;
     uint256 internal id;
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
 
     function setUp() public {
         bridge = new YearnBridge(address(ROLLUP_PROCESSOR));
@@ -131,24 +131,31 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         address underlyingToken = IYearnVault(_vault).token();
         _addSupportedIfNotAdded(underlyingToken);
         _addSupportedIfNotAdded(_vault);
-        
+
         deal(underlyingToken, address(ROLLUP_PROCESSOR), _depositAmount);
 
         AztecTypes.AztecAsset memory depositInputAssetA = getRealAztecAsset(underlyingToken);
         AztecTypes.AztecAsset memory depositOutputAssetA = getRealAztecAsset(address(_vault));
 
         uint256 inputAssetABefore = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
-        uint256 outputAssetABefore = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR)); 
+        uint256 outputAssetABefore = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
 
         // Computes the encoded data for the specific bridge interaction
-        uint256 bridgeCallData = encodeBridgeCallData(id, depositInputAssetA, emptyAsset, depositOutputAssetA, emptyAsset, 0);
-        vm.expectEmit(true, true, false, false); //Log 1 -> transfer _depositAmount from ROLLUP_PROCESSOR to bridge 
+        uint256 bridgeCallData = encodeBridgeCallData(
+            id,
+            depositInputAssetA,
+            emptyAsset,
+            depositOutputAssetA,
+            emptyAsset,
+            0
+        );
+        vm.expectEmit(true, true, false, false); //Log 1 -> transfer _depositAmount from ROLLUP_PROCESSOR to bridge
         emit Transfer(address(ROLLUP_PROCESSOR), address(bridge), _depositAmount);
-        vm.expectEmit(true, true, false, false); //Log 2 -> transfer _receiveAmount from 0 to bridge 
+        vm.expectEmit(true, true, false, false); //Log 2 -> transfer _receiveAmount from 0 to bridge
         emit Transfer(address(0), address(bridge), _depositAmount);
         vm.expectEmit(true, true, false, false); //Log 3 -> transfer _depositAmount from bridge to vault
         emit Transfer(address(bridge), address(_vault), _depositAmount);
-        vm.expectEmit(true, true, false, false); //Log 4 -> transfer _receiveAmount from bridge to rollup 
+        vm.expectEmit(true, true, false, false); //Log 4 -> transfer _receiveAmount from bridge to rollup
         emit Transfer(address(bridge), address(ROLLUP_PROCESSOR), _depositAmount);
         vm.expectEmit(true, true, false, false); //Log 5 -> Validate DefiBridge
         emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, _depositAmount, 0, true, "");
@@ -178,13 +185,14 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         uint256 inputAssetAAfter = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 outputAssetAAfter = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
         assertGt(inputAssetAAfter, inputAssetAMid, "erc20 bal don't match after withdrawal");
-        assertEq(outputAssetAAfter, outputAssetAMid - _redeemAmount, "no change in output asset balance after withdraw");
+        assertEq(
+            outputAssetAAfter,
+            outputAssetAMid - _redeemAmount,
+            "no change in output asset balance after withdraw"
+        );
     }
 
-    function _depositAndWithdrawETH(
-        uint256 _depositAmount,
-        uint256 _redeemAmount
-    ) internal {
+    function _depositAndWithdrawETH(uint256 _depositAmount, uint256 _redeemAmount) internal {
         IYearnRegistry _registry = bridge.YEARN_REGISTRY();
         IYearnVault _vault = IYearnVault(_registry.latestVault(address(bridge.WETH())));
         uint256 availableDepositLimit = _vault.availableDepositLimit();
@@ -198,9 +206,16 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         AztecTypes.AztecAsset memory depositOutputAssetA = getRealAztecAsset(address(_vault));
 
         uint256 inputAssetABefore = address(ROLLUP_PROCESSOR).balance;
-        uint256 outputAssetABefore = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR)); 
+        uint256 outputAssetABefore = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
 
-        uint256 bridgeCallData = encodeBridgeCallData(id, depositInputAssetA, emptyAsset, depositOutputAssetA, emptyAsset, 0);
+        uint256 bridgeCallData = encodeBridgeCallData(
+            id,
+            depositInputAssetA,
+            emptyAsset,
+            depositOutputAssetA,
+            emptyAsset,
+            0
+        );
         sendDefiRollup(bridgeCallData, _depositAmount);
 
         uint256 inputAssetAMid = address(ROLLUP_PROCESSOR).balance;
@@ -208,10 +223,16 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         assertEq(inputAssetAMid, inputAssetABefore - _depositAmount, "deposit eth - input asset balance too high");
         assertGt(outputAssetAMid, outputAssetABefore, "deposit eth - output asset balance too low");
 
-
         //Exit
         vm.assume(_redeemAmount > 1 && _redeemAmount <= outputAssetAMid);
-        uint256 outBridgeId = encodeBridgeCallData(id, depositOutputAssetA, emptyAsset, depositInputAssetA, emptyAsset, 1);
+        uint256 outBridgeId = encodeBridgeCallData(
+            id,
+            depositOutputAssetA,
+            emptyAsset,
+            depositInputAssetA,
+            emptyAsset,
+            1
+        );
         sendDefiRollup(outBridgeId, _redeemAmount);
         uint256 inputAssetAAfter = address(ROLLUP_PROCESSOR).balance;
         uint256 outputAssetAAfter = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));

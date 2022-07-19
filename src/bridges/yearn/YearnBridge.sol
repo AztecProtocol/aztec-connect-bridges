@@ -128,10 +128,10 @@ contract YearnBridge is BridgeBase {
      * @param _inputValue - Amount of shares to withdraw
      * @param _outputAssetA - Vault we want to deposit to
      */
-    function _zapETH(
-        uint256 _inputValue,
-        AztecTypes.AztecAsset memory _outputAssetA
-    ) private returns (uint256 outputValue) {
+    function _zapETH(uint256 _inputValue, AztecTypes.AztecAsset memory _outputAssetA)
+        private
+        returns (uint256 outputValue)
+    {
         IYearnVault yVault = IYearnVault(_outputAssetA.erc20Address);
         address underlyingToken = yVault.token();
         if (underlyingToken != WETH) {
