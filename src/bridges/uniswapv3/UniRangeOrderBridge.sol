@@ -163,8 +163,6 @@ contract UniRangeOrderBridge is IDefiBridge, ParentUniLPBridge {
     /**
      * @notice finalises an interaction if possible.
      * @dev performs safety checks, and then makes approval to the rollup processor, and changes to asyncOrders.
-     * @param _inputAssetA _inputAssetA, unused
-     * @param _inputAssetB _inputAssetB, unused
      * @param _outputAssetA _outputAssetA, asset that will be returned
      * @param _outputAssetB outputAsset B, asset that will be returned
      * @param _interactionNonce the nonce, used to determine amounts returned via deposits[itneractionNonce]
