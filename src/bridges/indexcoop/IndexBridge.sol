@@ -19,6 +19,7 @@ import {IWETH} from '../../interfaces/IWETH.sol';
 import {IExchangeIssue} from './interfaces/IExchangeIssue.sol';
 import {ISetToken} from './interfaces/ISetToken.sol';
 import {AggregatorV3Interface} from './interfaces/AggregatorV3Interface.sol';
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /** 
 * @title icETH Bridge
@@ -27,6 +28,7 @@ import {AggregatorV3Interface} from './interfaces/AggregatorV3Interface.sol';
 */
 contract IndexBridgeContract is BridgeBase {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     error UnsafeOraclePrice();
 
@@ -43,7 +45,15 @@ contract IndexBridgeContract is BridgeBase {
     address immutable UNIV3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
     address immutable UNIV3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984; 
 
-    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
+    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {
+
+        // Tokens can be pre approved since the bridge should not hold any tokens.
+        IERC20(ICETH).safeIncreaseAllowance(address(EXISSUE), type(uint256).max);
+        IERC20(ICETH).safeIncreaseAllowance(UNIV3_ROUTER, type(uint256).max);
+        IERC20(ICETH).safeIncreaseAllowance(ROLLUP_PROCESSOR, type(uint256).max);
+        IERC20(WETH).safeIncreaseAllowance(UNIV3_ROUTER, type(uint256).max);
+
+    }
 
     receive() external payable {}
 
@@ -182,7 +192,6 @@ contract IndexBridgeContract is BridgeBase {
                 IExchangeIssue.Exchange.Curve
             );
 
-            ISetToken(ICETH).approve(address(EXISSUE), _totalInputValue);
             // Redeem icETH for eth
             IExchangeIssue(EXISSUE).redeemExactSetForETH(
                 ISetToken(ICETH),
@@ -207,7 +216,6 @@ contract IndexBridgeContract is BridgeBase {
             // Using univ3 TWAP Oracle to get a lower bound on returned ETH.
             minAmountOut = _getAmountBasedOnTwap(_totalInputValue, ICETH, WETH, _uniFee, oracleLimit).mul(maxSlip).div(1e4);
             
-            IERC20(ICETH).approve(UNIV3_ROUTER, _totalInputValue);
             ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
                 tokenIn: ICETH,
                 tokenOut: WETH,
@@ -279,7 +287,6 @@ contract IndexBridgeContract is BridgeBase {
             outputValueA = ISetToken(ICETH).balanceOf(address(this));
             outputValueB = address(this).balance;
 
-            ISetToken(ICETH).approve(ROLLUP_PROCESSOR, outputValueA);
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueB}(_interactionNonce);
 
         } else if (_outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED){
@@ -294,7 +301,6 @@ contract IndexBridgeContract is BridgeBase {
             // Using univ3 TWAP Oracle to get a lower bound on returned ETH.
             minAmountOut = _getAmountBasedOnTwap(_totalInputValue, WETH, ICETH, uniFee, oracleLimit).mul(maxSlip).div(1e4);
             IWETH(WETH).deposit{value: _totalInputValue}();
-            IERC20(WETH).approve(UNIV3_ROUTER, _totalInputValue);
 
             ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
                 tokenIn: WETH,
@@ -308,7 +314,6 @@ contract IndexBridgeContract is BridgeBase {
             });
 
             outputValueA = ISwapRouter(UNIV3_ROUTER).exactInputSingle(params);
-            ISetToken(ICETH).approve(ROLLUP_PROCESSOR, outputValueA);
         } else revert ErrorLib.InvalidInput();
         
     }
