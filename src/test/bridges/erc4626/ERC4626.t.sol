@@ -51,7 +51,7 @@ contract ERC4626 is Test {
             address(0) // _rollupBeneficiary - not relevant in this context
         );
 
-        uint256 rollupMAPLEShares = vault.balanceOf(address(vaultbridge));
+        uint256 rollupMAPLEShares = VAULT.balanceOf(address(vaultbridge));
 
         assertEq(0, outputValueB);
         assertEq(rollupMAPLEShares, outputValueA);
