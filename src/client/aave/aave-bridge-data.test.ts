@@ -170,7 +170,7 @@ describe("aave lending bridge data", () => {
 
     const output = await aaveBridgeData.getAPR(ethAsset, emptyAsset, zkAsset, emptyAsset, 0n, depositAmount);
 
-    expect(output[0]).toBe(0.03);
+    expect(output[0]).toBe(3);
   });
 
   it("should return the expected yield when exiting", async () => {

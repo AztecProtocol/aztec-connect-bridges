@@ -145,9 +145,7 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
     // Not taking into account how the deposited funds will change the yield
     const reserveData = await this.lendingPoolContract.getReserveData(underlyingAsset.toString());
     const rate = reserveData.currentLiquidityRate.toBigInt();
-    const apr = Number(rate / 10n ** 25n) / 100;
-
-    return [apr];
+    return [Number(rate / 10n ** 25n)];
   }
 
   async getMarketSize(
