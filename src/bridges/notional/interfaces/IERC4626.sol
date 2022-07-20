@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 // SPDX-License-Identifier: MIT
+=======
+>>>>>>> 70661815 (add notional bridge)
 pragma solidity >=0.8.4;
 
 interface IERC4626 {
@@ -12,7 +15,42 @@ interface IERC4626 {
         uint256 shares
     );
 
+
+
+
     /**
+     * @dev Mints exactly shares Vault shares to receiver by depositing amount of underlying tokens.
+     *
+     * - MUST emit the Deposit event.
+     * - MAY support an additional flow in which the underlying tokens are owned by the Vault contract before the mint
+     *   execution, and are accounted for during mint.
+     * - MUST revert if all of shares cannot be minted (due to deposit limit being reached, slippage, the user not
+     *   approving enough underlying tokens to the Vault contract, etc).
+     *
+     * NOTE: most implementations will require pre-approval of the Vault with the Vault’s underlying asset token.
+     */
+    function mint(uint256 _shares, address _receiver) external returns (uint256 assets);
+
+        /**
+     * @dev Burns shares from owner and sends exactly assets of underlying tokens to receiver.
+     *
+     * - MUST emit the Withdraw event.
+     * - MAY support an additional flow in which the underlying tokens are owned by the Vault contract before the
+     *   withdraw execution, and are accounted for during withdraw.
+     * - MUST revert if all of assets cannot be withdrawn (due to withdrawal limit being reached, slippage, the owner
+     *   not having enough shares, etc).
+     *
+     * Note that some implementations will require pre-requesting to the Vault before a withdrawal may be performed.
+     * Those methods should be performed separately.
+     */
+    function withdraw(
+        uint256 _assets,
+        address _receiver,
+        address _owner
+    ) external returns (uint256 shares);
+
+    /**
+<<<<<<< HEAD
      * @dev Mints exactly shares Vault shares to receiver by depositing amount of underlying tokens.
      *
      * - MUST emit the Deposit event.
@@ -44,6 +82,8 @@ interface IERC4626 {
     ) external returns (uint256 shares);
 
     /**
+=======
+>>>>>>> 70661815 (add notional bridge)
      * @dev Burns exactly shares from owner and sends assets of underlying tokens to receiver.
      *
      * - MUST emit the Withdraw event.
@@ -61,7 +101,11 @@ interface IERC4626 {
         address _owner
     ) external returns (uint256 assets);
 
+<<<<<<< HEAD
     /**
+=======
+        /**
+>>>>>>> 70661815 (add notional bridge)
      * @dev Mints shares Vault shares to receiver by depositing exactly amount of underlying tokens.
      *
      * - MUST emit the Deposit event.
@@ -74,7 +118,12 @@ interface IERC4626 {
      */
     function deposit(uint256 _assets, address _receiver) external returns (uint256 shares);
 
+<<<<<<< HEAD
     /**
+=======
+
+        /**
+>>>>>>> 70661815 (add notional bridge)
      * @dev Returns the address of the underlying token used for the Vault for accounting, depositing, and withdrawing.
      *
      * - MUST be an ERC-20 token contract.
@@ -199,6 +248,10 @@ interface IERC4626 {
      * share price or some other type of condition, meaning the depositor will lose assets by depositing.
      */
     function previewWithdraw(uint256 _assets) external view returns (uint256 shares);
+<<<<<<< HEAD
+=======
+
+>>>>>>> 70661815 (add notional bridge)
 
     /**
      * @dev Returns the maximum amount of Vault shares that can be redeemed from the owner balance in the Vault,

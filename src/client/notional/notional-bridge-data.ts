@@ -1,5 +1,6 @@
 import { AssetValue, AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { createWeb3Provider } from "../aztec/provider";
 import { EthAddress } from "@aztec/barretenberg/address";
@@ -34,6 +35,18 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
   currencyId: Map<string, number>;
   addressSymbol: Map<string, string>;
   cToken: Set<string>;
+=======
+import Notional from "@notional-finance/sdk-v2";
+import { Provider } from "@ethersproject/providers";
+import { TypedBigNumber, BigNumberType } from "@notional-finance/sdk-v2"
+
+export class NotionalBridgeData implements BridgeDataFieldGetters {
+  notional: Notional
+  provider: Provider
+  currencyId: Map<string, number>
+  addressSymbol: Map<string, string>
+  cToken: Set<string>
+>>>>>>> 70661815 (add notional bridge)
   ETH = "0x0000000000000000000000000000000000000000";
   CETH = "0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5";
   DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
@@ -74,10 +87,18 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     this.cToken.add(this.CWBTC.toLowerCase());
   }
 
+<<<<<<< HEAD
   static async create(provider: Provider) {
     let notional_bridge_data = new NotionalBridgeData(provider);
     notional_bridge_data.notional = await Notional.load(1, provider);
 >>>>>>> 9c917c0b (rebase)
+=======
+  static async create(
+    provider: Provider,
+  ) {
+    let notional_bridge_data = new NotionalBridgeData(provider);
+    notional_bridge_data.notional = await Notional.load(1, provider);
+>>>>>>> 70661815 (add notional bridge)
   }
 
   async getAuxData(
@@ -86,6 +107,7 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
+<<<<<<< HEAD
 <<<<<<< HEAD
     const currencyId = await this.notionalBridgeContract.currencyIds(inputAssetA.erc20Address.toString());
     if (currencyId != 0) {
@@ -101,6 +123,14 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     }
     throw "Undefined Currency Id";
 >>>>>>> 9c917c0b (rebase)
+=======
+    const currencyId = this.currencyId.get(inputAssetA.erc20Address)
+    if (currencyId != undefined) {
+      const markets = this.notional.system.getMarkets(currencyId)
+      return [BigInt(markets[0].maturity)]
+    }
+    throw "Undefined Currency Id";
+>>>>>>> 70661815 (add notional bridge)
   }
 
   public auxDataConfig: AuxDataConfig[] = [
@@ -121,6 +151,7 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     inputValue: bigint,
   ): Promise<bigint[]> {
 <<<<<<< HEAD
+<<<<<<< HEAD
     if (auxData === 0n) {
       const wrappedFcash = IWrappedfCash__factory.connect(inputAssetA.erc20Address.toString(), this.provider);
       const underlyingToken = (await (wrappedFcash.getUnderlyingToken()))._underlyingToken;
@@ -136,21 +167,28 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     const fcashAmount = await this.notionalViewContract.getfCashAmountGivenCashAmount(currencyId,-cashAmount, 0, Date.now());
     return [fcashAmount.toBigInt()];
 =======
+=======
+>>>>>>> 70661815 (add notional bridge)
     const tokenCurrencyId = this.currencyId.get(outputAssetA.erc20Address);
     const currentTime = Math.floor(Date.now() / 1000);
     if (auxData === 0n) {
       //redeem
       if (tokenCurrencyId != undefined) {
         const market = this.notional.system.getMarkets(tokenCurrencyId)[0];
+<<<<<<< HEAD
         const cashAmount = market.getCashAmountGivenfCashAmount(
           TypedBigNumber.from(inputValue, BigNumberType.InternalUnderlying, market.underlyingSymbol),
           currentTime,
         ).netCashToMarket;
+=======
+        const cashAmount = market.getCashAmountGivenfCashAmount(TypedBigNumber.from(inputValue, BigNumberType.InternalUnderlying, market.underlyingSymbol),currentTime).netCashToMarket;
+>>>>>>> 70661815 (add notional bridge)
         if (this.cToken.has(outputAssetA.erc20Address)) {
           return [cashAmount.toAssetCash(false).toBigInt()];
         } else {
           return [cashAmount.toUnderlying(false).toBigInt()];
         }
+<<<<<<< HEAD
       } else {
         throw "unrecognized currency";
       }
@@ -179,6 +217,30 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
       }
     }
 >>>>>>> 9c917c0b (rebase)
+=======
+      }
+      else {
+        throw "unrecognized currency";
+      }
+    }
+    else {
+      if (tokenCurrencyId != undefined) {
+        const market = this.notional.system.getMarkets(tokenCurrencyId)[0];
+        if (this.cToken.has(inputAssetA.erc20Address)) {
+          const externalAsset = TypedBigNumber.from(inputValue.toString(), BigNumberType.ExternalAsset, market.assetSymbol);
+          const cashAmount = (market.getfCashAmountGivenCashAmount(externalAsset.toUnderlying(true), currentTime));
+          return [cashAmount.abs().toBigInt()];
+        } else {
+          const externalAsset = TypedBigNumber.from(inputValue.toString(), BigNumberType.ExternalUnderlying, market.underlyingSymbol);
+          const cashAmount = market.getfCashAmountGivenCashAmount(externalAsset.toInternalPrecision(), currentTime)
+          return [cashAmount.abs().toBigInt()];
+        }
+      }
+      else {
+        throw "unrecognized currency";
+      }
+    }
+>>>>>>> 70661815 (add notional bridge)
   }
 
   async getMarketSize(
@@ -188,6 +250,7 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     outputAssetB: AztecAsset,
     auxData: bigint,
   ): Promise<AssetValue[]> {
+<<<<<<< HEAD
 <<<<<<< HEAD
     let underlyingToken = inputAssetA.erc20Address.toString();
     if (auxData == 0n) {
@@ -223,5 +286,24 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     }
     throw "Undefined Currency Id";
 >>>>>>> 9c917c0b (rebase)
+=======
+    const currencyId = this.currencyId.get(inputAssetA.erc20Address)
+    let redeem = auxData === 0n
+    if (currencyId != undefined) {
+      const markets = this.notional.system.getMarkets(currencyId)
+      if (redeem) {
+        return [{
+          assetId: inputAssetA.id,
+          amount: BigInt(markets[0].totalfCashDisplayString)
+        }]
+      }
+      return [{
+        assetId: inputAssetA.id,
+        amount: BigInt(markets[0].totalCashUnderlyingDisplayString)
+      }]
+    }
+    throw "Undefined Currency Id";
+
+>>>>>>> 70661815 (add notional bridge)
   }
 }
