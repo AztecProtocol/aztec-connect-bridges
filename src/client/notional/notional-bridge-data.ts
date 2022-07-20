@@ -1,6 +1,7 @@
 import { AssetValue, AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { createWeb3Provider } from "../aztec/provider";
 import { EthAddress } from "@aztec/barretenberg/address";
@@ -36,6 +37,8 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
   addressSymbol: Map<string, string>;
   cToken: Set<string>;
 =======
+=======
+>>>>>>> 6be78da2 (add notional bridge)
 import Notional from "@notional-finance/sdk-v2";
 import { Provider } from "@ethersproject/providers";
 import { TypedBigNumber, BigNumberType } from "@notional-finance/sdk-v2"
@@ -46,7 +49,10 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
   currencyId: Map<string, number>
   addressSymbol: Map<string, string>
   cToken: Set<string>
+<<<<<<< HEAD
 >>>>>>> 70661815 (add notional bridge)
+=======
+>>>>>>> 6be78da2 (add notional bridge)
   ETH = "0x0000000000000000000000000000000000000000";
   CETH = "0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5";
   DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
@@ -88,17 +94,23 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   static async create(provider: Provider) {
     let notional_bridge_data = new NotionalBridgeData(provider);
     notional_bridge_data.notional = await Notional.load(1, provider);
 >>>>>>> 9c917c0b (rebase)
 =======
+=======
+>>>>>>> 6be78da2 (add notional bridge)
   static async create(
     provider: Provider,
   ) {
     let notional_bridge_data = new NotionalBridgeData(provider);
     notional_bridge_data.notional = await Notional.load(1, provider);
+<<<<<<< HEAD
 >>>>>>> 70661815 (add notional bridge)
+=======
+>>>>>>> 6be78da2 (add notional bridge)
   }
 
   async getAuxData(
@@ -107,6 +119,7 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
     const currencyId = await this.notionalBridgeContract.currencyIds(inputAssetA.erc20Address.toString());
@@ -124,13 +137,18 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     throw "Undefined Currency Id";
 >>>>>>> 9c917c0b (rebase)
 =======
+=======
+>>>>>>> 6be78da2 (add notional bridge)
     const currencyId = this.currencyId.get(inputAssetA.erc20Address)
     if (currencyId != undefined) {
       const markets = this.notional.system.getMarkets(currencyId)
       return [BigInt(markets[0].maturity)]
     }
     throw "Undefined Currency Id";
+<<<<<<< HEAD
 >>>>>>> 70661815 (add notional bridge)
+=======
+>>>>>>> 6be78da2 (add notional bridge)
   }
 
   public auxDataConfig: AuxDataConfig[] = [
@@ -152,6 +170,7 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
   ): Promise<bigint[]> {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     if (auxData === 0n) {
       const wrappedFcash = IWrappedfCash__factory.connect(inputAssetA.erc20Address.toString(), this.provider);
       const underlyingToken = (await (wrappedFcash.getUnderlyingToken()))._underlyingToken;
@@ -169,12 +188,15 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
 =======
 =======
 >>>>>>> 70661815 (add notional bridge)
+=======
+>>>>>>> 6be78da2 (add notional bridge)
     const tokenCurrencyId = this.currencyId.get(outputAssetA.erc20Address);
     const currentTime = Math.floor(Date.now() / 1000);
     if (auxData === 0n) {
       //redeem
       if (tokenCurrencyId != undefined) {
         const market = this.notional.system.getMarkets(tokenCurrencyId)[0];
+<<<<<<< HEAD
 <<<<<<< HEAD
         const cashAmount = market.getCashAmountGivenfCashAmount(
           TypedBigNumber.from(inputValue, BigNumberType.InternalUnderlying, market.underlyingSymbol),
@@ -183,11 +205,15 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
 =======
         const cashAmount = market.getCashAmountGivenfCashAmount(TypedBigNumber.from(inputValue, BigNumberType.InternalUnderlying, market.underlyingSymbol),currentTime).netCashToMarket;
 >>>>>>> 70661815 (add notional bridge)
+=======
+        const cashAmount = market.getCashAmountGivenfCashAmount(TypedBigNumber.from(inputValue, BigNumberType.InternalUnderlying, market.underlyingSymbol),currentTime).netCashToMarket;
+>>>>>>> 6be78da2 (add notional bridge)
         if (this.cToken.has(outputAssetA.erc20Address)) {
           return [cashAmount.toAssetCash(false).toBigInt()];
         } else {
           return [cashAmount.toUnderlying(false).toBigInt()];
         }
+<<<<<<< HEAD
 <<<<<<< HEAD
       } else {
         throw "unrecognized currency";
@@ -218,6 +244,8 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     }
 >>>>>>> 9c917c0b (rebase)
 =======
+=======
+>>>>>>> 6be78da2 (add notional bridge)
       }
       else {
         throw "unrecognized currency";
@@ -240,7 +268,10 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
         throw "unrecognized currency";
       }
     }
+<<<<<<< HEAD
 >>>>>>> 70661815 (add notional bridge)
+=======
+>>>>>>> 6be78da2 (add notional bridge)
   }
 
   async getMarketSize(
@@ -250,6 +281,7 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     outputAssetB: AztecAsset,
     auxData: bigint,
   ): Promise<AssetValue[]> {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
     let underlyingToken = inputAssetA.erc20Address.toString();
@@ -287,6 +319,8 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     throw "Undefined Currency Id";
 >>>>>>> 9c917c0b (rebase)
 =======
+=======
+>>>>>>> 6be78da2 (add notional bridge)
     const currencyId = this.currencyId.get(inputAssetA.erc20Address)
     let redeem = auxData === 0n
     if (currencyId != undefined) {
@@ -304,6 +338,9 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     }
     throw "Undefined Currency Id";
 
+<<<<<<< HEAD
 >>>>>>> 70661815 (add notional bridge)
+=======
+>>>>>>> 6be78da2 (add notional bridge)
   }
 }
