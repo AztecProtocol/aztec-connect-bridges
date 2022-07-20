@@ -28,8 +28,6 @@ To get started follow the steps bellow:
 2. Install dependencies and build the repo:
    ```
       cd aztec-connect-bridges
-      yarn
-      git submodule update --init
       yarn setup
    ```
 3. Copy and rename the following folders (e.g. rename example to uniswap):
