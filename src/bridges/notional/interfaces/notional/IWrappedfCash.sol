@@ -14,7 +14,6 @@ interface IWrappedfCash {
         // Zero signifies no maximum slippage
         uint32 maxImpliedRate;
     }
-
     function initialize(uint16 _currencyId, uint40 _maturity) external;
 
     /// @notice Mints wrapped fCash ERC20 tokens
