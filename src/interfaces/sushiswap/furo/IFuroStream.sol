@@ -3,6 +3,8 @@
 pragma solidity 0.8.10;
 
 interface IFuroStream {
+    function bentoBox() external view returns (address);
+
     function setBentoBoxApproval(
         address user,
         bool approved,
@@ -41,10 +43,7 @@ interface IFuroStream {
         bool fromBentoBox
     ) external payable returns (uint256 depositedShares);
 
-    function streamBalanceOf(uint256 streamId)
-        external
-        view
-        returns (uint256 senderBalance, uint256 recipientBalance);
+    function streamBalanceOf(uint256 streamId) external view returns (uint256 senderBalance, uint256 recipientBalance);
 
     function getStream(uint256 streamId) external view returns (Stream memory);
 
