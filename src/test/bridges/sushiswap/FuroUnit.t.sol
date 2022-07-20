@@ -26,10 +26,6 @@ interface IBento {
 }
 
 contract FuroUnitTest is Test {
-    IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-
-    AztecTypes.AztecAsset internal emptyAsset;
-
     // custom errors for Furo
     error NotSenderOrRecipient();
     error InvalidStartTime();
@@ -38,8 +34,12 @@ contract FuroUnitTest is Test {
     error NotSender();
     error Overflow();
 
+    AztecTypes.AztecAsset internal emptyAsset;
+
     address private rollupProcessor;
     FuroBridge private bridge;
+
+    IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
 
     function setUp() public {
         rollupProcessor = address(this);
@@ -96,7 +96,7 @@ contract FuroUnitTest is Test {
         uint256 _amount,
         uint256 _interactionNonce,
         uint256 _time
-    ) public returns (uint256) {
+    ) internal returns (uint256) {
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: address(DAI),
@@ -134,7 +134,7 @@ contract FuroUnitTest is Test {
         uint256 _amount,
         uint256 _vId,
         uint256 _interactionNonce
-    ) public returns (uint256) {
+    ) internal returns (uint256) {
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
             id: _vId,
             erc20Address: address(0),

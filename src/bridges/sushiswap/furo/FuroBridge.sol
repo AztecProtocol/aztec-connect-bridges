@@ -57,6 +57,7 @@ contract FuroBridge is BridgeBase {
     function preApprove(address _asset) public {
         address bentoBox = FURO.bentoBox();
         {
+            //solhint-disable-next-line
             (bool success, ) = bentoBox.call(
                 abi.encodeWithSignature(
                     "setMasterContractApproval(address,address,bool,uint8,bytes32,bytes32)",
