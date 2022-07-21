@@ -121,10 +121,10 @@ contract YearnBridge is BridgeBase {
     }
 
     /**
-     * @notice Wrap _inputValue ETH to wETH and deposit theses wETH to the latests yvETH vault.
-     * @dev we can deposit only to the latest yvETH vault.
-     * @param _inputValue - Amount of shares to withdraw
+     * @notice Wrap _inputValue ETH to wETH and deposit theses wETH to the provided yvETH vault.
+     * @param _inputValue - Amount of shares to deposit
      * @param _outputAssetA - Vault we want to deposit to
+     * @return outputValue - Amount of shares received after deposit
      */
     function _zapETH(uint256 _inputValue, AztecTypes.AztecAsset memory _outputAssetA)
         private
