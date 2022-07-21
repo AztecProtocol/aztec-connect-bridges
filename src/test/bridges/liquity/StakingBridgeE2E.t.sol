@@ -37,8 +37,8 @@ contract StakingBridgeE2ETest is BridgeTestBase {
         // Impersonate the multi-sig to add a new bridge
         vm.startPrank(MULTI_SIG);
 
-        // List the staking-bridge with a gasLimit of 350k
-        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 350000);
+        // List the staking-bridge with a gasLimit of 500k
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 500000);
 
         // List the assets with a gasLimit of 100k
         ROLLUP_PROCESSOR.setSupportedAsset(address(LQTY), 100000);
@@ -76,6 +76,11 @@ contract StakingBridgeE2ETest is BridgeTestBase {
             LQTY.balanceOf(stakingContract) - stakingBalanceBefore,
             _depositAmount,
             "Staking contract balance didn't rise enough"
+        );
+        assertEq(
+            bridge.balanceOf(address(ROLLUP_PROCESSOR)),
+            _depositAmount,
+            "Incorrect SB balance of rollup processor"
         );
 
         // 2nd WITHDRAWAL
