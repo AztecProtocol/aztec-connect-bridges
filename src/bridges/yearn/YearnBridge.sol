@@ -90,7 +90,7 @@ contract YearnBridge is BridgeBase {
         )
     {
         if (_inputValue == 0) {
-            revert ErrorLib.InvalidInputA();
+            revert ErrorLib.InvalidInputAmount();
         }
         if (_auxData == 0) {
             if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) {
