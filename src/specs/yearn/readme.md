@@ -8,7 +8,7 @@ This will accrue yield and will reflect it increasing the `pricePerShare` of the
 
 ## What protocol(s) does the bridge interact with ?
 
-The bridge interacts will only interact with Yearn Vaults.
+The bridge will only interact with Yearn Vaults.
 
 ## What is the flow of the bridge?
 
