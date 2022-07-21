@@ -19,7 +19,6 @@ contract TestUtil is Test {
 
     mapping(bytes32 => Token) internal tokens;
 
-    AztecTypes.AztecAsset internal emptyAsset;
     address internal rollupProcessor;
 
     // @dev This method exists on RollupProcessor.sol. It's defined here in order to be able to receive ETH like a real
