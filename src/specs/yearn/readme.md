@@ -4,7 +4,7 @@
 
 The bridge deposits an ERC20 token into the corresponding Yearn Vault, and receives another ERC20 called yvToken that represents its deposit in the vault.
 The tokens deposited into the vault are going to be invested using different strategies, with different capital allocations based on risk and profitability.
-This will accrue yield and will reflect it increasing the `pricePerShare` of the yvToken.
+This will accrue yield and be reflected by an increase in the `pricePerShare` of the yvToken.
 
 ## What protocol(s) does the bridge interact with ?
 
