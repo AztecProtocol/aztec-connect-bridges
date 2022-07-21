@@ -152,7 +152,7 @@ contract YearnBridge is BridgeBase {
      * @notice Withdraw _inputValue from a yvETH vault, unwrap the wETH received to ETH and reclaim them.
      * @dev we can withdraw from any yvETH vault, not only the latest one.
      * @param _inputValue - Amount of shares to withdraw
-     * @param _interactionNonce - Azteck nonce of the interaction
+     * @param _interactionNonce - Aztec nonce of the interaction
      */
     function _unzapETH(
         uint256 _inputValue,
