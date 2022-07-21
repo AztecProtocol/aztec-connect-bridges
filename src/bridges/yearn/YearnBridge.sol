@@ -132,12 +132,15 @@ contract YearnBridge is BridgeBase {
         private
         returns (uint256 outputValue)
     {
+        if (msg.value == 0) {
+            revert ErrorLib.InvalidInputAmount();
+        }
+
         IYearnVault yVault = IYearnVault(_outputAssetA.erc20Address);
         address underlyingToken = yVault.token();
         if (underlyingToken != WETH) {
             revert ErrorLib.InvalidOutputA();
         }
-
         IWETH(WETH).deposit{value: _inputValue}();
         IERC20(WETH).balanceOf(address(this));
 
