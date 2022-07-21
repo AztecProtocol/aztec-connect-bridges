@@ -61,11 +61,13 @@ contract YearnBridge is BridgeBase {
     }
 
     /**
-     * @notice A function which returns an _inputValue amount of _inputAssetA
+     * @notice A function which will allow the user to deposit/withdraw a given amount of a given token to a given vault.
      * @param _inputAssetA - Arbitrary ERC20 token
      * @param _outputAssetA - Equal to _inputAssetA
+     * @param _inputValue - Amount to deposit or withdraw
+     * @param _interactionNonce - Unique identifier for this DeFi interaction
+     * @param _auxData - Special value to indicate a deposit (0) or a withdraw (1)
      * @return outputValueA - the amount of output asset to return
-     * @dev In this case _outputAssetA equals _inputAssetA
      */
     function convert(
         AztecTypes.AztecAsset memory _inputAssetA,
