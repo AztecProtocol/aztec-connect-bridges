@@ -16,7 +16,7 @@ Users will use the bridge in two cases: deposit and withdraw.
 
 ### Deposit
 
-When the bridge receives a deposit request, we use Yearn Lens Registry contract ([here](https://etherscan.io/address/0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804#readContract)) to get the most recent Vault for the token to be deposited.
+When the bridge proceed to deposit the input token to the output vault.
 
 If the bridge receives `ETH` as the input token it will first wrap into `WETH` and then follow the same flow as any other ERC20.
 
