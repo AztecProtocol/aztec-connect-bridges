@@ -16,8 +16,6 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
  * @title Aztec Connect Bridge for depositing on Yearn
  * @author Majorfi
  * @notice You can use this contract to deposit tokens on compatible Yearn Vaults
- * @dev This bridge demonstrates the flow of assets in the convert function. This bridge simply returns what has been
- *      sent to it.
  */
 contract YearnBridge is BridgeBase {
     using SafeERC20 for IERC20;
