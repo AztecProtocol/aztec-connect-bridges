@@ -221,7 +221,7 @@ The `_auxData` field can be used to provide data to the bridge contract, such as
 #### Bridge Contract Interface
 
 ```solidity
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
