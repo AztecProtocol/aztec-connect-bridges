@@ -139,8 +139,7 @@ contract YearnBridge is BridgeBase {
         IWETH(WETH).deposit{value: _inputValue}();
         IERC20(WETH).balanceOf(address(this));
 
-        yVault.deposit(_inputValue);
-        outputValue = IERC20(address(yVault)).balanceOf(address(this));
+        outputValue = yVault.deposit(_inputValue);
     }
 
     /**
