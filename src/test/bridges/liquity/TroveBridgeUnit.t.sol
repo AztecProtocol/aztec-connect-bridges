@@ -5,11 +5,13 @@ pragma solidity >=0.8.4;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
-import {TroveBridge} from "../../../bridges/liquity/TroveBridge.sol";
 
+import {TroveBridge} from "../../../bridges/liquity/TroveBridge.sol";
 import {TroveBridgeTestBase} from "./TroveBridgeTestBase.sol";
 
 contract TroveBridgeUnitTest is TroveBridgeTestBase {
+    AztecTypes.AztecAsset internal emptyAsset;
+
     function setUp() public {
         rollupProcessor = address(this);
 

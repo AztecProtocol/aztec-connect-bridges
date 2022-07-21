@@ -13,6 +13,7 @@ contract StabilityPoolBridgeUnitTest is TestUtil {
     address public constant USDC_ETH_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640; // 500 bps fee tier
     address public constant LUSD_USDC_POOL = 0x4e0924d3a751bE199C426d52fb1f2337fa96f736; // 500 bps fee tier
 
+    AztecTypes.AztecAsset internal emptyAsset;
     StabilityPoolBridge private bridge;
 
     function setUp() public {
