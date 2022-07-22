@@ -53,7 +53,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         AztecTypes.AztecAsset memory tbAsset = getRealAztecAsset(address(bridge));
         AztecTypes.AztecAsset memory lusdAsset = getRealAztecAsset(tokens["LUSD"].addr);
 
-        // 1st BORROW
+        // BORROW
         // Mint the collateral amount of ETH to rollupProcessor
         vm.deal(address(ROLLUP_PROCESSOR), collateral);
 
@@ -87,7 +87,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
             "Borrowed amount doesn't equal expected borrow amount"
         );
 
-        // 2nd REPAY
+        // REPAY
         // Mint the amount to repay to rollup processor - sufficient amount is not there since borrowing because there
         // we need to pay for the borrowing fee
         deal(lusdAsset.erc20Address, address(ROLLUP_PROCESSOR), tbBalanceAfterBorrowing + bridge.DUST());

@@ -32,8 +32,8 @@ contract TroveBridgeTestBase is TestUtil {
 
     address internal constant OWNER = address(24);
 
-    uint256 internal constant OWNER_WEI_BALANCE = 50 ether;
-    uint256 internal constant ROLLUP_PROCESSOR_WEI_BALANCE = 1 ether;
+    uint256 internal constant OWNER_ETH_BALANCE = 50 ether;
+    uint256 internal constant ROLLUP_PROCESSOR_ETH_BALANCE = 1 ether;
 
     uint64 internal constant MAX_FEE = 5e16; // Slippage protection: 5%
     uint256 public constant MCR = 1100000000000000000; // 110%
@@ -69,13 +69,13 @@ contract TroveBridgeTestBase is TestUtil {
 
     function _openTrove() internal {
         // Set owner's balance
-        vm.deal(OWNER, OWNER_WEI_BALANCE);
+        vm.deal(OWNER, OWNER_ETH_BALANCE);
 
         // Set msg.sender to OWNER
         vm.startPrank(OWNER);
 
-        uint256 amtToBorrow = bridge.computeAmtToBorrow(OWNER_WEI_BALANCE);
-        uint256 nicr = (OWNER_WEI_BALANCE * NICR_PRECISION) / amtToBorrow;
+        uint256 amtToBorrow = bridge.computeAmtToBorrow(OWNER_ETH_BALANCE);
+        uint256 nicr = (OWNER_ETH_BALANCE * NICR_PRECISION) / amtToBorrow;
 
         // The following is Solidity implementation of https://github.com/liquity/dev#opening-a-trove
         uint256 numTrials = 15;
@@ -84,7 +84,7 @@ contract TroveBridgeTestBase is TestUtil {
         (address upperHint, address lowerHint) = SORTED_TROVES.findInsertPosition(nicr, approxHint, approxHint);
 
         // Open the trove
-        bridge.openTrove{value: OWNER_WEI_BALANCE}(upperHint, lowerHint, MAX_FEE);
+        bridge.openTrove{value: OWNER_ETH_BALANCE}(upperHint, lowerHint, MAX_FEE);
 
         uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
         uint256 icr = TROVE_MANAGER.getCurrentICR(address(bridge), price);
@@ -94,7 +94,7 @@ contract TroveBridgeTestBase is TestUtil {
             address(bridge)
         );
         assertEq(bridge.totalSupply(), debtAfterBorrowing, "TB total supply doesn't equal totalDebt");
-        assertEq(collAfterBorrowing, OWNER_WEI_BALANCE, "Trove's collateral doesn't equal deposit amount");
+        assertEq(collAfterBorrowing, OWNER_ETH_BALANCE, "Trove's collateral doesn't equal deposit amount");
 
         uint256 lusdBalance = tokens["LUSD"].erc.balanceOf(OWNER);
         assertApproxEqAbs(lusdBalance, amtToBorrow, 1, "Borrowed amount differs from received by more than 1 wei");
@@ -129,7 +129,7 @@ contract TroveBridgeTestBase is TestUtil {
 
         assertApproxEqAbs(
             OWNER.balance,
-            OWNER_WEI_BALANCE,
+            OWNER_ETH_BALANCE,
             1,
             "Current owner balance differs from the initial balance by more than 1 wei"
         );

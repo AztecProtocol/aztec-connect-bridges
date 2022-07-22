@@ -29,14 +29,14 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
 
     function testInvalidTroveStatus() public {
         // Attempt borrowing when trove was not opened - state 0
-        vm.deal(rollupProcessor, ROLLUP_PROCESSOR_WEI_BALANCE);
+        vm.deal(rollupProcessor, ROLLUP_PROCESSOR_ETH_BALANCE);
         vm.expectRevert(abi.encodeWithSignature("InvalidStatus(uint8,uint8,uint8)", 1, 1, 0));
         bridge.convert(
             AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH),
             emptyAsset,
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
-            ROLLUP_PROCESSOR_WEI_BALANCE,
+            ROLLUP_PROCESSOR_ETH_BALANCE,
             0,
             MAX_FEE,
             address(0)
@@ -63,8 +63,8 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         // in parallel in different EVM instances. For this reason these parts of tests can't be evaluated individually
         // unless ran repeatedly.
         _openTrove();
-        _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
-        _repay(ROLLUP_PROCESSOR_WEI_BALANCE, 1, false, 1);
+        _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
+        _repay(ROLLUP_PROCESSOR_ETH_BALANCE, 1, false, 1);
         _closeTrove();
 
         // Try reopening the trove
@@ -74,7 +74,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
 
     function testLiquidationFlow() public {
         _openTrove();
-        _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
+        _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
 
         // Drop price and liquidate the trove
         setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
@@ -104,7 +104,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         bridge = new TroveBridge(rollupProcessor, totalCollateralRatio / 1e16);
 
         _openTrove();
-        _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
+        _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
 
         uint256 targetPrice = (currentPrice * targetCollateralRatio) / totalCollateralRatio;
         setLiquityPrice(targetPrice);
@@ -139,7 +139,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         bridge = new TroveBridge(rollupProcessor, 110);
 
         _openTrove();
-        _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
+        _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
 
         address lowestIcrTrove = SORTED_TROVES.getLast();
         assertEq(lowestIcrTrove, address(bridge), "Bridge's trove is not the first one to redeem.");
@@ -300,9 +300,9 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         _setUpRedistribution();
 
         // Setting maxEthDelta to 0.05 ETH because there is some loss during swap
-        _repay(ROLLUP_PROCESSOR_WEI_BALANCE * 3, 5e16, true, 1);
+        _repay(ROLLUP_PROCESSOR_ETH_BALANCE * 3, 5e16, true, 1);
 
-        _closeTroveAfterRedistribution(OWNER_WEI_BALANCE);
+        _closeTroveAfterRedistribution(OWNER_ETH_BALANCE);
 
         // Try reopening the trove
         deal(tokens["LUSD"].addr, OWNER, 0); // delete user's LUSD balance to make accounting easier in _openTrove(...)
@@ -314,7 +314,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         bridge = new TroveBridge(rollupProcessor, 500);
 
         _openTrove();
-        _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
+        _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
 
         // Erase stability pool's LUSD balance
         deal(tokens["LUSD"].addr, STABILITY_POOL, 0);
@@ -457,7 +457,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         bridge = new TroveBridge(rollupProcessor, 500);
 
         _openTrove();
-        _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
+        _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
 
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
@@ -559,7 +559,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
     }
 
     function _borrowAfterRedistribution() private {
-        uint256 depositAmount = ROLLUP_PROCESSOR_WEI_BALANCE * 2;
+        uint256 depositAmount = ROLLUP_PROCESSOR_ETH_BALANCE * 2;
         vm.deal(rollupProcessor, depositAmount);
 
         uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
@@ -579,7 +579,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
             AztecTypes.AztecAssetType.ERC20
         );
 
-        // Borrow against ROLLUP_PROCESSOR_WEI_BALANCE
+        // Borrow against ROLLUP_PROCESSOR_ETH_BALANCE
         (uint256 outputValueA, uint256 outputValueB, ) = bridge.convert{value: depositAmount}(
             inputAssetA,
             emptyAsset,
