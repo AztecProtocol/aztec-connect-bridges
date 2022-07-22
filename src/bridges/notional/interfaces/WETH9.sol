@@ -45,6 +45,10 @@ interface WETH9 {
 =======
     function withdraw(uint256 _wad) external;
 
+<<<<<<< HEAD
     function transfer(address _dst, uint _wad) external returns (bool);
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+    function transfer(address _dst, uint256 _wad) external returns (bool);
+>>>>>>> 2bdb4a12 (run prettier)
 }
