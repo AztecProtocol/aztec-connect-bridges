@@ -221,6 +221,9 @@ contract NotionalBridgeContract is BridgeBase {
             }
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 2bdb4a12 (run prettier)
             outputValueA = _enter(
                 _inputAssetA.erc20Address,
                 _outputAssetA.erc20Address,
@@ -228,6 +231,7 @@ contract NotionalBridgeContract is BridgeBase {
                 _inputValue,
                 maturity
             );
+<<<<<<< HEAD
         } else {
             outputValueA = _exit(_inputAssetA.erc20Address, _outputAssetA.erc20Address, _inputValue);
         }
@@ -250,6 +254,8 @@ contract NotionalBridgeContract is BridgeBase {
 >>>>>>> 37be3094 (add notional)
 =======
             outputValueA = _enter(_inputAssetA.erc20Address, _outputAssetA.erc20Address, currencyId, _inputValue, maturity);
+=======
+>>>>>>> 2bdb4a12 (run prettier)
         } else {
             outputValueA = _exit(_inputAssetA.erc20Address, _outputAssetA.erc20Address, _inputValue);
         }
@@ -475,7 +481,7 @@ contract NotionalBridgeContract is BridgeBase {
 >>>>>>> 6be78da2 (add notional bridge)
     function _enter(
         address _inputToken,
-        address _outputToken, 
+        address _outputToken,
         uint16 _currencyId,
         uint256 _amount,
         uint40 _maturity
@@ -534,6 +540,7 @@ contract NotionalBridgeContract is BridgeBase {
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> ec73562e (add notional)
     function _exit(address inputToken, uint256 amount) internal returns (address, uint256) {
         (IERC20 underlyingToken, ) = IWrappedfCash(inputToken).getUnderlyingToken();
@@ -548,11 +555,13 @@ contract NotionalBridgeContract is BridgeBase {
 =======
 >>>>>>> 6be78da2 (add notional bridge)
 
+=======
+>>>>>>> 2bdb4a12 (run prettier)
     /**
-     * @notice validate the input asset and output asset 
+     * @notice validate the input asset and output asset
      * @dev For entering the market, we make sure the user passes in the supported input asset list
      * For exiting the market, we make sure the user passes in the supported output asset list
-     * @param _maturity The maturity of the market we want to enter. It also indicates 
+     * @param _maturity The maturity of the market we want to enter. It also indicates
      * whether this is for entering the market or exiting the market
      * @param _inputAsset The address of the input asset
      * @param _outputAsset The address of the output asset

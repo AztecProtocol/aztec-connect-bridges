@@ -82,6 +82,7 @@ contract NotionalTest is BridgeTestBase {
         uint256 redeemedBalance = address(ROLLUP_PROCESSOR).balance - prevBalance;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         if ((redeemedBalance * 10000) / _x < 9900) {
             revert("should take most of money back");
         }
@@ -97,6 +98,12 @@ contract NotionalTest is BridgeTestBase {
 >>>>>>> 70661815 (add notional bridge)
 =======
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+        if ((redeemedBalance * 10000) / _x < 9900) {
+            revert("should take most of money back");
+        }
+        if (ERC20(fcashToken).balanceOf(address(ROLLUP_PROCESSOR)) != 0) {
+>>>>>>> 2bdb4a12 (run prettier)
             revert("fcash should be burned");
         }
     }
@@ -119,6 +126,7 @@ contract NotionalTest is BridgeTestBase {
         uint256 redeemedBalance = address(ROLLUP_PROCESSOR).balance - prevBalance;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         if ((redeemedBalance * 10000) / _x < 9900) {
             revert("should take most of money back");
         }
@@ -134,6 +142,12 @@ contract NotionalTest is BridgeTestBase {
 >>>>>>> 70661815 (add notional bridge)
 =======
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+        if ((redeemedBalance * 10000) / _x < 9900) {
+            revert("should take most of money back");
+        }
+        if (ERC20(fcashToken).balanceOf(address(ROLLUP_PROCESSOR)) != 0) {
+>>>>>>> 2bdb4a12 (run prettier)
             revert("fcash should be burned");
         }
     }
@@ -172,6 +186,7 @@ contract NotionalTest is BridgeTestBase {
         }
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         if ((secondWithdrawETH * 10000) / _x < 9900) {
 =======
         if(secondWithdrawETH * 10000 / _x < 9900) {
@@ -179,6 +194,9 @@ contract NotionalTest is BridgeTestBase {
 =======
         if(secondWithdrawETH * 10000 / _x < 9900) {
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+        if ((secondWithdrawETH * 10000) / _x < 9900) {
+>>>>>>> 2bdb4a12 (run prettier)
             revert("should take most of money back");
         }
     }
@@ -200,6 +218,7 @@ contract NotionalTest is BridgeTestBase {
         uint256 redeemedBalance = address(ROLLUP_PROCESSOR).balance - prevBalance;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         if ((redeemedBalance * 10000) / _x < 9900) {
             revert("should take most of money back");
         }
@@ -215,6 +234,12 @@ contract NotionalTest is BridgeTestBase {
 >>>>>>> 70661815 (add notional bridge)
 =======
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+        if ((redeemedBalance * 10000) / _x < 9900) {
+            revert("should take most of money back");
+        }
+        if (ERC20(fcashToken).balanceOf(address(ROLLUP_PROCESSOR)) != 0) {
+>>>>>>> 2bdb4a12 (run prettier)
             revert("fcash should be burned");
         }
     }
@@ -238,6 +263,7 @@ contract NotionalTest is BridgeTestBase {
         uint256 redeemedBalance = address(ROLLUP_PROCESSOR).balance - prevBalance;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         if ((redeemedBalance * 10000) / (_x / 2) < 9900) {
             revert("should take most of money back");
         }
@@ -253,6 +279,12 @@ contract NotionalTest is BridgeTestBase {
 >>>>>>> 70661815 (add notional bridge)
 =======
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+        if ((redeemedBalance * 10000) / (_x / 2) < 9900) {
+            revert("should take most of money back");
+        }
+        if (ERC20(fcashToken).balanceOf(address(ROLLUP_PROCESSOR)) < withdrawAmount / 2) {
+>>>>>>> 2bdb4a12 (run prettier)
             revert("should still have fcash");
         }
     }
@@ -273,6 +305,7 @@ contract NotionalTest is BridgeTestBase {
         _withdraw(withdrawAmount, ETH, CETH, info);
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         uint256 redeemedBalance = ERC20(CETH).balanceOf(address(ROLLUP_PROCESSOR)) - prevBalance;
         if ((redeemedBalance * 10000) / _x < 9900) {
             revert("should take most of money back");
@@ -290,6 +323,13 @@ contract NotionalTest is BridgeTestBase {
 >>>>>>> 70661815 (add notional bridge)
 =======
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+        uint256 redeemedBalance = ERC20(CETH).balanceOf(address(ROLLUP_PROCESSOR)) - prevBalance;
+        if ((redeemedBalance * 10000) / _x < 9900) {
+            revert("should take most of money back");
+        }
+        if (ERC20(fcashToken).balanceOf(address(ROLLUP_PROCESSOR)) != 0) {
+>>>>>>> 2bdb4a12 (run prettier)
             revert("fcash should be burned");
         }
     }
@@ -327,6 +367,7 @@ contract NotionalTest is BridgeTestBase {
         uint256 redeemedBalance = ERC20(CDAI).balanceOf(address(ROLLUP_PROCESSOR)) - prevBalance;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         if ((redeemedBalance * 10000) / _x < 9900) {
             revert("should take most of money back");
         }
@@ -342,6 +383,12 @@ contract NotionalTest is BridgeTestBase {
 >>>>>>> 70661815 (add notional bridge)
 =======
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+        if ((redeemedBalance * 10000) / _x < 9900) {
+            revert("should take most of money back");
+        }
+        if (ERC20(fcashToken).balanceOf(address(ROLLUP_PROCESSOR)) != 0) {
+>>>>>>> 2bdb4a12 (run prettier)
             revert("fcash should be burned");
         }
     }
@@ -365,6 +412,7 @@ contract NotionalTest is BridgeTestBase {
         uint256 redeemedBalance = ERC20(DAI).balanceOf(address(ROLLUP_PROCESSOR)) - prevBalance;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         if ((redeemedBalance * 10000) / _x < 9900) {
             revert("should take most of money back");
         }
@@ -380,6 +428,12 @@ contract NotionalTest is BridgeTestBase {
 >>>>>>> 70661815 (add notional bridge)
 =======
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+        if ((redeemedBalance * 10000) / _x < 9900) {
+            revert("should take most of money back");
+        }
+        if (ERC20(fcashToken).balanceOf(address(ROLLUP_PROCESSOR)) != 0) {
+>>>>>>> 2bdb4a12 (run prettier)
             revert("fcash should be burned");
         }
     }
@@ -417,6 +471,7 @@ contract NotionalTest is BridgeTestBase {
         uint256 redeemedBalance = ERC20(CUSDC).balanceOf(address(ROLLUP_PROCESSOR)) - prevBalance;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         if ((redeemedBalance * 10000) / _x < 9900) {
             revert("should take most of money back");
         }
@@ -432,6 +487,12 @@ contract NotionalTest is BridgeTestBase {
 >>>>>>> 70661815 (add notional bridge)
 =======
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+        if ((redeemedBalance * 10000) / _x < 9900) {
+            revert("should take most of money back");
+        }
+        if (ERC20(fcashToken).balanceOf(address(ROLLUP_PROCESSOR)) != 0) {
+>>>>>>> 2bdb4a12 (run prettier)
             revert("fcash should be burned");
         }
     }
@@ -455,6 +516,7 @@ contract NotionalTest is BridgeTestBase {
         uint256 redeemedBalance = ERC20(USDC).balanceOf(address(ROLLUP_PROCESSOR)) - prevBalance;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         if ((redeemedBalance * 10000) / _x < 9900) {
             revert("should take most of money back");
         }
@@ -470,6 +532,12 @@ contract NotionalTest is BridgeTestBase {
 >>>>>>> 70661815 (add notional bridge)
 =======
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+        if ((redeemedBalance * 10000) / _x < 9900) {
+            revert("should take most of money back");
+        }
+        if (ERC20(fcashToken).balanceOf(address(ROLLUP_PROCESSOR)) != 0) {
+>>>>>>> 2bdb4a12 (run prettier)
             revert("fcash should be burned");
         }
     }
@@ -507,6 +575,7 @@ contract NotionalTest is BridgeTestBase {
         uint256 redeemedBalance = ERC20(WBTC).balanceOf(address(ROLLUP_PROCESSOR)) - prevBalance;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         if ((redeemedBalance * 10000) / _x < 9900) {
             revert("should take most of money back");
         }
@@ -522,6 +591,12 @@ contract NotionalTest is BridgeTestBase {
 >>>>>>> 70661815 (add notional bridge)
 =======
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+        if ((redeemedBalance * 10000) / _x < 9900) {
+            revert("should take most of money back");
+        }
+        if (ERC20(fcashToken).balanceOf(address(ROLLUP_PROCESSOR)) != 0) {
+>>>>>>> 2bdb4a12 (run prettier)
             revert("fcash should be burned");
         }
     }

@@ -176,6 +176,7 @@ struct AssetRateParameters {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 }
 =======
 }
@@ -192,3 +193,6 @@ struct AssetRateParameters {
 =======
 }
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+}
+>>>>>>> 2bdb4a12 (run prettier)

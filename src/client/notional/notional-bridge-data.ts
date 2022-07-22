@@ -41,9 +41,10 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
 >>>>>>> 6be78da2 (add notional bridge)
 import Notional from "@notional-finance/sdk-v2";
 import { Provider } from "@ethersproject/providers";
-import { TypedBigNumber, BigNumberType } from "@notional-finance/sdk-v2"
+import { TypedBigNumber, BigNumberType } from "@notional-finance/sdk-v2";
 
 export class NotionalBridgeData implements BridgeDataFieldGetters {
+<<<<<<< HEAD
   notional: Notional
   provider: Provider
   currencyId: Map<string, number>
@@ -53,6 +54,13 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
 >>>>>>> 70661815 (add notional bridge)
 =======
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+  notional: Notional;
+  provider: Provider;
+  currencyId: Map<string, number>;
+  addressSymbol: Map<string, string>;
+  cToken: Set<string>;
+>>>>>>> 2bdb4a12 (run prettier)
   ETH = "0x0000000000000000000000000000000000000000";
   CETH = "0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5";
   DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
@@ -95,6 +103,7 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   static async create(provider: Provider) {
     let notional_bridge_data = new NotionalBridgeData(provider);
     notional_bridge_data.notional = await Notional.load(1, provider);
@@ -105,6 +114,9 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
   static async create(
     provider: Provider,
   ) {
+=======
+  static async create(provider: Provider) {
+>>>>>>> 2bdb4a12 (run prettier)
     let notional_bridge_data = new NotionalBridgeData(provider);
     notional_bridge_data.notional = await Notional.load(1, provider);
 <<<<<<< HEAD
@@ -119,6 +131,7 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -140,9 +153,12 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
 =======
 >>>>>>> 6be78da2 (add notional bridge)
     const currencyId = this.currencyId.get(inputAssetA.erc20Address)
+=======
+    const currencyId = this.currencyId.get(inputAssetA.erc20Address);
+>>>>>>> 2bdb4a12 (run prettier)
     if (currencyId != undefined) {
-      const markets = this.notional.system.getMarkets(currencyId)
-      return [BigInt(markets[0].maturity)]
+      const markets = this.notional.system.getMarkets(currencyId);
+      return [BigInt(markets[0].maturity)];
     }
     throw "Undefined Currency Id";
 <<<<<<< HEAD
@@ -198,21 +214,28 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
         const market = this.notional.system.getMarkets(tokenCurrencyId)[0];
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 2bdb4a12 (run prettier)
         const cashAmount = market.getCashAmountGivenfCashAmount(
           TypedBigNumber.from(inputValue, BigNumberType.InternalUnderlying, market.underlyingSymbol),
           currentTime,
         ).netCashToMarket;
+<<<<<<< HEAD
 =======
         const cashAmount = market.getCashAmountGivenfCashAmount(TypedBigNumber.from(inputValue, BigNumberType.InternalUnderlying, market.underlyingSymbol),currentTime).netCashToMarket;
 >>>>>>> 70661815 (add notional bridge)
 =======
         const cashAmount = market.getCashAmountGivenfCashAmount(TypedBigNumber.from(inputValue, BigNumberType.InternalUnderlying, market.underlyingSymbol),currentTime).netCashToMarket;
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+>>>>>>> 2bdb4a12 (run prettier)
         if (this.cToken.has(outputAssetA.erc20Address)) {
           return [cashAmount.toAssetCash(false).toBigInt()];
         } else {
           return [cashAmount.toUnderlying(false).toBigInt()];
         }
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
       } else {
@@ -248,23 +271,32 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
 >>>>>>> 6be78da2 (add notional bridge)
       }
       else {
+=======
+      } else {
+>>>>>>> 2bdb4a12 (run prettier)
         throw "unrecognized currency";
       }
-    }
-    else {
+    } else {
       if (tokenCurrencyId != undefined) {
         const market = this.notional.system.getMarkets(tokenCurrencyId)[0];
         if (this.cToken.has(inputAssetA.erc20Address)) {
-          const externalAsset = TypedBigNumber.from(inputValue.toString(), BigNumberType.ExternalAsset, market.assetSymbol);
-          const cashAmount = (market.getfCashAmountGivenCashAmount(externalAsset.toUnderlying(true), currentTime));
+          const externalAsset = TypedBigNumber.from(
+            inputValue.toString(),
+            BigNumberType.ExternalAsset,
+            market.assetSymbol,
+          );
+          const cashAmount = market.getfCashAmountGivenCashAmount(externalAsset.toUnderlying(true), currentTime);
           return [cashAmount.abs().toBigInt()];
         } else {
-          const externalAsset = TypedBigNumber.from(inputValue.toString(), BigNumberType.ExternalUnderlying, market.underlyingSymbol);
-          const cashAmount = market.getfCashAmountGivenCashAmount(externalAsset.toInternalPrecision(), currentTime)
+          const externalAsset = TypedBigNumber.from(
+            inputValue.toString(),
+            BigNumberType.ExternalUnderlying,
+            market.underlyingSymbol,
+          );
+          const cashAmount = market.getfCashAmountGivenCashAmount(externalAsset.toInternalPrecision(), currentTime);
           return [cashAmount.abs().toBigInt()];
         }
-      }
-      else {
+      } else {
         throw "unrecognized currency";
       }
     }
@@ -281,6 +313,7 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     outputAssetB: AztecAsset,
     auxData: bigint,
   ): Promise<AssetValue[]> {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -323,24 +356,35 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
 >>>>>>> 6be78da2 (add notional bridge)
     const currencyId = this.currencyId.get(inputAssetA.erc20Address)
     let redeem = auxData === 0n
+=======
+    const currencyId = this.currencyId.get(inputAssetA.erc20Address);
+    let redeem = auxData === 0n;
+>>>>>>> 2bdb4a12 (run prettier)
     if (currencyId != undefined) {
-      const markets = this.notional.system.getMarkets(currencyId)
+      const markets = this.notional.system.getMarkets(currencyId);
       if (redeem) {
-        return [{
-          assetId: inputAssetA.id,
-          amount: BigInt(markets[0].totalfCashDisplayString)
-        }]
+        return [
+          {
+            assetId: inputAssetA.id,
+            amount: BigInt(markets[0].totalfCashDisplayString),
+          },
+        ];
       }
-      return [{
-        assetId: inputAssetA.id,
-        amount: BigInt(markets[0].totalCashUnderlyingDisplayString)
-      }]
+      return [
+        {
+          assetId: inputAssetA.id,
+          amount: BigInt(markets[0].totalCashUnderlyingDisplayString),
+        },
+      ];
     }
     throw "Undefined Currency Id";
+<<<<<<< HEAD
 
 <<<<<<< HEAD
 >>>>>>> 70661815 (add notional bridge)
 =======
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+>>>>>>> 2bdb4a12 (run prettier)
   }
 }
