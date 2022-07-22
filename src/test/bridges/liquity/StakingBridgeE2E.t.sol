@@ -86,13 +86,10 @@ contract StakingBridgeE2ETest is BridgeTestBase {
 
         uint256 processorBalanceBefore = LQTY.balanceOf(address(ROLLUP_PROCESSOR));
 
-        vm.recordLogs();
-        sendDefiRollup(bridgeCallData, _depositAmount);
-        (uint256 totalInputValue, uint256 totalOutputValueA, uint256 totalOutputValueB) = getDefiBridgeProcessedData();
+        (uint256 outputValueA, uint256 outputValueB, ) = sendDefiRollup(bridgeCallData, _depositAmount);
 
-        assertEq(totalInputValue, _depositAmount, "Incorrect input value decoded");
-        assertGe(totalOutputValueA, _depositAmount, "Output value not bigger than deposit");
-        assertEq(totalOutputValueB, 0, "Output value B is not 0");
+        assertGe(outputValueA, _depositAmount, "Output value not bigger than deposit");
+        assertEq(outputValueB, 0, "Output value B is not 0");
 
         assertGe(
             LQTY.balanceOf(address(ROLLUP_PROCESSOR)) - processorBalanceBefore,
