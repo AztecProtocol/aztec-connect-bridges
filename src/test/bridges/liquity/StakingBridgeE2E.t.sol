@@ -55,7 +55,7 @@ contract StakingBridgeE2ETest is BridgeTestBase {
         AztecTypes.AztecAsset memory lqtyAsset = getRealAztecAsset(address(LQTY));
         AztecTypes.AztecAsset memory sbAsset = getRealAztecAsset(address(bridge));
 
-        // 1st DEPOSIT
+        // DEPOSIT
         // Mint the depositAmount of LQTY to rollupProcessor
         deal(address(LQTY), address(ROLLUP_PROCESSOR), _depositAmount);
 
@@ -80,7 +80,7 @@ contract StakingBridgeE2ETest is BridgeTestBase {
             "Incorrect SB balance of rollup processor"
         );
 
-        // 2nd WITHDRAWAL
+        // WITHDRAWAL
         // Compute withdrawal calldata
         bridgeCallData = encodeBridgeCallData(id, sbAsset, emptyAsset, lqtyAsset, emptyAsset, 0);
 

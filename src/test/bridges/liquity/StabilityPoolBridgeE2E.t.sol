@@ -55,7 +55,7 @@ contract StabilityPoolBridgeE2ETest is BridgeTestBase {
         AztecTypes.AztecAsset memory lusdAsset = getRealAztecAsset(address(LUSD));
         AztecTypes.AztecAsset memory spbAsset = getRealAztecAsset(address(bridge));
 
-        // 1st DEPOSIT
+        // DEPOSIT
         // Mint the depositAmount of LUSD to rollupProcessor
         deal(address(LUSD), address(ROLLUP_PROCESSOR), _depositAmount);
 
@@ -80,7 +80,7 @@ contract StabilityPoolBridgeE2ETest is BridgeTestBase {
             "Incorrect SPB balance of rollup processor"
         );
 
-        // 2nd WITHDRAWAL
+        // WITHDRAWAL
         // Compute withdrawal calldata
         bridgeCallData = encodeBridgeCallData(id, spbAsset, emptyAsset, lusdAsset, emptyAsset, 0);
 
