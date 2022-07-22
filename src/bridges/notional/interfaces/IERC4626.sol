@@ -11,9 +11,6 @@ interface IERC4626 {
         uint256 shares
     );
 
-
-
-
     /**
      * @dev Mints exactly shares Vault shares to receiver by depositing amount of underlying tokens.
      *
@@ -27,7 +24,7 @@ interface IERC4626 {
      */
     function mint(uint256 _shares, address _receiver) external returns (uint256 assets);
 
-        /**
+    /**
      * @dev Burns shares from owner and sends exactly assets of underlying tokens to receiver.
      *
      * - MUST emit the Withdraw event.
@@ -98,10 +95,14 @@ interface IERC4626 {
     ) external returns (uint256 assets);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     /**
 =======
         /**
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+    /**
+>>>>>>> 2bdb4a12 (run prettier)
      * @dev Mints shares Vault shares to receiver by depositing exactly amount of underlying tokens.
      *
      * - MUST emit the Deposit event.
@@ -115,11 +116,15 @@ interface IERC4626 {
     function deposit(uint256 _assets, address _receiver) external returns (uint256 shares);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     /**
 =======
 
         /**
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+    /**
+>>>>>>> 2bdb4a12 (run prettier)
      * @dev Returns the address of the underlying token used for the Vault for accounting, depositing, and withdrawing.
      *
      * - MUST be an ERC-20 token contract.
@@ -195,8 +200,11 @@ interface IERC4626 {
 <<<<<<< HEAD
 =======
 
+<<<<<<< HEAD
 >>>>>>> 6be78da2 (add notional bridge)
 
+=======
+>>>>>>> 2bdb4a12 (run prettier)
     /**
      * @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call.
      * - MUST return a limited value if receiver is subject to some mint limit.
@@ -251,8 +259,11 @@ interface IERC4626 {
 <<<<<<< HEAD
 =======
 
+<<<<<<< HEAD
 >>>>>>> 6be78da2 (add notional bridge)
 
+=======
+>>>>>>> 2bdb4a12 (run prettier)
     /**
      * @dev Returns the maximum amount of Vault shares that can be redeemed from the owner balance in the Vault,
      * through a redeem call.

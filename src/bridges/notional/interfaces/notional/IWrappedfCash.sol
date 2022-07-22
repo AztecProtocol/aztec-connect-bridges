@@ -3,10 +3,14 @@ pragma solidity >=0.8.4;
 
 import {TokenType} from "./Types.sol";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import {IERC4626} from "../IERC4626.sol";
 =======
 import {IERC4626} from  "../IERC4626.sol";
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+import {IERC4626} from "../IERC4626.sol";
+>>>>>>> 2bdb4a12 (run prettier)
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC777} from "@openzeppelin/contracts/token/ERC777/IERC777.sol";
 
@@ -18,6 +22,7 @@ interface IWrappedfCash {
         // Zero signifies no maximum slippage
         uint32 maxImpliedRate;
     }
+
     function initialize(uint16 _currencyId, uint40 _maturity) external;
 
     /// @notice Mints wrapped fCash ERC20 tokens
@@ -37,6 +42,9 @@ interface IWrappedfCash {
 
     function redeem(uint256 _amount, RedeemOpts memory _data) external;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 2bdb4a12 (run prettier)
 
     function redeemToAsset(
         uint256 _amount,
@@ -49,10 +57,13 @@ interface IWrappedfCash {
         address _receiver,
         uint32 _maxImpliedRate
     ) external;
+<<<<<<< HEAD
 =======
     function redeemToAsset(uint256 _amount, address _receiver, uint32 _maxImpliedRate) external;
     function redeemToUnderlying(uint256 _amount, address _receiver, uint32 _maxImpliedRate) external;
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+>>>>>>> 2bdb4a12 (run prettier)
 
     /// @notice Returns the underlying fCash ID of the token
     function getfCashId() external view returns (uint256);
