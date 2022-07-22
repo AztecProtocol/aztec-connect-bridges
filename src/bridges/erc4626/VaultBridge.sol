@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec.
 pragma solidity ^0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -32,7 +32,7 @@ contract VaultBridge is BridgeBase {
      * @param _inputAssetA - Vault asset (Staking) or Vault Address (Unstaking)
      * @param _outputAssetA - Vault Address (Staking) or Vault asset (UnStaking)
      * @param _totalInputValue - the amount of assets to stake or shares to unstake
-     * @return _outputValueA - the amount of shares (Staking) or assets (Unstaking) minted/transferred to the RollupProcessor.sol
+     * @return outputValueA - the amount of shares (Staking) or assets (Unstaking) minted/transferred to the RollupProcessor.sol
      *
      */
     function convert(
@@ -50,7 +50,7 @@ contract VaultBridge is BridgeBase {
         override(BridgeBase)
         onlyRollup
         returns (
-            uint256 _outputValueA,
+            uint256 outputValueA,
             uint256,
             bool
         )
@@ -58,9 +58,9 @@ contract VaultBridge is BridgeBase {
         // // ### INITIALIZATION AND SANITY CHECKS
 
         if (_isValidPair(_outputAssetA.erc20Address, _inputAssetA.erc20Address)) {
-            _outputValueA = _enter(_outputAssetA.erc20Address, _totalInputValue);
+            outputValueA = _enter(_outputAssetA.erc20Address, _totalInputValue);
         } else if (_isValidPair(_inputAssetA.erc20Address, _outputAssetA.erc20Address)) {
-            _outputValueA = _exit(_inputAssetA.erc20Address, _totalInputValue);
+            outputValueA = _exit(_inputAssetA.erc20Address, _totalInputValue);
         } else {
             revert ErrorLib.InvalidInput();
         }
