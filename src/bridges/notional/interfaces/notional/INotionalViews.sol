@@ -24,8 +24,4 @@ interface NotionalViews {
     function getCurrencyId(address _tokenAddress) external view returns (uint16 currencyId);
 
     function getActiveMarkets(uint16 _currencyId) external view returns (MarketParameters[] memory);
-
-    function getfCashAmountGivenCashAmount(uint16 _currencyId, int88 _netCashToAccount, uint256 _marketIndex, uint256 _blockTime) external view returns (int256);
-
-    function getCashAmountGivenfCashAmount(uint16 _currencyId,int88 _fCashAmount,uint256 _marketIndex,uint256 _blockTime) external view returns (int256, int256);
 }

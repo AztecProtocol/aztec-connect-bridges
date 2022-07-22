@@ -106,11 +106,14 @@ abstract contract BridgeTestBase is Test {
     address internal constant MULTI_SIG = 0xE298a76986336686CC3566469e3520d23D1a8aaD;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     bytes32 public constant BRIDGE_PROCESSED_EVENT_SIG =
         keccak256("DefiBridgeProcessed(uint256,uint256,uint256,uint256,uint256,bool,bytes)");
     bytes32 public constant ASYNC_BRIDGE_PROCESSED_EVENT_SIG =
         keccak256("AsyncDefiBridgeProcessed(uint256,uint256,uint256)");
 
+=======
+>>>>>>> 9c917c0b (rebase)
 =======
 >>>>>>> 9c917c0b (rebase)
     AztecTypes.AztecAsset internal emptyAsset;
@@ -256,6 +259,7 @@ abstract contract BridgeTestBase is Test {
     }
 
     /**
+<<<<<<< HEAD
      * @notice A function which iterates through logs, decodes relevant events and returns values which were originally
      *         returned from bridge's `convert(...)` function.
      * @dev You have to call `vm.recordLogs()` before calling this function
@@ -290,6 +294,8 @@ abstract contract BridgeTestBase is Test {
     }
 
     /**
+=======
+>>>>>>> 9c917c0b (rebase)
      * @notice Helper function that will overwrite the rollup state to let us mock the rollup proof
      * @dev Resets the rollupState to the initial state
      * @dev if first run, also resets the data size and start index of the rollup

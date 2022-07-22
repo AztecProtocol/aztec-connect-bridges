@@ -173,6 +173,7 @@ struct AssetRateParameters {
     int256 underlyingDecimals;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 }
 =======
 }
@@ -180,3 +181,6 @@ struct AssetRateParameters {
 =======
 }
 >>>>>>> 2bdb4a12 (run prettier)
+=======
+}
+>>>>>>> 9c917c0b (rebase)

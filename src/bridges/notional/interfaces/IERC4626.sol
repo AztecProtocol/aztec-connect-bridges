@@ -44,6 +44,7 @@ interface IERC4626 {
 
     /**
 <<<<<<< HEAD
+<<<<<<< HEAD
      * @dev Mints exactly shares Vault shares to receiver by depositing amount of underlying tokens.
      *
      * - MUST emit the Deposit event.
@@ -77,6 +78,8 @@ interface IERC4626 {
     /**
 =======
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+>>>>>>> 9c917c0b (rebase)
      * @dev Burns exactly shares from owner and sends assets of underlying tokens to receiver.
      *
      * - MUST emit the Withdraw event.
@@ -96,6 +99,7 @@ interface IERC4626 {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     /**
 =======
         /**
@@ -103,6 +107,9 @@ interface IERC4626 {
 =======
     /**
 >>>>>>> 2bdb4a12 (run prettier)
+=======
+    /**
+>>>>>>> 9c917c0b (rebase)
      * @dev Mints shares Vault shares to receiver by depositing exactly amount of underlying tokens.
      *
      * - MUST emit the Deposit event.
@@ -117,6 +124,7 @@ interface IERC4626 {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     /**
 =======
 
@@ -125,6 +133,9 @@ interface IERC4626 {
 =======
     /**
 >>>>>>> 2bdb4a12 (run prettier)
+=======
+    /**
+>>>>>>> 9c917c0b (rebase)
      * @dev Returns the address of the underlying token used for the Vault for accounting, depositing, and withdrawing.
      *
      * - MUST be an ERC-20 token contract.
@@ -198,6 +209,7 @@ interface IERC4626 {
      */
     function previewDeposit(uint256 _assets) external view returns (uint256 shares);
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 <<<<<<< HEAD
@@ -205,6 +217,9 @@ interface IERC4626 {
 
 =======
 >>>>>>> 2bdb4a12 (run prettier)
+=======
+
+>>>>>>> 9c917c0b (rebase)
     /**
      * @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call.
      * - MUST return a limited value if receiver is subject to some mint limit.
@@ -257,6 +272,7 @@ interface IERC4626 {
      */
     function previewWithdraw(uint256 _assets) external view returns (uint256 shares);
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 <<<<<<< HEAD
@@ -264,6 +280,9 @@ interface IERC4626 {
 
 =======
 >>>>>>> 2bdb4a12 (run prettier)
+=======
+
+>>>>>>> 9c917c0b (rebase)
     /**
      * @dev Returns the maximum amount of Vault shares that can be redeemed from the owner balance in the Vault,
      * through a redeem call.
