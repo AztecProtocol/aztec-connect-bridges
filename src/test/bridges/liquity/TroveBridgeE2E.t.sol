@@ -55,7 +55,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
 
         // 1st BORROW
         // Mint the collateral amount of ETH to rollupProcessor
-        vm.deal(address(bridge), collateral);
+        vm.deal(address(ROLLUP_PROCESSOR), collateral);
 
         // Compute borrow calldata
         uint256 bridgeCallData = encodeBridgeCallData(id, ethAsset, emptyAsset, tbAsset, lusdAsset, MAX_FEE);
@@ -86,5 +86,20 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
             bridge.computeAmtToBorrow(collateral),
             "Borrowed amount doesn't equal expected borrow amount"
         );
+
+        // 2nd REPAY
+        // Mint the amount to repay to rollup processor - sufficient amount is not there since borrowing because there
+        // we need to pay for the borrowing fee
+        deal(lusdAsset.erc20Address, address(ROLLUP_PROCESSOR), tbBalanceAfterBorrowing + bridge.DUST());
+
+        // Compute repay calldata
+        bridgeCallData = encodeBridgeCallData(id, tbAsset, lusdAsset, ethAsset, lusdAsset, MAX_FEE);
+
+        vm.recordLogs();
+        sendDefiRollup(bridgeCallData, tbBalanceAfterBorrowing);
+        (uint256 totalInputValue, uint256 totalOutputValueA, uint256 totalOutputValueB) = getDefiBridgeProcessedEvent();
+
+        assertApproxEqAbs(totalOutputValueA, collateral, 1, "output value differs from colalteral by more than 1 wei");
+        assertEq(totalOutputValueB, 0, "Non-zero LUSD amount returned");
     }
 }
