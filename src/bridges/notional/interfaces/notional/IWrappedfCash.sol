@@ -2,7 +2,7 @@
 pragma solidity >=0.8.4;
 
 import {TokenType} from "./Types.sol";
-import {IERC4626} from  "../IERC4626.sol";
+import {IERC4626} from "../IERC4626.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC777} from "@openzeppelin/contracts/token/ERC777/IERC777.sol";
 
@@ -14,6 +14,7 @@ interface IWrappedfCash {
         // Zero signifies no maximum slippage
         uint32 maxImpliedRate;
     }
+
     function initialize(uint16 _currencyId, uint40 _maturity) external;
 
     /// @notice Mints wrapped fCash ERC20 tokens
@@ -32,8 +33,18 @@ interface IWrappedfCash {
     ) external;
 
     function redeem(uint256 _amount, RedeemOpts memory _data) external;
-    function redeemToAsset(uint256 _amount, address _receiver, uint32 _maxImpliedRate) external;
-    function redeemToUnderlying(uint256 _amount, address _receiver, uint32 _maxImpliedRate) external;
+
+    function redeemToAsset(
+        uint256 _amount,
+        address _receiver,
+        uint32 _maxImpliedRate
+    ) external;
+
+    function redeemToUnderlying(
+        uint256 _amount,
+        address _receiver,
+        uint32 _maxImpliedRate
+    ) external;
 
     /// @notice Returns the underlying fCash ID of the token
     function getfCashId() external view returns (uint256);
@@ -61,8 +72,14 @@ interface IWrappedfCash {
 
     /// @notice Returns the asset token which the fCash settles to. This will be an interest
     /// bearing token like a cToken or aToken.
-    function getAssetToken() external view returns (IERC20 _assetToken, int256 _assetPrecision, TokenType _tokenType);
+    function getAssetToken()
+        external
+        view
+        returns (
+            IERC20 _assetToken,
+            int256 _assetPrecision,
+            TokenType _tokenType
+        );
 }
 
-
-interface IWrappedfCashComplete is IWrappedfCash, IERC777, IERC4626 {} 
+interface IWrappedfCashComplete is IWrappedfCash, IERC777, IERC4626 {}

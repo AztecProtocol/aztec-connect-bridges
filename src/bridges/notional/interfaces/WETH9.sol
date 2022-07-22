@@ -6,5 +6,5 @@ interface WETH9 {
 
     function withdraw(uint256 _wad) external;
 
-    function transfer(address _dst, uint _wad) external returns (bool);
+    function transfer(address _dst, uint256 _wad) external returns (bool);
 }

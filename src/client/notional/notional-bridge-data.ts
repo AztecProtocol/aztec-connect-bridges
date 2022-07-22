@@ -1,14 +1,14 @@
 import { AssetValue, AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
 import Notional from "@notional-finance/sdk-v2";
 import { Provider } from "@ethersproject/providers";
-import { TypedBigNumber, BigNumberType } from "@notional-finance/sdk-v2"
+import { TypedBigNumber, BigNumberType } from "@notional-finance/sdk-v2";
 
 export class NotionalBridgeData implements BridgeDataFieldGetters {
-  notional: Notional
-  provider: Provider
-  currencyId: Map<string, number>
-  addressSymbol: Map<string, string>
-  cToken: Set<string>
+  notional: Notional;
+  provider: Provider;
+  currencyId: Map<string, number>;
+  addressSymbol: Map<string, string>;
+  cToken: Set<string>;
   ETH = "0x0000000000000000000000000000000000000000";
   CETH = "0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5";
   DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
@@ -49,9 +49,7 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     this.cToken.add(this.CWBTC.toLowerCase());
   }
 
-  static async create(
-    provider: Provider,
-  ) {
+  static async create(provider: Provider) {
     let notional_bridge_data = new NotionalBridgeData(provider);
     notional_bridge_data.notional = await Notional.load(1, provider);
   }
@@ -62,10 +60,10 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
-    const currencyId = this.currencyId.get(inputAssetA.erc20Address)
+    const currencyId = this.currencyId.get(inputAssetA.erc20Address);
     if (currencyId != undefined) {
-      const markets = this.notional.system.getMarkets(currencyId)
-      return [BigInt(markets[0].maturity)]
+      const markets = this.notional.system.getMarkets(currencyId);
+      return [BigInt(markets[0].maturity)];
     }
     throw "Undefined Currency Id";
   }
@@ -93,31 +91,39 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
       //redeem
       if (tokenCurrencyId != undefined) {
         const market = this.notional.system.getMarkets(tokenCurrencyId)[0];
-        const cashAmount = market.getCashAmountGivenfCashAmount(TypedBigNumber.from(inputValue, BigNumberType.InternalUnderlying, market.underlyingSymbol),currentTime).netCashToMarket;
+        const cashAmount = market.getCashAmountGivenfCashAmount(
+          TypedBigNumber.from(inputValue, BigNumberType.InternalUnderlying, market.underlyingSymbol),
+          currentTime,
+        ).netCashToMarket;
         if (this.cToken.has(outputAssetA.erc20Address)) {
           return [cashAmount.toAssetCash(false).toBigInt()];
         } else {
           return [cashAmount.toUnderlying(false).toBigInt()];
         }
-      }
-      else {
+      } else {
         throw "unrecognized currency";
       }
-    }
-    else {
+    } else {
       if (tokenCurrencyId != undefined) {
         const market = this.notional.system.getMarkets(tokenCurrencyId)[0];
         if (this.cToken.has(inputAssetA.erc20Address)) {
-          const externalAsset = TypedBigNumber.from(inputValue.toString(), BigNumberType.ExternalAsset, market.assetSymbol);
-          const cashAmount = (market.getfCashAmountGivenCashAmount(externalAsset.toUnderlying(true), currentTime));
+          const externalAsset = TypedBigNumber.from(
+            inputValue.toString(),
+            BigNumberType.ExternalAsset,
+            market.assetSymbol,
+          );
+          const cashAmount = market.getfCashAmountGivenCashAmount(externalAsset.toUnderlying(true), currentTime);
           return [cashAmount.abs().toBigInt()];
         } else {
-          const externalAsset = TypedBigNumber.from(inputValue.toString(), BigNumberType.ExternalUnderlying, market.underlyingSymbol);
-          const cashAmount = market.getfCashAmountGivenCashAmount(externalAsset.toInternalPrecision(), currentTime)
+          const externalAsset = TypedBigNumber.from(
+            inputValue.toString(),
+            BigNumberType.ExternalUnderlying,
+            market.underlyingSymbol,
+          );
+          const cashAmount = market.getfCashAmountGivenCashAmount(externalAsset.toInternalPrecision(), currentTime);
           return [cashAmount.abs().toBigInt()];
         }
-      }
-      else {
+      } else {
         throw "unrecognized currency";
       }
     }
@@ -130,22 +136,25 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     outputAssetB: AztecAsset,
     auxData: bigint,
   ): Promise<AssetValue[]> {
-    const currencyId = this.currencyId.get(inputAssetA.erc20Address)
-    let redeem = auxData === 0n
+    const currencyId = this.currencyId.get(inputAssetA.erc20Address);
+    let redeem = auxData === 0n;
     if (currencyId != undefined) {
-      const markets = this.notional.system.getMarkets(currencyId)
+      const markets = this.notional.system.getMarkets(currencyId);
       if (redeem) {
-        return [{
-          assetId: inputAssetA.id,
-          amount: BigInt(markets[0].totalfCashDisplayString)
-        }]
+        return [
+          {
+            assetId: inputAssetA.id,
+            amount: BigInt(markets[0].totalfCashDisplayString),
+          },
+        ];
       }
-      return [{
-        assetId: inputAssetA.id,
-        amount: BigInt(markets[0].totalCashUnderlyingDisplayString)
-      }]
+      return [
+        {
+          assetId: inputAssetA.id,
+          amount: BigInt(markets[0].totalCashUnderlyingDisplayString),
+        },
+      ];
     }
     throw "Undefined Currency Id";
-
   }
 }

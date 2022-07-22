@@ -22,5 +22,6 @@ struct MarketParameters {
 
 interface NotionalViews {
     function getCurrencyId(address _tokenAddress) external view returns (uint16 currencyId);
+
     function getActiveMarkets(uint16 _currencyId) external view returns (MarketParameters[] memory);
 }

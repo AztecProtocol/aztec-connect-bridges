@@ -11,9 +11,6 @@ interface IERC4626 {
         uint256 shares
     );
 
-
-
-
     /**
      * @dev Mints exactly shares Vault shares to receiver by depositing amount of underlying tokens.
      *
@@ -27,7 +24,7 @@ interface IERC4626 {
      */
     function mint(uint256 _shares, address _receiver) external returns (uint256 assets);
 
-        /**
+    /**
      * @dev Burns shares from owner and sends exactly assets of underlying tokens to receiver.
      *
      * - MUST emit the Withdraw event.
@@ -63,7 +60,7 @@ interface IERC4626 {
         address _owner
     ) external returns (uint256 assets);
 
-        /**
+    /**
      * @dev Mints shares Vault shares to receiver by depositing exactly amount of underlying tokens.
      *
      * - MUST emit the Deposit event.
@@ -76,8 +73,7 @@ interface IERC4626 {
      */
     function deposit(uint256 _assets, address _receiver) external returns (uint256 shares);
 
-
-        /**
+    /**
      * @dev Returns the address of the underlying token used for the Vault for accounting, depositing, and withdrawing.
      *
      * - MUST be an ERC-20 token contract.
@@ -151,7 +147,6 @@ interface IERC4626 {
      */
     function previewDeposit(uint256 _assets) external view returns (uint256 shares);
 
-
     /**
      * @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call.
      * - MUST return a limited value if receiver is subject to some mint limit.
@@ -203,7 +198,6 @@ interface IERC4626 {
      * share price or some other type of condition, meaning the depositor will lose assets by depositing.
      */
     function previewWithdraw(uint256 _assets) external view returns (uint256 shares);
-
 
     /**
      * @dev Returns the maximum amount of Vault shares that can be redeemed from the owner balance in the Vault,
