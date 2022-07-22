@@ -50,7 +50,7 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
   }
 
   static async create(provider: Provider) {
-    let notional_bridge_data = new NotionalBridgeData(provider);
+    const notional_bridge_data = new NotionalBridgeData(provider);
     notional_bridge_data.notional = await Notional.load(1, provider);
   }
 
@@ -137,7 +137,7 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     auxData: bigint,
   ): Promise<AssetValue[]> {
     const currencyId = this.currencyId.get(inputAssetA.erc20Address);
-    let redeem = auxData === 0n;
+    const redeem = auxData === 0n;
     if (currencyId != undefined) {
       const markets = this.notional.system.getMarkets(currencyId);
       if (redeem) {
