@@ -13,7 +13,6 @@ contract StakingBridgeUnitTest is TestUtil {
     address public constant USDC_ETH_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640; // 500 bps fee tier
     address public constant LQTY_ETH_POOL = 0xD1D5A4c0eA98971894772Dcd6D2f1dc71083C44E; // 3000 bps fee tier
 
-    AztecTypes.AztecAsset internal emptyAsset;
     StakingBridge private bridge;
 
     function setUp() public {
