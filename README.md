@@ -28,6 +28,8 @@ To get started follow the steps bellow:
 2. Install dependencies and build the repo:
    ```
       cd aztec-connect-bridges
+      yarn
+      git submodule update --init
       yarn setup
    ```
 3. Copy and rename the following folders (e.g. rename example to uniswap):
@@ -225,7 +227,7 @@ The `_auxData` field can be used to provide data to the bridge contract, such as
 #### Bridge Contract Interface
 
 ```solidity
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
