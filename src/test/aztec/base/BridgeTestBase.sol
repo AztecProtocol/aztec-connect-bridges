@@ -239,14 +239,15 @@ abstract contract BridgeTestBase is Test {
     }
 
     /**
-     * @notice A function which iterates through logs and returns values from DefiBridgeProcessed event.
-     * @dev You have to call `vm.recordLogs()` and `sendDefiRollup(...)` before calling this function
+     * @notice A function which iterates through logs and returns decoded values from DefiBridgeProcessed event's data.
+     * @dev You have to call `vm.recordLogs()` and `sendDefiRollup(...)` before calling this function (see
+     *      src/test/bridges/liquity/TroveBridgeE2E.t.sol for example usage)
      * @dev If no DefiBridgeProcessed event is found or more than 1 is found function reverts
      * @return totalInputValue The input amount of _inputAssetA and _inputAssetB (if used)
      * @return totalOutputValueA The amount of outputAssetA returned from this interaction
      * @return totalOutputValueB The amount of outputAssetB returned from this interaction
      */
-    function getDefiBridgeProcessedEvent()
+    function getDefiBridgeProcessedData()
         public
         returns (
             uint256 totalInputValue,

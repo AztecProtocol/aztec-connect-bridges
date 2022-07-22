@@ -88,7 +88,7 @@ contract StakingBridgeE2ETest is BridgeTestBase {
 
         vm.recordLogs();
         sendDefiRollup(bridgeCallData, _depositAmount);
-        (uint256 totalInputValue, uint256 totalOutputValueA, uint256 totalOutputValueB) = getDefiBridgeProcessedEvent();
+        (uint256 totalInputValue, uint256 totalOutputValueA, uint256 totalOutputValueB) = getDefiBridgeProcessedData();
 
         assertEq(totalInputValue, _depositAmount, "Incorrect input value decoded");
         assertGe(totalOutputValueA, _depositAmount, "Output value not bigger than deposit");

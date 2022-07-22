@@ -97,7 +97,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
 
         vm.recordLogs();
         sendDefiRollup(bridgeCallData, tbBalanceAfterBorrowing);
-        (uint256 totalInputValue, uint256 totalOutputValueA, uint256 totalOutputValueB) = getDefiBridgeProcessedEvent();
+        (, uint256 totalOutputValueA, uint256 totalOutputValueB) = getDefiBridgeProcessedData();
 
         assertApproxEqAbs(totalOutputValueA, collateral, 1, "output value differs from colalteral by more than 1 wei");
         assertEq(totalOutputValueB, 0, "Non-zero LUSD amount returned");
