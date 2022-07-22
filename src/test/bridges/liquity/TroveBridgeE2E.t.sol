@@ -44,7 +44,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         _openTrove();
     }
 
-    // @dev In order to avoid overflows we set _depositAmount to be uint96 instead of uint256.
+    // @dev In order to avoid overflows we set _collateral to be uint96 instead of uint256.
     function testFullFlow(uint96 _collateral) public {
         uint256 collateral = bound(_collateral, 1e17, 1e21);
 
@@ -60,12 +60,13 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         // Compute borrow calldata
         uint256 bridgeCallData = encodeBridgeCallData(id, ethAsset, emptyAsset, tbAsset, lusdAsset, MAX_FEE);
 
-        uint256 processorLusdBalanceBefore = tokens["LUSD"].erc.balanceOf(address(ROLLUP_PROCESSOR));
         (uint256 debtBeforeBorrowing, uint256 collBeforeBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
             address(bridge)
         );
 
+        vm.recordLogs();
         sendDefiRollup(bridgeCallData, collateral);
+        (, uint256 totalOutputValueA, uint256 totalOutputValueB) = getDefiBridgeProcessedData();
 
         (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
             address(bridge)
@@ -81,8 +82,9 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
             tbBalanceAfterBorrowing,
             "Debt increase differs from processor's TB balance"
         );
+        assertEq(totalOutputValueA, tbBalanceAfterBorrowing, "Debt amount doesn't equal totalOutputValueA");
         assertEq(
-            tokens["LUSD"].erc.balanceOf(address(ROLLUP_PROCESSOR)) - processorLusdBalanceBefore,
+            totalOutputValueB,
             bridge.computeAmtToBorrow(collateral),
             "Borrowed amount doesn't equal expected borrow amount"
         );
@@ -97,7 +99,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
 
         vm.recordLogs();
         sendDefiRollup(bridgeCallData, tbBalanceAfterBorrowing);
-        (, uint256 totalOutputValueA, uint256 totalOutputValueB) = getDefiBridgeProcessedData();
+        (, totalOutputValueA, totalOutputValueB) = getDefiBridgeProcessedData();
 
         assertApproxEqAbs(totalOutputValueA, collateral, 1, "output value differs from colalteral by more than 1 wei");
         assertEq(totalOutputValueB, 0, "Non-zero LUSD amount returned");
