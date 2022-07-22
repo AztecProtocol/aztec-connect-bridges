@@ -107,6 +107,8 @@ abstract contract BridgeTestBase is Test {
 
     bytes32 public constant BRIDGE_PROCESSED_EVENT_SIG =
         keccak256("DefiBridgeProcessed(uint256,uint256,uint256,uint256,uint256,bool,bytes)");
+    bytes32 public constant ASYNC_BRIDGE_PROCESSED_EVENT_SIG =
+        keccak256("AsyncDefiBridgeProcessed(uint256,uint256,uint256)");
 
     AztecTypes.AztecAsset internal emptyAsset;
 
@@ -223,55 +225,65 @@ abstract contract BridgeTestBase is Test {
     }
 
     /**
-     * @notice Helper function for processing a rollup with a specific bridge and `_inputValue`
-     * @dev will impersonate the rollup processor and update rollup state
+     * @notice Helper function for processing a rollup with a specific call data and `_inputValue`
+     * @dev @ill impersonate the rollup processor and update rollup state
      * @param _encodedBridgeCallData The encoded bridge call data for the action, e.g., output from `encodeBridgeCallData()`
      * @param _inputValue The value of inputAssetA and inputAssetB to transfer to the bridge
+     * @return outputValueA The amount of outputAssetA returned from the DeFi bridge interaction in this rollup
+     * @return outputValueB The amount of outputAssetB returned from the DeFi bridge interaction in this rollup
+     * @return isAsync A flag indicating whether the DeFi bridge interaction in this rollup was async
      */
-    function sendDefiRollup(uint256 _encodedBridgeCallData, uint256 _inputValue) public {
+    function sendDefiRollup(uint256 _encodedBridgeCallData, uint256 _inputValue)
+        public
+        returns (
+            uint256 outputValueA,
+            uint256 outputValueB,
+            bool isAsync
+        )
+    {
         _prepareRollup();
         bytes memory proofData = _getProofData(_encodedBridgeCallData, _inputValue);
 
+        vm.recordLogs();
         vm.prank(ROLLUP_PROVIDER);
         ROLLUP_PROCESSOR.processRollup(proofData, "");
         nextRollupId++;
+
+        return _getDefiBridgeProcessedData();
     }
 
     /**
-     * @notice A function which iterates through logs and returns decoded values from DefiBridgeProcessed event's data.
-     * @dev You have to call `vm.recordLogs()` and `sendDefiRollup(...)` before calling this function (see
-     *      src/test/bridges/liquity/TroveBridgeE2E.t.sol for example usage)
+     * @notice A function which iterates through logs, decodes relevant events and returns values which were originally
+     *         returned from bridge's `convert(...)` function.
+     * @dev You have to call `vm.recordLogs()` before calling this function
      * @dev If no DefiBridgeProcessed event is found or more than 1 is found function reverts
-     * @return totalInputValue The input amount of _inputAssetA and _inputAssetB (if used)
-     * @return totalOutputValueA The amount of outputAssetA returned from this interaction
-     * @return totalOutputValueB The amount of outputAssetB returned from this interaction
+     * @return outputValueA the amount of outputAssetA returned from the DeFi bridge interaction in this rollup
+     * @return outputValueB the amount of outputAssetB returned from the DeFi bridge interaction in this rollup
+     * @return isAsync a flag indicating whether the DeFi bridge interaction in this rollup was async
      */
-    function getDefiBridgeProcessedData()
-        public
+    function _getDefiBridgeProcessedData()
+        private
         returns (
-            uint256 totalInputValue,
-            uint256 totalOutputValueA,
-            uint256 totalOutputValueB
+            uint256 outputValueA,
+            uint256 outputValueB,
+            bool isAsync
         )
     {
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
-        uint256 numEventsFound = 0;
-        Vm.Log memory defiBridgeProcessedEvent;
-
+        uint256 numEventsFound;
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].topics[0] == BRIDGE_PROCESSED_EVENT_SIG) {
+                (, outputValueA, outputValueB) = abi.decode(logs[i].data, (uint256, uint256, uint256));
                 ++numEventsFound;
-                defiBridgeProcessedEvent = logs[i];
+            } else if (logs[i].topics[0] == ASYNC_BRIDGE_PROCESSED_EVENT_SIG) {
+                // We don't return totalInputValue so there is no need to decode the event's data
+                isAsync = true;
+                ++numEventsFound;
             }
         }
 
-        assertEq(numEventsFound, 1, "Incorrect number of DefiBridgeProcessed events found");
-
-        (totalInputValue, totalOutputValueA, totalOutputValueB) = abi.decode(
-            defiBridgeProcessedEvent.data,
-            (uint256, uint256, uint256)
-        );
+        assertEq(numEventsFound, 1, "Incorrect number of events found");
     }
 
     /**

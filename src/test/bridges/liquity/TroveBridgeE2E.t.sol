@@ -64,9 +64,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
             address(bridge)
         );
 
-        vm.recordLogs();
-        sendDefiRollup(bridgeCallData, collateral);
-        (, uint256 totalOutputValueA, uint256 totalOutputValueB) = getDefiBridgeProcessedData();
+        (uint256 outputValueA, uint256 outputValueB, ) = sendDefiRollup(bridgeCallData, collateral);
 
         (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
             address(bridge)
@@ -82,9 +80,9 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
             tbBalanceAfterBorrowing,
             "Debt increase differs from processor's TB balance"
         );
-        assertEq(totalOutputValueA, tbBalanceAfterBorrowing, "Debt amount doesn't equal totalOutputValueA");
+        assertEq(outputValueA, tbBalanceAfterBorrowing, "Debt amount doesn't equal outputValueA");
         assertEq(
-            totalOutputValueB,
+            outputValueB,
             bridge.computeAmtToBorrow(collateral),
             "Borrowed amount doesn't equal expected borrow amount"
         );
@@ -97,11 +95,9 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         // Compute repay calldata
         bridgeCallData = encodeBridgeCallData(id, tbAsset, lusdAsset, ethAsset, lusdAsset, MAX_FEE);
 
-        vm.recordLogs();
-        sendDefiRollup(bridgeCallData, tbBalanceAfterBorrowing);
-        (, totalOutputValueA, totalOutputValueB) = getDefiBridgeProcessedData();
+        (outputValueA, outputValueB, ) = sendDefiRollup(bridgeCallData, tbBalanceAfterBorrowing);
 
-        assertApproxEqAbs(totalOutputValueA, collateral, 1, "output value differs from colalteral by more than 1 wei");
-        assertEq(totalOutputValueB, 0, "Non-zero LUSD amount returned");
+        assertApproxEqAbs(outputValueA, collateral, 1, "output value differs from colalteral by more than 1 wei");
+        assertEq(outputValueB, 0, "Non-zero LUSD amount returned");
     }
 }
