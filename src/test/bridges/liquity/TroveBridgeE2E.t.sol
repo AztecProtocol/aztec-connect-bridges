@@ -13,9 +13,6 @@ import {TroveBridge} from "../../../bridges/liquity/TroveBridge.sol";
 import {TroveBridgeTestBase} from "./TroveBridgeTestBase.sol";
 
 contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
-    bytes32 public constant BRIDGE_PROCESSED_EVENT_SIG =
-        keccak256("DefiBridgeProcessed(uint256,uint256,uint256,uint256,uint256,bool,bytes)");
-
     // To store the id of the trove bridge after being added
     uint256 private id;
 
@@ -49,7 +46,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
 
     // @dev In order to avoid overflows we set _depositAmount to be uint96 instead of uint256.
     function testFullFlow(uint96 _collateral) public {
-        uint256 collateral = bound(0, 1e18, 1e20);
+        uint256 collateral = bound(_collateral, 1e17, 1e21);
 
         // Use the helper function to fetch Aztec assets
         AztecTypes.AztecAsset memory ethAsset = getRealAztecAsset(address(0));
@@ -58,49 +55,36 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
 
         // 1st BORROW
         // Mint the collateral amount of ETH to rollupProcessor
-        deal(tokens["LUSD"].addr, address(ROLLUP_PROCESSOR), collateral);
+        vm.deal(address(bridge), collateral);
 
         // Compute borrow calldata
         uint256 bridgeCallData = encodeBridgeCallData(id, ethAsset, emptyAsset, tbAsset, lusdAsset, MAX_FEE);
 
-        uint256 amtToBorrow = bridge.computeAmtToBorrow(collateral);
-
-        uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
-        uint256 icr = 1600000000000000000;
-        uint256 roundingError = 1;
-        // Note: if rounding starts causing issues simply fetch the event as a whole, decode and check diff is small
-        // enough
-        uint256 tbBalanceAfterBorrowing = (collateral * price) / icr - roundingError;
-
-        vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(
-            bridgeCallData,
-            getNextNonce(),
-            collateral,
-            tbBalanceAfterBorrowing,
-            amtToBorrow,
-            true,
-            ""
+        uint256 processorLusdBalanceBefore = tokens["LUSD"].erc.balanceOf(address(ROLLUP_PROCESSOR));
+        (uint256 debtBeforeBorrowing, uint256 collBeforeBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
+            address(bridge)
         );
 
         sendDefiRollup(bridgeCallData, collateral);
 
-        assertEq(
-            bridge.balanceOf(address(ROLLUP_PROCESSOR)),
-            tbBalanceAfterBorrowing,
-            "Incorrect TB balance of rollup processor"
+        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
+            address(bridge)
         );
-
-        // 2nd REPAY
-        // Mint the amount to repay to rollup processor
-        deal(lusdAsset.erc20Address, address(ROLLUP_PROCESSOR), tbBalanceAfterBorrowing + bridge.DUST());
-
-        // Compute repay calldata
-        bridgeCallData = encodeBridgeCallData(id, tbAsset, lusdAsset, ethAsset, lusdAsset, MAX_FEE);
-
-        vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), tbBalanceAfterBorrowing, collateral, 0, true, "");
-
-        sendDefiRollup(bridgeCallData, tbBalanceAfterBorrowing);
+        assertEq(
+            collAfterBorrowing - collBeforeBorrowing,
+            collateral,
+            "Collateral increase differs from deposited collateral"
+        );
+        uint256 tbBalanceAfterBorrowing = bridge.balanceOf(address(ROLLUP_PROCESSOR));
+        assertEq(
+            debtAfterBorrowing - debtBeforeBorrowing,
+            tbBalanceAfterBorrowing,
+            "Debt increase differs from processor's TB balance"
+        );
+        assertEq(
+            tokens["LUSD"].erc.balanceOf(address(ROLLUP_PROCESSOR)) - processorLusdBalanceBefore,
+            bridge.computeAmtToBorrow(collateral),
+            "Borrowed amount doesn't equal expected borrow amount"
+        );
     }
 }
