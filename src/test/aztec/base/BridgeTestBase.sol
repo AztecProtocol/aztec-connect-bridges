@@ -2,7 +2,7 @@
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, Vm} from "forge-std/Test.sol";
 import {AztecTypes} from "./../../../aztec/libraries/AztecTypes.sol";
 import {IRollupProcessor} from "./../../../aztec/interfaces/IRollupProcessor.sol";
 
@@ -104,6 +104,9 @@ abstract contract BridgeTestBase is Test {
 
     address internal constant ROLLUP_PROVIDER = payable(0xA173BDdF4953C1E8be2cA0695CFc07502Ff3B1e7);
     address internal constant MULTI_SIG = 0xE298a76986336686CC3566469e3520d23D1a8aaD;
+
+    bytes32 public constant BRIDGE_PROCESSED_EVENT_SIG =
+        keccak256("DefiBridgeProcessed(uint256,uint256,uint256,uint256,uint256,bool,bytes)");
 
     AztecTypes.AztecAsset internal emptyAsset;
 
@@ -232,6 +235,43 @@ abstract contract BridgeTestBase is Test {
         vm.prank(ROLLUP_PROVIDER);
         ROLLUP_PROCESSOR.processRollup(proofData, "");
         nextRollupId++;
+    }
+
+    /**
+     * @notice A function which iterates through logs and returns decoded values from DefiBridgeProcessed event's data.
+     * @dev You have to call `vm.recordLogs()` and `sendDefiRollup(...)` before calling this function (see
+     *      src/test/bridges/liquity/TroveBridgeE2E.t.sol for example usage)
+     * @dev If no DefiBridgeProcessed event is found or more than 1 is found function reverts
+     * @return totalInputValue The input amount of _inputAssetA and _inputAssetB (if used)
+     * @return totalOutputValueA The amount of outputAssetA returned from this interaction
+     * @return totalOutputValueB The amount of outputAssetB returned from this interaction
+     */
+    function getDefiBridgeProcessedData()
+        public
+        returns (
+            uint256 totalInputValue,
+            uint256 totalOutputValueA,
+            uint256 totalOutputValueB
+        )
+    {
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        uint256 numEventsFound = 0;
+        Vm.Log memory defiBridgeProcessedEvent;
+
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].topics[0] == BRIDGE_PROCESSED_EVENT_SIG) {
+                ++numEventsFound;
+                defiBridgeProcessedEvent = logs[i];
+            }
+        }
+
+        assertEq(numEventsFound, 1, "Incorrect number of DefiBridgeProcessed events found");
+
+        (totalInputValue, totalOutputValueA, totalOutputValueB) = abi.decode(
+            defiBridgeProcessedEvent.data,
+            (uint256, uint256, uint256)
+        );
     }
 
     /**
