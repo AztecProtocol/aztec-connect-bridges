@@ -2,7 +2,6 @@
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
-import {Vm} from "forge-std/Vm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
@@ -13,8 +12,6 @@ import {StabilityPoolBridge} from "../../../bridges/liquity/StabilityPoolBridge.
 
 contract StabilityPoolBridgeE2ETest is BridgeTestBase {
     IERC20 public constant LUSD = IERC20(0x5f98805A4E8be255a32880FDeC7F6728C6568bA0);
-    bytes32 public constant BRIDGE_PROCESSED_EVENT_SIG =
-        keccak256("DefiBridgeProcessed(uint256,uint256,uint256,uint256,uint256,bool,bytes)");
 
     // The reference to the stability pool bridge
     StabilityPoolBridge private bridge;
@@ -91,24 +88,7 @@ contract StabilityPoolBridgeE2ETest is BridgeTestBase {
 
         vm.recordLogs();
         sendDefiRollup(bridgeCallData, _depositAmount);
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-
-        uint256 numEventsFound = 0;
-        Vm.Log memory defiBridgeProcessedEvent;
-
-        for (uint256 i; i < logs.length; ++i) {
-            if (logs[i].topics[0] == BRIDGE_PROCESSED_EVENT_SIG) {
-                ++numEventsFound;
-                defiBridgeProcessedEvent = logs[i];
-            }
-        }
-
-        assertEq(numEventsFound, 1, "Incorrect number of events found");
-
-        (uint256 totalInputValue, uint256 totalOutputValueA, uint256 totalOutputValueB) = abi.decode(
-            defiBridgeProcessedEvent.data,
-            (uint256, uint256, uint256)
-        );
+        (uint256 totalInputValue, uint256 totalOutputValueA, uint256 totalOutputValueB) = getDefiBridgeProcessedEvent();
 
         assertEq(totalInputValue, _depositAmount, "Incorrect input value decoded");
         assertGe(totalOutputValueA, _depositAmount, "Output value not bigger than deposit");
