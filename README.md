@@ -126,6 +126,10 @@ We decided to have 2 separate approaches of bridge testing:
    The purpose of this test is to test the bridge in an environment that is as close to the final deployment as possible without spinning up all the rollup infrastructure (sequencer, proof generator etc.).
    This test can be considered an end-to-end test of the bridge and an example of such a test is [here](https://github.com/AztecProtocol/aztec-connect-bridges/blob/master/src/test/bridges/example/ExampleE2E.t.sol).
 
+We encourage you to first write all tests as unit tests to be able to leverage simple traces while you are debugging the bridge.
+Once you make the bridge work in the unit tests environment convert the relevant tests to E2E.
+Converting unit tests to E2E is straightforward because we made the `BridgeTestBase.sendDefiRollup(...)` function return the same values as `IDefiBridge.convert(...)`.
+
 In production, the rollup contract will supply `_inputValue` of both input assets and use the `_interactionNonce` as a globally unique ID.
 For testing, you may provide this value.
 
