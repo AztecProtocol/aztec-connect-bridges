@@ -262,7 +262,7 @@ abstract contract BridgeTestBase is Test {
      * @return isAsync a flag indicating whether the DeFi bridge interaction in this rollup was async
      */
     function _getDefiBridgeProcessedData()
-        private
+        internal
         returns (
             uint256 outputValueA,
             uint256 outputValueB,
@@ -283,7 +283,7 @@ abstract contract BridgeTestBase is Test {
             }
         }
 
-        assertEq(numEventsFound, 1, "Incorrect number of events found");
+        if (numEventsFound != 1) revert("Incorrect number of events found");
     }
 
     /**
