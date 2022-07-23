@@ -35,11 +35,11 @@ contract AceOfZkTest is BridgeTestBase {
         assertTrue(ACE_OF_ZK_NFT.ownerOf(NFT_ID) != address(ROLLUP_PROCESSOR), "The rollup processor owns the nft");
 
         uint256 bId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
-        uint256 bridgeId = encodeBridgeId(bId, ethAsset, emptyAsset, ethAsset, emptyAsset, 0);
+        uint256 bridgeCallData = encodeBridgeCallData(bId, ethAsset, emptyAsset, ethAsset, emptyAsset, 0);
 
         vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), 1, 0, 0, true, "");
-        sendDefiRollup(bridgeId, 1);
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), 1, 0, 0, true, "");
+        sendDefiRollup(bridgeCallData, 1);
 
         assertEq(ACE_OF_ZK_NFT.ownerOf(NFT_ID), address(ROLLUP_PROCESSOR), "The rollup processor does not own the nft");
     }

@@ -133,10 +133,10 @@ contract LidoTest is BridgeTestBase {
 
         uint256 wstEthIncrease = _computeEthToWST(_depositAmount);
 
-        uint256 bridgeId = encodeBridgeId(idIn, ethAsset, emptyAsset, wstETHAsset, emptyAsset, 0);
+        uint256 bridgeCallData = encodeBridgeCallData(idIn, ethAsset, emptyAsset, wstETHAsset, emptyAsset, 0);
         vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), _depositAmount, wstEthIncrease, 0, true, "");
-        sendDefiRollup(bridgeId, _depositAmount);
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, wstEthIncrease, 0, true, "");
+        sendDefiRollup(bridgeCallData, _depositAmount);
 
         assertEq(address(ROLLUP_PROCESSOR).balance, beforeETHBalance - _depositAmount, "ETH balance not matching");
         assertEq(
@@ -154,10 +154,10 @@ contract LidoTest is BridgeTestBase {
 
         uint256 expectedEth = _computeWSTHToEth(_depositAmount);
 
-        uint256 bridgeId = encodeBridgeId(idOut, wstETHAsset, emptyAsset, ethAsset, emptyAsset, 0);
+        uint256 bridgeCallData = encodeBridgeCallData(idOut, wstETHAsset, emptyAsset, ethAsset, emptyAsset, 0);
         vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), _depositAmount, expectedEth, 0, true, "");
-        sendDefiRollup(bridgeId, _depositAmount);
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, expectedEth, 0, true, "");
+        sendDefiRollup(bridgeCallData, _depositAmount);
 
         assertEq(address(ROLLUP_PROCESSOR).balance, beforeETHBalance + expectedEth, "ETH balance not maching");
         assertEq(

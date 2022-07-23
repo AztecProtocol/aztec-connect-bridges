@@ -2,8 +2,8 @@
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
-import {IDefiBridge} from "./interfaces/IDefiBridge.sol";
-import {AztecTypes} from "./libraries/AztecTypes.sol";
+import {IDefiBridge} from "../../../../aztec/interfaces/IDefiBridge.sol";
+import {AztecTypes} from "../../../../aztec/libraries/AztecTypes.sol";
 import {TokenTransfers} from "./libraries/TokenTransfers.sol";
 
 contract DefiBridgeProxy {

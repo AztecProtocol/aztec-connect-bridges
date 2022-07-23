@@ -57,17 +57,17 @@ describe("aave lending bridge data", () => {
     ethAsset = {
       id: 1n,
       assetType: AztecAssetType.ETH,
-      erc20Address: "0x0",
+      erc20Address: EthAddress.ZERO,
     };
     wethAsset = {
       id: 2n,
       assetType: AztecAssetType.ERC20,
-      erc20Address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      erc20Address: EthAddress.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
     };
     emptyAsset = {
       id: 0n,
       assetType: AztecAssetType.NOT_USED,
-      erc20Address: "0x0",
+      erc20Address: EthAddress.ZERO,
     };
   });
 
@@ -80,7 +80,7 @@ describe("aave lending bridge data", () => {
     const zkAsset = {
       id: 3n,
       assetType: AztecAssetType.ERC20,
-      erc20Address: EthAddress.randomAddress().toString(),
+      erc20Address: EthAddress.random(),
     };
 
     aaveLendingBridgeContract = {
@@ -110,12 +110,12 @@ describe("aave lending bridge data", () => {
     const zkAsset = {
       id: 3n,
       assetType: AztecAssetType.ERC20,
-      erc20Address: EthAddress.randomAddress().toString(),
+      erc20Address: EthAddress.random(),
     };
 
     aaveLendingBridgeContract = {
       ...aaveLendingBridgeContract,
-      underlyingToZkAToken: jest.fn().mockResolvedValue(zkAsset.erc20Address),
+      underlyingToZkAToken: jest.fn().mockResolvedValue(zkAsset.erc20Address.toString()),
     };
 
     lendingPoolContract = {
@@ -136,7 +136,7 @@ describe("aave lending bridge data", () => {
     const zkAsset = {
       id: 3n,
       assetType: AztecAssetType.ERC20,
-      erc20Address: EthAddress.randomAddress().toString(),
+      erc20Address: EthAddress.random(),
     };
 
     const rate = 3n * 10n ** 25n;
@@ -149,16 +149,16 @@ describe("aave lending bridge data", () => {
       currentVariableBorrowRate: 0,
       currentStableBorrowRate: 0,
       lastUpdateTimestamp: 0,
-      aTokenAddress: EthAddress.randomAddress().toString(),
-      stableDebtTokenAddress: EthAddress.randomAddress().toString(),
-      variableDebtTokenAddress: EthAddress.randomAddress().toString(),
-      interestRateStrategyAddress: EthAddress.randomAddress().toString(),
+      aTokenAddress: EthAddress.random().toString(),
+      stableDebtTokenAddress: EthAddress.random().toString(),
+      variableDebtTokenAddress: EthAddress.random().toString(),
+      interestRateStrategyAddress: EthAddress.random().toString(),
       id: 0,
     };
 
     aaveLendingBridgeContract = {
       ...aaveLendingBridgeContract,
-      underlyingToZkAToken: jest.fn().mockResolvedValue(zkAsset.erc20Address),
+      underlyingToZkAToken: jest.fn().mockResolvedValue(zkAsset.erc20Address.toString()),
     };
 
     lendingPoolContract = {
@@ -168,9 +168,9 @@ describe("aave lending bridge data", () => {
 
     aaveBridgeData = createAaveBridgeData(lendingPoolContract as any, aaveLendingBridgeContract as any);
 
-    const output = await aaveBridgeData.getExpectedYield(ethAsset, emptyAsset, zkAsset, emptyAsset, 0n, depositAmount);
+    const output = await aaveBridgeData.getAPR(ethAsset, emptyAsset, zkAsset, emptyAsset, 0n, depositAmount);
 
-    expect(output[0]).toBe(0.03);
+    expect(output[0]).toBe(3);
   });
 
   it("should return the expected yield when exiting", async () => {
@@ -178,7 +178,7 @@ describe("aave lending bridge data", () => {
     const zkAsset = {
       id: 3n,
       assetType: AztecAssetType.ERC20,
-      erc20Address: EthAddress.randomAddress().toString(),
+      erc20Address: EthAddress.random(),
     };
 
     const rate = 3n * 10n ** 25n;
@@ -190,16 +190,16 @@ describe("aave lending bridge data", () => {
       currentVariableBorrowRate: 0,
       currentStableBorrowRate: 0,
       lastUpdateTimestamp: 0,
-      aTokenAddress: EthAddress.randomAddress().toString(),
-      stableDebtTokenAddress: EthAddress.randomAddress().toString(),
-      variableDebtTokenAddress: EthAddress.randomAddress().toString(),
-      interestRateStrategyAddress: EthAddress.randomAddress().toString(),
+      aTokenAddress: EthAddress.random().toString(),
+      stableDebtTokenAddress: EthAddress.random().toString(),
+      variableDebtTokenAddress: EthAddress.random().toString(),
+      interestRateStrategyAddress: EthAddress.random().toString(),
       id: 0,
     };
 
     aaveLendingBridgeContract = {
       ...aaveLendingBridgeContract,
-      underlyingToZkAToken: jest.fn().mockResolvedValue(zkAsset.erc20Address),
+      underlyingToZkAToken: jest.fn().mockResolvedValue(zkAsset.erc20Address.toString()),
     };
 
     lendingPoolContract = {
@@ -209,7 +209,7 @@ describe("aave lending bridge data", () => {
 
     aaveBridgeData = createAaveBridgeData(lendingPoolContract as any, aaveLendingBridgeContract as any);
 
-    const output = await aaveBridgeData.getExpectedYield(zkAsset, emptyAsset, ethAsset, emptyAsset, 0n, depositAmount);
+    const output = await aaveBridgeData.getAPR(zkAsset, emptyAsset, ethAsset, emptyAsset, 0n, depositAmount);
 
     expect(output[0]).toBe(0);
   });
@@ -218,12 +218,12 @@ describe("aave lending bridge data", () => {
     const zkAsset = {
       id: 3n,
       assetType: AztecAssetType.ERC20,
-      erc20Address: EthAddress.randomAddress().toString(),
+      erc20Address: EthAddress.random(),
     };
 
     aaveLendingBridgeContract = {
       ...aaveLendingBridgeContract,
-      underlyingToZkAToken: jest.fn().mockResolvedValue(zkAsset.erc20Address),
+      underlyingToZkAToken: jest.fn().mockResolvedValue(zkAsset.erc20Address).toString(),
     };
 
     aaveBridgeData = createAaveBridgeData(lendingPoolContract as any, aaveLendingBridgeContract as any);

@@ -1,18 +1,18 @@
-import { AddressZero } from '@ethersproject/constants';
-import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from '../bridge-data';
+import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from "../bridge-data";
 import {
   ElementBridge,
   IVault,
-  RollupProcessor,
+  IRollupProcessor,
   ElementBridge__factory,
   IVault__factory,
-  RollupProcessor__factory,
-} from '../../../typechain-types';
-import { AsyncDefiBridgeProcessedEvent } from '../../../typechain-types/RollupProcessor';
-import { EthereumProvider } from '@aztec/barretenberg/blockchain';
-import { createWeb3Provider } from '../aztec/provider';
-import { EthAddress } from '@aztec/barretenberg/address';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+  IRollupProcessor__factory,
+} from "../../../typechain-types";
+import { AsyncDefiBridgeProcessedEvent } from "../../../typechain-types/IRollupProcessor";
+import { EthereumProvider } from "@aztec/barretenberg/blockchain";
+import { createWeb3Provider } from "../aztec/provider";
+import { EthAddress } from "@aztec/barretenberg/address";
+// TODO: simply import BridgeCallData once the name is changed on defi-bridge-project
+import { BridgeId as BridgeCallData } from "@aztec/barretenberg/bridge_id";
 
 export type BatchSwapStep = {
   poolId: string;
@@ -45,7 +45,7 @@ export type ChainProperties = {
 interface EventBlock {
   nonce: bigint;
   blockNumber: number;
-  bridgeId: bigint;
+  encodedBridgeCallData: bigint;
   totalInputValue: bigint;
   timestamp: number;
 }
@@ -54,15 +54,15 @@ function divide(a: bigint, b: bigint, precision: bigint) {
   return (a * precision) / b;
 }
 
-const decodeEvent = async (event: AsyncDefiBridgeProcessedEvent) => {
+const decodeEvent = async (event: AsyncDefiBridgeProcessedEvent): Promise<EventBlock> => {
   const {
-    args: [bridgeId, nonce, totalInputValue],
+    args: [encodedBridgeCallData, nonce, totalInputValue],
   } = event;
   const block = await event.getBlock();
   const newEventBlock = {
     nonce: nonce.toBigInt(),
     blockNumber: block.number,
-    bridgeId: bridgeId.toBigInt(),
+    encodedBridgeCallData: encodedBridgeCallData.toBigInt(),
     totalInputValue: totalInputValue.toBigInt(),
     timestamp: block.timestamp,
   };
@@ -76,7 +76,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   private constructor(
     private elementBridgeContract: ElementBridge,
     private balancerContract: IVault,
-    private rollupContract: RollupProcessor,
+    private rollupContract: IRollupProcessor,
     private chainProperties: ChainProperties,
   ) {}
 
@@ -89,7 +89,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   ) {
     const ethersProvider = createWeb3Provider(provider);
     const elementBridgeContract = ElementBridge__factory.connect(elementBridgeAddress.toString(), ethersProvider);
-    const rollupContract = RollupProcessor__factory.connect(rollupContractAddress.toString(), ethersProvider);
+    const rollupContract = IRollupProcessor__factory.connect(rollupContractAddress.toString(), ethersProvider);
     const vaultContract = IVault__factory.connect(balancerAddress.toString(), ethersProvider);
     return new ElementBridgeData(elementBridgeContract, vaultContract, rollupContract, chainProperties);
   }
@@ -120,9 +120,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   }
 
   private async getCurrentBlock() {
-    const currentBlockNumber = await this.elementBridgeContract.provider.getBlockNumber();
-    const currentBlock = await this.elementBridgeContract.provider.getBlock(currentBlockNumber);
-    return currentBlock;
+    return this.elementBridgeContract.provider.getBlock("latest");
   }
 
   private async findDefiEventForNonce(interactionNonce: bigint) {
@@ -131,7 +129,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
       await this.elementBridgeContract.getTrancheDeploymentBlockNumber(interactionNonce),
     );
     // start with the last block being the current block
-    let lastBlock = await this.getCurrentBlock();
+    const lastBlock = await this.getCurrentBlock();
     let latestBlockNumber = lastBlock.number;
     // try and find previously stored events that encompass the nonce we are looking for
     // also if we find the exact nonce then just return the stored data
@@ -181,7 +179,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   // @dev which define how much a given interaction is worth in terms of Aztec asset ids.
   // @param bigint interactionNonce the interaction nonce to return the value for
 
-  async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
+  async getInteractionPresentValue(interactionNonce: bigint, inputValue: bigint): Promise<AssetValue[]> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
     if (interaction === undefined) {
       return [];
@@ -201,18 +199,19 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     const totalInterest = endValue.toBigInt() - defiEvent.totalInputValue;
     const elapsedTime = BigInt(now - defiEvent.timestamp);
     const totalTime = exitTimestamp.toBigInt() - BigInt(defiEvent.timestamp);
-    const timeRatio = divide(elapsedTime, totalTime, this.scalingFactor);
-    const accruedInterst = (totalInterest * timeRatio) / this.scalingFactor;
+    const accruedInterest = (totalInterest * elapsedTime) / totalTime;
+    const totalPresentValue = defiEvent.totalInputValue + accruedInterest;
+    const userPresentValue = (totalPresentValue * inputValue) / defiEvent.totalInputValue;
 
     return [
       {
-        assetId: BigInt(BridgeId.fromBigInt(defiEvent.bridgeId).inputAssetIdA),
-        amount: defiEvent.totalInputValue + accruedInterst,
+        assetId: BigInt(BridgeCallData.fromBigInt(defiEvent.encodedBridgeCallData).inputAssetIdA),
+        amount: userPresentValue,
       },
     ];
   }
 
-  async getCurrentYield(interactionNonce: bigint): Promise<number[]> {
+  async getInteractionAPR(interactionNonce: bigint): Promise<number[]> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
     if (interaction === undefined) {
       return [];
@@ -244,7 +243,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
-    const assetExpiries = await this.elementBridgeContract.getAssetExpiries(inputAssetA.erc20Address);
+    const assetExpiries = await this.elementBridgeContract.getAssetExpiries(inputAssetA.erc20Address.toString());
     if (assetExpiries && assetExpiries.length) {
       return assetExpiries.map(a => a.toBigInt());
     }
@@ -256,7 +255,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
       start: 0,
       length: 64,
       solidityType: SolidityType.uint64,
-      description: 'Unix Timestamp of the tranch expiry',
+      description: "Unix Timestamp of the tranch expiry",
     },
   ];
 
@@ -266,28 +265,31 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
-    precision: bigint,
+    inputValue: bigint,
   ): Promise<bigint[]> {
     // bridge is async the third parameter represents this
     return [BigInt(0), BigInt(0), BigInt(1)];
   }
 
-  async getExpectedYield(
+  async getAPR(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
-    precision: bigint,
+    inputValue: bigint,
   ): Promise<number[]> {
-    const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(inputAssetA.erc20Address, auxData);
+    const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(
+      inputAssetA.erc20Address.toString(),
+      auxData,
+    );
     const pool = await this.elementBridgeContract.pools(assetExpiryHash);
     const poolId = pool.poolId;
     const trancheAddress = pool.trancheAddress;
 
     const funds: FundManagement = {
-      sender: AddressZero,
-      recipient: AddressZero,
+      sender: EthAddress.ZERO.toString(),
+      recipient: EthAddress.ZERO.toString(),
       fromInternalBalance: false,
       toInternalBalance: false,
     };
@@ -296,14 +298,14 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
       poolId,
       assetInIndex: 0,
       assetOutIndex: 1,
-      amount: precision.toString(),
-      userData: '0x',
+      amount: inputValue.toString(),
+      userData: "0x",
     };
 
     const deltas = await this.balancerContract.queryBatchSwap(
       SwapType.SwapExactIn,
       [step],
-      [inputAssetA.erc20Address, trancheAddress],
+      [inputAssetA.erc20Address.toString(), trancheAddress],
       funds,
     );
 
@@ -314,10 +316,10 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     const timeToExpiration = auxData - BigInt(latestBlock.timestamp);
 
     const YEAR = 60n * 60n * 24n * 365n;
-    const interest = -outputAssetAValue.toBigInt() - precision;
+    const interest = -outputAssetAValue.toBigInt() - inputValue;
     const scaledOutput = divide(interest, timeToExpiration, this.scalingFactor);
     const yearlyOutput = (scaledOutput * YEAR) / this.scalingFactor;
-    const percentageScaled = divide(yearlyOutput, precision, this.scalingFactor);
+    const percentageScaled = divide(yearlyOutput, inputValue, this.scalingFactor);
     const percentage2sf = (percentageScaled * 10000n) / this.scalingFactor;
 
     return [Number(percentage2sf) / 100];
@@ -330,7 +332,10 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     outputAssetB: AztecAsset,
     auxData: bigint,
   ): Promise<AssetValue[]> {
-    const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(inputAssetA.erc20Address, auxData);
+    const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(
+      inputAssetA.erc20Address.toString(),
+      auxData,
+    );
     const pool = await this.elementBridgeContract.pools(assetExpiryHash);
     const poolId = pool.poolId;
     const tokenBalances = await this.balancerContract.getPoolTokens(poolId);
@@ -349,7 +354,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     return BigInt(interaction.expiry.toString());
   }
 
-  async hasFinalised(interactionNonce: bigint): Promise<Boolean> {
+  async hasFinalised(interactionNonce: bigint): Promise<boolean> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
     return interaction.finalised;
   }

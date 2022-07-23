@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -17,9 +17,6 @@ import {ErrorLib} from "../base/ErrorLib.sol";
 
 contract IssuanceBridge is BridgeBase {
     using SafeERC20 for IERC20;
-
-    error ApproveFailed(address token);
-    error ZeroInputValue();
 
     IExchangeIssuance public constant EXCHANGE_ISSUANCE = IExchangeIssuance(0xc8C85A3b4d03FB3451e7248Ff94F780c92F884fD);
     IController public constant SET_CONTROLLER = IController(0xa4c8d221d8BB851f83aadd0223a8900A6921A349);
@@ -81,7 +78,7 @@ contract IssuanceBridge is BridgeBase {
             bool
         )
     {
-        if (_inputValue == 0) revert ZeroInputValue();
+        if (_inputValue == 0) revert ErrorLib.InvalidInput();
 
         if (SET_CONTROLLER.isSet(address(_inputAssetA.erc20Address))) {
             // User wants to redeem the underlying asset

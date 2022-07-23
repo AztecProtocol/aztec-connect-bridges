@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2022 Spilsbury Holdings Ltd
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -13,7 +13,7 @@ contract StabilityPoolBridgeTestInternal is TestUtil, StabilityPoolBridge(addres
     address public constant LUSD_USDC_POOL = 0x4e0924d3a751bE199C426d52fb1f2337fa96f736; // 500 bps fee tier
 
     function setUp() public {
-        _aztecPreSetup();
+        rollupProcessor = address(this);
         setUpTokens();
 
         // solhint-disable-next-line

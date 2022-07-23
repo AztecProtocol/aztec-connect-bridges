@@ -2,9 +2,9 @@
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
-import {IDefiBridge} from "./interfaces/IDefiBridge.sol";
+import {IDefiBridge} from "../../../../aztec/interfaces/IDefiBridge.sol";
 import {DefiBridgeProxy} from "./DefiBridgeProxy.sol";
-import {AztecTypes} from "./libraries/AztecTypes.sol";
+import {AztecTypes} from "../../../../aztec/libraries/AztecTypes.sol";
 import {TokenTransfers} from "./libraries/TokenTransfers.sol";
 
 /**
@@ -14,7 +14,7 @@ contract RollupProcessor {
     error INSUFFICIENT_ETH_PAYMENT();
 
     event DefiBridgeProcessed(
-        uint256 indexed bridgeId,
+        uint256 indexed bridgeCallData,
         uint256 indexed nonce,
         uint256 totalInputValue,
         uint256 totalOutputValueA,
@@ -22,7 +22,7 @@ contract RollupProcessor {
         bool result
     );
 
-    event AsyncDefiBridgeProcessed(uint256 indexed bridgeId, uint256 indexed nonce, uint256 totalInputValue);
+    event AsyncDefiBridgeProcessed(uint256 indexed bridgeCallData, uint256 indexed nonce, uint256 totalInputValue);
 
     struct DefiInteraction {
         address bridgeAddress;

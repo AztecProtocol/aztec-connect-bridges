@@ -1,15 +1,15 @@
-version: '2.1'
+version: "2.1"
 orbs:
   node: circleci/node@5.0.0
 jobs:
   build-and-test:
     docker:
-      - image: 'cimg/base:stable-20.04'
+      - image: "cimg/base:stable-20.04"
     steps:
       - checkout
       - node/install:
           install-yarn: true
-          node-version: '16.13'
+          node-version: "16.13"
       - run:
           name: Setup Foundry
           shell: /bin/bash
@@ -28,6 +28,18 @@ jobs:
             yarn config set script-shell /bin/bash
             yarn formatting:check
       - run:
+          name: Check Linting Errors in Contracts
+          shell: /bin/bash
+          command: |
+            yarn config set script-shell /bin/bash
+            yarn lint:contracts
+      - run:
+          name: Check Linting Errors in Clients
+          shell: /bin/bash
+          command: |
+            yarn config set script-shell /bin/bash
+            yarn lint:clients
+      - run:
           name: Test Contracts
           shell: /bin/bash
           command: |
@@ -36,13 +48,13 @@ jobs:
             export PATH=/home/circleci/.forge/bin:$PATH
             yarn test:contracts
       - run:
-          name: Test Client
+          name: Test Clients
           shell: /bin/bash
           command: |
             yarn config set script-shell /bin/bash
             export PATH=/home/circleci/.foundry/bin:$PATH
             export PATH=/home/circleci/.forge/bin:$PATH
-            yarn test:client
+            yarn test:clients
       - run:
           name: Build
           shell: /bin/bash
@@ -53,12 +65,12 @@ jobs:
             yarn build
   publish:
     docker:
-      - image: 'cimg/base:stable-20.04'
+      - image: "cimg/base:stable-20.04"
     steps:
       - checkout
       - node/install:
           install-yarn: true
-          node-version: '16.13'
+          node-version: "16.13"
       - run:
           name: Authenticate with registry
           command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc
