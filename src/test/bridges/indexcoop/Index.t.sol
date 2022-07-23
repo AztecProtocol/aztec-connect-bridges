@@ -149,8 +149,8 @@ contract IndexTest is BridgeTestBase {
         }
    } 
 
-    function testSellSet(uint256 _depositAmount) public{
-        _depositAmount = bound(_depositAmount, 1000, 500 ether);
+    function testSellSet() public{
+        uint256 _depositAmount = 1 ether; 
 
         uint64 flowSelector = 5;
         uint64 maxSlipAux = 9900; 
@@ -161,6 +161,7 @@ contract IndexTest is BridgeTestBase {
         bytes memory path = abi.encodePacked(ICETH, uniFee);
         path = abi.encodePacked(path, WETH);
         uint256 ethFromQuoter = IQuoter(UNIV3_QUOTER).quoteExactInput(path, _depositAmount);
+
         uint256 minimumReceivedDex = _getAmountBasedOnTwap(uint128(_depositAmount), ICETH, WETH, uniFee).
             mul(maxSlipAux).
             div(1e4)
@@ -172,7 +173,6 @@ contract IndexTest is BridgeTestBase {
 
         } else { 
             uint256 newEth = _sellSet(_depositAmount, auxData);
-            console2.log("newEth", newEth);
             assertGe(newEth, minimumReceivedDex, "Received to little ETH from dex");
         }
    } 
@@ -390,7 +390,7 @@ contract IndexTest is BridgeTestBase {
             _uniFee
         );
 
-        uint32 secondsAgo = 60*10; 
+        uint32 secondsAgo = 10; 
 
         uint32[] memory secondsAgos = new uint32[](2);
         secondsAgos[0] = secondsAgo;
@@ -659,4 +659,7 @@ contract IndexTest is BridgeTestBase {
         c = (_encoded << 16) >> 48;
         a = (_encoded << 32) >> 32;
     }
+
+
+
 }
