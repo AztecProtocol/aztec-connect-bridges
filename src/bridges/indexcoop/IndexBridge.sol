@@ -13,12 +13,11 @@ import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {ISwapRouter} from '../../interfaces/uniswapv3/ISwapRouter.sol';
 import {IUniswapV3Factory} from "../../interfaces/uniswapv3/IUniswapV3Factory.sol";
 import {IUniswapV3PoolDerivedState} from "../../interfaces/uniswapv3/pool/IUniswapV3PoolDerivedState.sol";
-
-import {IAaveLeverageModule} from './interfaces/IAaveLeverageModule.sol';
-import {IWETH} from '../../interfaces/IWETH.sol';
-import {IExchangeIssue} from './interfaces/IExchangeIssue.sol';
-import {ISetToken} from './interfaces/ISetToken.sol';
-import {AggregatorV3Interface} from './interfaces/AggregatorV3Interface.sol';
+import {IAaveLeverageModule} from "../../interfaces/set/IAaveLeverageModule.sol";
+import {ISetToken} from "../../interfaces/set/ISetToken.sol";
+import {AggregatorV3Interface} from "../../interfaces/chainlink/AggregatorV3Interface.sol";
+import {IWETH} from "../../interfaces/IWETH.sol";
+import {IExchangeIssuanceLeveraged} from "../../interfaces/set/IExchangeIssuanceLeveraged.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /** 
@@ -32,7 +31,7 @@ contract IndexBridgeContract is BridgeBase {
 
     error UnsafeOraclePrice();
 
-    address immutable EXISSUE = 0xB7cc88A13586D862B97a677990de14A122b74598;
+    address immutable EXCHANGE_ISSUANCE = 0xB7cc88A13586D862B97a677990de14A122b74598;
     address immutable CURVE = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
     address immutable WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address immutable STETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
@@ -48,7 +47,7 @@ contract IndexBridgeContract is BridgeBase {
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {
 
         // Tokens can be pre approved since the bridge should not hold any tokens.
-        IERC20(ICETH).safeIncreaseAllowance(address(EXISSUE), type(uint256).max);
+        IERC20(ICETH).safeIncreaseAllowance(address(EXCHANGE_ISSUANCE), type(uint256).max);
         IERC20(ICETH).safeIncreaseAllowance(UNIV3_ROUTER, type(uint256).max);
         IERC20(ICETH).safeIncreaseAllowance(ROLLUP_PROCESSOR, type(uint256).max);
         IERC20(WETH).safeIncreaseAllowance(UNIV3_ROUTER, type(uint256).max);
@@ -126,26 +125,6 @@ contract IndexBridgeContract is BridgeBase {
         
     }
 
-    // @dev This function always reverts since this contract has not async flow.
-    function finalise(
-        AztecTypes.AztecAsset calldata inputAssetA,
-        AztecTypes.AztecAsset calldata inputAssetB,
-        AztecTypes.AztecAsset calldata outputAssetA,
-        AztecTypes.AztecAsset calldata outputAssetB,
-        uint256 interactionNonce,
-        uint64 auxData
-    )
-        external
-        payable
-        override
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
-        require(false);
-    }
 
     /**
     * @dev This function either redeems icETH for ETH or sells icETH for ETH on univ3 depending
@@ -185,15 +164,15 @@ contract IndexBridgeContract is BridgeBase {
             pathToEth[0] = STETH;
             pathToEth[1] = ETH;
 
-            IExchangeIssue.SwapData memory redeemData = IExchangeIssue.SwapData(
+            IExchangeIssuanceLeveraged.SwapData memory redeemData = IExchangeIssuanceLeveraged.SwapData(
                 pathToEth, 
                 fee,
                 CURVE, 
-                IExchangeIssue.Exchange.Curve
+                IExchangeIssuanceLeveraged.Exchange.Curve
             );
 
             // Redeem icETH for eth
-            IExchangeIssue(EXISSUE).redeemExactSetForETH(
+            IExchangeIssuanceLeveraged(EXCHANGE_ISSUANCE).redeemExactSetForETH(
                 ISetToken(ICETH),
                 _totalInputValue,
                 minAmountOut,
@@ -273,11 +252,11 @@ contract IndexBridgeContract is BridgeBase {
             address[] memory pathToSt = new address[](2);
             pathToSt[0] = ETH;
             pathToSt[1] = STETH;
-            IExchangeIssue.SwapData memory issueData = IExchangeIssue.SwapData(
-                    pathToSt, fee, CURVE, IExchangeIssue.Exchange.Curve
+            IExchangeIssuanceLeveraged.SwapData memory issueData = IExchangeIssuanceLeveraged.SwapData(
+                    pathToSt, fee, CURVE, IExchangeIssuanceLeveraged.Exchange.Curve
             );
 
-            IExchangeIssue(EXISSUE).issueExactSetFromETH{value: _totalInputValue}(
+            IExchangeIssuanceLeveraged(EXCHANGE_ISSUANCE).issueExactSetFromETH{value: _totalInputValue}(
                 ISetToken(ICETH),
                 minAmountOut,
                 issueData,
@@ -346,7 +325,7 @@ contract IndexBridgeContract is BridgeBase {
         );
 
         {
-            uint32 secondsAgo = 60*10; 
+            uint32 secondsAgo = 10; 
 
             uint32[] memory secondsAgos = new uint32[](2);
             secondsAgos[0] = secondsAgo;
@@ -430,10 +409,11 @@ contract IndexBridgeContract is BridgeBase {
         if (price < uint256(_oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
 
         IAaveLeverageModule(AAVE_LEVERAGE_MODULE).sync(ISetToken(ICETH));
-        IExchangeIssue.LeveragedTokenData memory issueInfo = IExchangeIssue(EXISSUE).getLeveragedTokenData(
-            ISetToken(ICETH), 
-            _setAmount, 
-            true
+        IExchangeIssuanceLeveraged.LeveragedTokenData memory issueInfo = 
+            IExchangeIssuanceLeveraged(EXCHANGE_ISSUANCE).getLeveragedTokenData(
+                ISetToken(ICETH), 
+                _setAmount, 
+                true
         );        
 
         uint256 debtOwed = issueInfo.debtAmount.mul(1.0009 ether).div(1e18);
@@ -463,10 +443,11 @@ contract IndexBridgeContract is BridgeBase {
         if (price > uint256(_oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
 
         IAaveLeverageModule(AAVE_LEVERAGE_MODULE).sync(ISetToken(ICETH));
-        IExchangeIssue.LeveragedTokenData memory data = IExchangeIssue(EXISSUE).getLeveragedTokenData(
-            ISetToken(ICETH),
-            1e18,
-            true
+        IExchangeIssuanceLeveraged.LeveragedTokenData memory data = 
+            IExchangeIssuanceLeveraged(EXCHANGE_ISSUANCE).getLeveragedTokenData(
+                ISetToken(ICETH),
+                1e18,
+                true
         );
 
         uint256 costOfOneIc = (data.collateralAmount.
