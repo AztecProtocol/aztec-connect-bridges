@@ -15,7 +15,7 @@ import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
  *         as possible without spinning up all the rollup infrastructure (sequencer, proof generator etc.).
  */
 contract ExampleE2ETest is BridgeTestBase {
-    IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+    IERC20 public constant USDC = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
 
     // The reference to the example bridge
     ExampleBridgeContract internal bridge;
@@ -31,11 +31,19 @@ contract ExampleE2ETest is BridgeTestBase {
         vm.label(address(bridge), "Example Bridge");
 
         // Impersonate the multi-sig to add a new bridge
-        vm.prank(MULTI_SIG);
+        vm.startPrank(MULTI_SIG);
 
         // List the example-bridge with a gasLimit of 100K
         // WARNING: If you set this value to low the interaction will fail for seemingly no reason!
         ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 100000);
+
+        // List USDC with a gasLimit of 100k
+        // Note: necessary for assets which are not already registered on RollupProcessor
+        // Call https://etherscan.io/address/0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455#readProxyContract#F25 to get
+        // addresses of all the listed ERC20 tokens
+        ROLLUP_PROCESSOR.setSupportedAsset(address(USDC), 100000);
+
+        vm.stopPrank();
 
         // Fetch the id of the example bridge
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
@@ -46,10 +54,10 @@ contract ExampleE2ETest is BridgeTestBase {
         vm.assume(_depositAmount > 1);
 
         // Use the helper function to fetch the support AztecAsset for DAI
-        AztecTypes.AztecAsset memory daiAsset = getRealAztecAsset(address(DAI));
+        AztecTypes.AztecAsset memory daiAsset = getRealAztecAsset(address(USDC));
 
         // Mint the depositAmount of Dai to rollupProcessor
-        deal(address(DAI), address(ROLLUP_PROCESSOR), _depositAmount);
+        deal(address(USDC), address(ROLLUP_PROCESSOR), _depositAmount);
 
         // Computes the encoded data for the specific bridge interaction
         uint256 bridgeCallData = encodeBridgeCallData(id, daiAsset, emptyAsset, daiAsset, emptyAsset, 0);
@@ -65,7 +73,7 @@ contract ExampleE2ETest is BridgeTestBase {
         assertFalse(isAsync, "Bridge is not synchronous");
 
         // Check that the balance of the rollup is same as before interaction (bridge just sends funds back)
-        assertEq(_depositAmount, DAI.balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
+        assertEq(_depositAmount, USDC.balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
 
         // Perform a second rollup with half the deposit, perform similar checks.
         uint256 secondDeposit = _depositAmount / 2;
@@ -79,6 +87,6 @@ contract ExampleE2ETest is BridgeTestBase {
         assertFalse(isAsync, "Bridge is not synchronous");
 
         // Check that the balance of the rollup is same as before interaction (bridge just sends funds back)
-        assertEq(_depositAmount, DAI.balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
+        assertEq(_depositAmount, USDC.balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
     }
 }
