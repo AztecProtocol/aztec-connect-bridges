@@ -226,7 +226,7 @@ abstract contract BridgeTestBase is Test {
 
     /**
      * @notice Helper function for processing a rollup with a specific call data and `_inputValue`
-     * @dev @ill impersonate the rollup processor and update rollup state
+     * @dev will impersonate the rollup processor and update rollup state
      * @param _encodedBridgeCallData The encoded bridge call data for the action, e.g., output from `encodeBridgeCallData()`
      * @param _inputValue The value of inputAssetA and inputAssetB to transfer to the bridge
      * @return outputValueA The amount of outputAssetA returned from the DeFi bridge interaction in this rollup
