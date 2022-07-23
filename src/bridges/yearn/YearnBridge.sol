@@ -132,7 +132,7 @@ contract YearnBridge is BridgeBase {
         private
         returns (uint256 outputValue)
     {
-        if (msg.value == 0) {
+        if (msg.value == 0 || msg.value != _inputValue) {
             revert ErrorLib.InvalidInputAmount();
         }
 
@@ -142,7 +142,6 @@ contract YearnBridge is BridgeBase {
             revert ErrorLib.InvalidOutputA();
         }
         IWETH(WETH).deposit{value: _inputValue}();
-        IERC20(WETH).balanceOf(address(this));
 
         outputValue = yVault.deposit(_inputValue);
     }
@@ -168,9 +167,10 @@ contract YearnBridge is BridgeBase {
             revert InvalidWETHAmount();
         }
 
+        uint256 outputValueBefore = address(this).balance;
         IWETH(WETH).withdraw(wethAmount);
         outputValue = address(this).balance;
-        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValue}(_interactionNonce);
+        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValue - outputValueBefore}(_interactionNonce);
     }
 
     /**
