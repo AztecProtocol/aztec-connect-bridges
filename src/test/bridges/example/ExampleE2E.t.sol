@@ -34,6 +34,7 @@ contract ExampleE2ETest is BridgeTestBase {
         vm.prank(MULTI_SIG);
 
         // List the example-bridge with a gasLimit of 100K
+        // WARNING: If you set this value to low the interaction will fail for seemingly no reason!
         ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 100000);
 
         // Fetch the id of the example bridge
@@ -53,26 +54,29 @@ contract ExampleE2ETest is BridgeTestBase {
         // Computes the encoded data for the specific bridge interaction
         uint256 bridgeCallData = encodeBridgeCallData(id, daiAsset, emptyAsset, daiAsset, emptyAsset, 0);
 
-        // Use cheatcodes to look for event matching 2 first indexed values and data
-        vm.expectEmit(true, true, false, true);
-        // Second part of cheatcode, emit the event that we are to match against.
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, _depositAmount, 0, true, "");
-
         // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
-        sendDefiRollup(bridgeCallData, _depositAmount);
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, _depositAmount);
+
+        // Note: Unlike in unit tests there is no need to manually transfer the tokens - RollupProcessor does this
+
+        // Check the output values are as expected
+        assertEq(outputValueA, _depositAmount, "outputValueA doesn't equal deposit");
+        assertEq(outputValueB, 0, "Non-zero outputValueB");
+        assertFalse(isAsync, "Bridge is not synchronous");
 
         // Check that the balance of the rollup is same as before interaction (bridge just sends funds back)
         assertEq(_depositAmount, DAI.balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
 
         // Perform a second rollup with half the deposit, perform similar checks.
         uint256 secondDeposit = _depositAmount / 2;
-        // Use cheatcodes to look for event matching 2 first indexed values and data
-        vm.expectEmit(true, true, false, true);
-        // Second part of cheatcode, emit the event that we are to match against.
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), secondDeposit, secondDeposit, 0, true, "");
 
         // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
-        sendDefiRollup(bridgeCallData, secondDeposit);
+        (outputValueA, outputValueB, isAsync) = sendDefiRollup(bridgeCallData, secondDeposit);
+
+        // Check the output values are as expected
+        assertEq(outputValueA, secondDeposit, "outputValueA doesn't equal second deposit");
+        assertEq(outputValueB, 0, "Non-zero outputValueB");
+        assertFalse(isAsync, "Bridge is not synchronous");
 
         // Check that the balance of the rollup is same as before interaction (bridge just sends funds back)
         assertEq(_depositAmount, DAI.balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
