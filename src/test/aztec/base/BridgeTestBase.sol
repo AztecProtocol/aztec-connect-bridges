@@ -2,7 +2,7 @@
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, Vm} from "forge-std/Test.sol";
 import {AztecTypes} from "./../../../aztec/libraries/AztecTypes.sol";
 import {IRollupProcessor} from "./../../../aztec/interfaces/IRollupProcessor.sol";
 
@@ -105,14 +105,11 @@ abstract contract BridgeTestBase is Test {
     address internal constant ROLLUP_PROVIDER = payable(0xA173BDdF4953C1E8be2cA0695CFc07502Ff3B1e7);
     address internal constant MULTI_SIG = 0xE298a76986336686CC3566469e3520d23D1a8aaD;
 
-<<<<<<< HEAD
     bytes32 public constant BRIDGE_PROCESSED_EVENT_SIG =
         keccak256("DefiBridgeProcessed(uint256,uint256,uint256,uint256,uint256,bool,bytes)");
     bytes32 public constant ASYNC_BRIDGE_PROCESSED_EVENT_SIG =
         keccak256("AsyncDefiBridgeProcessed(uint256,uint256,uint256)");
 
-=======
->>>>>>> 9c917c0b (rebase)
     AztecTypes.AztecAsset internal emptyAsset;
 
     uint256 public nextRollupId = 0;
