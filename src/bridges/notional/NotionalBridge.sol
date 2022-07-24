@@ -115,7 +115,7 @@ contract NotionalBridgeContract is BridgeBase {
      * @param _token is the address of input asset token
      * @param _amount is the amount of input asset token
      */
-    function _computeUnderlyingAmount(address _token, uint256 _amount) internal returns (uint88) {
+    function computeUnderlyingAmount(address _token, uint256 _amount) public returns (uint88) {
         bool isCtoken = ctokens[_token];
         address underlyingToken = underlyingAddrMap[_token];
         if (isCtoken) {
@@ -162,7 +162,7 @@ contract NotionalBridgeContract is BridgeBase {
         if (fcash.getCurrencyId() != _currencyId) {
             revert("fcash has not been deployed");
         }
-        uint88 fcashAmount = _computeUnderlyingAmount(_inputToken, _amount);
+        uint88 fcashAmount = computeUnderlyingAmount(_inputToken, _amount);
         if (ctokens[_inputToken]) {
             fcash.mintViaAsset(_amount, fcashAmount, address(this), 0);
         } else {
