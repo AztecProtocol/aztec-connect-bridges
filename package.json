@@ -25,14 +25,8 @@
     "lint:clients": "eslint \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
-<<<<<<< HEAD
     "@aztec/barretenberg": "2.1.35",
     "@ethersproject/providers": "^5.6.8"
-=======
-    "@aztec/barretenberg": "2.1.26",
-    "@ethersproject/providers": "^5.6.8",
-    "@notional-finance/sdk-v2": "^0.5.6"
->>>>>>> 6be78da2 (add notional bridge)
   },
   "jest": {
     "transform": {
