@@ -25,25 +25,8 @@
     "lint:clients": "eslint \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "@aztec/barretenberg": "2.1.35",
-<<<<<<< HEAD
-    "@ethersproject/providers": "^5.6.8",
-    "@notional-finance/sdk-v2": "^0.5.6"
-=======
+    "@aztec/barretenberg": "2.1.36",
     "@ethersproject/providers": "^5.6.8"
-=======
-    "@aztec/barretenberg": "2.1.26",
-    "@ethersproject/providers": "^5.6.8",
-    "@notional-finance/sdk-v2": "^0.5.6"
->>>>>>> 6be78da2 (add notional bridge)
->>>>>>> 70661815 (add notional bridge)
-=======
-    "@aztec/barretenberg": "2.1.26",
-    "@ethersproject/providers": "^5.6.8",
-    "@notional-finance/sdk-v2": "^0.5.6"
->>>>>>> 6be78da2 (add notional bridge)
   },
   "jest": {
     "transform": {
