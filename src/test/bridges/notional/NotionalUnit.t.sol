@@ -47,8 +47,6 @@ contract NotionalTest is BridgeTestBase {
         balanceOfSlot[CWBTC] = bytes32(uint256(14));
 
         bridge = new NotionalBridgeContract(address(ROLLUP_PROCESSOR), address(FCASH_FACTORY));
-        vm.prank(MULTI_SIG);
-        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 500000);
     }
 
     // test whether when we lend eth, we receive wrapper fcash token back
