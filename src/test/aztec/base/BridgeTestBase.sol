@@ -2,7 +2,7 @@
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, Vm} from "forge-std/Test.sol";
 import {AztecTypes} from "./../../../aztec/libraries/AztecTypes.sol";
 import {IRollupProcessor} from "./../../../aztec/interfaces/IRollupProcessor.sol";
 
@@ -107,15 +107,21 @@ abstract contract BridgeTestBase is Test {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 80476fc453a69626ed0f518dbac00b651bb4232a
     bytes32 public constant BRIDGE_PROCESSED_EVENT_SIG =
         keccak256("DefiBridgeProcessed(uint256,uint256,uint256,uint256,uint256,bool,bytes)");
     bytes32 public constant ASYNC_BRIDGE_PROCESSED_EVENT_SIG =
         keccak256("AsyncDefiBridgeProcessed(uint256,uint256,uint256)");
 
+<<<<<<< HEAD
 =======
 >>>>>>> 9c917c0b (rebase)
 =======
 >>>>>>> 9c917c0b (rebase)
+=======
+>>>>>>> 80476fc453a69626ed0f518dbac00b651bb4232a
     AztecTypes.AztecAsset internal emptyAsset;
 
     uint256 public nextRollupId = 0;
@@ -260,6 +266,9 @@ abstract contract BridgeTestBase is Test {
 
     /**
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 80476fc453a69626ed0f518dbac00b651bb4232a
      * @notice A function which iterates through logs, decodes relevant events and returns values which were originally
      *         returned from bridge's `convert(...)` function.
      * @dev You have to call `vm.recordLogs()` before calling this function

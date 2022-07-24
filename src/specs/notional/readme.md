@@ -16,15 +16,7 @@ There are two flows of Notional Bridge, namely deposits and withdraws.
 
 ### Deposit
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 If the bridge received `USDC`, `DAI`, `ETH`, `WBTC` or their corresponding compound tokens, and the output asset address matches the address of `fcash` token we compute, then the bridge would deposit the input token into the `fcash` contract and give back a certain number of `fcash` tokens to represent the lending position.
-=======
-If the bridge received `USDC`, `DAI`, `ETH`, `WBTC` or their corresponding compound tokens, and the output asset address matches the address of `fcash` token we compute, then the bridge would deposit the input token into the `fcash` contract and give back a certain number of `fcash` tokens to represent the lending position. 
->>>>>>> 70661815 (add notional bridge)
-=======
-If the bridge received `USDC`, `DAI`, `ETH`, `WBTC` or their corresponding compound tokens, and the output asset address matches the address of `fcash` token we compute, then the bridge would deposit the input token into the `fcash` contract and give back a certain number of `fcash` tokens to represent the lending position.
->>>>>>> 2bdb4a12 (run prettier)
 
 ### Withdrawal
 
@@ -36,13 +28,6 @@ If the bridge receives `fcash` as the input token, it will withdraw them for the
 
 - The bridge uses `auxData` for entering positions. `auxData` represents the maturity of the market we want to enter
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-
->>>>>>> 70661815 (add notional bridge)
-=======
->>>>>>> 2bdb4a12 (run prettier)
 ## Is the contract upgradeable?
 
 No, the bridge is immutable without any admin role.

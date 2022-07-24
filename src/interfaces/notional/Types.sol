@@ -171,28 +171,4 @@ struct AssetRateParameters {
     int256 rate;
     // The decimals of the underlying, the rate converts to the underlying decimals
     int256 underlyingDecimals;
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 6be78da2 (add notional bridge)
-=======
-}
->>>>>>> 2bdb4a12 (run prettier)
-=======
-}
->>>>>>> 9c917c0b (rebase)
-=======
-}
->>>>>>> 70661815 (add notional bridge)
-=======
-}
->>>>>>> 6be78da2 (add notional bridge)
-=======
-}
->>>>>>> 2bdb4a12 (run prettier)

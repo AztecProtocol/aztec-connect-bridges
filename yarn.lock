@@ -982,8 +982,11 @@
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/@humanwhocodes/object-schema/-/object-schema-1.2.1.tgz#b520529ec21d8e5945a1851dfd1c32e94e39ff45"
   integrity sha512-ZnQMnLV4e7hDlUvw8H+U8ASL02SS2Gn6+9Ac3wGGLIe7+je2AeAOxPY+izIPJDfFDb7eDjev0Us8MO1iFRN8hA==
+<<<<<<< HEAD
 =======
 >>>>>>> 6be78da2 (add notional bridge)
+=======
+>>>>>>> 80476fc453a69626ed0f518dbac00b651bb4232a
 "@graphql-typed-document-node/core@^3.1.1":
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/@graphql-typed-document-node/core/-/core-3.1.1.tgz#076d78ce99822258cf813ecc1e7fa460fa74d052"
@@ -1299,6 +1302,7 @@
     tweetnacl-util "^0.15.1"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 "@notional-finance/sdk-v2@^0.5.6":
   version "0.5.6"
   resolved "https://registry.yarnpkg.com/@notional-finance/sdk-v2/-/sdk-v2-0.5.6.tgz#109de5a3752a7fdca26320bccff0c130d7682db1"
@@ -1316,6 +1320,8 @@
     graphql "^15.3.0"
     set-interval-async "^2.0.3"
 =======
+=======
+>>>>>>> 80476fc453a69626ed0f518dbac00b651bb4232a
 "@nodelib/fs.scandir@2.1.5":
   version "2.1.5"
   resolved "https://registry.yarnpkg.com/@nodelib/fs.scandir/-/fs.scandir-2.1.5.tgz#7619c2eb21b25483f6d167548b4cfd5a7488c3d5"
@@ -2515,6 +2521,7 @@ cross-spawn@^7.0.2, cross-spawn@^7.0.3:
     which "^2.0.1"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 crypto-es@^1.2.2:
   version "1.2.7"
   resolved "https://registry.yarnpkg.com/crypto-es/-/crypto-es-1.2.7.tgz#754a6d52319a94fb4eb1f119297f17196b360f88"
@@ -2524,6 +2531,9 @@ debug@4, debug@^4.0.1, debug@^4.1.0, debug@^4.1.1, debug@^4.2.0, debug@^4.3.3:
 =======
 debug@4, debug@^4.0.1, debug@^4.1.0, debug@^4.1.1, debug@^4.2.0, debug@^4.3.2, debug@^4.3.3, debug@^4.3.4:
 >>>>>>> 95078025 (remove notional sdk)
+=======
+debug@4, debug@^4.0.1, debug@^4.1.0, debug@^4.1.1, debug@^4.2.0, debug@^4.3.2, debug@^4.3.3, debug@^4.3.4:
+>>>>>>> 80476fc453a69626ed0f518dbac00b651bb4232a
   version "4.3.4"
   resolved "https://registry.yarnpkg.com/debug/-/debug-4.3.4.tgz#1319f6579357f2338d3337d2cdd4914bb5dcc865"
   integrity sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==
@@ -5730,12 +5740,16 @@ ts-essentials@^7.0.1:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 95078025 (remove notional sdk)
+=======
+>>>>>>> 80476fc453a69626ed0f518dbac00b651bb4232a
 ts-jest@^28.0.6:
   version "28.0.6"
   resolved "https://registry.yarnpkg.com/ts-jest/-/ts-jest-28.0.6.tgz#d63df9a9908044cd891e066ad869b1a432e70d67"
   integrity sha512-yLAWoaSJ6c9o+IT7+nyutp5uvwGzhMYb/LD5WEQAi2tBq4ZSAPay4Lf69pP/IU+GFYg87pdg5eADSzuNAFSK4g==
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
 ts-invariant@^0.10.3:
@@ -5752,6 +5766,8 @@ ts-jest@^28.0.5:
 >>>>>>> 6be78da2 (add notional bridge)
 =======
 >>>>>>> 95078025 (remove notional sdk)
+=======
+>>>>>>> 80476fc453a69626ed0f518dbac00b651bb4232a
   dependencies:
     bs-logger "0.x"
     fast-json-stable-stringify "2.x"
@@ -5957,8 +5973,12 @@ which@^1.2.9:
   resolved "https://registry.yarnpkg.com/which/-/which-1.3.1.tgz#a45043d54f5805316da8d62f9f50918d3da70b0a"
   integrity sha512-HxJdYWq1MTIQbJ3nw0cqssHoTNU267KlrDuGZ1WYlxDStUtKUhOaJmh112/TZmHxxUfuJqPXSOm7tDyas0OSIQ==
   dependencies:
+<<<<<<< HEAD
     "@ethersproject/abi" "^5.6.3"
     web3-utils "1.7.4"
+=======
+    isexe "^2.0.0"
+>>>>>>> 80476fc453a69626ed0f518dbac00b651bb4232a
 
 word-wrap@^1.2.3, word-wrap@~1.2.3:
   version "1.2.3"
