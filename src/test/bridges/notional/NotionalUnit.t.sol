@@ -4,8 +4,8 @@ pragma solidity >=0.8.4;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
 import {NotionalBridgeContract} from "../../../bridges/notional/NotionalBridge.sol";
-import {IWrappedfCashFactory} from "../../../bridges/notional/interfaces/notional/IWrappedfCashFactory.sol";
-import {NotionalViews} from "../../../bridges/notional/interfaces/notional/INotionalViews.sol";
+import {IWrappedfCashFactory} from "../../../interfaces/notional/IWrappedfCashFactory.sol";
+import {NotionalViews} from "../../../interfaces/notional/INotionalViews.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 
 struct Info {
