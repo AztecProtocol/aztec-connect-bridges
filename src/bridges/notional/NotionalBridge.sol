@@ -6,11 +6,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
-import {IWrappedfCashFactory} from "./interfaces/notional/IWrappedfCashFactory.sol";
-import {IWrappedfCash} from "./interfaces/notional/IWrappedfCash.sol";
+import {IWrappedfCashFactory} from "../../interfaces/notional/IWrappedfCashFactory.sol";
+import {IWrappedfCash} from "../../interfaces/notional/IWrappedfCash.sol";
 import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
-import {WETH9} from "./interfaces/WETH9.sol";
-import {CToken} from "./interfaces/CToken.sol";
+import {WETH9} from "../../interfaces/notional/WETH9.sol";
+import {CToken} from "../../interfaces/notional/CToken.sol";
 
 contract NotionalBridgeContract is BridgeBase {
     IWrappedfCashFactory public fcashFactory;
