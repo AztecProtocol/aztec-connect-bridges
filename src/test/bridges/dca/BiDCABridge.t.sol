@@ -596,7 +596,7 @@ contract BiDCATestUnit is Test {
         deal(address(assetB), address(this), dealAmount);
         assetB.approve(address(bridge), type(uint256).max);
         refreshTs();
-        (int256 a, int256 b) = bridge.rebalanceAndfill(0, dealAmount);
+        (int256 a, int256 b) = bridge.rebalanceAndFill(0, dealAmount);
 
         {
             // Check rabalance output values
@@ -696,7 +696,7 @@ contract BiDCATestUnit is Test {
         deal(address(assetB), address(this), 1000 ether);
         assetB.approve(address(bridge), type(uint256).max);
         refreshTs();
-        (int256 a, int256 b) = bridge.rebalanceAndfill(0, 10 ether);
+        (int256 a, int256 b) = bridge.rebalanceAndFill(0, 10 ether);
 
         {
             // Check rabalance output values
@@ -790,7 +790,7 @@ contract BiDCATestUnit is Test {
         deal(address(assetB), address(this), 1000 ether);
         assetB.approve(address(bridge), type(uint256).max);
         refreshTs();
-        (int256 a, int256 b) = bridge.rebalanceAndfill(0, 10 ether);
+        (int256 a, int256 b) = bridge.rebalanceAndFill(0, 10 ether);
 
         {
             // Check rabalance output values
@@ -864,7 +864,7 @@ contract BiDCATestUnit is Test {
         deal(address(assetB), address(this), 1000 ether);
         assetB.approve(address(bridge), type(uint256).max);
         refreshTs();
-        (int256 a, int256 b) = bridge.rebalanceAndfill(0, 0.15 ether);
+        (int256 a, int256 b) = bridge.rebalanceAndFill(0, 0.15 ether);
 
         {
             // Check rabalance output values
@@ -990,7 +990,7 @@ contract BiDCATestUnit is Test {
         }
 
         refreshTs();
-        (int256 a, int256 b) = bridge.rebalanceAndfill(0, 0);
+        (int256 a, int256 b) = bridge.rebalanceAndFill(0, 0);
 
         {
             // Check rabalance output values
@@ -1115,7 +1115,7 @@ contract BiDCATestUnit is Test {
         }
 
         refreshTs();
-        (int256 a, int256 b) = bridge.rebalanceAndfill(0, 0);
+        (int256 a, int256 b) = bridge.rebalanceAndFill(0, 0);
 
         {
             // Check rabalance output values
@@ -1255,7 +1255,7 @@ contract BiDCATestUnit is Test {
         movePrice(1e18, 0); // This is probably better for full cover, but why does it mess with the bridge accounting :eyes:
 
         {
-            (int256 a, int256 b) = bridge.rebalanceAndfill(0, 0);
+            (int256 a, int256 b) = bridge.rebalanceAndFill(0, 0);
             // Check rabalance output values
             assertEq(a, 0 ether, "User did not buy 0 tokens");
             assertEq(b, 0 ether, "User did not sell 0 eth");
@@ -1322,7 +1322,7 @@ contract BiDCATestUnit is Test {
         deal(address(assetB), address(this), 1 ether);
         assetB.approve(address(bridge), 1 ether);
         {
-            (int256 a2, int256 b2) = bridge.rebalanceAndfill(0, 1 ether);
+            (int256 a2, int256 b2) = bridge.rebalanceAndFill(0, 1 ether);
             price = bridge.getPrice();
 
             assertEq(a2, -int256(1400e18 - sums.summedA), "User did not buy matching tokens");
