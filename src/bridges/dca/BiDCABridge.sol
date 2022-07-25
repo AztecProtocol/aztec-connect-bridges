@@ -127,8 +127,8 @@ abstract contract BiDCABridge is BridgeBase {
      * @return flowA The flow of asset A from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
      * @return flowB The flow of asset B from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
      */
-    function rebalanceAndfill(uint256 _offerA, uint256 _offerB) public returns (int256, int256) {
-        (int256 flowA, int256 flowB, , ) = _rebalanceAndfill(_offerA, _offerB, getPrice(), false);
+    function rebalanceAndFill(uint256 _offerA, uint256 _offerB) public returns (int256, int256) {
+        (int256 flowA, int256 flowB, , ) = _rebalanceAndFill(_offerA, _offerB, getPrice(), false);
         if (flowA > 0) {
             ASSET_A.safeTransferFrom(msg.sender, address(this), uint256(flowA));
         } else if (flowA < 0) {
@@ -279,7 +279,7 @@ abstract contract BiDCABridge is BridgeBase {
     /**
      * @notice Helper to fetch the tick at `_tick`
      * @param _tick The tick to fetch
-     * @return The Tick sturcture
+     * @return The Tick structure
      */
     function getTick(uint256 _tick) public view returns (Tick memory) {
         return ticks[_tick];
@@ -288,7 +288,7 @@ abstract contract BiDCABridge is BridgeBase {
     /**
      * @notice Helper to fetch the DCA at `_nonce`
      * @param _nonce The DCA to fetch
-     * @return The DCA sturcture
+     * @return The DCA structure
      */
     function getDCA(uint256 _nonce) public view returns (DCA memory) {
         return dcas[_nonce];
@@ -387,7 +387,7 @@ abstract contract BiDCABridge is BridgeBase {
      * @return availableB The amount of asset B that is available after the rebalancing
      */
 
-    function _rebalanceAndfill(
+    function _rebalanceAndFill(
         uint256 _offerA,
         uint256 _offerB,
         uint256 _currentPrice,
@@ -437,7 +437,7 @@ abstract contract BiDCABridge is BridgeBase {
             if (tick.availableA > 0 && tick.availableB > 0) {
                 uint256 price = tick.priceAToB;
 
-                // If a price is stored, update the last used price and timestamp. Otherwise intrapolate.
+                // If a price is stored, update the last used price and timestamp. Otherwise interpolate.
                 if (price > 0) {
                     vars.lastUsedPrice = price;
                     vars.lastUsedPriceTs = tick.priceUpdated;
@@ -527,7 +527,7 @@ abstract contract BiDCABridge is BridgeBase {
                 vars.protocolBoughtB += assetBPayment;
             }
 
-            // If no more available, increase tick to the next. Can be expensive if no-thing happend for a long time
+            // If no more available, increase tick to the next. Can be expensive if nothing happened for a long time
             if (tick.availableA == 0 && vars.oldestTickAvailableA == i) {
                 vars.oldestTickAvailableA = i + 1;
             }

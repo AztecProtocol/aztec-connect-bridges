@@ -53,7 +53,7 @@ contract UniswapDCABridge is BiDCABridge {
     }
 
     /**
-     * @notice Rebalances within ticks, then accross ticks, and finally, take the remaining funds to uniswap
+     * @notice Rebalances within ticks, then across ticks, and finally, take the remaining funds to uniswap
      * where it is traded for the opposite, and used to rebalance completely
      * @dev Uses a specific path for the assets to do the swap
      * @dev Slippage protection through the chainlink oracle, as a base price
@@ -63,10 +63,10 @@ contract UniswapDCABridge is BiDCABridge {
      */
     function rebalanceAndFillUniswap() public returns (int256, int256) {
         uint256 oraclePrice = getPrice();
-        (int256 aFlow, int256 bFlow, uint256 a, uint256 b) = _rebalanceAndfill(0, 0, oraclePrice, true);
+        (int256 aFlow, int256 bFlow, uint256 a, uint256 b) = _rebalanceAndFill(0, 0, oraclePrice, true);
 
         if (a > 0 && b > 0) {
-            (aFlow, bFlow, a, b) = _rebalanceAndfill(a, b, oraclePrice, true);
+            (aFlow, bFlow, a, b) = _rebalanceAndFill(a, b, oraclePrice, true);
         }
 
         if (a > 0) {
@@ -83,7 +83,7 @@ contract UniswapDCABridge is BiDCABridge {
 
             uint256 price = (bOffer * 1e18) / a;
 
-            (aFlow, bFlow, , ) = _rebalanceAndfill(0, bOffer, price, true);
+            (aFlow, bFlow, , ) = _rebalanceAndFill(0, bOffer, price, true);
         }
 
         if (b > 0) {
@@ -100,7 +100,7 @@ contract UniswapDCABridge is BiDCABridge {
 
             uint256 price = (b * 1e18 + aOffer - 1) / aOffer;
 
-            (aFlow, bFlow, , ) = _rebalanceAndfill(aOffer, 0, price, true);
+            (aFlow, bFlow, , ) = _rebalanceAndFill(aOffer, 0, price, true);
         }
 
         return (aFlow, bFlow);

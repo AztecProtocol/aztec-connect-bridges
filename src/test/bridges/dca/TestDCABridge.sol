@@ -24,7 +24,7 @@ contract TestDCABridge is UniswapDCABridge {
         bool _transfer
     ) public returns (int256, int256) {
         // Only for testing
-        (int256 flowA, int256 flowB, , ) = _rebalanceAndfill(_a, _b, _price, _self);
+        (int256 flowA, int256 flowB, , ) = _rebalanceAndFill(_a, _b, _price, _self);
 
         if (_transfer) {
             if (flowA > 0) {
