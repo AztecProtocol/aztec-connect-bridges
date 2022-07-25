@@ -11,8 +11,7 @@ import {OracleLibrary} from "../libraries/uniswapv3/OracleLibrary.sol";
 import {IUniswapV3Factory} from "../interfaces/uniswapv3/IUniswapV3Factory.sol";
 import {IUniswapV3PoolState} from "../interfaces/uniswapv3/pool/IUniswapV3PoolState.sol";
 import {IQuoter} from "../interfaces/uniswapv3/IQuoter.sol";
-// TODO: point to ../interfaces/uniswapv3 once the liquity audit feedback is merged
-import {ISwapRouter} from "../interfaces/liquity/ISwapRouter.sol";
+import {ISwapRouter} from "../interfaces/uniswapv3/ISwapRouter.sol";
 
 import {IPathRegistry} from "./interfaces/IPathRegistry.sol";
 
