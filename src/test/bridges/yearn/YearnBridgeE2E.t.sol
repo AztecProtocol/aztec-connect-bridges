@@ -36,6 +36,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
 
     function setUp() public {
         bridge = new YearnBridge(address(ROLLUP_PROCESSOR));
+        bridge.preApproveAll();
         vm.label(address(bridge), "YEARN_BRIDGE");
         vm.deal(address(bridge), 0);
 
@@ -45,129 +46,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
     }
 
-    function testPreApproveOne() public {
-        IYearnRegistry _registry = bridge.YEARN_REGISTRY();
-        address vault = _registry.latestVault(address(DAI));
-
-        assertEq(
-            IERC20(DAI).allowance(address(bridge), address(vault)),
-            0,
-            "token allowance for bridge from vault should be 0"
-        );
-        assertEq(
-            IERC20(DAI).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
-            0,
-            "token allowance for bridge from ROLLUP_PROCESSOR should be 0"
-        );
-        assertEq(
-            IERC20(address(vault)).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
-            0,
-            "vault allowance for bridge from ROLLUP_PROCESSOR should be 0"
-        );
-        bridge.preApprove(vault);
-        assertEq(
-            IERC20(DAI).allowance(address(bridge), address(vault)),
-            type(uint256).max,
-            "token allowance for bridge from vault should be uint256.max"
-        );
-        assertEq(
-            IERC20(DAI).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
-            type(uint256).max,
-            "token allowance for bridge from ROLLUP_PROCESSOR should be 0"
-        );
-        assertEq(
-            IERC20(address(vault)).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
-            type(uint256).max,
-            "vault allowance for bridge from ROLLUP_PROCESSOR should be uint256.max"
-        );
-    }
-
-    function testPreApprove() public {
-        IYearnRegistry _registry = bridge.YEARN_REGISTRY();
-        uint256 numTokens = _registry.numTokens();
-        for (uint256 i; i < numTokens; ++i) {
-            address token = _registry.tokens(i);
-            address vault = _registry.latestVault(token);
-
-            assertEq(
-                IERC20(address(token)).allowance(address(bridge), address(vault)),
-                0,
-                "token allowance for bridge from vault should be 0"
-            );
-            assertEq(
-                IERC20(address(token)).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
-                0,
-                "token allowance for bridge from ROLLUP_PROCESSOR should be 0"
-            );
-            assertEq(
-                IERC20(address(vault)).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
-                0,
-                "vault allowance for bridge from ROLLUP_PROCESSOR should be 0"
-            );
-            bridge.preApprove(vault);
-            assertGt(
-                IERC20(address(token)).allowance(address(bridge), address(vault)),
-                SAFE_MAX,
-                "token allowance for bridge from vault should be SAFE_MAX"
-            );
-            assertGt(
-                IERC20(address(token)).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
-                SAFE_MAX,
-                "token allowance for bridge from ROLLUP_PROCESSOR should be SAFE_MAX"
-            );
-            assertGt(
-                IERC20(address(vault)).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
-                SAFE_MAX,
-                "vault allowance for bridge from ROLLUP_PROCESSOR should be SAFE_MAX"
-            );
-        }
-    }
-
-    function testPreApproveReverts() public {
-        address nonVaultTokenAddress = 0x3cD751E6b0078Be393132286c442345e5DC49699;
-        vm.expectRevert();
-        bridge.preApprove(nonVaultTokenAddress);
-
-        address nonApprovedVault = 0x33Bd0F9618Cf38FeA8f7f01E1514AB63b9bDe64b;
-        vm.expectRevert(YearnBridge.InvalidVault.selector);
-        bridge.preApprove(nonApprovedVault);
-    }
-
-    function testPreApproveWhenAllowanceNotZero(uint256 _currentAllowance) public {
-        vm.assume(_currentAllowance > 0);
-        vm.startPrank(address(bridge));
-        IYearnRegistry _registry = bridge.YEARN_REGISTRY();
-        uint256 numTokens = _registry.numTokens();
-        for (uint256 i; i < numTokens; ++i) {
-            address _token = _registry.tokens(i);
-            address _vault = _registry.latestVault(_token);
-            IYearnVault yVault = IYearnVault(_vault);
-            uint256 allowance = yVault.allowance(address(this), address(ROLLUP_PROCESSOR));
-            if (allowance < _currentAllowance) {
-                yVault.approve(address(ROLLUP_PROCESSOR), _currentAllowance - allowance);
-            }
-
-            IERC20 underlying = IERC20(yVault.token());
-            allowance = underlying.allowance(address(this), address(yVault));
-            if (allowance != type(uint256).max) {
-                underlying.safeApprove(address(yVault), 0);
-                underlying.safeApprove(address(yVault), type(uint256).max);
-            }
-            allowance = underlying.allowance(address(this), address(ROLLUP_PROCESSOR));
-            if (allowance != type(uint256).max) {
-                underlying.safeApprove(address(ROLLUP_PROCESSOR), 0);
-                underlying.safeApprove(address(ROLLUP_PROCESSOR), type(uint256).max);
-            }
-        }
-        vm.stopPrank();
-
-        // Verify that preApproveAll() doesn't fail
-        bridge.preApproveAll();
-    }
-
     function testERC20DepositAndWithdrawal(uint256 _depositAmount, uint256 _redeemAmount) public {
-        bridge.preApproveAll();
-
         IYearnRegistry _registry = bridge.YEARN_REGISTRY();
         address vault = _registry.latestVault(address(DAI));
         uint256 availableDepositLimit = IYearnVault(vault).availableDepositLimit();
@@ -177,8 +56,6 @@ contract YearnBridgeE2ETest is BridgeTestBase {
     }
 
     function testETHDepositAndWithdrawal(uint256 _depositAmount, uint256 _redeemAmount) public {
-        bridge.preApproveAll();
-
         _depositAndWithdrawETH(_depositAmount, _redeemAmount);
     }
 
