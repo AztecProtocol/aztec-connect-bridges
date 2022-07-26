@@ -23,7 +23,7 @@ import {IUniswapV3Factory} from "../../../interfaces/uniswapv3/IUniswapV3Factory
 import {IUniswapV3PoolDerivedState} from "../../../interfaces/uniswapv3/pool/IUniswapV3PoolDerivedState.sol";
 import {ICurvePool} from "../../../interfaces/curve/ICurvePool.sol";
 
-import "/home/ink/web3/aztec-connect-bridges/lib/forge-std/src/console2.sol"; //@note path
+import "forge-std/console2.sol"; 
 
 contract IndexTest is BridgeTestBase {
     using SafeMath for uint256;
@@ -94,10 +94,8 @@ contract IndexTest is BridgeTestBase {
         assertGe(newICETH, minAmountOut, 'Less than expected was returned when issuing icETH');
     }
 
-    function testBuySet() public {
-        //_depositAmount = bound(_depositAmount, 1 ether, 500 ether);
-
-        uint256 _depositAmount = 1 ether;
+    function testBuySet(uint256 _depositAmount) public {
+        _depositAmount = bound(_depositAmount, 1e6, 500 ether);
 
         uint64 flowSelector = 5; // Selects flow to swap with 0.05% pool 
         uint64 maxSlipAux = 9900; 
@@ -149,8 +147,8 @@ contract IndexTest is BridgeTestBase {
         }
    } 
 
-    function testSellSet() public{
-        uint256 _depositAmount = 1 ether; 
+    function testSellSet(uint256 _depositAmount) public{
+        _depositAmount = bound(_depositAmount, 1e6, 500 ether);
 
         uint64 flowSelector = 5;
         uint64 maxSlipAux = 9900; 
