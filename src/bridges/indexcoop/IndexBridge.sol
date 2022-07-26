@@ -95,8 +95,6 @@ contract IndexBridgeContract is BridgeBase {
     {
         isAsync = false;
 
-        if (msg.sender != ROLLUP_PROCESSOR) revert ErrorLib.InvalidCaller();
-
         if ( // To buy/issue
             _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
             _inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED &&
@@ -362,7 +360,15 @@ contract IndexBridgeContract is BridgeBase {
         }
     }
 
-    // From v3-peripher/contracts/libraries/OracleLibrary.sol using modified Fullmath and Tickmath for 0.8.x @audit add natspec
+    /**
+     * @dev Calculates the quote based on an an arithmetic mean tick.
+     * From v3-peripher/contracts/libraries/OracleLibrary.sol using modified Fullmath and Tickmath for 0.8.x 
+     * 
+     * @param _tick - the arithmetic mean tick.
+     * @param _baseAmount - The amount of base token.
+     * @param _baseToken - Address of the base token. 
+     * @param _quoteToken - Address of the quote token.
+     */
     function _getQuoteAtTick( 
         int24 _tick, 
         uint128 _baseAmount,
@@ -470,8 +476,11 @@ contract IndexBridgeContract is BridgeBase {
     *           flowSelector = 1 -> use ExchangeIssue contract to issue/redeem
     *           flowSelector = 3 -> use univ3 pool with a fee of 3000 to buy/sell
     *           flowSelector = 5 -> use univ3 pool with a fee of 500 buy/sell
-    * return  oracleLimit - Sanity check on Oracle, lower bound on stETH/ETH when 
-    * selling/redeeming icETH for ETH. Upper bound when buying/issuing icETH with ETH. 
+    * return  oracleLimit - A safety feature that is either the upper or lower limit 
+    * of the prices reported by an Oracles, it is set with 4 decimals. If we are buying 
+    * or issuing it is the upper limit, if we are selling/redeeming it is the lower limit. 
+    * If we are going through issuing/redeeming it is a limit on ETH/stETH from Chainlink, 
+    * if we are buying/selling on uniswap it is a limit on the ETH/icETH TWAP price.
     * return maxSlip - Used to specific maximal difference between the expected return based
     * on Oracle data and the received amount. maxSlip uses a decimal value of 4 e.g. to set the 
     * minimum discrepency to 1%, maxSlip should be 9900.
