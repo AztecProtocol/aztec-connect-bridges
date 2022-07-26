@@ -40,6 +40,8 @@ contract SetUnitTest is Test {
 
         vm.label(tokens[0], "DAI");
         vm.label(tokens[1], "DPI");
+        vm.label(address(bridge.EXCHANGE_ISSUANCE()), "EXCHANGE_ISSUANCE");
+        vm.label(address(bridge.SET_CONTROLLER()), "SET_CONTROLLER");
     }
 
     function testInvalidCaller() public {
@@ -237,4 +239,6 @@ contract SetUnitTest is Test {
         assertEq(DPI.balanceOf(rollupProcessor), 0, "DPI balance after convert must be 0");
         assertEq(outputValueA, rollupProcessor.balance, "ETH balance after convert must match");
     }
+
+    // TODO: test different decimal tokens
 }
