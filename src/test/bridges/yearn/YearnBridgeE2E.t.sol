@@ -27,6 +27,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
     IERC20 public constant YVETH = IERC20(0xa258C4606Ca8206D8aA700cE2143D7db854D168c);
     IERC20 public constant OLD_YVETH = IERC20(0xa9fE4601811213c340e850ea305481afF02f5b28);
     IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+    uint256 public constant SAFE_MAX = 79228162514264337593543950334;
 
     YearnBridge internal bridge;
     uint256 internal id;
@@ -35,7 +36,6 @@ contract YearnBridgeE2ETest is BridgeTestBase {
 
     function setUp() public {
         bridge = new YearnBridge(address(ROLLUP_PROCESSOR));
-        bridge.preApproveAll();
         vm.label(address(bridge), "YEARN_BRIDGE");
         vm.deal(address(bridge), 0);
 
@@ -48,7 +48,38 @@ contract YearnBridgeE2ETest is BridgeTestBase {
     function testPreApproveOne() public {
         IYearnRegistry _registry = bridge.YEARN_REGISTRY();
         address vault = _registry.latestVault(address(DAI));
+        
+        assertEq(
+            IERC20(DAI).allowance(address(bridge), address(vault)),
+            0,
+            "token allowance for bridge from vault should be 0"
+        );
+        assertEq(
+            IERC20(DAI).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
+            0,
+            "token allowance for bridge from ROLLUP_PROCESSOR should be 0"
+        );
+        assertEq(
+            IERC20(address(vault)).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
+            0,
+            "vault allowance for bridge from ROLLUP_PROCESSOR should be 0"
+        );
         bridge.preApprove(vault);
+        assertEq(
+            IERC20(DAI).allowance(address(bridge), address(vault)),
+            type(uint256).max,
+            "token allowance for bridge from vault should be uint256.max"
+        );
+        assertEq(
+            IERC20(DAI).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
+            type(uint256).max,
+            "token allowance for bridge from ROLLUP_PROCESSOR should be 0"
+        );
+        assertEq(
+            IERC20(address(vault)).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
+            type(uint256).max,
+            "vault allowance for bridge from ROLLUP_PROCESSOR should be uint256.max"
+        );
     }
 
     function testPreApprove() public {
@@ -57,7 +88,38 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         for (uint256 i; i < numTokens; ++i) {
             address token = _registry.tokens(i);
             address vault = _registry.latestVault(token);
+        
+            assertEq(
+                IERC20(address(token)).allowance(address(bridge), address(vault)),
+                0,
+                "token allowance for bridge from vault should be 0"
+            );
+            assertEq(
+                IERC20(address(token)).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
+                0,
+                "token allowance for bridge from ROLLUP_PROCESSOR should be 0"
+            );
+            assertEq(
+                IERC20(address(vault)).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
+                0,
+                "vault allowance for bridge from ROLLUP_PROCESSOR should be 0"
+            );
             bridge.preApprove(vault);
+            assertGt(
+                IERC20(address(token)).allowance(address(bridge), address(vault)),
+                SAFE_MAX,
+                "token allowance for bridge from vault should be SAFE_MAX"
+            );
+            assertGt(
+                IERC20(address(token)).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
+                SAFE_MAX,
+                "token allowance for bridge from ROLLUP_PROCESSOR should be SAFE_MAX"
+            );
+            assertGt(
+                IERC20(address(vault)).allowance(address(bridge), address(ROLLUP_PROCESSOR)),
+                SAFE_MAX,
+                "vault allowance for bridge from ROLLUP_PROCESSOR should be SAFE_MAX"
+            );
         }
     }
 
@@ -70,7 +132,6 @@ contract YearnBridgeE2ETest is BridgeTestBase {
 
     function testPreApproveWhenAllowanceNotZero(uint256 _currentAllowance) public {
         vm.assume(_currentAllowance > 0);
-        // Set allowances to _currentAllowance for all the cTokens and its underlying
         vm.startPrank(address(bridge));
         IYearnRegistry _registry = bridge.YEARN_REGISTRY();
         uint256 numTokens = _registry.numTokens();
@@ -102,6 +163,8 @@ contract YearnBridgeE2ETest is BridgeTestBase {
     }
 
     function testERC20DepositAndWithdrawal(uint256 _depositAmount, uint256 _redeemAmount) public {
+        bridge.preApproveAll();
+
         IYearnRegistry _registry = bridge.YEARN_REGISTRY();
         address vault = _registry.latestVault(address(DAI));
         uint256 availableDepositLimit = IYearnVault(vault).availableDepositLimit();
@@ -111,6 +174,8 @@ contract YearnBridgeE2ETest is BridgeTestBase {
     }
 
     function testETHDepositAndWithdrawal(uint256 _depositAmount, uint256 _redeemAmount) public {
+        bridge.preApproveAll();
+
         _depositAndWithdrawETH(_depositAmount, _redeemAmount);
     }
 
