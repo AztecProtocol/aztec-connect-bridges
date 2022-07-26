@@ -83,12 +83,12 @@ contract IssuanceBridge is BridgeBase {
 
         uint256 minAmountOut = (_inputValue * _auxData) / PRECISION;
 
-        if (SET_CONTROLLER.isSet(address(_inputAssetA.erc20Address))) {
+        if (SET_CONTROLLER.isSet(_inputAssetA.erc20Address)) {
             // User wants to redeem the underlying asset
             if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 // redeem in exchange for ETH
                 outputValueA = EXCHANGE_ISSUANCE.redeemExactSetForETH(
-                    ISetToken(address(_inputAssetA.erc20Address)),
+                    ISetToken(_inputAssetA.erc20Address),
                     _inputValue, // _amountSetToken
                     minAmountOut // __minEthOut
                 );
@@ -96,27 +96,27 @@ contract IssuanceBridge is BridgeBase {
             } else if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
                 // redeem in exchange for ERC20
                 outputValueA = EXCHANGE_ISSUANCE.redeemExactSetForToken(
-                    ISetToken(address(_inputAssetA.erc20Address)), // _setToken,
-                    IERC20(address(_outputAssetA.erc20Address)), // _outputToken,
+                    ISetToken(_inputAssetA.erc20Address), // _setToken,
+                    IERC20(_outputAssetA.erc20Address), // _outputToken,
                     _inputValue, //  _amountSetToken,
                     minAmountOut //  _minOutputReceive
                 );
             } else {
                 revert ErrorLib.InvalidInputA();
             }
-        } else if (SET_CONTROLLER.isSet(address(_outputAssetA.erc20Address))) {
+        } else if (SET_CONTROLLER.isSet(_outputAssetA.erc20Address)) {
             // User wants to issue SetToken
             if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 // User supplies ETH
                 outputValueA = EXCHANGE_ISSUANCE.issueSetForExactETH{value: _inputValue}(
-                    ISetToken(address(_outputAssetA.erc20Address)),
+                    ISetToken(_outputAssetA.erc20Address),
                     minAmountOut // _minSetReceive
                 );
             } else if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
                 // User supplies ERC20
                 outputValueA = EXCHANGE_ISSUANCE.issueSetForExactToken(
-                    ISetToken(address(_outputAssetA.erc20Address)),
-                    IERC20(address(_inputAssetA.erc20Address)),
+                    ISetToken(_outputAssetA.erc20Address),
+                    IERC20(_inputAssetA.erc20Address),
                     _inputValue, // _amountInput
                     minAmountOut // _minSetReceive
                 );
