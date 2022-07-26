@@ -48,7 +48,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
     function testPreApproveOne() public {
         IYearnRegistry _registry = bridge.YEARN_REGISTRY();
         address vault = _registry.latestVault(address(DAI));
-        
+
         assertEq(
             IERC20(DAI).allowance(address(bridge), address(vault)),
             0,
@@ -88,7 +88,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         for (uint256 i; i < numTokens; ++i) {
             address token = _registry.tokens(i);
             address vault = _registry.latestVault(token);
-        
+
             assertEq(
                 IERC20(address(token)).allowance(address(bridge), address(vault)),
                 0,

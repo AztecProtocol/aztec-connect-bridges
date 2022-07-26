@@ -60,7 +60,7 @@ contract YearnBridge is BridgeBase {
     function preApprove(address _vault) external {
         address token = IYearnVault(_vault).token();
         uint256 numVaultsForToken = YEARN_REGISTRY.numVaults(token);
-        for (uint256 i; i < numVaultsForToken;) {
+        for (uint256 i; i < numVaultsForToken; ) {
             address vault = YEARN_REGISTRY.vaults(token, i);
             if (vault == _vault) {
                 _preApprove(vault, token);
@@ -185,7 +185,9 @@ contract YearnBridge is BridgeBase {
         uint256 outputValueBefore = address(this).balance;
         IWETH(WETH).withdraw(wethAmount);
         outputValue = address(this).balance;
-        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValue - outputValueBefore}(_interactionNonce);
+        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValue - outputValueBefore}(
+            _interactionNonce
+        );
     }
 
     /**
