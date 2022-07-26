@@ -26,6 +26,7 @@ contract YearnBridge is BridgeBase {
     error InvalidOutputANotLatest();
     error InvalidWETHAmount();
     error InvalidOutputVault();
+    error InvalidVault();
 
     /**
      * @notice Set address of rollup processor
@@ -53,11 +54,23 @@ contract YearnBridge is BridgeBase {
 
     /**
      * @notice Set all the necessary approvals for a given vault and its underlying.
+     * @dev The vault must be a valid Yearn vault, registered in the registry
      * @param _vault - vault address
      */
     function preApprove(address _vault) external {
         address token = IYearnVault(_vault).token();
-        _preApprove(_vault, token);
+        uint256 numVaultsForToken = YEARN_REGISTRY.numVaults(token);
+        for (uint256 i; i < numVaultsForToken;) {
+            address vault = YEARN_REGISTRY.vaults(token, i);
+            if (vault == _vault) {
+                _preApprove(vault, token);
+                return;
+            }
+            unchecked {
+                ++i;
+            }
+        }
+        revert InvalidVault();
     }
 
     /**

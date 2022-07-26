@@ -125,9 +125,12 @@ contract YearnBridgeE2ETest is BridgeTestBase {
 
     function testPreApproveReverts() public {
         address nonVaultTokenAddress = 0x3cD751E6b0078Be393132286c442345e5DC49699;
-
         vm.expectRevert();
         bridge.preApprove(nonVaultTokenAddress);
+
+        address nonApprovedVault = 0x33Bd0F9618Cf38FeA8f7f01E1514AB63b9bDe64b;
+        vm.expectRevert(YearnBridge.InvalidVault.selector);
+        bridge.preApprove(nonApprovedVault);
     }
 
     function testPreApproveWhenAllowanceNotZero(uint256 _currentAllowance) public {
