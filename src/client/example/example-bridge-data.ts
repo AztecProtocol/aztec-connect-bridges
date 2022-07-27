@@ -40,7 +40,7 @@ export class ExampleBridgeData implements BridgeDataFieldGetters {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
-    precision: bigint,
+    inputValue: bigint,
   ): Promise<bigint[]> {
     return [100n, 0n];
   }

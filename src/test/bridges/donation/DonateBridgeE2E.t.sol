@@ -61,10 +61,10 @@ contract DonationBridgeE2ETest is BridgeTestBase {
 
         uint256 doneeBalanceBefore = DONEE.balance;
 
-        uint256 bridgeId = encodeBridgeId(bridgeAddressId, ethAsset, emptyAsset, emptyAsset, emptyAsset, 1);
+        uint256 bridgeCallData = encodeBridgeCallData(bridgeAddressId, ethAsset, emptyAsset, emptyAsset, emptyAsset, 1);
         vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), _amount, 0, 0, true, "");
-        sendDefiRollup(bridgeId, _amount);
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _amount, 0, 0, true, "");
+        sendDefiRollup(bridgeCallData, _amount);
 
         assertEq(DONEE.balance, doneeBalanceBefore + _amount, "Donee did not receive eth");
     }
@@ -84,7 +84,7 @@ contract DonationBridgeE2ETest is BridgeTestBase {
 
             uint256 doneeBalanceBefore = token.balanceOf(DONEE);
 
-            uint256 bridgeId = encodeBridgeId(
+            uint256 bridgeCallData = encodeBridgeCallData(
                 bridgeAddressId,
                 getRealAztecAsset(address(token)),
                 emptyAsset,
@@ -93,8 +93,8 @@ contract DonationBridgeE2ETest is BridgeTestBase {
                 1
             );
             vm.expectEmit(true, true, false, true);
-            emit DefiBridgeProcessed(bridgeId, getNextNonce(), amount, 0, 0, true, "");
-            sendDefiRollup(bridgeId, amount);
+            emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), amount, 0, 0, true, "");
+            sendDefiRollup(bridgeCallData, amount);
 
             assertEq(token.balanceOf(DONEE), doneeBalanceBefore + amount, "Donee did not receive token");
         }
@@ -104,11 +104,11 @@ contract DonationBridgeE2ETest is BridgeTestBase {
         vm.assume(_amount > 0);
         vm.deal(address(ROLLUP_PROCESSOR), _amount);
 
-        uint256 bridgeId = encodeBridgeId(bridgeAddressId, ethAsset, emptyAsset, emptyAsset, emptyAsset, 2);
+        uint256 bridgeCallData = encodeBridgeCallData(bridgeAddressId, ethAsset, emptyAsset, emptyAsset, emptyAsset, 2);
         vm.expectEmit(true, true, false, true);
         bytes memory err = abi.encodePacked(ErrorLib.InvalidAuxData.selector);
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), _amount, 0, 0, false, err);
-        sendDefiRollup(bridgeId, _amount);
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _amount, 0, 0, false, err);
+        sendDefiRollup(bridgeCallData, _amount);
     }
 
     function testDonateEthToGasHeavy(uint96 _amount) public {
@@ -117,11 +117,18 @@ contract DonationBridgeE2ETest is BridgeTestBase {
 
         uint256 doneeId = bridge.listDonee(address(this));
 
-        uint256 bridgeId = encodeBridgeId(bridgeAddressId, ethAsset, emptyAsset, emptyAsset, emptyAsset, doneeId);
+        uint256 bridgeCallData = encodeBridgeCallData(
+            bridgeAddressId,
+            ethAsset,
+            emptyAsset,
+            emptyAsset,
+            emptyAsset,
+            doneeId
+        );
         vm.expectEmit(true, true, false, true);
         bytes memory err = abi.encodePacked(EthTransferFailed.selector);
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), _amount, 0, 0, false, err);
-        sendDefiRollup(bridgeId, _amount);
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _amount, 0, 0, false, err);
+        sendDefiRollup(bridgeCallData, _amount);
     }
 
     function testDonateWrongAsset(uint96 _amount) public {
@@ -136,11 +143,18 @@ contract DonationBridgeE2ETest is BridgeTestBase {
             assetType: AztecTypes.AztecAssetType.VIRTUAL
         });
 
-        uint256 bridgeId = encodeBridgeId(bridgeAddressId, fakeAsset, emptyAsset, emptyAsset, emptyAsset, doneeId);
+        uint256 bridgeCallData = encodeBridgeCallData(
+            bridgeAddressId,
+            fakeAsset,
+            emptyAsset,
+            emptyAsset,
+            emptyAsset,
+            doneeId
+        );
         vm.expectEmit(true, true, false, true);
         bytes memory err = abi.encodePacked(ErrorLib.InvalidInputA.selector);
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), _amount, 0, 0, false, err);
-        sendDefiRollup(bridgeId, _amount);
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _amount, 0, 0, false, err);
+        sendDefiRollup(bridgeCallData, _amount);
     }
 
     function testInvalidDoneeAddress() public {

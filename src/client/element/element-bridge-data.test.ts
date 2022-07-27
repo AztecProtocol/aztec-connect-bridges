@@ -9,7 +9,8 @@ import {
   IRollupProcessor__factory,
   IVault__factory,
 } from "../../../typechain-types";
-import { BridgeId } from "@aztec/barretenberg/bridge_id";
+// TODO: simply import BridgeCallData once the name is changed on defi-bridge-project branch
+import { BridgeId as BridgeCallData } from "@aztec/barretenberg/bridge_id";
 import { AztecAssetType } from "../bridge-data";
 import { EthAddress } from "@aztec/barretenberg/address";
 
@@ -25,7 +26,7 @@ const tranche1DeploymentBlockNumber = 45n;
 const tranche2DeploymentBlockNumber = 87n;
 
 interface DefiEvent {
-  bridgeId: bigint;
+  encodedBridgeCallData: bigint;
   nonce: number;
   totalInputValue: bigint;
   blockNumber: number;
@@ -48,21 +49,66 @@ describe("element bridge data", () => {
   const expiration1 = BigInt(now + 86400 * 60);
   const expiration2 = BigInt(now + 86400 * 90);
   const startDate = BigInt(now - 86400 * 30);
-  const bridge1 = new BridgeId(1, 4, 4, undefined, undefined, Number(expiration1));
-  const bridge2 = new BridgeId(1, 5, 5, undefined, undefined, Number(expiration2));
+  const bridgeCallData1 = new BridgeCallData(1, 4, 4, undefined, undefined, Number(expiration1));
+  const bridgeCallData2 = new BridgeCallData(1, 5, 5, undefined, undefined, Number(expiration2));
   const outputValue = 10n * 10n ** 18n;
   const testAddress = EthAddress.random();
 
   const defiEvents = [
-    { bridgeId: bridge1.toBigInt(), nonce: 56, totalInputValue: 56n * 10n ** 16n, blockNumber: 59 } as DefiEvent,
-    { bridgeId: bridge1.toBigInt(), nonce: 158, totalInputValue: 158n * 10n ** 16n, blockNumber: 62 } as DefiEvent,
-    { bridgeId: bridge1.toBigInt(), nonce: 190, totalInputValue: 190n * 10n ** 16n, blockNumber: 76 } as DefiEvent,
-    { bridgeId: bridge2.toBigInt(), nonce: 194, totalInputValue: 194n * 10n ** 16n, blockNumber: 91 } as DefiEvent,
-    { bridgeId: bridge1.toBigInt(), nonce: 203, totalInputValue: 203n * 10n ** 16n, blockNumber: 103 } as DefiEvent,
-    { bridgeId: bridge2.toBigInt(), nonce: 216, totalInputValue: 216n * 10n ** 16n, blockNumber: 116 } as DefiEvent,
-    { bridgeId: bridge2.toBigInt(), nonce: 227, totalInputValue: 227n * 10n ** 16n, blockNumber: 125 } as DefiEvent,
-    { bridgeId: bridge1.toBigInt(), nonce: 242, totalInputValue: 242n * 10n ** 16n, blockNumber: 134 } as DefiEvent,
-    { bridgeId: bridge1.toBigInt(), nonce: 289, totalInputValue: 289n * 10n ** 16n, blockNumber: 147 } as DefiEvent,
+    {
+      encodedBridgeCallData: bridgeCallData1.toBigInt(),
+      nonce: 56,
+      totalInputValue: 56n * 10n ** 16n,
+      blockNumber: 59,
+    } as DefiEvent,
+    {
+      encodedBridgeCallData: bridgeCallData1.toBigInt(),
+      nonce: 158,
+      totalInputValue: 158n * 10n ** 16n,
+      blockNumber: 62,
+    } as DefiEvent,
+    {
+      encodedBridgeCallData: bridgeCallData1.toBigInt(),
+      nonce: 190,
+      totalInputValue: 190n * 10n ** 16n,
+      blockNumber: 76,
+    } as DefiEvent,
+    {
+      encodedBridgeCallData: bridgeCallData2.toBigInt(),
+      nonce: 194,
+      totalInputValue: 194n * 10n ** 16n,
+      blockNumber: 91,
+    } as DefiEvent,
+    {
+      encodedBridgeCallData: bridgeCallData1.toBigInt(),
+      nonce: 203,
+      totalInputValue: 203n * 10n ** 16n,
+      blockNumber: 103,
+    } as DefiEvent,
+    {
+      encodedBridgeCallData: bridgeCallData2.toBigInt(),
+      nonce: 216,
+      totalInputValue: 216n * 10n ** 16n,
+      blockNumber: 116,
+    } as DefiEvent,
+    {
+      encodedBridgeCallData: bridgeCallData2.toBigInt(),
+      nonce: 227,
+      totalInputValue: 227n * 10n ** 16n,
+      blockNumber: 125,
+    } as DefiEvent,
+    {
+      encodedBridgeCallData: bridgeCallData1.toBigInt(),
+      nonce: 242,
+      totalInputValue: 242n * 10n ** 16n,
+      blockNumber: 134,
+    } as DefiEvent,
+    {
+      encodedBridgeCallData: bridgeCallData1.toBigInt(),
+      nonce: 289,
+      totalInputValue: 289n * 10n ** 16n,
+      blockNumber: 147,
+    } as DefiEvent,
   ];
 
   const getDefiEvents = (nonce: number, from: number, to: number) => {
@@ -74,8 +120,8 @@ describe("element bridge data", () => {
   };
 
   const getTrancheDeploymentBlockNumber = (nonce: bigint) => {
-    const bridge = defiEvents.find(x => x.nonce == Number(nonce));
-    if (bridge?.bridgeId ?? 1n == 1n) {
+    const defiEvent = defiEvents.find(x => x.nonce == Number(nonce));
+    if (defiEvent?.encodedBridgeCallData ?? 1n == 1n) {
       return tranche1DeploymentBlockNumber;
     }
     return tranche2DeploymentBlockNumber;
@@ -102,12 +148,12 @@ describe("element bridge data", () => {
       if (defiEvent === undefined) {
         return [];
       }
-      const bridgeId = BridgeId.fromBigInt(defiEvent.bridgeId);
+      const bridgeCallData = BridgeCallData.fromBigInt(defiEvent.encodedBridgeCallData);
       return [
         {
           getBlock: jest.fn().mockResolvedValue({ timestamp: +startDate.toString(), number: defiEvent.blockNumber }),
           args: [
-            BigNumber.from(bridgeId.toBigInt()),
+            BigNumber.from(bridgeCallData.toBigInt()),
             BigNumber.from(defiEvent.nonce),
             BigNumber.from(defiEvent.totalInputValue),
           ],
@@ -115,9 +161,9 @@ describe("element bridge data", () => {
       ];
     }),
     filters: {
-      AsyncDefiBridgeProcessed: jest.fn().mockImplementation((bridgeId: any, interactionNonce: number) => {
+      AsyncDefiBridgeProcessed: jest.fn().mockImplementation((bridgeCallData: any, interactionNonce: number) => {
         return {
-          bridgeId,
+          bridgeCallData,
           interactionNonce,
         };
       }),
@@ -155,17 +201,17 @@ describe("element bridge data", () => {
     const out = defiEvent.totalInputValue + (delta * timeElapsed) / fullTime;
 
     expect(daiValue.amount).toStrictEqual(out / userShareDivisor);
-    expect(Number(daiValue.assetId)).toStrictEqual(bridge1.inputAssetIdA);
+    expect(Number(daiValue.assetId)).toStrictEqual(bridgeCallData1.inputAssetIdA);
   });
 
   it("should return the correct amount of interest for multiple interactions", async () => {
     const elementBridgeData = createElementBridgeData();
     const testInteraction = async (nonce: number) => {
       const defiEvent = getDefiEvent(nonce)!;
-      const bridgeId = BridgeId.fromBigInt(defiEvent.bridgeId);
+      const bridgeCallData = BridgeCallData.fromBigInt(defiEvent.encodedBridgeCallData);
       interactions[nonce] = {
         quantityPT: BigNumber.from(10n * 10n ** 18n),
-        expiry: BigNumber.from(bridgeId.auxData),
+        expiry: BigNumber.from(bridgeCallData.auxData),
         trancheAddress: "",
         finalised: false,
         failed: false,
@@ -179,10 +225,10 @@ describe("element bridge data", () => {
       );
       const delta = interactions[nonce].quantityPT.toBigInt() - defiEvent.totalInputValue;
       const timeElapsed = BigInt(now) - startDate;
-      const fullTime = BigInt(bridgeId.auxData) - startDate;
+      const fullTime = BigInt(bridgeCallData.auxData) - startDate;
       const out = defiEvent.totalInputValue + (delta * timeElapsed) / fullTime;
       expect(daiValue.amount).toStrictEqual(out / userShareDivisor);
-      expect(Number(daiValue.assetId)).toStrictEqual(bridgeId.inputAssetIdA);
+      expect(Number(daiValue.assetId)).toStrictEqual(bridgeCallData.inputAssetIdA);
     };
     await testInteraction(56);
     await testInteraction(190);
@@ -252,7 +298,7 @@ describe("element bridge data", () => {
       balancerContract as any,
       rollupContract as any,
     );
-    const output = await elementBridgeData.getExpectedYield(
+    const output = await elementBridgeData.getAPR(
       {
         assetType: AztecAssetType.ERC20,
         erc20Address: testAddress,

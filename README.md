@@ -28,8 +28,6 @@ To get started follow the steps bellow:
 2. Install dependencies and build the repo:
    ```
       cd aztec-connect-bridges
-      yarn
-      git submodule update --init
       yarn setup
    ```
 3. Copy and rename the following folders (e.g. rename example to uniswap):
@@ -85,9 +83,9 @@ We have included helpers to make testing easier (see [example bridge tests](http
 
 In production a bridge is called by a user creating a client side proof via the Aztec SDK.
 These transaction proofs are sent to a rollup provider for aggregation.
-The rollup provider then sends the aggregate rollup proof with the sum of all users' proofs for a given `bridgeId` to your bridge contract.
+The rollup provider then sends the aggregate rollup proof with the sum of all users' proofs for a given `bridgeCallData` to your bridge contract.
 
-A `bridgeId` uniquely defines the expected inputs/outputs of a DeFi interaction.
+A `bridgeCallData` uniquely defines the expected inputs/outputs of a DeFi interaction.
 It is a `uint256` that represents a bit-string containing multiple fields.
 When unpacked its data is used to create a BridgeData struct in the rollup processor contract.
 
@@ -110,7 +108,7 @@ Bit Config Definition:
 | 0   | secondInputInUse  |
 | 1   | secondOutputInUse |
 
-> Note 1: Last 8 bits of `bridgeId` bit-string are wasted because the circuits don't support values of full 256 bits (248 is the largest multiple of 8 that we can use).
+> Note 1: Last 8 bits of `bridgeCallData` bit-string are wasted because the circuits don't support values of full 256 bits (248 is the largest multiple of 8 that we can use).
 
 > Note 2: `bitConfig` is 32 bits large even though we only use 2 bits because we need it to be future proofed (e.g. we might add NFT support, and we would need new bit flag for that).
 
@@ -124,9 +122,13 @@ We decided to have 2 separate approaches of bridge testing:
    Disadvantage of this approach is that you have take care of transferring tokens to and from the bridge (this is handle by the DefiBridgeProxy contract in the production environment).
    This type of test can be considered to be a unit test and an example of such a test is [here](https://github.com/AztecProtocol/aztec-connect-bridges/blob/master/src/test/bridges/example/ExampleUnit.t.sol).
 
-2. In the second approach we construct a `bridgeId`, we mock proof data and verifier's response and we pass this data directly to the RollupProcessor's `processRollup(...)` function.
+2. In the second approach we construct a `bridgeCallData`, we mock proof data and verifier's response and we pass this data directly to the RollupProcessor's `processRollup(...)` function.
    The purpose of this test is to test the bridge in an environment that is as close to the final deployment as possible without spinning up all the rollup infrastructure (sequencer, proof generator etc.).
    This test can be considered an end-to-end test of the bridge and an example of such a test is [here](https://github.com/AztecProtocol/aztec-connect-bridges/blob/master/src/test/bridges/example/ExampleE2E.t.sol).
+
+We encourage you to first write all tests as unit tests to be able to leverage simple traces while you are debugging the bridge.
+Once you make the bridge work in the unit tests environment convert the relevant tests to E2E.
+Converting unit tests to E2E is straightforward because we made the `BridgeTestBase.sendDefiRollup(...)` function return the same values as `IDefiBridge.convert(...)`.
 
 In production, the rollup contract will supply `_inputValue` of both input assets and use the `_interactionNonce` as a globally unique ID.
 For testing, you may provide this value.
@@ -223,7 +225,7 @@ The `_auxData` field can be used to provide data to the bridge contract, such as
 #### Bridge Contract Interface
 
 ```solidity
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 

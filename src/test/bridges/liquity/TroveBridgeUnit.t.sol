@@ -5,72 +5,20 @@ pragma solidity >=0.8.4;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
+
 import {TroveBridge} from "../../../bridges/liquity/TroveBridge.sol";
-import {IBorrowerOperations} from "../../../interfaces/liquity/IBorrowerOperations.sol";
-import {ITroveManager} from "../../../interfaces/liquity/ITroveManager.sol";
-import {ISortedTroves} from "../../../interfaces/liquity/ISortedTroves.sol";
-import {IHintHelpers} from "../../../interfaces/liquity/IHintHelpers.sol";
+import {TroveBridgeTestBase} from "./TroveBridgeTestBase.sol";
 
-import {TestUtil} from "./utils/TestUtil.sol";
-
-contract TroveBridgeUnitTest is TestUtil {
-    enum Status {
-        nonExistent,
-        active,
-        closedByOwner,
-        closedByLiquidation,
-        closedByRedemption
-    }
-
-    IHintHelpers private constant HINT_HELPERS = IHintHelpers(0xE84251b93D9524E0d2e621Ba7dc7cb3579F997C0);
-    address private constant STABILITY_POOL = 0x66017D22b0f8556afDd19FC67041899Eb65a21bb;
-    address private constant LQTY_STAKING_CONTRACT = 0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d;
-    IBorrowerOperations public constant BORROWER_OPERATIONS =
-        IBorrowerOperations(0x24179CD81c9e782A4096035f7eC97fB8B783e007);
-    ITroveManager public constant TROVE_MANAGER = ITroveManager(0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2);
-    ISortedTroves private constant SORTED_TROVES = ISortedTroves(0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6);
-
-    address private constant OWNER = address(24);
-
-    uint256 private constant OWNER_WEI_BALANCE = 50 ether;
-    uint256 private constant ROLLUP_PROCESSOR_WEI_BALANCE = 1 ether;
-
-    uint64 private constant MAX_FEE = 5e16; // Slippage protection: 5%
-    uint256 public constant MCR = 1100000000000000000; // 110%
-    uint256 public constant CCR = 1500000000000000000; // 150%
-
-    // From LiquityMath.sol
-    uint256 private constant NICR_PRECISION = 1e20;
-
-    TroveBridge private bridge;
-
-    receive() external payable {}
-
-    // Here so that I can successfully liquidate a trove from within this contract.
-    fallback() external payable {}
+contract TroveBridgeUnitTest is TroveBridgeTestBase {
+    AztecTypes.AztecAsset internal emptyAsset;
 
     function setUp() public {
         rollupProcessor = address(this);
-        setUpTokens();
-
-        uint256 initialCollateralRatio = 160;
 
         vm.prank(OWNER);
-        bridge = new TroveBridge(rollupProcessor, initialCollateralRatio);
+        bridge = new TroveBridge(rollupProcessor, 160);
 
-        vm.label(address(bridge.USDC()), "USDC");
-        vm.label(address(BORROWER_OPERATIONS), "BORROWER_OPERATIONS");
-        vm.label(address(TROVE_MANAGER), "TROVE_MANAGER");
-        vm.label(address(SORTED_TROVES), "SORTED_TROVES");
-        vm.label(address(bridge.LUSD_USDC_POOL()), "LUSD_USDC_POOL");
-        vm.label(address(bridge.USDC_ETH_POOL()), "USDC_ETH_POOL");
-        vm.label(address(LIQUITY_PRICE_FEED), "LIQUITY_PRICE_FEED");
-        vm.label(STABILITY_POOL, "STABILITY_POOL");
-        vm.label(LQTY_STAKING_CONTRACT, "LQTY_STAKING_CONTRACT");
-
-        // Set LUSD bridge balance to 1 WEI
-        // Necessary for the optimization based on EIP-1087 to work!
-        deal(tokens["LUSD"].addr, address(bridge), 1);
+        _baseSetUp();
     }
 
     function testInitialERC20Params() public {
@@ -81,14 +29,14 @@ contract TroveBridgeUnitTest is TestUtil {
 
     function testInvalidTroveStatus() public {
         // Attempt borrowing when trove was not opened - state 0
-        vm.deal(rollupProcessor, ROLLUP_PROCESSOR_WEI_BALANCE);
+        vm.deal(rollupProcessor, ROLLUP_PROCESSOR_ETH_BALANCE);
         vm.expectRevert(abi.encodeWithSignature("InvalidStatus(uint8,uint8,uint8)", 1, 1, 0));
         bridge.convert(
             AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH),
             emptyAsset,
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),
             AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
-            ROLLUP_PROCESSOR_WEI_BALANCE,
+            ROLLUP_PROCESSOR_ETH_BALANCE,
             0,
             MAX_FEE,
             address(0)
@@ -115,8 +63,8 @@ contract TroveBridgeUnitTest is TestUtil {
         // in parallel in different EVM instances. For this reason these parts of tests can't be evaluated individually
         // unless ran repeatedly.
         _openTrove();
-        _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
-        _repay(ROLLUP_PROCESSOR_WEI_BALANCE, 1, false, 1);
+        _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
+        _repay(ROLLUP_PROCESSOR_ETH_BALANCE, 1, false, 1);
         _closeTrove();
 
         // Try reopening the trove
@@ -126,7 +74,7 @@ contract TroveBridgeUnitTest is TestUtil {
 
     function testLiquidationFlow() public {
         _openTrove();
-        _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
+        _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
 
         // Drop price and liquidate the trove
         setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
@@ -156,7 +104,7 @@ contract TroveBridgeUnitTest is TestUtil {
         bridge = new TroveBridge(rollupProcessor, totalCollateralRatio / 1e16);
 
         _openTrove();
-        _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
+        _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
 
         uint256 targetPrice = (currentPrice * targetCollateralRatio) / totalCollateralRatio;
         setLiquityPrice(targetPrice);
@@ -191,7 +139,7 @@ contract TroveBridgeUnitTest is TestUtil {
         bridge = new TroveBridge(rollupProcessor, 110);
 
         _openTrove();
-        _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
+        _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
 
         address lowestIcrTrove = SORTED_TROVES.getLast();
         assertEq(lowestIcrTrove, address(bridge), "Bridge's trove is not the first one to redeem.");
@@ -352,9 +300,9 @@ contract TroveBridgeUnitTest is TestUtil {
         _setUpRedistribution();
 
         // Setting maxEthDelta to 0.05 ETH because there is some loss during swap
-        _repay(ROLLUP_PROCESSOR_WEI_BALANCE * 3, 5e16, true, 1);
+        _repay(ROLLUP_PROCESSOR_ETH_BALANCE * 3, 5e16, true, 1);
 
-        _closeTroveAfterRedistribution(OWNER_WEI_BALANCE);
+        _closeTroveAfterRedistribution(OWNER_ETH_BALANCE);
 
         // Try reopening the trove
         deal(tokens["LUSD"].addr, OWNER, 0); // delete user's LUSD balance to make accounting easier in _openTrove(...)
@@ -366,7 +314,7 @@ contract TroveBridgeUnitTest is TestUtil {
         bridge = new TroveBridge(rollupProcessor, 500);
 
         _openTrove();
-        _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
+        _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
 
         // Erase stability pool's LUSD balance
         deal(tokens["LUSD"].addr, STABILITY_POOL, 0);
@@ -446,44 +394,6 @@ contract TroveBridgeUnitTest is TestUtil {
         // Reopening the trove doesn't make sense here because user didn't burn his full TB balance
     }
 
-    function _openTrove() private {
-        // Set owner's balance
-        vm.deal(OWNER, OWNER_WEI_BALANCE);
-
-        // Set msg.sender to OWNER
-        vm.startPrank(OWNER);
-
-        uint256 amtToBorrow = bridge.computeAmtToBorrow(OWNER_WEI_BALANCE);
-        uint256 nicr = (OWNER_WEI_BALANCE * NICR_PRECISION) / amtToBorrow;
-
-        // The following is Solidity implementation of https://github.com/liquity/dev#opening-a-trove
-        uint256 numTrials = 15;
-        uint256 randomSeed = 42;
-        (address approxHint, , ) = HINT_HELPERS.getApproxHint(nicr, numTrials, randomSeed);
-        (address upperHint, address lowerHint) = SORTED_TROVES.findInsertPosition(nicr, approxHint, approxHint);
-
-        // Open the trove
-        bridge.openTrove{value: OWNER_WEI_BALANCE}(upperHint, lowerHint, MAX_FEE);
-
-        uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
-        uint256 icr = TROVE_MANAGER.getCurrentICR(address(bridge), price);
-        assertEq(icr, bridge.INITIAL_ICR(), "ICR doesn't equal initial ICR");
-
-        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
-            address(bridge)
-        );
-        assertEq(bridge.totalSupply(), debtAfterBorrowing, "TB total supply doesn't equal totalDebt");
-        assertEq(collAfterBorrowing, OWNER_WEI_BALANCE, "Trove's collateral doesn't equal deposit amount");
-
-        uint256 lusdBalance = tokens["LUSD"].erc.balanceOf(OWNER);
-        assertApproxEqAbs(lusdBalance, amtToBorrow, 1, "Borrowed amount differs from received by more than 1 wei");
-
-        assertEq(address(bridge).balance, 0, "Bridge holds ETH after trove opening");
-        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST(), "Bridge holds LUSD after trove opening");
-
-        vm.stopPrank();
-    }
-
     function _borrow(uint256 _collateral) private {
         vm.deal(address(bridge), _collateral);
 
@@ -547,7 +457,7 @@ contract TroveBridgeUnitTest is TestUtil {
         bridge = new TroveBridge(rollupProcessor, 500);
 
         _openTrove();
-        _borrow(ROLLUP_PROCESSOR_WEI_BALANCE);
+        _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
 
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
@@ -630,40 +540,6 @@ contract TroveBridgeUnitTest is TestUtil {
         );
     }
 
-    function _closeTrove() private {
-        // Set msg.sender to OWNER
-        vm.startPrank(OWNER);
-
-        uint256 ownerTBBalance = bridge.balanceOf(OWNER);
-        uint256 ownerLUSDBalance = tokens["LUSD"].erc.balanceOf(OWNER);
-
-        uint256 borrowerFee = ownerTBBalance - ownerLUSDBalance - 200e18;
-        uint256 amountToRepay = ownerLUSDBalance + borrowerFee;
-
-        // Increase OWNER's LUSD balance by borrowerFee
-        deal(tokens["LUSD"].addr, OWNER, amountToRepay);
-        tokens["LUSD"].erc.approve(address(bridge), amountToRepay);
-
-        bridge.closeTrove();
-
-        Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(bridge)));
-        assertTrue(troveStatus == Status.closedByOwner, "Invalid trove status");
-
-        assertEq(address(bridge).balance, 0, "Bridge holds ETH after trove closure");
-        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST(), "Bridge holds LUSD after trove closure");
-
-        assertApproxEqAbs(
-            OWNER.balance,
-            OWNER_WEI_BALANCE,
-            1,
-            "Current owner balance differs from the initial balance by more than 1 wei"
-        );
-
-        assertEq(bridge.totalSupply(), 0, "TB total supply is not 0 after trove closure");
-
-        vm.stopPrank();
-    }
-
     function _redeem() private {
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
             2,
@@ -682,23 +558,8 @@ contract TroveBridgeUnitTest is TestUtil {
         assertGt(rollupProcessor.balance, 0, "No ETH has been redeemed");
     }
 
-    function _closeRedeem() private {
-        // Set msg.sender to OWNER
-        vm.startPrank(OWNER);
-
-        bridge.closeTrove();
-
-        assertEq(address(bridge).balance, 0, "Bridge holds ETH after trove closing");
-
-        assertGt(OWNER.balance, 0, "No ETH has been redeemed");
-
-        assertEq(bridge.totalSupply(), 0, "TB total supply is not 0");
-
-        vm.stopPrank();
-    }
-
     function _borrowAfterRedistribution() private {
-        uint256 depositAmount = ROLLUP_PROCESSOR_WEI_BALANCE * 2;
+        uint256 depositAmount = ROLLUP_PROCESSOR_ETH_BALANCE * 2;
         vm.deal(rollupProcessor, depositAmount);
 
         uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
@@ -718,7 +579,7 @@ contract TroveBridgeUnitTest is TestUtil {
             AztecTypes.AztecAssetType.ERC20
         );
 
-        // Borrow against ROLLUP_PROCESSOR_WEI_BALANCE
+        // Borrow against ROLLUP_PROCESSOR_ETH_BALANCE
         (uint256 outputValueA, uint256 outputValueB, ) = bridge.convert{value: depositAmount}(
             inputAssetA,
             emptyAsset,
@@ -750,37 +611,5 @@ contract TroveBridgeUnitTest is TestUtil {
 
         assertEq(address(bridge).balance, 0, "Bridge holds ETH after interaction");
         assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST(), "Bridge holds LUSD after interaction");
-    }
-
-    function _closeTroveAfterRedistribution(uint256 _expectedBalance) private {
-        // Set msg.sender to OWNER
-        vm.startPrank(OWNER);
-
-        (uint256 debtBeforeClosure, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
-
-        uint256 amountToRepay = debtBeforeClosure - 200e18;
-
-        // Increase OWNER's LUSD balance by borrowerFee
-        deal(tokens["LUSD"].addr, OWNER, amountToRepay);
-        tokens["LUSD"].erc.approve(address(bridge), amountToRepay);
-
-        bridge.closeTrove();
-
-        Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(bridge)));
-        assertTrue(troveStatus == Status.closedByOwner, "Invalid trove status");
-
-        assertEq(address(bridge).balance, 0, "Bridge holds ETH after trove closure");
-        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST(), "Bridge holds LUSD after trove closure");
-
-        assertApproxEqAbs(
-            OWNER.balance,
-            _expectedBalance,
-            2e17,
-            "Current owner balance differs from the initial balance by more than 0.2 ETH"
-        );
-
-        assertEq(bridge.totalSupply(), 0, "TB total supply is not 0 after trove closure");
-
-        vm.stopPrank();
     }
 }

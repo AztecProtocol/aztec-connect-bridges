@@ -126,13 +126,13 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
     }
   }
 
-  async getExpectedYield(
+  async getAPR(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
-    precision: bigint,
+    inputValue: bigint,
   ): Promise<number[]> {
     const YEAR = 60n * 60n * 24n * 365n;
 
@@ -145,9 +145,7 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
     // Not taking into account how the deposited funds will change the yield
     const reserveData = await this.lendingPoolContract.getReserveData(underlyingAsset.toString());
     const rate = reserveData.currentLiquidityRate.toBigInt();
-    const apr = Number(rate / 10n ** 25n) / 100;
-
-    return [apr];
+    return [Number(rate / 10n ** 25n)];
   }
 
   async getMarketSize(

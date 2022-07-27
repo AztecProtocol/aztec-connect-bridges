@@ -14,7 +14,7 @@ contract RollupProcessor {
     error INSUFFICIENT_ETH_PAYMENT();
 
     event DefiBridgeProcessed(
-        uint256 indexed bridgeId,
+        uint256 indexed bridgeCallData,
         uint256 indexed nonce,
         uint256 totalInputValue,
         uint256 totalOutputValueA,
@@ -22,7 +22,7 @@ contract RollupProcessor {
         bool result
     );
 
-    event AsyncDefiBridgeProcessed(uint256 indexed bridgeId, uint256 indexed nonce, uint256 totalInputValue);
+    event AsyncDefiBridgeProcessed(uint256 indexed bridgeCallData, uint256 indexed nonce, uint256 totalInputValue);
 
     struct DefiInteraction {
         address bridgeAddress;
