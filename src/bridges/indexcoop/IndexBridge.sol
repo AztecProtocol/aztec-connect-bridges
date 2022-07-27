@@ -31,19 +31,20 @@ contract IndexBridgeContract is BridgeBase {
 
     error UnsafeOraclePrice();
 
-    address immutable EXCHANGE_ISSUANCE = 0xB7cc88A13586D862B97a677990de14A122b74598;
-    address immutable CURVE = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-    address immutable WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address immutable STETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
-    address immutable ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-    address immutable ICETH = 0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84;
-    address immutable STETH_PRICE_FEED = 0xAb55Bf4DfBf469ebfe082b7872557D1F87692Fe6;
-    address immutable AAVE_LEVERAGE_MODULE = 0x251Bd1D42Df1f153D86a5BA2305FaADE4D5f51DC;
-    address immutable CHAINLINK_STETH_ETH = 0x86392dC19c0b719886221c78AB11eb8Cf5c52812;
+    address constant EXCHANGE_ISSUANCE = 0xB7cc88A13586D862B97a677990de14A122b74598;
+    address constant CURVE = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
+    address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address constant STETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
+    address constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    address constant ICETH = 0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84;
+    address constant STETH_PRICE_FEED = 0xAb55Bf4DfBf469ebfe082b7872557D1F87692Fe6;
+    address constant AAVE_LEVERAGE_MODULE = 0x251Bd1D42Df1f153D86a5BA2305FaADE4D5f51DC;
+    address constant CHAINLINK_STETH_ETH = 0x86392dC19c0b719886221c78AB11eb8Cf5c52812;
 
-    address immutable UNIV3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
-    address immutable UNIV3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984; 
+    address constant UNIV3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+    address constant UNIV3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984; 
 
+    uint256 private constant DUST = 1;
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {
 
         // Tokens can be pre approved since the bridge should not hold any tokens.
@@ -117,7 +118,7 @@ contract IndexBridgeContract is BridgeBase {
             ) 
         {
 
-            outputValueA = _getEth(_totalInputValue, _auxData, _interactionNonce);
+            outputValueA = _getEth(_totalInputValue - DUST, _auxData, _interactionNonce);
 
         } else revert ErrorLib.InvalidInput();
         
@@ -204,7 +205,7 @@ contract IndexBridgeContract is BridgeBase {
                 sqrtPriceLimitX96: 0
             });
 
-            outputValueA = ISwapRouter(UNIV3_ROUTER).exactInputSingle(params);
+            outputValueA = ISwapRouter(UNIV3_ROUTER).exactInputSingle(params)-DUST;
 
             IWETH(WETH).withdraw(outputValueA);
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
@@ -261,7 +262,7 @@ contract IndexBridgeContract is BridgeBase {
                 issueData
             );
 
-            outputValueA = ISetToken(ICETH).balanceOf(address(this));
+            outputValueA = ISetToken(ICETH).balanceOf(address(this)) - DUST;
             outputValueB = address(this).balance;
 
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueB}(_interactionNonce);
@@ -290,7 +291,7 @@ contract IndexBridgeContract is BridgeBase {
                 sqrtPriceLimitX96: 0 
             });
 
-            outputValueA = ISwapRouter(UNIV3_ROUTER).exactInputSingle(params);
+            outputValueA = ISwapRouter(UNIV3_ROUTER).exactInputSingle(params) - DUST;
         } else revert ErrorLib.InvalidInput();
         
     }
@@ -368,6 +369,7 @@ contract IndexBridgeContract is BridgeBase {
      * @param _baseAmount - The amount of base token.
      * @param _baseToken - Address of the base token. 
      * @param _quoteToken - Address of the quote token.
+     % @return quoteAmount - returned amount of quote token
      */
     function _getQuoteAtTick( 
         int24 _tick, 

@@ -123,7 +123,7 @@ contract IndexTest is BridgeTestBase {
     }
 
     function testRedeemSet(uint256 _depositAmount) public{
-        _depositAmount = bound(_depositAmount, 1e18, 500 ether);
+        _depositAmount = bound(_depositAmount, 1.1e18, 500 ether);
 
         uint64 maxSlipAux = 9800; 
         uint64 flowSelector = 1;
@@ -259,7 +259,7 @@ contract IndexTest is BridgeTestBase {
     }
 
     function testUnsafeChainlinkRedeemSet(uint256 _depositAmount) public {
-        _depositAmount = bound(_depositAmount, 1e18, 500 ether);
+        _depositAmount = bound(_depositAmount, 1.1e18, 500 ether);
         uint64 flowSelector = 1;
         uint64 maxSlipAux = 9900; 
 
@@ -291,7 +291,7 @@ contract IndexTest is BridgeTestBase {
     */
 
     function testLargeSlipIssueSet(uint256 _depositAmount) public {
-        _depositAmount = bound(_depositAmount, 1e18, 500 ether);
+        _depositAmount = bound(_depositAmount, 1.1e18, 500 ether);
         uint64 flowSelector = 1;
 
         /* Setting maxSlip to >9999 simulating a large slippage.
@@ -308,7 +308,7 @@ contract IndexTest is BridgeTestBase {
     }
 
     function testLargeSlipRedeemSet(uint256 _depositAmount) public {
-        _depositAmount = bound(_depositAmount, 1e18, 500 ether);
+        _depositAmount = bound(_depositAmount, 1.1e18, 500 ether);
         uint64 flowSelector = 1;
 
         /* Setting maxSlip to >9999 simulating a large slippage.
