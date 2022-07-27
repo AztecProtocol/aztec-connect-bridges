@@ -10,3 +10,4 @@ Please provide a paragraph or two giving a summary of the change, including rele
 - [ ] The branch has been rebased against the head of its merge target.
 - [ ] I'm happy for the PR to be merged at the reviewers next convenience.
 - [ ] NatSpec documentation of all the non-test functions is present and is complete.
+- [ ] Continuous integration (CI) passes.
