@@ -47,7 +47,7 @@ contract IndexTest is BridgeTestBase {
     address public constant HOAX_ADDRESS = 0xA400f843f0E577716493a3B0b8bC654C6EE8a8A3;
 
     // The reference to the example bridge
-    IndexBridgeContract public internal bridge;
+    IndexBridgeContract internal bridge;
 
     // To store the id of the example bridge after being added
     uint256 private id;
