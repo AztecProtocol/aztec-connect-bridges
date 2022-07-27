@@ -22,8 +22,6 @@ import {IUniswapV3Factory} from "../../../interfaces/uniswapv3/IUniswapV3Factory
 import {IUniswapV3PoolDerivedState} from "../../../interfaces/uniswapv3/pool/IUniswapV3PoolDerivedState.sol";
 import {ICurvePool} from "../../../interfaces/curve/ICurvePool.sol";
 
-import "forge-std/console2.sol";
-
 contract IndexTest is BridgeTestBase {
     using SafeMath for uint256;
 
