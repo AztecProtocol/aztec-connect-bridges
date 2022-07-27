@@ -98,7 +98,7 @@ contract IndexTest is BridgeTestBase {
 
         uint64 flowSelector = 5; // Selects flow to swap with 0.05% pool 
         uint64 maxSlipAux = 9900; 
-        uint64 oracleLimit = 9500; // ETH/icETH upper limit
+        uint64 oracleLimit = 9900; // ETH/icETH upper limit
         uint64 auxData = _encodeData(flowSelector, maxSlipAux, oracleLimit);
 
         uint24 uniFee = 500;
@@ -444,7 +444,7 @@ contract IndexTest is BridgeTestBase {
     {
 
         vm.deal(address(ROLLUP_PROCESSOR), _depositAmount);
-        uint256 bridgeId = encodeBridgeId(id, ethAsset, emptyAsset, icethAsset, ethAsset, _auxData);
+        uint256 bridgeId = encodeBridgeCallData(id, ethAsset, emptyAsset, icethAsset, ethAsset, _auxData);
         sendDefiRollup(bridgeId, _depositAmount);
 
         newICETH = IERC20(ICETH).balanceOf(address(ROLLUP_PROCESSOR));
@@ -488,7 +488,7 @@ contract IndexTest is BridgeTestBase {
     {
         vm.deal(address(ROLLUP_PROCESSOR), _depositAmount);
 
-        uint256 bridgeId = encodeBridgeId(id, ethAsset, emptyAsset, icethAsset, emptyAsset, _auxData);
+        uint256 bridgeId = encodeBridgeCallData(id, ethAsset, emptyAsset, icethAsset, emptyAsset, _auxData);
         sendDefiRollup(bridgeId, _depositAmount);
         newICETH = IERC20(ICETH).balanceOf(address(ROLLUP_PROCESSOR));
     }
@@ -529,7 +529,7 @@ contract IndexTest is BridgeTestBase {
         vm.prank(HOAX_ADDRESS);
         IERC20(ICETH).transfer(address(ROLLUP_PROCESSOR), _depositAmount);
 
-        uint256 bridgeId = encodeBridgeId(id, icethAsset, emptyAsset, ethAsset, emptyAsset, _auxData);
+        uint256 bridgeId = encodeBridgeCallData(id, icethAsset, emptyAsset, ethAsset, emptyAsset, _auxData);
         sendDefiRollup(bridgeId, _depositAmount);
 
         newEth = address(ROLLUP_PROCESSOR).balance - ethBefore;
@@ -578,7 +578,7 @@ contract IndexTest is BridgeTestBase {
 
         IERC20(ICETH).transfer(address(ROLLUP_PROCESSOR), _depositAmount);
 
-        uint256 bridgeId = encodeBridgeId(id, icethAsset, emptyAsset, ethAsset, emptyAsset, _auxData);
+        uint256 bridgeId = encodeBridgeCallData(id, icethAsset, emptyAsset, ethAsset, emptyAsset, _auxData);
         sendDefiRollup(bridgeId, _depositAmount);
 
         newEth = address(ROLLUP_PROCESSOR).balance - ethBefore;
