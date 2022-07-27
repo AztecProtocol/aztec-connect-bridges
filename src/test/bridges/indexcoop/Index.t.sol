@@ -27,35 +27,35 @@ import "forge-std/console2.sol";
 contract IndexTest is BridgeTestBase {
     using SafeMath for uint256;
 
-    address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address constant STETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
-    address constant ICETH = 0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84;
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant STETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
+    address public constant ICETH = 0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84;
 
-    address constant EXISSUE = 0xB7cc88A13586D862B97a677990de14A122b74598;
-    address constant CURVE = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-    address constant STETH_PRICE_FEED = 0xAb55Bf4DfBf469ebfe082b7872557D1F87692Fe6;
-    address constant AAVE_LEVERAGE_MODULE = 0x251Bd1D42Df1f153D86a5BA2305FaADE4D5f51DC;
-    address constant ICETH_SUPPLY_CAP = 0x2622c4BB67992356B3826b5034bB2C7e949ab12B;
-    address constant STABLE_SWAP_ORACLE = 0x3A6Bd15abf19581e411621D669B6a2bbe741ffD6;
+    address public constant EXISSUE = 0xB7cc88A13586D862B97a677990de14A122b74598;
+    address public constant CURVE = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
+    address public constant STETH_PRICE_FEED = 0xAb55Bf4DfBf469ebfe082b7872557D1F87692Fe6;
+    address public constant AAVE_LEVERAGE_MODULE = 0x251Bd1D42Df1f153D86a5BA2305FaADE4D5f51DC;
+    address public constant ICETH_SUPPLY_CAP = 0x2622c4BB67992356B3826b5034bB2C7e949ab12B;
+    address public constant STABLE_SWAP_ORACLE = 0x3A6Bd15abf19581e411621D669B6a2bbe741ffD6;
 
-    address constant UNIV3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
-    address constant UNIV3_QUOTER = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
-    address constant UNIV3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
-    address constant CHAINLINK_STETH_ETH = 0x86392dC19c0b719886221c78AB11eb8Cf5c52812;
+    address public constant UNIV3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+    address public constant UNIV3_QUOTER = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
+    address public constant UNIV3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
+    address public constant CHAINLINK_STETH_ETH = 0x86392dC19c0b719886221c78AB11eb8Cf5c52812;
 
     // Address with a lot of icETH
-    address constant HOAX_ADDRESS = 0xA400f843f0E577716493a3B0b8bC654C6EE8a8A3;
+    address public constant HOAX_ADDRESS = 0xA400f843f0E577716493a3B0b8bC654C6EE8a8A3;
 
     // The reference to the example bridge
-    IndexBridgeContract internal bridge;
+    IndexBridgeContract public internal bridge;
 
     // To store the id of the example bridge after being added
     uint256 private id;
 
-    AztecTypes.AztecAsset wethAsset;
-    AztecTypes.AztecAsset icethAsset;
-    AztecTypes.AztecAsset ethAsset;
-    AztecTypes.AztecAsset empty;
+    AztecTypes.AztecAsset public wethAsset;
+    AztecTypes.AztecAsset public icethAsset;
+    AztecTypes.AztecAsset public ethAsset;
+    AztecTypes.AztecAsset public empty;
 
     function setUp() public {
         bridge = new IndexBridgeContract(address(ROLLUP_PROCESSOR));
@@ -369,53 +369,6 @@ contract IndexTest is BridgeTestBase {
         return (colInEth - debtOwed);
     }
 
-    function _getAmountBasedOnTwap(
-        uint128 _amountIn,
-        address _baseToken,
-        address _quoteToken,
-        uint24 _uniFee
-    ) internal view returns (uint256 amountOut) {
-        address pool = IUniswapV3Factory(UNIV3_FACTORY).getPool(WETH, ICETH, _uniFee);
-
-        uint32 secondsAgo = 10;
-
-        uint32[] memory secondsAgos = new uint32[](2);
-        secondsAgos[0] = secondsAgo;
-        secondsAgos[1] = 0;
-
-        (int56[] memory tickCumulatives, ) = IUniswapV3PoolDerivedState(pool).observe(secondsAgos);
-
-        int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
-        int24 arithmeticmeanTick = int24(tickCumulativesDelta / int32(secondsAgo));
-
-        if (tickCumulativesDelta < 0 && (tickCumulativesDelta % int32(secondsAgo) != 0)) {
-            arithmeticmeanTick--;
-        }
-
-        amountOut = _getQuoteAtTick(arithmeticmeanTick, _amountIn, _baseToken, _quoteToken);
-    }
-
-    function _getQuoteAtTick(
-        int24 _tick,
-        uint128 _baseAmount,
-        address _baseToken,
-        address _quoteToken
-    ) internal pure returns (uint256 quoteAmount) {
-        uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(_tick);
-        // Calculate quoteAmount with better precision if it doesn't overflow when multiplied by itself
-        if (sqrtRatioX96 <= type(uint128).max) {
-            uint256 ratioX192 = uint256(sqrtRatioX96) * sqrtRatioX96;
-            quoteAmount = _baseToken < _quoteToken
-                ? FullMath.mulDiv(ratioX192, _baseAmount, 1 << 192)
-                : FullMath.mulDiv(1 << 192, _baseAmount, ratioX192);
-        } else {
-            uint256 ratioX128 = FullMath.mulDiv(sqrtRatioX96, sqrtRatioX96, 1 << 64);
-            quoteAmount = _baseToken < _quoteToken
-                ? FullMath.mulDiv(ratioX128, _baseAmount, 1 << 128)
-                : FullMath.mulDiv(1 << 128, _baseAmount, ratioX128);
-        }
-    }
-
     function _issueSet(uint256 _depositAmount, uint64 _auxData)
         internal
         returns (uint256 newICETH, uint256 returnedEth)
@@ -550,6 +503,53 @@ contract IndexTest is BridgeTestBase {
             data.debtAmount;
 
         minIcToReceive = _totalInputValue.mul(_maxSlipAux).mul(1e14).div(costOfOneIc);
+    }
+
+    function _getAmountBasedOnTwap(
+        uint128 _amountIn,
+        address _baseToken,
+        address _quoteToken,
+        uint24 _uniFee
+    ) internal view returns (uint256 amountOut) {
+        address pool = IUniswapV3Factory(UNIV3_FACTORY).getPool(WETH, ICETH, _uniFee);
+
+        uint32 secondsAgo = 10;
+
+        uint32[] memory secondsAgos = new uint32[](2);
+        secondsAgos[0] = secondsAgo;
+        secondsAgos[1] = 0;
+
+        (int56[] memory tickCumulatives, ) = IUniswapV3PoolDerivedState(pool).observe(secondsAgos);
+
+        int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
+        int24 arithmeticmeanTick = int24(tickCumulativesDelta / int32(secondsAgo));
+
+        if (tickCumulativesDelta < 0 && (tickCumulativesDelta % int32(secondsAgo) != 0)) {
+            arithmeticmeanTick--;
+        }
+
+        amountOut = _getQuoteAtTick(arithmeticmeanTick, _amountIn, _baseToken, _quoteToken);
+    }
+
+    function _getQuoteAtTick(
+        int24 _tick,
+        uint128 _baseAmount,
+        address _baseToken,
+        address _quoteToken
+    ) internal pure returns (uint256 quoteAmount) {
+        uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(_tick);
+        // Calculate quoteAmount with better precision if it doesn't overflow when multiplied by itself
+        if (sqrtRatioX96 <= type(uint128).max) {
+            uint256 ratioX192 = uint256(sqrtRatioX96) * sqrtRatioX96;
+            quoteAmount = _baseToken < _quoteToken
+                ? FullMath.mulDiv(ratioX192, _baseAmount, 1 << 192)
+                : FullMath.mulDiv(1 << 192, _baseAmount, ratioX192);
+        } else {
+            uint256 ratioX128 = FullMath.mulDiv(sqrtRatioX96, sqrtRatioX96, 1 << 64);
+            quoteAmount = _baseToken < _quoteToken
+                ? FullMath.mulDiv(ratioX128, _baseAmount, 1 << 128)
+                : FullMath.mulDiv(1 << 128, _baseAmount, ratioX128);
+        }
     }
 
     function _encodeData(
