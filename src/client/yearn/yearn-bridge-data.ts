@@ -15,6 +15,7 @@ import {
 export class YearnBridgeData implements BridgeDataFieldGetters {
   allVaults?: EthAddress[];
   allUnderlying?: EthAddress[];
+  latestYvETH?: EthAddress;
   wETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 
   constructor(
@@ -47,7 +48,7 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
-    const [allVaults, allUnderlying] = await this.getAllVaultsAndTokens();
+    const [allVaults, allUnderlying, latestYvETH] = await this.getAllVaultsAndTokens();
 
     if (!(await this.isSupportedAsset(inputAssetA))) {
       throw "inputAssetA not supported";
@@ -56,10 +57,26 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
       throw "outputAssetA not supported";
     }
 
-    if (inputAssetA.assetType == AztecAssetType.ETH && outputAssetA.assetType == AztecAssetType.ERC20) {
-      return [0n]; // deposit via zap
-    } else if (inputAssetA.assetType == AztecAssetType.ERC20 && outputAssetA.assetType == AztecAssetType.ETH) {
-      return [1n]; // withdraw via zap
+    if (inputAssetA.assetType == AztecAssetType.ETH || outputAssetA.assetType == AztecAssetType.ETH) {
+      if (!latestYvETH || latestYvETH === EthAddress.fromString('0x0')) {
+        throw "invalid latest yvETH vault";
+      }
+
+      if (
+        inputAssetA.assetType == AztecAssetType.ETH && // Check if we are depositing ETH
+        outputAssetA.assetType == AztecAssetType.ERC20 && // Check if we are receiving ERC20
+        outputAssetA.erc20Address == latestYvETH // Check if we are receiving latestYVEth
+      ) {
+        return [0n]; // deposit via zap
+      } else if (
+        inputAssetA.assetType == AztecAssetType.ERC20 && // Check if we are withdrawing ERC20
+        inputAssetA.erc20Address == latestYvETH && // Check if we are withdrawing from latestYVEth
+        outputAssetA.assetType == AztecAssetType.ETH // Check if we are receiving ETH
+      ) {
+        return [1n]; // withdraw via zap
+      } else {
+        throw "Invalid input and/or output asset";
+      }
     }
 
     const inputAssetAIsUnderlying = allUnderlying.includes(inputAssetA.erc20Address);
@@ -152,9 +169,11 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     return assetAddress.equals(asset.erc20Address);
   }
 
-  private async getAllVaultsAndTokens(): Promise<[EthAddress[], EthAddress[]]> {
+  private async getAllVaultsAndTokens(): Promise<[EthAddress[], EthAddress[], EthAddress]> {
     const allVaults: EthAddress[] = this.allVaults || [];
     const allUnderlying: EthAddress[] = this.allUnderlying || [];
+    let latestYvETH: EthAddress = this.latestYvETH || EthAddress.fromString("0x0");
+
     if (!this.allVaults) {
       const numTokens = await this.yRegistry.numTokens();
       for (let index = 0; index < Number(numTokens); index++) {
@@ -162,8 +181,14 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
         const vault = await this.yRegistry.latestVault(token);
         allVaults.push(EthAddress.fromString(vault));
         allUnderlying.push(EthAddress.fromString(token));
+        if (EthAddress.fromString(token) == EthAddress.fromString(this.wETH)) {
+          latestYvETH = EthAddress.fromString(vault)
+        }
       }
+      this.allVaults = allVaults
+      this.allUnderlying = allUnderlying
+      this.latestYvETH = latestYvETH
     }
-    return [allVaults, allUnderlying];
+    return [allVaults, allUnderlying, latestYvETH];
   }
 }
