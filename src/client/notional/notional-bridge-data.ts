@@ -12,34 +12,37 @@ import {
 } from "../../../typechain-types";
 export class NotionalBridgeData implements BridgeDataFieldGetters {
   currencyId: Map<string, number>;
-  toUnderlyingToken: Map<string,string>;
+  toUnderlyingToken: Map<string, string>;
   private constructor(
     private provider: Web3Provider,
     private notionalViewContract: NotionalViews,
     private notionalBridgeContract: NotionalBridgeContract,
   ) {
     this.currencyId = new Map<string, number>();
-    this.toUnderlyingToken = new Map<string,string>();
+    this.toUnderlyingToken = new Map<string, string>();
   }
 
   static async create(provider: EthereumProvider, notionalViewAddress: EthAddress, notionalBridgeAddress: EthAddress) {
     const ethersProvider = createWeb3Provider(provider);
-    const notionalViewContract: NotionalViews = NotionalViews__factory.connect(notionalViewAddress.toString(), ethersProvider);
+    const notionalViewContract: NotionalViews = NotionalViews__factory.connect(
+      notionalViewAddress.toString(),
+      ethersProvider,
+    );
     const notionalBridgeContract = NotionalBridgeContract__factory.connect(
       notionalBridgeAddress.toString(),
       ethersProvider,
     );
     const maxCurrencyId = await notionalViewContract.getMaxCurrencyId();
-    let notional = new NotionalBridgeData(ethersProvider, notionalViewContract, notionalBridgeContract);
+    const notional = new NotionalBridgeData(ethersProvider, notionalViewContract, notionalBridgeContract);
     for (let i = 1; i <= maxCurrencyId; i++) {
       const [assetToken, underlyingToken] = await notionalViewContract.getCurrency(i);
       notional.currencyId.set(assetToken.tokenAddress, i);
       notional.currencyId.set(underlyingToken.tokenAddress, i);
-      notional.toUnderlyingToken.set(assetToken.tokenAddress, underlyingToken.tokenAddress)
+      notional.toUnderlyingToken.set(assetToken.tokenAddress, underlyingToken.tokenAddress);
       notional.toUnderlyingToken.set(underlyingToken.tokenAddress, underlyingToken.tokenAddress);
     }
 
-    return
+    return;
   }
 
   async getAuxData(
@@ -93,7 +96,7 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
       const cashAmount = await this.notionalBridgeContract.computeUnderlyingAmount(
         inputAssetA.erc20Address.toString(),
         this.toUnderlyingToken.get(inputAssetA.erc20Address.toString())!,
-        inputValue
+        inputValue,
       );
       const fcashAmount = await this.notionalViewContract.getfCashAmountGivenCashAmount(
         currencyId,
