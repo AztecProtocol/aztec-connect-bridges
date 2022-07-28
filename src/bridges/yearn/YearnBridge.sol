@@ -139,7 +139,7 @@ contract YearnBridge is BridgeBase {
 
     /**
      * @notice Wrap _inputValue ETH to wETH and deposit theses wETH to the provided yvETH vault.
-     * @param _inputValue - Amount of shares to deposit
+     * @param _inputValue - Amount of underlying to deposit
      * @param _outputAssetA - Vault we want to deposit to
      * @return outputValue - Amount of shares received after deposit
      */
