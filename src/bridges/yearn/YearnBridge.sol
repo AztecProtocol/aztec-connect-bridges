@@ -111,14 +111,10 @@ contract YearnBridge is BridgeBase {
             if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) {
                 revert ErrorLib.InvalidOutputA();
             }
-
             if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
-                outputValueA = _zapETH(msg.value, _outputAssetA);
-            } else if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
-                outputValueA = IYearnVault(_outputAssetA.erc20Address).deposit(_inputValue);
-            } else {
-                revert ErrorLib.InvalidInputA();
+                _zapETH(msg.value, _outputAssetA);
             }
+            outputValueA = IYearnVault(_outputAssetA.erc20Address).deposit(_inputValue);
         } else if (_auxData == 1) {
             if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) {
                 revert ErrorLib.InvalidInputA();
@@ -138,15 +134,11 @@ contract YearnBridge is BridgeBase {
     }
 
     /**
-     * @notice Wrap _inputValue ETH to wETH and deposit theses wETH to the provided yvETH vault.
+     * @notice zap _inputValue ETH to wETH.
      * @param _inputValue - Amount of underlying to deposit
      * @param _outputAssetA - Vault we want to deposit to
-     * @return outputValue - Amount of shares received after deposit
      */
-    function _zapETH(uint256 _inputValue, AztecTypes.AztecAsset memory _outputAssetA)
-        private
-        returns (uint256 outputValue)
-    {
+    function _zapETH(uint256 _inputValue, AztecTypes.AztecAsset memory _outputAssetA) private {
         if (msg.value == 0 || msg.value != _inputValue) {
             revert ErrorLib.InvalidInputAmount();
         }
@@ -157,8 +149,6 @@ contract YearnBridge is BridgeBase {
             revert ErrorLib.InvalidOutputA();
         }
         IWETH(WETH).deposit{value: _inputValue}();
-
-        outputValue = yVault.deposit(_inputValue);
     }
 
     /**

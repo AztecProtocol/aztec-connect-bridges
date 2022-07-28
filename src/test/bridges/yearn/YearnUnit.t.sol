@@ -14,8 +14,7 @@ import {IYearnVault} from "../../../interfaces/yearn/IYearnVault.sol";
 contract YearnBridgeUnitTest is Test {
     IERC20 public constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-    IERC20 public constant OLD_YVETH = IERC20(0xa9fE4601811213c340e850ea305481afF02f5b28);
-    IERC20 public constant YVETH = IERC20(0xa258C4606Ca8206D8aA700cE2143D7db854D168c);
+    IYearnVault public constant YVETH = IYearnVault(0xa258C4606Ca8206D8aA700cE2143D7db854D168c);
     IYearnVault public constant YVDAI = IYearnVault(0xdA816459F1AB5631232FE5e97a05BBBb94970c95);
 
     AztecTypes.AztecAsset internal emptyAsset;
@@ -44,7 +43,6 @@ contract YearnBridgeUnitTest is Test {
         vm.label(address(DAI), "DAI");
         vm.label(address(WETH), "WETH");
         vm.label(address(yvDAI), "yvDAI");
-        vm.label(address(OLD_YVETH), "old_yvETH");
         vm.label(address(YVETH), "yvETH");
     }
 
@@ -82,7 +80,7 @@ contract YearnBridgeUnitTest is Test {
         });
         AztecTypes.AztecAsset memory depositOutputAssetA = AztecTypes.AztecAsset({
             id: 100,
-            erc20Address: address(OLD_YVETH),
+            erc20Address: address(YVETH),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
