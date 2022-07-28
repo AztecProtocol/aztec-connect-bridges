@@ -2,6 +2,7 @@ import { AssetValue, AuxDataConfig, AztecAsset, BridgeDataFieldGetters, Solidity
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { createWeb3Provider } from "../aztec/provider";
 import { EthAddress } from "@aztec/barretenberg/address";
+import { Web3Provider } from "@ethersproject/providers";
 import {
   NotionalViews,
   NotionalViews__factory,
@@ -9,22 +10,36 @@ import {
   NotionalBridgeContract__factory,
   IWrappedfCash__factory,
 } from "../../../typechain-types";
-import { Web3Provider } from "@ethersproject/providers";
 export class NotionalBridgeData implements BridgeDataFieldGetters {
+  currencyId: Map<string, number>;
+  toUnderlyingToken: Map<string,string>;
   private constructor(
     private provider: Web3Provider,
     private notionalViewContract: NotionalViews,
     private notionalBridgeContract: NotionalBridgeContract,
-  ) {}
+  ) {
+    this.currencyId = new Map<string, number>();
+    this.toUnderlyingToken = new Map<string,string>();
+  }
 
-  static create(provider: EthereumProvider, notionalViewAddress: EthAddress, notionalBridgeAddress: EthAddress) {
+  static async create(provider: EthereumProvider, notionalViewAddress: EthAddress, notionalBridgeAddress: EthAddress) {
     const ethersProvider = createWeb3Provider(provider);
-    const notionalViewContract = NotionalViews__factory.connect(notionalViewAddress.toString(), ethersProvider);
+    const notionalViewContract: NotionalViews = NotionalViews__factory.connect(notionalViewAddress.toString(), ethersProvider);
     const notionalBridgeContract = NotionalBridgeContract__factory.connect(
       notionalBridgeAddress.toString(),
       ethersProvider,
     );
-    return new NotionalBridgeData(ethersProvider, notionalViewContract, notionalBridgeContract);
+    const maxCurrencyId = await notionalViewContract.getMaxCurrencyId();
+    let notional = new NotionalBridgeData(ethersProvider, notionalViewContract, notionalBridgeContract);
+    for (let i = 1; i <= maxCurrencyId; i++) {
+      const [assetToken, underlyingToken] = await notionalViewContract.getCurrency(i);
+      notional.currencyId.set(assetToken.tokenAddress, i);
+      notional.currencyId.set(underlyingToken.tokenAddress, i);
+      notional.toUnderlyingToken.set(assetToken.tokenAddress, underlyingToken.tokenAddress)
+      notional.toUnderlyingToken.set(underlyingToken.tokenAddress, underlyingToken.tokenAddress);
+    }
+
+    return
   }
 
   async getAuxData(
@@ -33,8 +48,9 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
-    const currencyId = await this.notionalBridgeContract.currencyIds(inputAssetA.erc20Address.toString());
-    if (currencyId != 0) {
+
+    const currencyId = this.currencyId.get(inputAssetA.erc20Address.toString());
+    if (typeof currencyId !== "undefined") {
       const activeMarkets = await this.notionalViewContract.getActiveMarkets(currencyId);
       return [activeMarkets[0].maturity.toBigInt()];
     }
@@ -73,18 +89,22 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
       }
       return [assetAmount.toBigInt()];
     }
-    const currencyId = await this.notionalViewContract.getCurrencyId(inputAssetA.erc20Address.toString());
-    const cashAmount = await this.notionalBridgeContract.computeUnderlyingAmount(
-      inputAssetA.erc20Address.toString(),
-      inputValue,
-    );
-    const fcashAmount = await this.notionalViewContract.getfCashAmountGivenCashAmount(
-      currencyId,
-      -cashAmount,
-      0,
-      Date.now(),
-    );
-    return [fcashAmount.toBigInt()];
+    const currencyId = this.currencyId.get(inputAssetA.erc20Address.toString());
+    if (typeof currencyId !== "undefined") {
+      const cashAmount = await this.notionalBridgeContract.computeUnderlyingAmount(
+        inputAssetA.erc20Address.toString(),
+        this.toUnderlyingToken.get(inputAssetA.erc20Address.toString())!,
+        inputValue
+      );
+      const fcashAmount = await this.notionalViewContract.getfCashAmountGivenCashAmount(
+        currencyId,
+        -cashAmount,
+        0,
+        Date.now(),
+      );
+      return [fcashAmount.toBigInt()];
+    }
+    throw "Invalid Currency";
   }
 
   async getMarketSize(
@@ -100,11 +120,14 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
       const wrappedFcash = IWrappedfCash__factory.connect(inputAssetA.erc20Address.toString(), this.provider);
       underlyingToken = (await wrappedFcash.getUnderlyingToken())._underlyingToken;
     }
-    const currencyId = await this.notionalBridgeContract.currencyIds[underlyingToken];
-    const market = await this.notionalViewContract.getActiveMarkets(currencyId)[0];
-    if (auxData == 0n) {
-      return [{ assetId: inputAssetA.id, amount: market.totalAssetCash.toBigInt() }];
+    const currencyId = this.currencyId.get(inputAssetA.erc20Address.toString());
+    if (typeof currencyId !== "undefined") {
+      const market = await this.notionalViewContract.getActiveMarkets(currencyId)[0];
+      if (auxData == 0n) {
+        return [{ assetId: inputAssetA.id, amount: market.totalAssetCash.toBigInt() }];
+      }
+      return [{ assetId: inputAssetA.id, amount: market.totalfCash.toBigInt() }];
     }
-    return [{ assetId: inputAssetA.id, amount: market.totalfCash.toBigInt() }];
+    throw "Invalid Currency";
   }
 }

@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -11,41 +12,30 @@ import {IWrappedfCash} from "../../interfaces/notional/IWrappedfCash.sol";
 import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {WETH9} from "../../interfaces/notional/WETH9.sol";
 import {CToken} from "../../interfaces/notional/CToken.sol";
+import {NotionalViews, Token} from "../../interfaces/notional/INotionalViews.sol";
 
 contract NotionalBridgeContract is BridgeBase {
-    IWrappedfCashFactory public fcashFactory;
+    IWrappedfCashFactory public constant FCASH_FACTORY =
+        IWrappedfCashFactory(0x5D051DeB5db151C2172dCdCCD42e6A2953E27261);
+    NotionalViews public constant NOTIONAL_VIEW = NotionalViews(0x1344A36A1B56144C3Bc62E7757377D288fDE0369);
     address public constant ETH = address(0);
-    address public constant CETH = address(0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5);
-    address public constant DAI = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-    address public constant CDAI = address(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643);
     address public constant WETH = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    address public constant USDC = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-    address public constant CUSDC = address(0x39AA39c021dfbaE8faC545936693aC917d5E7563);
-    address public constant WBTC = address(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
-    address public constant CWBTC = address(0xC11b1268C1A384e55C48c2391d8d480264A3A7F4);
-    mapping(address => uint16) public currencyIds;
-    mapping(address => bool) public ctokens;
-    mapping(address => address) public underlyingAddrMap;
+    mapping(address => mapping(address => bool)) public preapproved;
 
-    constructor(address _rollupProcessor, address _fcashFactory) BridgeBase(_rollupProcessor) {
-        fcashFactory = IWrappedfCashFactory(_fcashFactory);
-        currencyIds[ETH] = 1;
-        currencyIds[CETH] = 1;
-        currencyIds[WETH] = 1;
-        currencyIds[DAI] = 2;
-        currencyIds[CDAI] = 2;
-        currencyIds[USDC] = 3;
-        currencyIds[CUSDC] = 3;
-        currencyIds[WBTC] = 4;
-        currencyIds[CWBTC] = 4;
-        underlyingAddrMap[CETH] = WETH;
-        underlyingAddrMap[CDAI] = DAI;
-        underlyingAddrMap[CUSDC] = USDC;
-        underlyingAddrMap[CWBTC] = WBTC;
-        ctokens[CETH] = true;
-        ctokens[CDAI] = true;
-        ctokens[CUSDC] = true;
-        ctokens[CWBTC] = true;
+    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {
+        uint16 maxCurrencyId = NOTIONAL_VIEW.getMaxCurrencyId();
+        for (uint16 i = 1; i <= maxCurrencyId; ) {
+            (Token memory assetToken, Token memory underlyingToken) = NOTIONAL_VIEW.getCurrency(i);
+            ERC20(assetToken.tokenAddress).approve(_rollupProcessor, type(uint256).max);
+            preapproved[assetToken.tokenAddress][_rollupProcessor] = true;
+            if (underlyingToken.tokenAddress != ETH) {
+                ERC20(underlyingToken.tokenAddress).approve(_rollupProcessor, type(uint256).max);
+                preapproved[underlyingToken.tokenAddress][_rollupProcessor] = true;
+            }
+            unchecked {
+                i++;
+            }
+        }
     }
 
     receive() external payable {}
@@ -61,6 +51,7 @@ contract NotionalBridgeContract is BridgeBase {
      * @param _interactionNonce The interaction nonce of the call
      * @param _auxData For entering the market, this will be the market maturity. For exitng the market,
      * this will be 0.
+     * @return outputValueA The amount of token (fcash token or ctoken or underlying token) the bridge reveived.
      */
     function convert(
         AztecTypes.AztecAsset memory _inputAssetA,
@@ -83,14 +74,8 @@ contract NotionalBridgeContract is BridgeBase {
         )
     {
         uint40 maturity = uint40(_auxData);
-        _validateInput(maturity, _inputAssetA.erc20Address, _outputAssetA.erc20Address);
-        uint16 currencyId = currencyIds[_inputAssetA.erc20Address];
-        if (currencyId != 0) {
-            if (_inputAssetA.erc20Address == address(0) || _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
-                if (msg.value != _inputValue) {
-                    revert("not enough ether");
-                }
-            }
+        if (maturity != 0) {
+            uint16 currencyId = IWrappedfCash(_outputAssetA.erc20Address).getCurrencyId();
             outputValueA = _enter(
                 _inputAssetA.erc20Address,
                 _outputAssetA.erc20Address,
@@ -101,8 +86,13 @@ contract NotionalBridgeContract is BridgeBase {
         } else {
             outputValueA = _exit(_inputAssetA.erc20Address, _outputAssetA.erc20Address, _inputValue);
         }
-        if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
-            ERC20(_outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, outputValueA);
+        if (
+            _outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 &&
+            !preapproved[_outputAssetA.erc20Address][ROLLUP_PROCESSOR]
+        ) {
+            // if it's not preapproved, we need to approve it
+            ERC20(_outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, type(uint256).max);
+            preapproved[_outputAssetA.erc20Address][ROLLUP_PROCESSOR] = true;
         } else if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
         }
@@ -114,22 +104,24 @@ contract NotionalBridgeContract is BridgeBase {
      * @dev If the token is an underlying token, then we simply scale it to 8 decimals
      * @param _token is the address of input asset token
      * @param _amount is the amount of input asset token
+     * @return underlyingAmount The amount of underlying token with 8 decimal
      */
-    function computeUnderlyingAmount(address _token, uint256 _amount) public returns (uint88) {
-        bool isCtoken = ctokens[_token];
-        address underlyingToken = underlyingAddrMap[_token];
-        if (isCtoken) {
-            uint256 underlyingDecimals = ERC20(underlyingToken).decimals();
+    function computeUnderlyingAmount(
+        address _token,
+        address _underlyingToken,
+        uint256 _amount
+    ) public returns (uint88) {
+        uint256 underlyingDecimals = ERC20(_underlyingToken).decimals();
+        if (_token != _underlyingToken) {
             uint256 exchangeRateCurrent = CToken(_token).exchangeRateCurrent();
             uint256 mantissa = 10 + underlyingDecimals;
             uint256 underlyingAmount = (_amount * exchangeRateCurrent) / (10**mantissa);
             return uint88(underlyingAmount);
         }
-        uint256 decimal = ERC20(_token).decimals();
-        if (decimal >= 8) {
-            return uint88(_amount / 10**(decimal - 8));
+        if (underlyingDecimals >= 8) {
+            return uint88(_amount / 10**(underlyingDecimals - 8));
         }
-        return uint88(_amount * 10**(8 - decimal));
+        return uint88(_amount * 10**(8 - underlyingDecimals));
     }
 
     /**
@@ -142,6 +134,7 @@ contract NotionalBridgeContract is BridgeBase {
      * @param _currencyId The predefined Notional currency id defined in constructor
      * @param _amount The amount of input token
      * @param _maturity The maturity of the market we want to enter
+     * @return outputAmount The amount of fcash token we actually receive
      */
     function _enter(
         address _inputToken,
@@ -150,7 +143,7 @@ contract NotionalBridgeContract is BridgeBase {
         uint256 _amount,
         uint40 _maturity
     ) internal returns (uint256) {
-        IWrappedfCash fcash = IWrappedfCash(fcashFactory.computeAddress(_currencyId, _maturity));
+        IWrappedfCash fcash = IWrappedfCash(FCASH_FACTORY.computeAddress(_currencyId, _maturity));
         if (address(fcash) != _outputToken) {
             revert ErrorLib.InvalidOutputA();
         }
@@ -158,12 +151,19 @@ contract NotionalBridgeContract is BridgeBase {
             WETH9(WETH).deposit{value: _amount}();
             _inputToken = WETH;
         }
-        ERC20(_inputToken).approve(address(fcash), _amount);
+        if (!preapproved[_inputToken][address(fcash)]) {
+            ERC20(_inputToken).approve(address(fcash), type(uint256).max);
+            preapproved[_inputToken][address(fcash)] = true;
+        }
         if (fcash.getCurrencyId() != _currencyId) {
             revert("fcash has not been deployed");
         }
-        uint88 fcashAmount = computeUnderlyingAmount(_inputToken, _amount);
-        if (ctokens[_inputToken]) {
+        (IERC20 underlyingToken, ) = fcash.getUnderlyingToken();
+        if (address(underlyingToken) == ETH) {
+            underlyingToken = IERC20(WETH);
+        }
+        uint88 fcashAmount = computeUnderlyingAmount(_inputToken, address(underlyingToken), _amount);
+        if (address(underlyingToken) != _inputToken) {
             fcash.mintViaAsset(_amount, fcashAmount, address(this), 0);
         } else {
             fcash.mintViaUnderlying(_amount, fcashAmount, address(this), 0);
@@ -179,6 +179,7 @@ contract NotionalBridgeContract is BridgeBase {
      * @param _inputToken The address of the input asset
      * @param _outputToken The address of the output asset
      * @param _amount The amount of the input asset
+     * @return outputAmount The actual received amount of the output asset
      */
     function _exit(
         address _inputToken,
@@ -189,7 +190,8 @@ contract NotionalBridgeContract is BridgeBase {
         uint256 prevBalance = isETH
             ? IERC20(WETH).balanceOf(address(this))
             : IERC20(_outputToken).balanceOf(address(this));
-        if (ctokens[_outputToken]) {
+        (IERC20 cToken, , ) = IWrappedfCash(_inputToken).getAssetToken();
+        if (address(cToken) == _outputToken) {
             IWrappedfCash(_inputToken).redeemToAsset(_amount, address(this), 0);
         } else {
             IWrappedfCash(_inputToken).redeemToUnderlying(_amount, address(this), 0);
@@ -201,28 +203,5 @@ contract NotionalBridgeContract is BridgeBase {
             WETH9(WETH).withdraw(currBalance);
         }
         return currBalance - prevBalance;
-    }
-
-    /**
-     * @notice validate the input asset and output asset
-     * @dev For entering the market, we make sure the user passes in the supported input asset list
-     * For exiting the market, we make sure the user passes in the supported output asset list
-     * @param _maturity The maturity of the market we want to enter. It also indicates
-     * whether this is for entering the market or exiting the market
-     * @param _inputAsset The address of the input asset
-     * @param _outputAsset The address of the output asset
-     */
-    function _validateInput(
-        uint40 _maturity,
-        address _inputAsset,
-        address _outputAsset
-    ) internal view {
-        uint16 currencyId = _maturity == 0 ? currencyIds[_outputAsset] : currencyIds[_inputAsset];
-        if (currencyId == 0) {
-            if (_maturity == 0) {
-                revert ErrorLib.InvalidOutputA();
-            }
-            revert ErrorLib.InvalidInputA();
-        }
     }
 }
