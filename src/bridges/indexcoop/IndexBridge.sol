@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
-pragma experimental ABIEncoderV2;
 
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
@@ -23,11 +21,10 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 /**
  * @title icETH Bridge
- * @dev A smart contract responsible for buying and selling icETH with ETH etther through selling/buying from
+ * @notice A smart contract responsible for buying and selling icETH with ETH either through selling/buying from
  * a DEX or by issuing/redeeming icEth set tokens.
  */
 contract IndexBridgeContract is BridgeBase {
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     error UnsafeOraclePrice();
@@ -122,7 +119,7 @@ contract IndexBridgeContract is BridgeBase {
      * @param _interactionNonce - Globablly unique identifier for this bridge call
      * @param _auxData - Encodes flowSelector and maxSlip. See notes on the decodeAuxData
      * function for encoding details.
-     * @return outputValueA - Amount of ETH to return to the Rollupprocessor
+     * @return outputValueA - Amount of ETH to return to the RollupProcessor
      */
     function _getEth(
         uint256 _totalInputValue,
@@ -141,7 +138,7 @@ contract IndexBridgeContract is BridgeBase {
               */
             if (_totalInputValue < 1e18) revert ErrorLib.InvalidInputAmount();
 
-            minAmountOut = _getAmountBasedOnRedeem(_totalInputValue, oracleLimit).mul(maxSlip).div(1e4);
+            minAmountOut = (_getAmountBasedOnRedeem(_totalInputValue, oracleLimit) * maxSlip) / 1e4;
 
             // Creating a SwapData structure used to specify a path in a DEX in the ExchangeIssuance contract
             uint24[] memory fee;
@@ -178,9 +175,7 @@ contract IndexBridgeContract is BridgeBase {
             } else revert ErrorLib.InvalidAuxData();
 
             // Using univ3 TWAP Oracle to get a lower bound on returned ETH.
-            minAmountOut = _getAmountBasedOnTwap(_totalInputValue, ICETH, WETH, _uniFee, oracleLimit).mul(maxSlip).div(
-                1e4
-            );
+            minAmountOut = (_getAmountBasedOnTwap(_totalInputValue, ICETH, WETH, _uniFee, oracleLimit) * maxSlip) / 1e4;
 
             ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
                 tokenIn: ICETH,
@@ -228,7 +223,7 @@ contract IndexBridgeContract is BridgeBase {
 
             if (_totalInputValue < 1e18) revert ErrorLib.InvalidInputAmount();
 
-            minAmountOut = _getAmountBasedOnIssue(_totalInputValue, oracleLimit).mul(maxSlip).div(1e4);
+            minAmountOut = (_getAmountBasedOnIssue(_totalInputValue, oracleLimit) * maxSlip) / 1e4;
 
             uint24[] memory fee;
             address[] memory pathToSt = new address[](2);
@@ -261,9 +256,7 @@ contract IndexBridgeContract is BridgeBase {
             } else revert ErrorLib.InvalidAuxData();
 
             // Using univ3 TWAP Oracle to get a lower bound on returned ETH.
-            minAmountOut = _getAmountBasedOnTwap(_totalInputValue, WETH, ICETH, uniFee, oracleLimit).mul(maxSlip).div(
-                1e4
-            );
+            minAmountOut = (_getAmountBasedOnTwap(_totalInputValue, WETH, ICETH, uniFee, oracleLimit) * maxSlip) / 1e4;
             IWETH(WETH).deposit{value: _totalInputValue}();
 
             ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
@@ -321,11 +314,11 @@ contract IndexBridgeContract is BridgeBase {
 
         uint256 price;
         if (_baseToken == ICETH) {
-            price = amountOut.mul(1e18).div(_amountIn);
-            if (price < uint256(_oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
+            price = (amountOut * 1e18) / _amountIn;
+            if (price < uint256(_oracleLimit) * 1e14) revert UnsafeOraclePrice();
         } else {
-            price = _amountIn.mul(1e18).div(amountOut);
-            if (price > uint256(_oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
+            price = (_amountIn * 1e18) / amountOut;
+            if (price > uint256(_oracleLimit) * 1e14) revert UnsafeOraclePrice();
         }
     }
 
@@ -366,20 +359,20 @@ contract IndexBridgeContract is BridgeBase {
      * flashloan of WETH to pay back debt. Chainlink oracle is used for the ETH/stETH price.
      *
      * @param _setAmount - Amount of icETH to redeem
-     * @return Expcted amount of ETH returned from redeeming
+     * @return Expected amount of ETH returned from redeeming
      */
     function _getAmountBasedOnRedeem(uint256 _setAmount, uint64 _oracleLimit) internal returns (uint256) {
         (, int256 intPrice, , , ) = AggregatorV3Interface(CHAINLINK_STETH_ETH).latestRoundData();
         uint256 price = uint256(intPrice);
 
-        if (price < uint256(_oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
+        if (price < uint256(_oracleLimit) * 1e14) revert UnsafeOraclePrice();
 
         IAaveLeverageModule(AAVE_LEVERAGE_MODULE).sync(ISetToken(ICETH));
         IExchangeIssuanceLeveraged.LeveragedTokenData memory issueInfo = IExchangeIssuanceLeveraged(EXCHANGE_ISSUANCE)
             .getLeveragedTokenData(ISetToken(ICETH), _setAmount, true);
 
-        uint256 debtOwed = issueInfo.debtAmount.mul(1.0009 ether).div(1e18);
-        uint256 colInEth = issueInfo.collateralAmount.mul(price).div(1e18);
+        uint256 debtOwed = (issueInfo.debtAmount * (1.0009 ether)) / 1e18;
+        uint256 colInEth = (issueInfo.collateralAmount * price) / 1e18;
 
         return colInEth - debtOwed;
     }
@@ -396,36 +389,34 @@ contract IndexBridgeContract is BridgeBase {
         (, int256 intPrice, , , ) = AggregatorV3Interface(CHAINLINK_STETH_ETH).latestRoundData();
         uint256 price = uint256(intPrice);
 
-        if (price > uint256(_oracleLimit).mul(1e14)) revert UnsafeOraclePrice();
+        if (price > uint256(_oracleLimit) * 1e14) revert UnsafeOraclePrice();
 
         IAaveLeverageModule(AAVE_LEVERAGE_MODULE).sync(ISetToken(ICETH));
         IExchangeIssuanceLeveraged.LeveragedTokenData memory data = IExchangeIssuanceLeveraged(EXCHANGE_ISSUANCE)
             .getLeveragedTokenData(ISetToken(ICETH), 1e18, true);
 
-        uint256 costOfOneIc = (
-            data.collateralAmount.mul(1.0009 ether).div(1e18).mul(price).div(1e18) // Cost of flashlaon // Convert to ETH
-        ) - data.debtAmount;
+        uint256 costOfOneIc = (((data.collateralAmount * 1.0009 ether) / uint256(1e18)) * price) /
+            1e18 - // Cost of flashlaon
+            data.debtAmount;
 
-        return _totalInputValue.mul(1e18).div(costOfOneIc);
+        return (_totalInputValue * 1e18) / costOfOneIc;
     }
 
     /**
-     * dev decode auxData into two variables
-     *
-     * param encoded - encoded auxData the first 32 bytes represent flowSelector
-     * return flowSelector - Used to specify the flow of the bridge:
+     * @dev decode auxData into two variables
+     * @param _encoded - encoded auxData the first 32 bytes represent flowSelector
+     * @return flowSelector - Used to specify the flow of the bridge:
      *           flowSelector = 1 -> use ExchangeIssue contract to issue/redeem
      *           flowSelector = 3 -> use univ3 pool with a fee of 3000 to buy/sell
      *           flowSelector = 5 -> use univ3 pool with a fee of 500 buy/sell
-     * return  oracleLimit - A safety feature that is either the upper or lower limit
+     * @return maxSlip - Used to specific maximal difference between the expected return based
+     * on Oracle data and the received amount. maxSlip uses a decimal value of 4 e.g. to set the
+     * minimum discrepency to 1%, maxSlip should be 9900.
+     * @return oracleLimit - A safety feature that is either the upper or lower limit
      * of the prices reported by an Oracles, it is set with 4 decimals. If we are buying
      * or issuing it is the upper limit, if we are selling/redeeming it is the lower limit.
      * If we are going through issuing/redeeming it is a limit on ETH/stETH from Chainlink,
      * if we are buying/selling on uniswap it is a limit on the ETH/icETH TWAP price.
-     * return maxSlip - Used to specific maximal difference between the expected return based
-     * on Oracle data and the received amount. maxSlip uses a decimal value of 4 e.g. to set the
-     * minimum discrepency to 1%, maxSlip should be 9900.
-     *
      */
     function _decodeAuxdata(uint64 _encoded)
         internal

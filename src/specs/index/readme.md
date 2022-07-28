@@ -91,8 +91,8 @@ The recent volatility and stETH:ETH de-peg required multiple rebalancing events.
 
 ## Is this contract upgradable?
 
-Nothing is stored on the contract.
+The contract is not upgradable.
 
 ## Does this bridge maintain state?
 
-The contract is not upgradable.
+Nothing is stored on the contract.

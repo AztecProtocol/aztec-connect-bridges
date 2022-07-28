@@ -2,7 +2,6 @@
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 
@@ -23,8 +22,6 @@ import {IUniswapV3PoolDerivedState} from "../../../interfaces/uniswapv3/pool/IUn
 import {ICurvePool} from "../../../interfaces/curve/ICurvePool.sol";
 
 contract IndexTest is BridgeTestBase {
-    using SafeMath for uint256;
-
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant STETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address public constant ICETH = 0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84;
@@ -104,9 +101,8 @@ contract IndexTest is BridgeTestBase {
         path = abi.encodePacked(path, ICETH);
 
         uint256 icethFromQuoter = IQuoter(UNIV3_QUOTER).quoteExactInput(path, _depositAmount);
-        uint256 minimumReceivedDex = _getAmountBasedOnTwap(uint128(_depositAmount), WETH, ICETH, uniFee)
-            .mul(maxSlipAux)
-            .div(1e4);
+        uint256 minimumReceivedDex = (_getAmountBasedOnTwap(uint128(_depositAmount), WETH, ICETH, uniFee) *
+            maxSlipAux) / 1e4;
 
         if (icethFromQuoter < minimumReceivedDex) {
             // When price impact becomes too large expect a revert.
@@ -164,9 +160,8 @@ contract IndexTest is BridgeTestBase {
         path = abi.encodePacked(path, WETH);
         uint256 ethFromQuoter = IQuoter(UNIV3_QUOTER).quoteExactInput(path, _depositAmount);
 
-        uint256 minimumReceivedDex = _getAmountBasedOnTwap(uint128(_depositAmount), ICETH, WETH, uniFee)
-            .mul(maxSlipAux)
-            .div(1e4);
+        uint256 minimumReceivedDex = (_getAmountBasedOnTwap(uint128(_depositAmount), ICETH, WETH, uniFee) *
+            maxSlipAux) / 1e4;
 
         if (ethFromQuoter < minimumReceivedDex) {
             //If price impact is too large revert when swapping
@@ -350,10 +345,10 @@ contract IndexTest is BridgeTestBase {
         IExchangeIssuanceLeveraged.LeveragedTokenData memory issueInfo = IExchangeIssuanceLeveraged(EXISSUE)
             .getLeveragedTokenData(ISetToken(ICETH), _setAmount, true);
 
-        uint256 debtOwed = issueInfo.debtAmount.mul(1.0009 ether).div(1e18);
-        uint256 colInEth = issueInfo.collateralAmount.mul(price).div(1e18);
+        uint256 debtOwed = (issueInfo.debtAmount * (1.0009 ether)) / 1e18;
+        uint256 colInEth = (issueInfo.collateralAmount * price) / 1e18;
 
-        return (colInEth - debtOwed).mul(_maxSlipAux).div(1e4);
+        return ((colInEth - debtOwed) * _maxSlipAux) / 1e4;
     }
 
     function _getEthBasedOnQuoter(uint256 _setAmount) internal returns (uint256) {
@@ -361,7 +356,7 @@ contract IndexTest is BridgeTestBase {
         IExchangeIssuanceLeveraged.LeveragedTokenData memory issueInfo = IExchangeIssuanceLeveraged(EXISSUE)
             .getLeveragedTokenData(ISetToken(ICETH), _setAmount, true);
 
-        uint256 debtOwed = issueInfo.debtAmount.mul(1.0009 ether).div(1e18);
+        uint256 debtOwed = (issueInfo.debtAmount * (1.0009 ether)) / 1e18;
         uint256 colInEth = ICurvePool(CURVE).get_dy(1, 0, issueInfo.collateralAmount);
 
         return (colInEth - debtOwed);
@@ -497,10 +492,9 @@ contract IndexTest is BridgeTestBase {
         IExchangeIssuanceLeveraged.LeveragedTokenData memory data = IExchangeIssuanceLeveraged(EXISSUE)
             .getLeveragedTokenData(ISetToken(ICETH), 1e18, true);
 
-        uint256 costOfOneIc = (data.collateralAmount.mul(1.0009 ether).div(1e18).mul(price).div(1e18)) -
-            data.debtAmount;
+        uint256 costOfOneIc = ((((data.collateralAmount * (1.0009 ether)) / 1e18) * price) / 1e18) - data.debtAmount;
 
-        minIcToReceive = _totalInputValue.mul(_maxSlipAux).mul(1e14).div(costOfOneIc);
+        minIcToReceive = ((_totalInputValue * (_maxSlipAux)) / 1e14) / costOfOneIc;
     }
 
     function _getAmountBasedOnTwap(
