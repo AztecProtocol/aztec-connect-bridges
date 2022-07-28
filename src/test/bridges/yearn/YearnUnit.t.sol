@@ -19,6 +19,7 @@ contract YearnBridgeUnitTest is Test {
     IYearnVault public constant YVDAI = IYearnVault(0xdA816459F1AB5631232FE5e97a05BBBb94970c95);
 
     AztecTypes.AztecAsset internal emptyAsset;
+    IYearnRegistry internal registry;
 
     address private rollupProcessor;
     YearnBridge private bridge;
@@ -35,11 +36,11 @@ contract YearnBridgeUnitTest is Test {
         vm.label(address(bridge), "YEARN_BRIDGE");
         vm.deal(address(bridge), 0);
         bridge.preApproveAll();
+        registry = bridge.YEARN_REGISTRY();
 
         // Some more labels
-        IYearnRegistry _registry = bridge.YEARN_REGISTRY();
-        address yvDAI = _registry.latestVault(address(DAI));
-        vm.label(address(_registry), "YEARN_REGISTRY");
+        address yvDAI = registry.latestVault(address(DAI));
+        vm.label(address(registry), "YEARN_REGISTRY");
         vm.label(address(DAI), "DAI");
         vm.label(address(WETH), "WETH");
         vm.label(address(yvDAI), "yvDAI");
@@ -96,12 +97,9 @@ contract YearnBridgeUnitTest is Test {
         bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 1, 0, 2, address(0));
     }
 
-    // @dev In order to avoid overflows we set _depositAmount to be uint96 instead of uint256.
-    function testYearnBridgeUnitTestERC20(uint96 _depositAmount) public {
-        IYearnRegistry _registry = bridge.YEARN_REGISTRY();
-        address vault = _registry.latestVault(address(DAI));
-        uint256 availableDepositLimit = IYearnVault(vault).availableDepositLimit();
-        vm.assume(_depositAmount > 1 && _depositAmount < availableDepositLimit);
+    function testYearnBridgeUnitTestERC20(uint256 _depositAmount, uint256 _withdrawAmount) public {
+        address vault = registry.latestVault(address(DAI));
+        _depositAmount = bound(_depositAmount, 1e17, IYearnVault(vault).availableDepositLimit());
 
         deal(address(DAI), address(bridge), _depositAmount);
         uint256 daiBalanceBefore = DAI.balanceOf(address(bridge));
@@ -135,12 +133,13 @@ contract YearnBridgeUnitTest is Test {
         assertLt(daiBalanceMid, daiBalanceBefore, "DAI balance after is not less than before");
 
         // Withdraw
+        _withdrawAmount = bound(_withdrawAmount, 1, outputValueA);
         (uint256 outputValueA2, , ) = bridge.convert(
             depositOutputAssetA,
             emptyAsset,
             depositInputAssetA,
             emptyAsset,
-            outputValueA,
+            _withdrawAmount,
             0,
             1,
             address(0)
@@ -152,12 +151,9 @@ contract YearnBridgeUnitTest is Test {
         assertGt(daiBalanceAfter, daiBalanceMid, "DAI balance after is not more than before");
     }
 
-    // @dev In order to avoid overflows we set _depositAmount to be uint96 instead of uint256.
-    function testYearnBridgeUnitTestETH(uint96 _depositAmount) public {
-        IYearnRegistry _registry = bridge.YEARN_REGISTRY();
-        address vault = _registry.latestVault(address(WETH));
-        uint256 availableDepositLimit = IYearnVault(vault).availableDepositLimit();
-        vm.assume(_depositAmount > 1 && _depositAmount < availableDepositLimit);
+    function testYearnBridgeUnitTestETH(uint256 _depositAmount, uint256 _withdrawAmount) public {
+        address vault = registry.latestVault(address(WETH));
+        _depositAmount = bound(_depositAmount, 1e17, IYearnVault(vault).availableDepositLimit());
 
         vm.deal(address(rollupProcessor), _depositAmount);
         uint256 ethBalanceBefore = address(rollupProcessor).balance;
@@ -191,20 +187,19 @@ contract YearnBridgeUnitTest is Test {
         assertLt(ethBalanceMid, ethBalanceBefore, "ETH balance after is not less than before");
 
         // Withdraw
+        _withdrawAmount = bound(_withdrawAmount, 1, outputValueA);
         (uint256 outputValueA2, , ) = bridge.convert(
             depositOutputAssetA,
             emptyAsset,
             depositInputAssetA,
             emptyAsset,
-            outputValueA,
+            _withdrawAmount,
             0,
             1,
             address(0)
         );
-        uint256 ethBalanceAfter = address(rollupProcessor).balance;
-        uint256 shareAmountAfter = IERC20(address(vault)).balanceOf(address(bridge));
         assertGt(outputValueA2, 0, "ETH receive should not be 0");
-        assertLt(shareAmountAfter, shareAmountMid, "Invalid share amount");
-        assertGt(ethBalanceAfter, ethBalanceMid, "ETH balance after is not more than before");
+        assertLt(IERC20(address(vault)).balanceOf(address(bridge)), shareAmountMid, "Invalid share amount");
+        assertGt(address(rollupProcessor).balance, ethBalanceMid, "ETH balance after is not more than before");
     }
 }
