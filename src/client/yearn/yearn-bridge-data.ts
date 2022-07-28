@@ -184,9 +184,9 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
         const vault = await this.yRegistry.vaults(this.wETH, index);
         allYvETH.push(EthAddress.fromString(vault));
       }
-      this.allVaults = allVaults
-      this.allUnderlying = allUnderlying
-      this.allYvETH = allYvETH
+      this.allVaults = allVaults;
+      this.allUnderlying = allUnderlying;
+      this.allYvETH = allYvETH;
     }
     return [allVaults, allUnderlying, allYvETH];
   }
