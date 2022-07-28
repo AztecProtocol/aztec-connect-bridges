@@ -33,7 +33,7 @@ export class NotionalBridgeData implements BridgeDataFieldGetters {
       ethersProvider,
     );
     const maxCurrencyId = await notionalViewContract.getMaxCurrencyId();
-    const notional = new NotionalBridgeData(ethersProvider, notionalViewContract, notionalBridgeContract);
+    let notional = new NotionalBridgeData(ethersProvider, notionalViewContract, notionalBridgeContract);
     for (let i = 1; i <= maxCurrencyId; i++) {
       const [assetToken, underlyingToken] = await notionalViewContract.getCurrency(i);
       notional.currencyId.set(assetToken.tokenAddress, i);
