@@ -12,7 +12,7 @@ import {IYearnRegistry} from "../../../interfaces/yearn/IYearnRegistry.sol";
 import {YearnBridge} from "../../../bridges/yearn/YearnBridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
-contract YearnBridgeE2ETest is BridgeTestBase {
+contract YearnBridgeApprovalE2ETest is BridgeTestBase {
     using SafeERC20 for IERC20;
 
     struct Balances {
