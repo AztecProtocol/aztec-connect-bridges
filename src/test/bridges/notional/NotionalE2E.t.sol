@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -22,7 +23,7 @@ contract NotionalE2ETest is BridgeTestBase {
 
     function setUp() public {
         // Deploy a new stability pool bridge and set approvals
-        bridge = new NotionalBridgeContract(address(ROLLUP_PROCESSOR), address(FCASH_FACTORY));
+        bridge = new NotionalBridgeContract(address(ROLLUP_PROCESSOR));
 
         // Use the label cheat-code to mark the address in the traces
         vm.label(address(bridge), "NotionalBridge");
