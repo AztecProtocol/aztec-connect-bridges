@@ -146,14 +146,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         assertGt(outputAssetAMid, outputAssetABefore, "no change in output asset balance after deposit");
 
         _withdrawAmount = outputAssetAMid;
-        bridgeCallData = encodeBridgeCallData(
-            id,
-            depositOutputAssetA,
-            emptyAsset,
-            depositInputAssetA,
-            emptyAsset,
-            1
-        );
+        bridgeCallData = encodeBridgeCallData(id, depositOutputAssetA, emptyAsset, depositInputAssetA, emptyAsset, 1);
 
         vm.expectEmit(true, true, false, false); //Log 1 -> transfer _withdrawAmount from Rollup to bridge
         emit Transfer(address(ROLLUP_PROCESSOR), address(bridge), _withdrawAmount);
