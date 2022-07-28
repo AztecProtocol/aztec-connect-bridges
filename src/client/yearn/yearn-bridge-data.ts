@@ -15,7 +15,7 @@ import {
 export class YearnBridgeData implements BridgeDataFieldGetters {
   allVaults?: EthAddress[];
   allUnderlying?: EthAddress[];
-  latestYvETH?: EthAddress;
+  allYvETH?: EthAddress[];
   wETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 
   constructor(
@@ -48,7 +48,7 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
-    const [allVaults, allUnderlying, latestYvETH] = await this.getAllVaultsAndTokens();
+    const [allVaults, allUnderlying, allYvETH] = await this.getAllVaultsAndTokens();
 
     if (!(await this.isSupportedAsset(inputAssetA))) {
       throw "inputAssetA not supported";
@@ -58,19 +58,15 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     }
 
     if (inputAssetA.assetType == AztecAssetType.ETH || outputAssetA.assetType == AztecAssetType.ETH) {
-      if (!latestYvETH || latestYvETH === EthAddress.fromString('0x0')) {
-        throw "invalid latest yvETH vault";
-      }
-
       if (
         inputAssetA.assetType == AztecAssetType.ETH && // Check if we are depositing ETH
         outputAssetA.assetType == AztecAssetType.ERC20 && // Check if we are receiving ERC20
-        outputAssetA.erc20Address == latestYvETH // Check if we are receiving latestYVEth
+        allYvETH.includes(outputAssetA.erc20Address) // Check if we are receiving yvETH
       ) {
         return [0n]; // deposit via zap
       } else if (
         inputAssetA.assetType == AztecAssetType.ERC20 && // Check if we are withdrawing ERC20
-        inputAssetA.erc20Address == latestYvETH && // Check if we are withdrawing from latestYVEth
+        allYvETH.includes(inputAssetA.erc20Address) && // Check if we are withdrawing from yvETH
         outputAssetA.assetType == AztecAssetType.ETH // Check if we are receiving ETH
       ) {
         return [1n]; // withdraw via zap
@@ -169,10 +165,10 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     return assetAddress.equals(asset.erc20Address);
   }
 
-  private async getAllVaultsAndTokens(): Promise<[EthAddress[], EthAddress[], EthAddress]> {
+  private async getAllVaultsAndTokens(): Promise<[EthAddress[], EthAddress[], EthAddress[]]> {
     const allVaults: EthAddress[] = this.allVaults || [];
     const allUnderlying: EthAddress[] = this.allUnderlying || [];
-    let latestYvETH: EthAddress = this.latestYvETH || EthAddress.fromString("0x0");
+    const allYvETH: EthAddress[] = this.allYvETH || [];
 
     if (!this.allVaults) {
       const numTokens = await this.yRegistry.numTokens();
@@ -181,14 +177,17 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
         const vault = await this.yRegistry.latestVault(token);
         allVaults.push(EthAddress.fromString(vault));
         allUnderlying.push(EthAddress.fromString(token));
-        if (EthAddress.fromString(token) == EthAddress.fromString(this.wETH)) {
-          latestYvETH = EthAddress.fromString(vault)
-        }
+      }
+
+      const numWEthTokens = await this.yRegistry.numVaults(this.wETH);
+      for (let index = 0; index < Number(numWEthTokens); index++) {
+        const vault = await this.yRegistry.vaults(this.wETH, index);
+        allYvETH.push(EthAddress.fromString(vault));
       }
       this.allVaults = allVaults
       this.allUnderlying = allUnderlying
-      this.latestYvETH = latestYvETH
+      this.allYvETH = allYvETH
     }
-    return [allVaults, allUnderlying, latestYvETH];
+    return [allVaults, allUnderlying, allYvETH];
   }
 }
