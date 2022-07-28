@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -7,7 +8,6 @@ import {NotionalBridgeContract} from "../../../bridges/notional/NotionalBridge.s
 import {IWrappedfCashFactory} from "../../../interfaces/notional/IWrappedfCashFactory.sol";
 import {NotionalViews} from "../../../interfaces/notional/INotionalViews.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
-
 struct Info {
     uint16 currencyId;
     uint40 maturity;
@@ -25,7 +25,6 @@ contract NotionalTest is BridgeTestBase {
     address public constant CUSDC = address(0x39AA39c021dfbaE8faC545936693aC917d5E7563);
     address public constant WBTC = address(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
     address public constant CWBTC = address(0xC11b1268C1A384e55C48c2391d8d480264A3A7F4);
-    mapping(address => bytes32) public balanceOfSlot;
     uint16 public constant ETH_CURRENCYID = 1;
     uint16 public constant DAI_CURRENCYID = 2;
     uint16 public constant USDC_CURRENCYID = 3;
@@ -37,21 +36,14 @@ contract NotionalTest is BridgeTestBase {
     NotionalViews public notionalView = NotionalViews(0x1344A36A1B56144C3Bc62E7757377D288fDE0369);
 
     function setUp() public {
-        balanceOfSlot[DAI] = bytes32(uint256(2));
-        balanceOfSlot[CETH] = bytes32(uint256(15));
-        balanceOfSlot[CDAI] = bytes32(uint256(14));
-        balanceOfSlot[WETH] = bytes32(uint256(3));
-        balanceOfSlot[USDC] = bytes32(uint256(9));
-        balanceOfSlot[CUSDC] = bytes32(uint256(15));
-        balanceOfSlot[WBTC] = bytes32(uint256(0));
-        balanceOfSlot[CWBTC] = bytes32(uint256(14));
-
-        bridge = new NotionalBridgeContract(address(ROLLUP_PROCESSOR), address(FCASH_FACTORY));
+        bridge = new NotionalBridgeContract(address(ROLLUP_PROCESSOR));
+        vm.label(address(bridge), "Notional Bridge");
     }
 
     // test whether when we lend eth, we receive wrapper fcash token back
     function testETHLend(uint256 _x) public {
-        _x = _convertInput(_x, 1e16, 1e20);
+        vm.assume(_x >= 1e16);
+        vm.assume(_x <= 1e20);
         Info memory info;
         info.currencyId = ETH_CURRENCYID;
         info.maturity = uint40(notionalView.getActiveMarkets(info.currencyId)[0].maturity);
@@ -65,7 +57,8 @@ contract NotionalTest is BridgeTestBase {
     }
 
     function testETHWithdrawUnderMaturity(uint256 _x) public {
-        _x = _convertInput(_x, 1e16, 1e20);
+        vm.assume(_x >= 1e16);
+        vm.assume(_x <= 1e20);
         Info memory info;
         info.currencyId = ETH_CURRENCYID;
         info.maturity = uint40(notionalView.getActiveMarkets(info.currencyId)[0].maturity);
@@ -87,9 +80,10 @@ contract NotionalTest is BridgeTestBase {
     }
 
     function testETHLendAtAnyTimeWithdraw(uint256 _x, uint256 _time) public {
-        _time = _time > 60 days ? 60 days : _time;
+        vm.assume(_time < 30 days);
         vm.warp(block.timestamp + _time);
-        _x = _convertInput(_x, 1e16, 1e20);
+        vm.assume(_x >= 1e16);
+        vm.assume(_x <= 1e20);
         Info memory info;
         info.currencyId = ETH_CURRENCYID;
         info.maturity = uint40(notionalView.getActiveMarkets(info.currencyId)[0].maturity);
@@ -111,7 +105,8 @@ contract NotionalTest is BridgeTestBase {
     }
 
     function testETHLendTwiceAndWithdraw(uint256 _x) public {
-        _x = _convertInput(_x, 1e16, 1e20);
+        vm.assume(_x >= 1e16);
+        vm.assume(_x <= 1e20);
         // first lend
         Info memory info;
         info.currencyId = ETH_CURRENCYID;
@@ -148,7 +143,8 @@ contract NotionalTest is BridgeTestBase {
     }
 
     function testETHWithdrawOverMaturity(uint256 _x) public {
-        _x = _convertInput(_x, 1e16, 1e20);
+        vm.assume(_x >= 1e16);
+        vm.assume(_x <= 1e20);
         Info memory info;
         info.currencyId = ETH_CURRENCYID;
         info.interactionNonce = 1;
@@ -171,7 +167,8 @@ contract NotionalTest is BridgeTestBase {
     }
 
     function testETHPartialWithdraw(uint256 _x, bool _overMaturity) public {
-        _x = _convertInput(_x, 1e16, 1e20);
+        vm.assume(_x >= 1e16);
+        vm.assume(_x <= 1e20);
         Info memory info;
         info.currencyId = ETH_CURRENCYID;
         info.interactionNonce = 1;
@@ -196,7 +193,8 @@ contract NotionalTest is BridgeTestBase {
     }
 
     function testCETHLendithdrawCETH(uint256 _x) public {
-        _x = _convertInput(_x, 1e8, 1e12);
+        vm.assume(_x >= 1e8);
+        vm.assume(_x <= 1e12);
         Info memory info;
         info.currencyId = ETH_CURRENCYID;
         info.interactionNonce = 1;
@@ -219,7 +217,8 @@ contract NotionalTest is BridgeTestBase {
     }
 
     function testCDAILend(uint256 _x) public {
-        _x = _convertInput(_x, 1e9, 1e15);
+        vm.assume(_x >= 1e9);
+        vm.assume(_x <= 1e15);
         Info memory info;
         info.currencyId = DAI_CURRENCYID;
         info.maturity = uint40(notionalView.getActiveMarkets(info.currencyId)[0].maturity);
@@ -233,7 +232,8 @@ contract NotionalTest is BridgeTestBase {
     }
 
     function testCDAILendwithdrawCDAI(uint256 _x, bool _overMaturity) public {
-        _x = _convertInput(_x, 1e9, 1e12);
+        vm.assume(_x >= 1e9);
+        vm.assume(_x <= 1e12);
         Info memory info;
         info.currencyId = DAI_CURRENCYID;
         info.maturity = uint40(notionalView.getActiveMarkets(info.currencyId)[0].maturity);
@@ -258,7 +258,8 @@ contract NotionalTest is BridgeTestBase {
     }
 
     function testDAIWithdraw(uint256 _x, bool _overMaturity) public {
-        _x = _convertInput(_x, 1e18, 1e21);
+        vm.assume(_x >= 1e16);
+        vm.assume(_x <= 1e24);
         Info memory info;
         info.currencyId = DAI_CURRENCYID;
         info.maturity = uint40(notionalView.getActiveMarkets(info.currencyId)[0].maturity);
@@ -283,7 +284,8 @@ contract NotionalTest is BridgeTestBase {
     }
 
     function testUSDCLend(uint256 _x) public {
-        _x = _convertInput(_x, 1e6, 1e10);
+        vm.assume(_x >= 1e6);
+        vm.assume(_x <= 1e10);
         Info memory info;
         info.currencyId = USDC_CURRENCYID;
         info.maturity = uint40(notionalView.getActiveMarkets(info.currencyId)[0].maturity);
@@ -297,7 +299,8 @@ contract NotionalTest is BridgeTestBase {
     }
 
     function testCUSDCLendWithdrawCUSDC(uint256 _x, bool _overMaturity) public {
-        _x = _convertInput(_x, 1e9, 1e12);
+        vm.assume(_x >= 1e9);
+        vm.assume(_x <= 1e12);
         Info memory info;
         info.currencyId = USDC_CURRENCYID;
         info.maturity = uint40(notionalView.getActiveMarkets(info.currencyId)[0].maturity);
@@ -322,7 +325,8 @@ contract NotionalTest is BridgeTestBase {
     }
 
     function testUSDCWithdraw(uint256 _x, bool _overMaturity) public {
-        _x = _convertInput(_x, 1e6, 1e10);
+        vm.assume(_x >= 1e6);
+        vm.assume(_x <= 1e10);
         Info memory info;
         info.currencyId = USDC_CURRENCYID;
         info.interactionNonce = 1;
@@ -347,7 +351,8 @@ contract NotionalTest is BridgeTestBase {
     }
 
     function testWBTCLend(uint256 _x) public {
-        _x = _convertInput(_x, 1e6, 1e9);
+        vm.assume(_x >= 1e6);
+        vm.assume(_x <= 1e9);
         Info memory info;
         info.currencyId = WBTC_CURRENCYID;
         info.maturity = uint40(notionalView.getActiveMarkets(info.currencyId)[0].maturity);
@@ -361,7 +366,8 @@ contract NotionalTest is BridgeTestBase {
     }
 
     function testWBTCWithdraw(uint256 _x, bool _overMaturity) public {
-        _x = _convertInput(_x, 1e6, 1e9);
+        vm.assume(_x >= 1e6);
+        vm.assume(_x <= 1e9);
         Info memory info;
         info.currencyId = WBTC_CURRENCYID;
         info.maturity = uint40(notionalView.getActiveMarkets(info.currencyId)[0].maturity);
@@ -405,6 +411,7 @@ contract NotionalTest is BridgeTestBase {
         uint64 auxData = uint64(_info.maturity);
         outputAsset.assetType = AztecTypes.AztecAssetType.ERC20;
         outputAsset.erc20Address = FCASH_FACTORY.computeAddress(_info.currencyId, _info.maturity);
+        vm.label(outputAsset.erc20Address, "fcash token");
         vm.prank(address(ROLLUP_PROCESSOR));
         uint256 fcashAmount;
         if (isLendETH) {
@@ -472,15 +479,5 @@ contract NotionalTest is BridgeTestBase {
             vm.prank(address(ROLLUP_PROCESSOR));
             ERC20(outputAsset.erc20Address).transferFrom(address(bridge), address(ROLLUP_PROCESSOR), outputAmount);
         }
-    }
-
-    function _convertInput(
-        uint256 _x,
-        uint256 _lowerBound,
-        uint256 _upperBound
-    ) internal pure returns (uint256) {
-        _x = _x > _lowerBound ? _x : _lowerBound;
-        _x = _x < _upperBound ? _x : _upperBound;
-        return _x;
     }
 }
