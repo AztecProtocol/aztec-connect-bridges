@@ -93,50 +93,34 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     auxData: bigint,
     inputValue: bigint,
   ): Promise<bigint[]> {
-    if (auxData === 0n && inputAssetA.assetType == AztecAssetType.ETH) {
-      //Deposit via zap
-      const yvETHAddress = await this.yRegistry.latestVault(this.wETH);
-      const yvETHContract = IYearnVault__factory.connect(yvETHAddress, this.ethersProvider);
-      const pricePerShare = utils.formatEther(await yvETHContract.pricePerShare());
-      const amount = utils.formatEther(inputValue);
-      const expectedShares = utils.parseEther(String(Number(amount) / Number(pricePerShare)));
-
-      return [BigNumber.from(expectedShares).toBigInt(), 0n];
-    }
-    if (auxData === 1n && outputAssetA.assetType == AztecAssetType.ETH) {
-      //Withdraw via zap
-      const yvETHAddress = await this.yRegistry.latestVault(this.wETH);
-      const yvETHContract = IYearnVault__factory.connect(yvETHAddress, this.ethersProvider);
-      const pricePerShare = utils.formatEther(await yvETHContract.pricePerShare());
-      const shares = utils.formatEther(inputValue);
-      const expectedShares = utils.parseEther(String(Number(shares) * Number(pricePerShare)));
-
-      return [BigNumber.from(expectedShares).toBigInt(), 0n];
-    }
-
-    if (auxData === 0n && inputAssetA.assetType == AztecAssetType.ERC20) {
-      //Standard Deposit
-      const yvTokenAddress = await this.yRegistry.latestVault(inputAssetA.erc20Address.toString());
+    if (auxData === 0n) {
+      let tokenAddress = inputAssetA.erc20Address.toString();
+      if (inputAssetA.assetType == AztecAssetType.ETH) { // Deposit via zap
+        tokenAddress = this.wETH;
+      }
+      const yvTokenAddress = await this.yRegistry.latestVault(tokenAddress);
       const yvTokenContract = IYearnVault__factory.connect(yvTokenAddress, this.ethersProvider);
-      const decimals = await yvTokenContract.decimals();
-      const pricePerShare = utils.formatUnits(await yvTokenContract.pricePerShare(), decimals);
-      const amount = utils.formatUnits(inputValue, decimals);
-      const expectedShares = utils.parseUnits(String(Number(amount) / Number(pricePerShare)), decimals);
-
-      return [BigNumber.from(expectedShares).toBigInt(), 0n];
+      const [pricePerShare, decimals] = await Promise.all([
+        yvTokenContract.pricePerShare(),
+        yvTokenContract.decimals()
+      ]);
+      const expectedShares = BigNumber.from(inputValue).mul(BigNumber.from(10).pow(decimals)).div(pricePerShare)
+      return [expectedShares.toBigInt(), 0n];
     }
-    if (auxData === 1n && outputAssetA.assetType == AztecAssetType.ERC20) {
-      //Standard Withdraw
-      const yvTokenAddress = await this.yRegistry.latestVault(this.wETH);
+    if (auxData === 1n) {
+      let tokenAddress = outputAssetA.erc20Address.toString();
+      if (outputAssetA.assetType == AztecAssetType.ETH) { // Withdraw via zap
+        tokenAddress = this.wETH;
+      }
+      const yvTokenAddress = await this.yRegistry.latestVault(tokenAddress);
       const yvTokenContract = IYearnVault__factory.connect(yvTokenAddress, this.ethersProvider);
-      const decimals = await yvTokenContract.decimals();
-      const pricePerShare = utils.formatUnits(await yvTokenContract.pricePerShare(), decimals);
-      const shares = utils.formatUnits(inputValue, decimals);
-      const expectedShares = utils.parseUnits(String(Number(shares) * Number(pricePerShare)), decimals);
-
-      return [BigNumber.from(expectedShares).toBigInt(), 0n];
+      const [pricePerShare, decimals] = await Promise.all([
+        yvTokenContract.pricePerShare(),
+        yvTokenContract.decimals()
+      ]);
+      const expectedShares = BigNumber.from(inputValue).mul(pricePerShare).div(BigNumber.from(10).pow(decimals))
+      return [expectedShares.toBigInt(), 0n];
     }
-
     throw "Invalid auxData";
   }
 
