@@ -20,6 +20,23 @@ struct MarketParameters {
     uint256 previousTradeTime;
 }
 
+enum TokenType {
+    UnderlyingToken,
+    cToken,
+    cETH,
+    Ether,
+    NonMintable,
+    aToken
+}
+
+struct Token {
+    address tokenAddress;
+    bool hasTransferFee;
+    int256 decimals;
+    TokenType tokenType;
+    uint256 maxCollateralBalance;
+}
+
 interface NotionalViews {
     function getCurrencyId(address _tokenAddress) external view returns (uint16 currencyId);
 
@@ -38,4 +55,11 @@ interface NotionalViews {
         uint256 _marketIndex,
         uint256 _blockTime
     ) external view returns (int256, int256);
+
+    function getMaxCurrencyId() external view returns (uint16);
+
+    function getCurrency(uint16 _currencyId)
+        external
+        view
+        returns (Token memory assetToken, Token memory underlyingToken);
 }
