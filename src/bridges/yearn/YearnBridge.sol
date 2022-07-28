@@ -77,8 +77,8 @@ contract YearnBridge is BridgeBase {
      * @notice A function which will allow the user to deposit/withdraw a given amount of a given token to a given vault. When depositing to a Yearn vault,
      * the user deposits the underlying (or want) token as input (ex: DAI). When withdrawing from a Yearn vault, the user asks to withdraws some shares of the
      * Yearn Vaults, where input is the yvToken (ex: yvDAI) and receive the underlying token as output (ex: DAI).
-     * @param _inputAssetA - Arbitrary ERC20 token
-     * @param _outputAssetA - Equal to _inputAssetA
+     * @param _inputAssetA - ERC20 token to deposit or Yearn Vault ERC20 token to withdraw
+     * @param _outputAssetA - Yearn Vault ERC20 token to receive on deposit or ERC20 token to receive on withdraw
      * @param _inputValue - Amount to deposit or withdraw
      * @param _interactionNonce - Unique identifier for this DeFi interaction
      * @param _auxData - Special value to indicate a deposit (0) or a withdraw (1)
