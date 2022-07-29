@@ -32,7 +32,8 @@
   },
   "dependencies": {
     "@aztec/barretenberg": "2.1.35",
-    "@ethersproject/providers": "^5.6.8"
+    "@ethersproject/providers": "^5.6.8",
+    "isomorphic-fetch": "^3.0.0"
   },
   "jest": {
     "transform": {
