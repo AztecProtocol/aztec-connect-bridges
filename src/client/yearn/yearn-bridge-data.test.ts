@@ -81,7 +81,7 @@ describe("Testing Yearn auxData", () => {
         if (indexOfToken === -1) {
           throw new Error("Token not found");
         }
-        return vaults[indexOfToken]
+        return vaults[indexOfToken];
       }),
     };
     IYearnRegistry__factory.connect = () => registryContract as any;
@@ -90,15 +90,15 @@ describe("Testing Yearn auxData", () => {
       ...rollupProcessorContract,
       getSupportedAsset: jest.fn((id: bigint) => {
         if (id === 1n) {
-          return daiAsset.erc20Address.toString()
+          return daiAsset.erc20Address.toString();
         } else if (id === 2n) {
-          return yvDaiAsset.erc20Address.toString()
+          return yvDaiAsset.erc20Address.toString();
         } else if (id === 3n) {
-          return yvEthAsset.erc20Address.toString()
+          return yvEthAsset.erc20Address.toString();
         } else if (id === 4n) {
-          return wethAsset.erc20Address.toString()
+          return wethAsset.erc20Address.toString();
         }
-      })
+      }),
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
@@ -122,7 +122,7 @@ describe("Testing Yearn auxData", () => {
         if (indexOfToken === -1) {
           throw new Error("Token not found");
         }
-        return vaults[indexOfToken]
+        return vaults[indexOfToken];
       }),
     };
     IYearnRegistry__factory.connect = () => registryContract as any;
@@ -131,15 +131,15 @@ describe("Testing Yearn auxData", () => {
       ...rollupProcessorContract,
       getSupportedAsset: jest.fn((id: bigint) => {
         if (id === 1n) {
-          return daiAsset.erc20Address.toString()
+          return daiAsset.erc20Address.toString();
         } else if (id === 2n) {
-          return yvDaiAsset.erc20Address.toString()
+          return yvDaiAsset.erc20Address.toString();
         } else if (id === 3n) {
-          return yvEthAsset.erc20Address.toString()
+          return yvEthAsset.erc20Address.toString();
         } else if (id === 4n) {
-          return wethAsset.erc20Address.toString()
+          return wethAsset.erc20Address.toString();
         }
-      })
+      }),
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
@@ -163,19 +163,19 @@ describe("Testing Yearn auxData", () => {
         if (indexOfToken === -1) {
           throw new Error("Token not found");
         }
-        return vaults[indexOfToken]
+        return vaults[indexOfToken];
       }),
     };
     IYearnRegistry__factory.connect = () => registryContract as any;
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn().mockResolvedValue(EthAddress.random().toString())
+      getSupportedAsset: jest.fn().mockResolvedValue(EthAddress.random().toString()),
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
     const yearnBridgeData = YearnBridgeData.create({} as any);
-    
+
     expect.assertions(1);
     await expect(yearnBridgeData.getAuxData(yvDaiAsset, emptyAsset, ethAsset, emptyAsset)).rejects.toEqual(
       "inputAssetA not supported",
@@ -195,19 +195,19 @@ describe("Testing Yearn auxData", () => {
         if (indexOfToken === -1) {
           throw new Error("Token not found");
         }
-        return vaults[indexOfToken]
+        return vaults[indexOfToken];
       }),
     };
     IYearnRegistry__factory.connect = () => registryContract as any;
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn().mockResolvedValue(EthAddress.random().toString())
+      getSupportedAsset: jest.fn().mockResolvedValue(EthAddress.random().toString()),
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
     const yearnBridgeData = YearnBridgeData.create({} as any);
-    
+
     expect.assertions(1);
     await expect(yearnBridgeData.getAuxData(ethAsset, emptyAsset, yvEthAsset, emptyAsset)).rejects.toEqual(
       "outputAssetA not supported",
@@ -227,8 +227,8 @@ describe("Testing Yearn auxData", () => {
         if (indexOfToken === -1) {
           throw new Error("Token not found");
         }
-        return vaults[indexOfToken]
-      })
+        return vaults[indexOfToken];
+      }),
     };
     IYearnRegistry__factory.connect = () => registryContract as any;
 
@@ -236,17 +236,17 @@ describe("Testing Yearn auxData", () => {
       ...rollupProcessorContract,
       getSupportedAsset: jest.fn((id: bigint) => {
         if (id === 1n) {
-          return daiAsset.erc20Address.toString()
+          return daiAsset.erc20Address.toString();
         } else if (id === 2n) {
-          return yvDaiAsset.erc20Address.toString()
+          return yvDaiAsset.erc20Address.toString();
         } else if (id === 3n) {
-          return yvEthAsset.erc20Address.toString()
+          return yvEthAsset.erc20Address.toString();
         } else if (id === 4n) {
-          return wethAsset.erc20Address.toString()
+          return wethAsset.erc20Address.toString();
         } else if (id === 5n) {
-          return yvUSDCAsset.erc20Address.toString()
+          return yvUSDCAsset.erc20Address.toString();
         }
-      })
+      }),
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
@@ -321,18 +321,32 @@ describe("Testing Yearn expectedOutput", () => {
     // Setup mocks
     vaultContract = {
       ...vaultContract,
-      pricePerShare: jest.fn(() => BigNumber.from('1010200000000000000')),
-      decimals: jest.fn(() => BigNumber.from('18'))
+      pricePerShare: jest.fn(() => BigNumber.from("1010200000000000000")),
+      decimals: jest.fn(() => BigNumber.from("18")),
     };
     IYearnVault__factory.connect = () => vaultContract as any;
 
     const yearnBridgeData = YearnBridgeData.create({} as any);
 
-    const expectedOutputERC20 = await yearnBridgeData.getExpectedOutput(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 0n, 10n ** 18n);
+    const expectedOutputERC20 = await yearnBridgeData.getExpectedOutput(
+      daiAsset,
+      emptyAsset,
+      yvDaiAsset,
+      emptyAsset,
+      0n,
+      10n ** 18n,
+    );
     expect(expectedOutputERC20[0]).toBe(989902989507028311n);
     expect(expectedOutputERC20[1]).toBe(0n);
 
-    const expectedOutputETH = await yearnBridgeData.getExpectedOutput(ethAsset, emptyAsset, yvEthAsset, emptyAsset, 0n, 10n ** 18n);
+    const expectedOutputETH = await yearnBridgeData.getExpectedOutput(
+      ethAsset,
+      emptyAsset,
+      yvEthAsset,
+      emptyAsset,
+      0n,
+      10n ** 18n,
+    );
     expect(expectedOutputETH[0]).toBe(989902989507028311n);
     expect(expectedOutputETH[1]).toBe(0n);
   });
@@ -341,18 +355,32 @@ describe("Testing Yearn expectedOutput", () => {
     // Setup mocks
     vaultContract = {
       ...vaultContract,
-      pricePerShare: jest.fn(() => BigNumber.from('1110200000000000000')),
-      decimals: jest.fn(() => BigNumber.from('18'))
+      pricePerShare: jest.fn(() => BigNumber.from("1110200000000000000")),
+      decimals: jest.fn(() => BigNumber.from("18")),
     };
     IYearnVault__factory.connect = () => vaultContract as any;
 
     const yearnBridgeData = YearnBridgeData.create({} as any);
 
-    const expectedOutputERC20 = await yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 1n, 10n ** 18n);
+    const expectedOutputERC20 = await yearnBridgeData.getExpectedOutput(
+      yvDaiAsset,
+      emptyAsset,
+      daiAsset,
+      emptyAsset,
+      1n,
+      10n ** 18n,
+    );
     expect(expectedOutputERC20[0]).toBe(1110200000000000000n);
     expect(expectedOutputERC20[1]).toBe(0n);
 
-    const expectedOutputETH = await yearnBridgeData.getExpectedOutput(yvEthAsset, emptyAsset, ethAsset, emptyAsset, 1n, 10n ** 18n);
+    const expectedOutputETH = await yearnBridgeData.getExpectedOutput(
+      yvEthAsset,
+      emptyAsset,
+      ethAsset,
+      emptyAsset,
+      1n,
+      10n ** 18n,
+    );
     expect(expectedOutputETH[0]).toBe(1110200000000000000n);
     expect(expectedOutputETH[1]).toBe(0n);
   });
@@ -361,23 +389,23 @@ describe("Testing Yearn expectedOutput", () => {
     // Setup mocks
     vaultContract = {
       ...vaultContract,
-      pricePerShare: jest.fn(() => BigNumber.from('1110200000000000000')),
-      decimals: jest.fn(() => BigNumber.from('18'))
+      pricePerShare: jest.fn(() => BigNumber.from("1110200000000000000")),
+      decimals: jest.fn(() => BigNumber.from("18")),
     };
     IYearnVault__factory.connect = () => vaultContract as any;
 
     const yearnBridgeData = YearnBridgeData.create({} as any);
 
     expect.assertions(3);
-    await expect(yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 0n, 10n ** 18n)).rejects.toEqual(
-      new Error("Token not found"),
-    );
-    await expect(yearnBridgeData.getExpectedOutput(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 1n, 10n ** 18n)).rejects.toEqual(
-      new Error("Token not found"),
-    );
-    await expect(yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 3n, 10n ** 18n)).rejects.toEqual(
-      "Invalid auxData",
-    );
+    await expect(
+      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 0n, 10n ** 18n),
+    ).rejects.toEqual(new Error("Token not found"));
+    await expect(
+      yearnBridgeData.getExpectedOutput(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 1n, 10n ** 18n),
+    ).rejects.toEqual(new Error("Token not found"));
+    await expect(
+      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 3n, 10n ** 18n),
+    ).rejects.toEqual("Invalid auxData");
   });
 });
 
@@ -418,26 +446,45 @@ describe("Testing Yearn getExpectedYield", () => {
 
   it("should correctly get getExpectedYield", async () => {
     const yearnBridgeData = YearnBridgeData.create({} as any);
-    const expectedOutputDAI = await yearnBridgeData.getExpectedYield?.(daiAsset, emptyAsset, emptyAsset, emptyAsset, 0n, 0n);
+    const expectedOutputDAI = await yearnBridgeData.getExpectedYield?.(
+      daiAsset,
+      emptyAsset,
+      emptyAsset,
+      emptyAsset,
+      0n,
+      0n,
+    );
     expect(expectedOutputDAI).not.toBeUndefined();
     expect((expectedOutputDAI as [number, number])[0]).toBeGreaterThan(0n);
 
-    const expectedOutputWETH = await yearnBridgeData.getExpectedYield?.(wethAsset, emptyAsset, emptyAsset, emptyAsset, 0n, 0n);
+    const expectedOutputWETH = await yearnBridgeData.getExpectedYield?.(
+      wethAsset,
+      emptyAsset,
+      emptyAsset,
+      emptyAsset,
+      0n,
+      0n,
+    );
     expect(expectedOutputWETH).not.toBeUndefined();
     expect((expectedOutputWETH as [number, number])[0]).toBeGreaterThan(0n);
 
-    const expectedOutputETH = await yearnBridgeData.getExpectedYield?.(ethAsset, emptyAsset, emptyAsset, emptyAsset, 0n, 0n);
+    const expectedOutputETH = await yearnBridgeData.getExpectedYield?.(
+      ethAsset,
+      emptyAsset,
+      emptyAsset,
+      emptyAsset,
+      0n,
+      0n,
+    );
     expect(expectedOutputETH).not.toBeUndefined();
     expect((expectedOutputETH as [number, number])[0]).toBeGreaterThan(0n);
     expect((expectedOutputWETH as [number, number])[0]).toBe((expectedOutputETH as [number, number])[0]);
 
-    // expect.assertions(2);
-    await expect(yearnBridgeData.getExpectedOutput(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0n, 0n)).rejects.toEqual(
-      new Error("Token not found"),
-    );
-    await expect(yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, emptyAsset, emptyAsset, 0n, 0n)).rejects.toEqual(
-      new Error("Token not found"),
-    );
-
+    await expect(
+      yearnBridgeData.getExpectedOutput(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0n, 0n),
+    ).rejects.toEqual(new Error("Token not found"));
+    await expect(
+      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, emptyAsset, emptyAsset, 0n, 0n),
+    ).rejects.toEqual(new Error("Token not found"));
   });
 });

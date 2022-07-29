@@ -3,7 +3,7 @@ import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
 import { createWeb3Provider } from "../aztec/provider";
 import { BigNumber } from "ethers";
-import 'isomorphic-fetch';
+import "isomorphic-fetch";
 
 import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
 import {
@@ -16,7 +16,7 @@ import {
 
 export class YearnBridgeData implements BridgeDataFieldGetters {
   allYvETH?: EthAddress[];
-  allVaultsForTokens?: {[key: string]: EthAddress[]};
+  allVaultsForTokens?: { [key: string]: EthAddress[] };
   wETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 
   constructor(
@@ -62,12 +62,12 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
       if (
         inputAssetA.assetType == AztecAssetType.ETH && // Check if we are depositing ETH
         outputAssetA.assetType == AztecAssetType.ERC20 && // Check if we are receiving ERC20
-        allYvETH.findIndex((token) => token.toString() === outputAssetA.erc20Address.toString()) > -1  // Check if we are receiving yvETH
+        allYvETH.findIndex(token => token.toString() === outputAssetA.erc20Address.toString()) > -1 // Check if we are receiving yvETH
       ) {
         return [0n]; // deposit via zap
       } else if (
         inputAssetA.assetType == AztecAssetType.ERC20 && // Check if we are withdrawing ERC20
-        allYvETH.findIndex((token) => token.toString() === inputAssetA.erc20Address.toString()) > -1 && // Check if we are withdrawing from yvETH
+        allYvETH.findIndex(token => token.toString() === inputAssetA.erc20Address.toString()) > -1 && // Check if we are withdrawing from yvETH
         outputAssetA.assetType == AztecAssetType.ETH // Check if we are receiving ETH
       ) {
         return [1n]; // withdraw via zap
@@ -77,13 +77,19 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     }
 
     // standard deposit
-    const matchDepositSituation = (allVaultsForTokens[inputAssetA.erc20Address.toString()] || [])?.findIndex((token) => token.toString() === outputAssetA.erc20Address.toString()) > -1;
+    const matchDepositSituation =
+      (allVaultsForTokens[inputAssetA.erc20Address.toString()] || [])?.findIndex(
+        token => token.toString() === outputAssetA.erc20Address.toString(),
+      ) > -1;
     if (matchDepositSituation) {
       return [0n];
     }
 
     // standard withdraw
-    const matchWithdrawSituation = (allVaultsForTokens[outputAssetA.erc20Address.toString()] || [])?.findIndex((token) => token.toString() === inputAssetA.erc20Address.toString()) > -1;
+    const matchWithdrawSituation =
+      (allVaultsForTokens[outputAssetA.erc20Address.toString()] || [])?.findIndex(
+        token => token.toString() === inputAssetA.erc20Address.toString(),
+      ) > -1;
     if (matchWithdrawSituation) {
       return [1n];
     }
@@ -140,18 +146,22 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     inputValue: bigint,
   ): Promise<number[]> {
     type TminVaultStruct = {
-      address: string,
+      address: string;
       apy: {
-        gross_apr: number,
-      }
-    }
-    let tokenAddress = inputAssetA.erc20Address.toString()
+        gross_apr: number;
+      };
+    };
+    let tokenAddress = inputAssetA.erc20Address.toString();
     if (inputAssetA.assetType === AztecAssetType.ETH) {
       tokenAddress = this.wETH;
     }
     const yvTokenAddress = await this.yRegistry.latestVault(tokenAddress);
-    const allVaults = await (await fetch("https://api.yearn.finance/v1/chains/1/vaults/all")).json() as TminVaultStruct[];
-    const currentVault = (allVaults).find((vault: TminVaultStruct) => vault.address.toLowerCase() == yvTokenAddress.toLowerCase());
+    const allVaults = (await (
+      await fetch("https://api.yearn.finance/v1/chains/1/vaults/all")
+    ).json()) as TminVaultStruct[];
+    const currentVault = allVaults.find(
+      (vault: TminVaultStruct) => vault.address.toLowerCase() == yvTokenAddress.toLowerCase(),
+    );
     if (currentVault) {
       const grossAPR = currentVault.apy.gross_apr;
       return [grossAPR * 100, 0];
@@ -166,9 +176,9 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     return assetAddress.equals(asset.erc20Address);
   }
 
-  private async getAllVaultsAndTokens(): Promise<[EthAddress[], {[key: string]: EthAddress[]}]> {
+  private async getAllVaultsAndTokens(): Promise<[EthAddress[], { [key: string]: EthAddress[] }]> {
     const allYvETH: EthAddress[] = this.allYvETH || [];
-    const allVaultsForTokens: {[key: string]: EthAddress[]} = this.allVaultsForTokens || {};
+    const allVaultsForTokens: { [key: string]: EthAddress[] } = this.allVaultsForTokens || {};
 
     if (!this.allVaultsForTokens) {
       const numTokens = await this.yRegistry.numTokens();
