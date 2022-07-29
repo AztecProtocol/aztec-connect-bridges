@@ -61,11 +61,10 @@ contract YearnBridgeE2ETest is BridgeTestBase {
     function testMoreERC20DepositAndWithdrawal() public {
         IYearnRegistry _registry = bridge.YEARN_REGISTRY();
         uint256 numTokens = _registry.numTokens();
-        for (uint256 i; i < numTokens;) {
+        for (uint256 i; i < numTokens; ) {
             address token = _registry.tokens(i);
             if (
-                token == address(WETH) ||
-                token == 0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F //SNX, packed slot not supported
+                token == address(WETH) || token == 0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F //SNX, packed slot not supported
             ) {
                 unchecked {
                     ++i;
