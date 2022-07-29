@@ -53,7 +53,7 @@ contract IssuanceBridge is BridgeBase {
      * @notice Function that allows to ISSUE or REDEEM SetToken in exchange for ETH or ERC20
      * @param _inputAssetA    - If ISSUE SET: ETH or ERC20        | If REDEEM SET: SetToken
      * @param _outputAssetA   - If ISSUE SET: setToken            | If REDEEM SET: ETH or ERC20
-     * @param _inputValue     - If ISSUE SET: ETH or ERC20 amount | If REDEEM SET: SetToken amount
+     * @param _totalInputValue     - If ISSUE SET: ETH or ERC20 amount | If REDEEM SET: SetToken amount
      * @param _interactionNonce - The nonce of the DeFi interaction, used when redeeming ETH
      * @param _auxData        - minimum token amount received during redemption or minting
      * @return outputValueA  - If ISSUE SET: SetToken amount     | If REDEEM SET: ETH or ERC20 amount
@@ -64,7 +64,7 @@ contract IssuanceBridge is BridgeBase {
         AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
-        uint256 _inputValue,
+        uint256 _totalInputValue,
         uint256 _interactionNonce,
         uint64 _auxData,
         address
@@ -79,9 +79,9 @@ contract IssuanceBridge is BridgeBase {
             bool
         )
     {
-        if (_inputValue == 0) revert ErrorLib.InvalidInput();
+        if (_totalInputValue == 0) revert ErrorLib.InvalidInput();
 
-        uint256 minAmountOut = (_inputValue * _auxData) / PRECISION;
+        uint256 minAmountOut = (_totalInputValue * _auxData) / PRECISION;
 
         if (SET_CONTROLLER.isSet(_inputAssetA.erc20Address)) {
             // User wants to redeem the underlying asset
@@ -89,7 +89,7 @@ contract IssuanceBridge is BridgeBase {
                 // redeem in exchange for ETH
                 outputValueA = EXCHANGE_ISSUANCE.redeemExactSetForETH(
                     ISetToken(_inputAssetA.erc20Address),
-                    _inputValue, // _amountSetToken
+                    _totalInputValue, // _amountSetToken
                     minAmountOut // __minEthOut
                 );
                 IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
@@ -98,7 +98,7 @@ contract IssuanceBridge is BridgeBase {
                 outputValueA = EXCHANGE_ISSUANCE.redeemExactSetForToken(
                     ISetToken(_inputAssetA.erc20Address), // _setToken,
                     IERC20(_outputAssetA.erc20Address), // _outputToken,
-                    _inputValue, //  _amountSetToken,
+                    _totalInputValue, //  _amountSetToken,
                     minAmountOut //  _minOutputReceive
                 );
             } else {
@@ -108,7 +108,7 @@ contract IssuanceBridge is BridgeBase {
             // User wants to issue SetToken
             if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 // User supplies ETH
-                outputValueA = EXCHANGE_ISSUANCE.issueSetForExactETH{value: _inputValue}(
+                outputValueA = EXCHANGE_ISSUANCE.issueSetForExactETH{value: _totalInputValue}(
                     ISetToken(_outputAssetA.erc20Address),
                     minAmountOut // _minSetReceive
                 );
@@ -117,7 +117,7 @@ contract IssuanceBridge is BridgeBase {
                 outputValueA = EXCHANGE_ISSUANCE.issueSetForExactToken(
                     ISetToken(_outputAssetA.erc20Address),
                     IERC20(_inputAssetA.erc20Address),
-                    _inputValue, // _amountInput
+                    _totalInputValue, // _amountInput
                     minAmountOut // _minSetReceive
                 );
             } else {
