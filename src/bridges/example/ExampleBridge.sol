@@ -22,7 +22,7 @@ contract ExampleBridgeContract is BridgeBase {
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
     /**
-     * @notice A function which returns an _inputValue amount of _inputAssetA
+     * @notice A function which returns an _totalInputValue amount of _inputAssetA
      * @param _inputAssetA - Arbitrary ERC20 token
      * @param _outputAssetA - Equal to _inputAssetA
      * @return outputValueA - the amount of output asset to return
@@ -33,7 +33,7 @@ contract ExampleBridgeContract is BridgeBase {
         AztecTypes.AztecAsset memory,
         AztecTypes.AztecAsset memory _outputAssetA,
         AztecTypes.AztecAsset memory,
-        uint256 _inputValue,
+        uint256 _totalInputValue,
         uint256,
         uint64,
         address
@@ -52,8 +52,8 @@ contract ExampleBridgeContract is BridgeBase {
         if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidInputA();
         if (_outputAssetA.erc20Address != _inputAssetA.erc20Address) revert ErrorLib.InvalidOutputA();
         // Return the input value of input asset
-        outputValueA = _inputValue;
+        outputValueA = _totalInputValue;
         // Approve rollup processor to take input value of input asset
-        IERC20(_outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, _inputValue);
+        IERC20(_outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, _totalInputValue);
     }
 }

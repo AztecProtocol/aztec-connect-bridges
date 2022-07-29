@@ -76,7 +76,7 @@ contract ExampleUnitTest is Test {
             emptyAsset, // _inputAssetB - not used so can be left empty
             outputAssetA, // _outputAssetA - in this example equal to input asset
             emptyAsset, // _outputAssetB - not used so can be left empty
-            _depositAmount, // _inputValue - an amount of input asset A sent to the bridge
+            _depositAmount, // _totalInputValue - an amount of input asset A sent to the bridge
             0, // _interactionNonce
             0, // _auxData - not used in the example bridge
             address(0) // _rollupBeneficiary - not relevant in this context

@@ -83,7 +83,7 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
      *
      * @param _inputAssetA - LQTY (Staking) or SB (Unstaking)
      * @param _outputAssetA - SB (Staking) or LQTY (Unstaking)
-     * @param _inputValue - the amount of LQTY to stake or the amount of SB to burn and exchange for LQTY
+     * @param _totalInputValue - the amount of LQTY to stake or the amount of SB to burn and exchange for LQTY
      * @param _auxData - when set to 1 during withdrawals "urgent withdrawal mode" is set (see note bellow)
      * @return outputValueA - the amount of SB (Staking) or LQTY (Unstaking) minted/transferred to
      * the RollupProcessor.sol
@@ -100,7 +100,7 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
         AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
-        uint256 _inputValue,
+        uint256 _totalInputValue,
         uint256,
         uint64 _auxData,
         address
@@ -118,18 +118,18 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
         if (_inputAssetA.erc20Address == LQTY && _outputAssetA.erc20Address == address(this)) {
             // Deposit
             // Stake and claim rewards
-            STAKING_CONTRACT.stake(_inputValue);
+            STAKING_CONTRACT.stake(_totalInputValue);
             _swapRewardsToLQTYAndStake(false);
             uint256 totalSupply = totalSupply();
             // outputValueA = how much SB should be minted
             if (totalSupply == 0) {
                 // When the totalSupply is 0, I set the SB/LQTY ratio to be 1.
-                outputValueA = _inputValue;
+                outputValueA = _totalInputValue;
             } else {
-                uint256 totalLQTYOwnedBeforeDeposit = STAKING_CONTRACT.stakes(address(this)) - _inputValue;
+                uint256 totalLQTYOwnedBeforeDeposit = STAKING_CONTRACT.stakes(address(this)) - _totalInputValue;
                 // totalSupply / totalLQTYOwnedBeforeDeposit = how much SB one LQTY is worth
                 // When I multiply this ^ with the amount of LQTY deposited I get the amount of SB to be minted.
-                outputValueA = (totalSupply * _inputValue) / totalLQTYOwnedBeforeDeposit;
+                outputValueA = (totalSupply * _totalInputValue) / totalLQTYOwnedBeforeDeposit;
             }
             _mint(address(this), outputValueA);
         } else if (_inputAssetA.erc20Address == address(this) && _outputAssetA.erc20Address == LQTY) {
@@ -140,9 +140,9 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
 
             // STAKING_CONTRACT.stakes(address(this)) / totalSupply() = how much LQTY is one SB
             // outputValueA = amount of LQTY to be withdrawn and sent to rollupProcessor
-            outputValueA = (STAKING_CONTRACT.stakes(address(this)) * _inputValue) / totalSupply();
+            outputValueA = (STAKING_CONTRACT.stakes(address(this)) * _totalInputValue) / totalSupply();
             STAKING_CONTRACT.unstake(outputValueA);
-            _burn(address(this), _inputValue);
+            _burn(address(this), _totalInputValue);
         } else {
             revert ErrorLib.InvalidInput();
         }

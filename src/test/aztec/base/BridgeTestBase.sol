@@ -225,15 +225,15 @@ abstract contract BridgeTestBase is Test {
     }
 
     /**
-     * @notice Helper function for processing a rollup with a specific call data and `_inputValue`
+     * @notice Helper function for processing a rollup with a specific call data and `_totalInputValue`
      * @dev will impersonate the rollup processor and update rollup state
      * @param _encodedBridgeCallData The encoded bridge call data for the action, e.g., output from `encodeBridgeCallData()`
-     * @param _inputValue The value of inputAssetA and inputAssetB to transfer to the bridge
+     * @param _totalInputValue The value of inputAssetA and inputAssetB to transfer to the bridge
      * @return outputValueA The amount of outputAssetA returned from the DeFi bridge interaction in this rollup
      * @return outputValueB The amount of outputAssetB returned from the DeFi bridge interaction in this rollup
      * @return isAsync A flag indicating whether the DeFi bridge interaction in this rollup was async
      */
-    function sendDefiRollup(uint256 _encodedBridgeCallData, uint256 _inputValue)
+    function sendDefiRollup(uint256 _encodedBridgeCallData, uint256 _totalInputValue)
         public
         returns (
             uint256 outputValueA,
@@ -242,7 +242,7 @@ abstract contract BridgeTestBase is Test {
         )
     {
         _prepareRollup();
-        bytes memory proofData = _getProofData(_encodedBridgeCallData, _inputValue);
+        bytes memory proofData = _getProofData(_encodedBridgeCallData, _totalInputValue);
 
         vm.recordLogs();
         vm.prank(ROLLUP_PROVIDER);
@@ -334,12 +334,12 @@ abstract contract BridgeTestBase is Test {
     }
 
     /**
-     * @notice Helper function to generate a mock rollup proof that calls a specific bridge with `_inputValue`
+     * @notice Helper function to generate a mock rollup proof that calls a specific bridge with `_totalInputValue`
      * @param _encodedBridgeCallData The encoded call, e.g., output from `encodeBridgeCallData()`
-     * @param _inputValue The amount of inputAssetA and inputAssetB to transfer to the defi bridge.
+     * @param _totalInputValue The amount of inputAssetA and inputAssetB to transfer to the defi bridge.
      * @return res The bytes of the encoded mock proof.
      */
-    function _getProofData(uint256 _encodedBridgeCallData, uint256 _inputValue)
+    function _getProofData(uint256 _encodedBridgeCallData, uint256 _totalInputValue)
         private
         view
         returns (bytes memory res)
@@ -356,7 +356,7 @@ abstract contract BridgeTestBase is Test {
             mstore(add(res, 0x20), nextRollupId_)
             mstore(add(res, 0x60), mul(nextRollupId_, 2))
             mstore(add(res, 0x180), _encodedBridgeCallData)
-            mstore(add(res, 0x580), _inputValue)
+            mstore(add(res, 0x580), _totalInputValue)
 
             // Mock values
             // mstore(add(res, 0x20), 0x0000000000000000000000000000000000000000000000000000000000000000)

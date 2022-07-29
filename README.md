@@ -1,7 +1,7 @@
 # Aztec Connect Bridges
 
 [![CircleCI](https://circleci.com/gh/AztecProtocol/aztec-connect-bridges/tree/master.svg?style=shield)](https://circleci.com/gh/AztecProtocol/aztec-connect-bridges/tree/master)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](./CODE_OF_CONDUCT.md)
 
 ## How to contribute
 
@@ -38,7 +38,9 @@ To get started follow the steps bellow:
    src/client/example
    ```
 
-4. Implement the bridges and tests. See the [example bridge](https://github.com/AztecProtocol/aztec-connect-bridges/blob/master/src/bridges/example/ExampleBridge.sol) and [example bridge tests](https://github.com/AztecProtocol/aztec-connect-bridges/tree/master/src/test/bridges/example) for more details. For a more complex example check out other bridges in this repository.
+4. Implement the bridges and tests.
+   See the [example bridge](./src/bridges/example/ExampleBridge.sol), [example bridge tests](./src/test/bridges/example) and documentation of [IDefiBridge](./src/aztec/interfaces/IDefiBridge.sol) for more details.
+   For a more complex example check out other bridges in this repository.
 
 5. Debug your bridge:
 
@@ -130,10 +132,10 @@ We encourage you to first write all tests as unit tests to be able to leverage s
 Once you make the bridge work in the unit tests environment convert the relevant tests to E2E.
 Converting unit tests to E2E is straightforward because we made the `BridgeTestBase.sendDefiRollup(...)` function return the same values as `IDefiBridge.convert(...)`.
 
-In production, the rollup contract will supply `_inputValue` of both input assets and use the `_interactionNonce` as a globally unique ID.
+In production, the rollup contract will supply `_totalInputValue` of both input assets and use the `_interactionNonce` as a globally unique ID.
 For testing, you may provide this value.
 
-The rollup contract will send `_inputValue` of `_inputAssetA` and `_inputAssetB` ahead of the call to convert.
+The rollup contract will send `_totalInputValue` of `_inputAssetA` and `_inputAssetB` ahead of the call to convert.
 In production, the rollup contract already has these tokens as they are the users' funds.
 For testing use the `deal` method from the [forge-std](https://github.com/foundry-rs/forge-std)'s `Test` class (see [Example.t.sol](https://github.com/AztecProtocol/aztec-connect-bridges/blob/master/src/test/example/Example.t.sol) for details).
 This method prefunds the rollup with sufficient tokens to enable the transfer.
@@ -204,142 +206,30 @@ The rollup will call a bridge contract with a fixed deterministic amount of gas 
 
 #### What is private?
 
-The source of funds for any Aztec Connect transaction is an Aztec shielded asset.
+The source of funds for any Aztec Connect transaction is an Aztec-shielded asset.
 When a user interacts with an Aztec Connect Bridge contract, their identity is kept hidden, but balances sent to the bridge are public.
 
-## Virtual Assets
+### Virtual Assets
 
 Aztec uses the concept of Virtual Assets or Position tokens to represent a share of assets held by a Bridge contract.
 This is far more gas efficient than minting ERC20 tokens.
-These are used when the bridge holds an asset that Aztec doesn't support (e.g. Uniswap Position NFT's or other non-fungible assets).
+These are used when the bridge holds an asset that Aztec doesn't support (e.g. Uniswap Position NFTs or other non-fungible assets).
 
 If the output asset of any interaction is specified as "VIRTUAL", the user will receive encrypted notes on Aztec representing their share of the position, but no tokens or ETH need to be transferred.
 The position tokens have an `assetId` that is the `interactionNonce` of the DeFi Bridge call.
 This is globally unique.
 Virtual assets can be used to construct complex flows, such as entering or exiting LP positions (e.g. one bridge contract can have multiple flows which are triggered using different input assets).
 
-## Aux Input Data
+### Example flows and asset configurations
 
-The `_auxData` field can be used to provide data to the bridge contract, such as slippage, tokenIds etc.
-
-#### Bridge Contract Interface
-
-```solidity
-// SPDX-License-Identifier: Apache-2.0
-// Copyright 2022 Aztec
-pragma solidity >=0.8.4;
-
-import { AztecTypes } from "../libraries/AztecTypes.sol";
-
-interface IDefiBridge {
-  /**
-   * Input cases:
-   * Case1: 1 real input.
-   * Case2: 1 virtual asset input.
-   * Case3: 1 real 1 virtual input.
-   *
-   * Output cases:
-   * Case1: 1 real
-   * Case2: 2 real
-   * Case3: 1 real 1 virtual
-   * Case4: 1 virtual
-   *
-   * Example use cases with asset mappings
-   * 1 1: Swapping.
-   * 1 2: Swapping with incentives (2nd output reward token).
-   * 1 3: Borrowing. Lock up collateral, get back loan asset and virtual position asset.
-   * 1 4: Opening lending position OR Purchasing NFT. Input real asset, get back virtual asset representing NFT or position.
-   * 2 1: Selling NFT. Input the virtual asset, get back a real asset.
-   * 2 2: Closing a lending position. Get back original asset and reward asset.
-   * 2 3: Claiming fees from an open position.
-   * 2 4: Voting on a 1 4 case.
-   * 3 1: Repaying a borrow. Return loan plus interest. Get collateral back.
-   * 3 2: Repaying a borrow. Return loan plus interest. Get collateral plus reward token. (AAVE)
-   * 3 3: Partial loan repayment.
-   * 3 4: DAO voting stuff.
-   */
-
-  // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy. It receives the aggregate sum of all users funds for the input assets.
-  // @param AztecAsset _inputAssetA a struct detailing the first input asset, this will always be set
-  // @param AztecAsset _inputAssetB an optional struct detailing the second input asset, this is used for repaying borrows and should be virtual
-  // @param AztecAsset _outputAssetA a struct detailing the first output asset, this will always be set
-  // @param AztecAsset _outputAssetB a struct detailing an optional second output asset
-  // @param uint256 _inputValue, the total amount input, if there are two input assets, equal amounts of both assets will have been input
-  // @param uint256 _interactionNonce a globally unique identifier for this DeFi interaction. This is used as the assetId if one of the output assets is virtual
-  // @param uint64 _auxData other data to be passed into the bridge contract (slippage / nftID etc)
-  // @return uint256 outputValueA the amount of outputAssetA returned from this interaction, should be 0 if async
-  // @return uint256 outputValueB the amount of outputAssetB returned from this interaction, should be 0 if async or bridge only returns 1 asset.
-  // @return bool isAsync a flag to toggle if this bridge interaction will return assets at a later date after some third party contract has interacted with it via finalise()
-  function convert(
-    AztecTypes.AztecAsset calldata _inputAssetA,
-    AztecTypes.AztecAsset calldata _inputAssetB,
-    AztecTypes.AztecAsset calldata _outputAssetA,
-    AztecTypes.AztecAsset calldata _outputAssetB,
-    uint256 _inputValue,
-    uint256 _interactionNonce,
-    uint64 _auxData,
-    address _rollupBeneficiary
-  )
-    external
-    payable
-    returns (
-      uint256 outputValueA,
-      uint256 outputValueB,
-      bool isAsync
-    );
-
-  // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy. It receives the aggregate sum of all users funds for the input assets.
-  // @param AztecAsset _inputAssetA a struct detailing the first input asset, this will always be set
-  // @param AztecAsset _inputAssetB an optional struct detailing the second input asset, this is used for repaying borrows and should be virtual
-  // @param AztecAsset _outputAssetA a struct detailing the first output asset, this will always be set
-  // @param AztecAsset _outputAssetB a struct detailing an optional second output asset
-  // @param uint256 _interactionNonce
-  // @param uint64 _auxData other data to be passed into the bridge contract (slippage / nftID etc)
-  // @return uint256 outputValueA the return value of output asset A
-  // @return uint256 outputValueB optional return value of output asset B
-  // @dev this function should have a modifier on it to ensure it can only be called by the Rollup Contract
-  function finalise(
-    AztecTypes.AztecAsset calldata _inputAssetA,
-    AztecTypes.AztecAsset calldata _inputAssetB,
-    AztecTypes.AztecAsset calldata _outputAssetA,
-    AztecTypes.AztecAsset calldata _outputAssetB,
-    uint256 _interactionNonce,
-    uint64 _auxData
-  )
-    external
-    payable
-    returns (
-      uint256 outputValueA,
-      uint256 outputValueB,
-      bool interactionComplete
-    );
-}
-
-```
-
-### Async flow explainer
-
-If a DeFi Bridge interaction is asynchronous, it must be finalised at a later date once the DeFi interaction has completed.
-
-This is achieved by calling `RollupProcessor.processAsyncDefiInteraction(uint256 interactionNonce)`.
-This internally will call `finalise` and ensure the correct amount of tokens has been transferred.
-
-#### convert(...)
-
-This function is called from the Aztec Rollup Contract via the DeFi Bridge Proxy.
-Before this function on your bridge contract is called the rollup contract will have sent you ETH or tokens defined by the input params.
-
-This function should interact with the DeFi protocol (e.g Uniswap) and transfer tokens or ETH back to the Aztec Rollup Contract.
-The Rollup contract will check it received the correct amount.
-
-If the DeFi Bridge interaction is asynchronous (e.g. it does not settle in the same block), the call to convert should return `(0,0 true)`.
-The contract should record the interaction nonce for any asynchronous position or if virtual assets are returned.
-
-At a later date, this interaction can be finalised by prodding the rollup contract to call `finalise` on the bridge.
-
-#### finalise(...)
-
-This function will be called from the Aztec Rollup contract.
-The Aztec Rollup contract will check that it received the correct amount of ETH and tokens specified by the return values and trigger the settlement step on Aztec.
+1. Swapping - 1 real input, 1 real output
+2. Swapping with incentives - 1 real input, 2 real outputs (2nd output reward token)
+3. Borrowing - 1 real input (collateral), 1 real output (borrowed asset, e.g. Dai), 1 virtual output (represents the position, e.g. position is a vault in MakerDao)
+4. Purchasing an NFT - 1 real input, 1 virtual output (asset representing NFT)
+5. Selling an NFT - 1 virtual input (asset representing NFT), 1 real output (e.g. ETH)
+6. Repaying a loan - 1 real input (e.g. Dai), 1 virtual input (representing the vault/position), 1 real output (collateral, e.g. ETH)
+7. Repaying a loan 2 - 1 real input (e.g. USDC), 1 virtual input (representing the position), 2 real outputs ( 1st output collateral, 2nd output reward token, e.g. AAVE)
+8. Partial loan repaying - 1 real input (e.g. Dai), 1 virtual input (representing the vault/position), 1 real output (collateral, e.g. ETH), 1 virtual output (representing the vault/position)
+9. Claiming fees from Uniswap position and redepositing them - 1 virtual input (represents LP position NFT), 1 virtual output (representing the modified LP position)
 
 Please reach out on Discord with any questions. You can join our Discord [here](https://discord.gg/ctGpCgkBFt).
