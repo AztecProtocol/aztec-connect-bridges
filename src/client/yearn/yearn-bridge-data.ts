@@ -120,8 +120,8 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
         yvTokenContract.pricePerShare(),
         yvTokenContract.decimals(),
       ]);
-      const expectedShares = BigNumber.from(inputValue).mul(pricePerShare).div(BigNumber.from(10).pow(decimals));
-      return [expectedShares.toBigInt(), 0n];
+      const expectedUnderlying = BigNumber.from(inputValue).mul(pricePerShare).div(BigNumber.from(10).pow(decimals));
+      return [expectedUnderlying.toBigInt(), 0n];
     }
     throw "Invalid auxData";
   }
@@ -137,7 +137,7 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     const yvTokenAddress = await this.yRegistry.latestVault(inputAssetA.erc20Address.toString());
     const allVaults = await (await fetch("https://api.yearn.finance/v1/chains/1/vaults/all")).json();
     const currentVault = allVaults.find(vault => vault.address.toLowerCase() == yvTokenAddress.toLowerCase());
-    if (!currentVault) {
+    if (currentVault) {
       const grossAPR = currentVault.apy.gross_apr;
       return [grossAPR * 100, 0];
     }
