@@ -230,6 +230,6 @@ Virtual assets can be used to construct complex flows, such as entering or exiti
 6. Repaying a loan - 1 real input (e.g. Dai), 1 virtual input (representing the vault/position), 1 real output (collateral, e.g. ETH)
 7. Repaying a loan 2 - 1 real input (e.g. USDC), 1 virtual input (representing the position), 2 real outputs ( 1st output collateral, 2nd output reward token, e.g. AAVE)
 8. Partial loan repaying - 1 real input (e.g. Dai), 1 virtual input (representing the vault/position), 1 real output (collateral, e.g. ETH), 1 virtual output (representing the vault/position)
-9. Claiming fees from Uniswap position - 1 virtual input (represents LP position NFT), 2 real outputs (fees in token0 and token1)
+9. Claiming fees from Uniswap position and redepositing them - 1 virtual input (represents LP position NFT), 1 virtual output (representing the modified LP position)
 
 Please reach out on Discord with any questions. You can join our Discord [here](https://discord.gg/ctGpCgkBFt).
