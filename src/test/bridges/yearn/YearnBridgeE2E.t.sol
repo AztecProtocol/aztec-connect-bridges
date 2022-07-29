@@ -58,36 +58,32 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         }
     }
 
-    // function testMoreERC20DepositAndWithdrawal() public {
-    //     IYearnRegistry _registry = bridge.YEARN_REGISTRY();
-    //     uint256 numTokens = _registry.numTokens();
-    //     for (uint256 i; i < numTokens;) {
-    //         address token = _registry.tokens(i);
-    //         if (
-    //             token == address(WETH) ||
-    //             token == 0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F //SNX, packed slot not supported
-    //         ) {
-    //             unchecked {
-    //                 ++i;
-    //             }
-    //             continue;
-    //         }
-    //         address vault = _registry.latestVault(token);
-    //         uint256 availableDepositLimit = IYearnVault(vault).availableDepositLimit();
-    //         if (availableDepositLimit > 0) {
-    //             uint256 min = 1e6;
-    //             if (availableDepositLimit < min) {
-    //                 min = 1e2;
-    //             }
-    //             uint256 _depositAmount = bound(1e6, min, availableDepositLimit);
-    //             emit log_named_address("Testing for: ", address(vault));
-    //             _depositAndWithdrawERC20(vault, _depositAmount, _depositAmount);
-    //         }
-    //         unchecked {
-    //             ++i;
-    //         }
-    //     }
-    // }
+    function testMoreERC20DepositAndWithdrawal() public {
+        IYearnRegistry _registry = bridge.YEARN_REGISTRY();
+        uint256 numTokens = _registry.numTokens();
+        for (uint256 i; i < numTokens;) {
+            address token = _registry.tokens(i);
+            if (
+                token == address(WETH) ||
+                token == 0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F //SNX, packed slot not supported
+            ) {
+                unchecked {
+                    ++i;
+                }
+                continue;
+            }
+            address vault = _registry.latestVault(token);
+            uint256 availableDepositLimit = IYearnVault(vault).availableDepositLimit();
+            if (availableDepositLimit > 0) {
+                uint256 _depositAmount = bound(1e6, 1e2, availableDepositLimit);
+                emit log_named_address("Testing for: ", address(vault));
+                _depositAndWithdrawERC20(vault, _depositAmount, _depositAmount);
+            }
+            unchecked {
+                ++i;
+            }
+        }
+    }
 
     function testETHDepositAndWithdrawal(uint256 _depositAmount, uint256 _withdrawAmount) public {
         IYearnRegistry _registry = bridge.YEARN_REGISTRY();
