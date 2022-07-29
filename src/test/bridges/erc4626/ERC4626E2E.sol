@@ -37,6 +37,10 @@ contract ERC4626E2ETest is BridgeTestBase {
         // List the example-bridge with a gasLimit of 100K
         ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 1000000);
 
+        ROLLUP_PROCESSOR.setSupportedAsset(address(MAPLE), 100000);
+
+        vm.stopPrank();
+
         // Fetch the id of the example bridge
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
     }
@@ -59,30 +63,16 @@ contract ERC4626E2ETest is BridgeTestBase {
         deal(address(MAPLE), address(ROLLUP_PROCESSOR), _depositAmount);
 
         // Computes the encoded data for the specific bridge interaction
-        uint256 bridgeId = encodeBridgeId(id, mapleAsset, emptyAsset, vaultAsset, emptyAsset, 0);
+        // encodeBridgeCallData(id, daiAsset, emptyAsset, daiAsset, emptyAsset, 0);
+        uint256 bridgeCallData = encodeBridgeCallData(id, mapleAsset, emptyAsset, vaultAsset, emptyAsset, 0);
 
-        // Use cheatcodes to look for event matching 2 first indexed values and data
-        //vm.expectEmit(true, true, false, true);
-        // Second part of cheatcode, emit the event that we are to match against.
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), _depositAmount, _depositAmount, 0, true, "");
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, _depositAmount);
 
-        // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
-        sendDefiRollup(bridgeId, _depositAmount);
+        // Note: Unlike in unit tests there is no need to manually transfer the tokens - RollupProcessor does this
 
-        // Check that the balance of the rollup is same as before interaction (bridge just sends funds back)
-        assertEq(_depositAmount, MAPLE.balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
-
-        // Perform a second rollup with half the deposit, perform similar checks.
-        uint256 secondDeposit = _depositAmount / 2;
-        // Use cheatcodes to look for event matching 2 first indexed values and data
-        vm.expectEmit(true, true, false, true);
-        // Second part of cheatcode, emit the event that we are to match against.
-        emit DefiBridgeProcessed(bridgeId, getNextNonce(), secondDeposit, secondDeposit, 0, true, "");
-
-        // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
-        sendDefiRollup(bridgeId, secondDeposit);
-
-        // Check that the balance of the rollup is same as before interaction (bridge just sends funds back)
-        assertEq(_depositAmount, MAPLE.balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
+        // Check the output values are as expected
+        assertEq(outputValueA, _depositAmount, "outputValueA doesn't equal deposit");
+        assertEq(outputValueB, 0, "Non-zero outputValueB");
+        assertFalse(isAsync, "Bridge is not synchronous");
     }
 }
