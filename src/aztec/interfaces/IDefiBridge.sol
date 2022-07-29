@@ -29,8 +29,8 @@ interface IDefiBridge {
      *      method is called.
      * @dev **BOTH** output assets could be virtual but since their `assetId` is currently assigned as
      *      `_interactionNonce` it would simply mean that more of the same virtual asset is minted.
-     * @dev If this interaction is async the function has to return `(0,0 true)`.
-     * @dev If the interaction is async assets will be returned in a `IDefiBridge.finalise(...)` call.
+     * @dev If this interaction is async the function has to return `(0,0 true)`. Async interaction will be finalised at
+     *      a later time and its output assets will be returned in a `IDefiBridge.finalise(...)` call.
      **/
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
