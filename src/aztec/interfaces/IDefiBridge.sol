@@ -6,49 +6,38 @@ import {AztecTypes} from "../libraries/AztecTypes.sol";
 
 interface IDefiBridge {
     /**
-     * Input cases:
-     * Case1: 1 real input.
-     * Case2: 1 virtual asset input.
-     * Case3: 1 real 1 virtual input.
-     *
-     * Output cases:
-     * Case1: 1 real
-     * Case2: 2 real
-     * Case3: 1 real 1 virtual
-     * Case4: 1 virtual
-     *
-     * Example use cases with asset mappings
-     * 1 1: Swapping.
-     * 1 2: Swapping with incentives (2nd output reward token).
-     * 1 3: Borrowing. Lock up collateral, get back loan asset and virtual position asset.
-     * 1 4: Opening lending position OR Purchasing NFT. Input real asset, get back virtual asset representing NFT or position.
-     * 2 1: Selling NFT. Input the virtual asset, get back a real asset.
-     * 2 2: Closing a lending position. Get back original asset and reward asset.
-     * 2 3: Claiming fees from an open position.
-     * 2 4: Voting on a 1 4 case.
-     * 3 1: Repaying a borrow. Return loan plus interest. Get collateral back.
-     * 3 2: Repaying a borrow. Return loan plus interest. Get collateral plus reward token. (AAVE)
-     * 3 3: Partial loan repayment.
-     * 3 4: DAO voting stuff.
-     */
-
-    // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy. It receives the aggregate sum of all users funds for the input assets.
-    // @param AztecAsset _inputAssetA a struct detailing the first input asset, this will always be set
-    // @param AztecAsset _inputAssetB an optional struct detailing the second input asset, this is used for repaying borrows and should be virtual
-    // @param AztecAsset _outputAssetA a struct detailing the first output asset, this will always be set
-    // @param AztecAsset _outputAssetB a struct detailing an optional second output asset
-    // @param uint256 _inputValue, the total amount input, if there are two input assets, equal amounts of both assets will have been input
-    // @param uint256 _interactionNonce a globally unique identifier for this DeFi interaction. This is used as the assetId if one of the output assets is virtual
-    // @param uint64 _auxData other data to be passed into the bridge contract (slippage / nftID etc)
-    // @return uint256 outputValueA the amount of outputAssetA returned from this interaction, should be 0 if async
-    // @return uint256 outputValueB the amount of outputAssetB returned from this interaction, should be 0 if async or bridge only returns 1 asset.
-    // @return bool isAsync a flag to toggle if this bridge interaction will return assets at a later date after some third party contract has interacted with it via finalise()
+     * @notice A function which converts input assets to output assets.
+     * @param _inputAssetA A struct detailing the first input asset
+     * @param _inputAssetB A struct detailing the second input asset
+     * @param _outputAssetA A struct detailing the first output asset
+     * @param _outputAssetB A struct detailing the second output asset
+     * @param _totalInputValue An amount of input assets transferred to the bridge (Note: "total" is in the name
+     *                         because the value can represent summed/aggregated token amounts of users actions on L2)
+     * @param _interactionNonce A globally unique identifier of this interaction/`convert(...)` call.
+     * @param _auxData Bridge specific data to be passed into the bridge contract (e.g. slippage, nftID etc.)
+     * @return outputValueA An amount of `_outputAssetA` returned from this interaction.
+     * @return outputValueB An amount of `_outputAssetB` returned from this interaction.
+     * @return isAsync A flag indicating if the interaction is async.
+     * @dev This function is called from the RollupProcessor contract via the DefiBridgeProxy. Before this function is
+     *      called _RollupProcessor_ contract will have sent you all the assets defined by the input params. This
+     *      function is expected to convert input assets to output assets (e.g. on Uniswap) and return the amounts
+     *      of output assets to be received by the _RollupProcessor_. If output assets are ERC20 tokens the bridge has
+     *      to _RollupProcessor_ as a spender before the interaction is finished. If some of the output assets is ETH
+     *      it has to be sent to _RollupProcessor_ via the `receiveEthFromBridge(uint256 _interactionNonce)` method
+     *      inside before the `convert(...)` function call finishes.
+     * @dev If there are two input assets, equal amounts of both assets will be transferred to the bridge before this
+     *      method is called.
+     * @dev **BOTH** output assets could be virtual but since their `assetId` is currently assigned as
+     *      `_interactionNonce` it would simply mean that more of the same virtual asset is minted.
+     * @dev If this interaction is async the function has to return `(0,0 true)`.
+     * @dev If the interaction is async assets will be returned in a `IDefiBridge.finalise(...)` call.
+     **/
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata _inputAssetB,
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata _outputAssetB,
-        uint256 _inputValue,
+        uint256 _totalInputValue,
         uint256 _interactionNonce,
         uint64 _auxData,
         address _rollupBeneficiary
@@ -61,16 +50,19 @@ interface IDefiBridge {
             bool isAsync
         );
 
-    // @dev This function is called from the RollupProcessor.sol contract via the DefiBridgeProxy. It receives the aggregate sum of all users funds for the input assets.
-    // @param AztecAsset _inputAssetA a struct detailing the first input asset, this will always be set
-    // @param AztecAsset _inputAssetB an optional struct detailing the second input asset, this is used for repaying borrows and should be virtual
-    // @param AztecAsset _outputAssetA a struct detailing the first output asset, this will always be set
-    // @param AztecAsset _outputAssetB a struct detailing an optional second output asset
-    // @param uint256 _interactionNonce
-    // @param uint64 _auxData other data to be passed into the bridge contract (slippage / nftID etc)
-    // @return uint256 outputValueA the return value of output asset A
-    // @return uint256 outputValueB optional return value of output asset B
-    // @dev this function should have a modifier on it to ensure it can only be called by the Rollup Contract
+    /**
+     * @notice A function that finalises asynchronous interaction.
+     * @param _inputAssetA A struct detailing the first input asset
+     * @param _inputAssetB A struct detailing the second input asset
+     * @param _outputAssetA A struct detailing the first output asset
+     * @param _outputAssetB A struct detailing the second output asset
+     * @param _interactionNonce A globally unique identifier of this interaction/`convert(...)` call.
+     * @param _auxData Bridge specific data to be passed into the bridge contract (e.g. slippage, nftID etc.)
+     * @return outputValueA An amount of `_outputAssetA` returned from this interaction.
+     * @return outputValueB An amount of `_outputAssetB` returned from this interaction.
+     * @dev This function should use the `BridgeBase.onlyRollup()` modifier to ensure it can only be called from
+     *      the `RollupProcessor.processAsyncDefiInteraction(uint256 _interactionNonce)` method.
+     **/
     function finalise(
         AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata _inputAssetB,
