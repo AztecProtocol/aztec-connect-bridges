@@ -53,7 +53,7 @@ contract LidoBridge is BridgeBase {
         AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
-        uint256 _inputValue,
+        uint256 _totalInputValue,
         uint256 _interactionNonce,
         uint64,
         address
@@ -78,14 +78,14 @@ contract LidoBridge is BridgeBase {
 
         isAsync = false;
         outputValueA = isETHInput
-            ? _wrapETH(_inputValue, _outputAssetA)
-            : _unwrapETH(_inputValue, _outputAssetA, _interactionNonce);
+            ? _wrapETH(_totalInputValue, _outputAssetA)
+            : _unwrapETH(_totalInputValue, _outputAssetA, _interactionNonce);
     }
 
     /**
         Convert ETH -> wstETH
      */
-    function _wrapETH(uint256 _inputValue, AztecTypes.AztecAsset calldata _outputAsset)
+    function _wrapETH(uint256 _totalInputValue, AztecTypes.AztecAsset calldata _outputAsset)
         private
         returns (uint256 outputValue)
     {
@@ -97,14 +97,14 @@ contract LidoBridge is BridgeBase {
         }
 
         // deposit into lido (return value is shares NOT stETH)
-        LIDO.submit{value: _inputValue}(REFERRAL);
+        LIDO.submit{value: _totalInputValue}(REFERRAL);
 
         // Leave `DUST` in the stEth balance to save gas on future runs
         uint256 outputStETHBalance = LIDO.balanceOf(address(this)) - DUST;
 
         // Lido balance can be <=2 wei off, 1 from the submit where our shares is computed rounding down,
         // and then again when the balance is computed from the shares, rounding down again.
-        if (outputStETHBalance + 2 + DUST < _inputValue) {
+        if (outputStETHBalance + 2 + DUST < _totalInputValue) {
             revert InvalidWrapReturnValue();
         }
 
@@ -117,7 +117,7 @@ contract LidoBridge is BridgeBase {
         Convert wstETH to ETH
      */
     function _unwrapETH(
-        uint256 _inputValue,
+        uint256 _totalInputValue,
         AztecTypes.AztecAsset calldata _outputAsset,
         uint256 _interactionNonce
     ) private returns (uint256 outputValue) {
@@ -126,7 +126,7 @@ contract LidoBridge is BridgeBase {
         }
 
         // Convert wstETH to stETH so we can exchange it on curve
-        uint256 stETH = WRAPPED_STETH.unwrap(_inputValue);
+        uint256 stETH = WRAPPED_STETH.unwrap(_totalInputValue);
 
         // Exchange stETH to ETH via curve
         uint256 dy = CURVE_POOL.exchange(CURVE_STETH_INDEX, CURVE_ETH_INDEX, stETH, 0);

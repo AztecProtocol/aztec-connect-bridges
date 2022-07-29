@@ -61,17 +61,17 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
     }
 
     function testPrecisionLossNeverBiggerThan1Bps(
-        uint80 _inputValue,
+        uint80 _totalInputValue,
         uint24 _price,
         uint8 _tokenInDecimals
     ) public {
         uint256 decimals = bound(_tokenInDecimals, 0, 24);
         uint256 price = bound(_price, 1, maxMinPrice / 10**decimals);
-        uint256 quote = _inputValue * price;
+        uint256 quote = _totalInputValue * price;
 
         uint256 encodedMinPrice = _computeEncodedMinPrice(1, price, decimals);
         uint256 decodedMinPrice = _decodeMinPrice(encodedMinPrice);
-        uint256 amountOutMinimum = (_inputValue * decodedMinPrice) / 10**decimals;
+        uint256 amountOutMinimum = (_totalInputValue * decodedMinPrice) / 10**decimals;
 
         assertApproxEqRel(quote, amountOutMinimum, 1e16);
     }

@@ -153,7 +153,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
      * @param _inputAssetB -        None                 LUSD                 LUSD                   None
      * @param _outputAssetA -       TB                   ETH                  ETH                    ETH
      * @param _outputAssetB -       LUSD                 LUSD                 TB                     None
-     * @param _inputValue -         ETH amount           TB and LUSD amt.     TB and LUSD amt.       TB amount
+     * @param _totalInputValue -         ETH amount           TB and LUSD amt.     TB and LUSD amt.       TB amount
      * @param _interactionNonce -   nonce                nonce                nonce                  nonce
      * @param _auxData -            max borrower fee     0                    0                      0
      * @return outputValueA -       TB amount            ETH amount           ETH amount             ETH amount
@@ -166,7 +166,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         AztecTypes.AztecAsset calldata _inputAssetB,
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata _outputAssetB,
-        uint256 _inputValue,
+        uint256 _totalInputValue,
         uint256 _interactionNonce,
         uint64 _auxData,
         address
@@ -190,7 +190,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         ) {
             // Borrowing
             if (troveStatus != Status.active) revert InvalidStatus(Status.active, Status.active, troveStatus);
-            (outputValueA, outputValueB) = _borrow(_inputValue, _auxData);
+            (outputValueA, outputValueB) = _borrow(_totalInputValue, _auxData);
         } else if (
             _inputAssetA.erc20Address == address(this) &&
             _inputAssetB.erc20Address == LUSD &&
@@ -201,10 +201,10 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             if (_outputAssetB.erc20Address == LUSD) {
                 // A case when the trove was partially redeemed (1 TB corresponding to less than 1 LUSD of debt) or not
                 // redeemed and not touched by redistribution (1 TB corresponding to exactly 1 LUSD of debt)
-                (outputValueA, outputValueB) = _repay(_inputValue, _interactionNonce);
+                (outputValueA, outputValueB) = _repay(_totalInputValue, _interactionNonce);
             } else if (_outputAssetB.erc20Address == address(this)) {
                 // A case when the trove was touched by redistribution (1 TB corresponding to more than 1 LUSD of debt)
-                (outputValueA, outputValueB) = _repayAfterRedistribution(_inputValue, _interactionNonce);
+                (outputValueA, outputValueB) = _repayAfterRedistribution(_totalInputValue, _interactionNonce);
             } else {
                 revert ErrorLib.InvalidOutputB();
             }
@@ -215,7 +215,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             if (troveStatus != Status.closedByRedemption && troveStatus != Status.closedByLiquidation) {
                 revert InvalidStatus(Status.closedByRedemption, Status.closedByLiquidation, troveStatus);
             }
-            outputValueA = _redeem(_inputValue, _interactionNonce);
+            outputValueA = _redeem(_totalInputValue, _interactionNonce);
         } else {
             revert ErrorLib.InvalidInput();
         }
@@ -374,7 +374,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         // Compute how much collateral to withdraw
         uint256 collToWithdraw = (_tbAmount * collBefore) / tbTotalSupply;
 
-        // Repay _inputValue of LUSD and withdraw collateral
+        // Repay _totalInputValue of LUSD and withdraw collateral
         (address upperHint, address lowerHint) = _getHints();
         BORROWER_OPERATIONS.adjustTrove(0, collToWithdraw, debtToRepay, false, upperHint, lowerHint);
         lusdReturned = _tbAmount - debtToRepay; // LUSD to return --> 0 unless trove was partially redeemed
@@ -434,7 +434,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             debtToRepay = _tbAmount;
             uint256 tbToBurn = (debtToRepay * tbTotalSupply) / debtBefore;
             collToWithdraw = (tbToBurn * collBefore) / tbTotalSupply;
-            // Repay _inputValue of LUSD and withdraw collateral
+            // Repay _totalInputValue of LUSD and withdraw collateral
             (address upperHint, address lowerHint) = _getHints();
             BORROWER_OPERATIONS.adjustTrove(0, collToWithdraw, debtToRepay, false, upperHint, lowerHint);
             tbReturned = _tbAmount - tbToBurn;

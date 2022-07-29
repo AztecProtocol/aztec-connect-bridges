@@ -68,7 +68,7 @@ contract CompoundBridge is BridgeBase {
      *
      * @param _inputAssetA - ETH/ERC20 (Mint), cToken ERC20 (Redeem)
      * @param _outputAssetA - cToken (Mint), ETH/ERC20 (Redeem)
-     * @param _inputValue - the amount of ERC20 token/ETH to deposit (Mint), the amount of cToken to burn (Redeem)
+     * @param _totalInputValue - the amount of ERC20 token/ETH to deposit (Mint), the amount of cToken to burn (Redeem)
      * @param _interactionNonce - interaction nonce as defined in RollupProcessor.sol
      * @param _auxData - 0 (Mint), 1 (Redeem)
      * @return outputValueA - the amount of cToken (Mint) or ETH/ERC20 (Redeem) transferred to RollupProcessor.sol
@@ -78,7 +78,7 @@ contract CompoundBridge is BridgeBase {
         AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
-        uint256 _inputValue,
+        uint256 _totalInputValue,
         uint256 _interactionNonce,
         uint64 _auxData,
         address
@@ -103,7 +103,7 @@ contract CompoundBridge is BridgeBase {
                 outputValueA = cToken.balanceOf(address(this));
             } else if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
                 ICERC20 tokenOut = ICERC20(_outputAssetA.erc20Address);
-                tokenOut.mint(_inputValue);
+                tokenOut.mint(_totalInputValue);
                 outputValueA = tokenOut.balanceOf(address(this));
             } else {
                 revert ErrorLib.InvalidInputA();
@@ -115,13 +115,13 @@ contract CompoundBridge is BridgeBase {
             if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 // Redeem cETH case
                 ICETH cToken = ICETH(_inputAssetA.erc20Address);
-                cToken.redeem(_inputValue);
+                cToken.redeem(_totalInputValue);
                 outputValueA = address(this).balance;
                 IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
             } else if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
                 ICERC20 tokenIn = ICERC20(_inputAssetA.erc20Address);
                 IERC20 tokenOut = IERC20(_outputAssetA.erc20Address);
-                tokenIn.redeem(_inputValue);
+                tokenIn.redeem(_totalInputValue);
                 outputValueA = tokenOut.balanceOf(address(this));
             } else {
                 revert ErrorLib.InvalidInputA();
