@@ -9,6 +9,7 @@ import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ExampleBridgeContract} from "../../../bridges/example/ExampleBridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
+import {Subsidy} from "../../../aztec/Subsidy.sol";
 
 // @notice The purpose of this test is to directly test convert functionality of the bridge.
 contract ExampleUnitTest is Test {
@@ -29,7 +30,7 @@ contract ExampleUnitTest is Test {
         rollupProcessor = address(this);
 
         // Deploy a new example bridge
-        bridge = new ExampleBridgeContract(rollupProcessor);
+        bridge = new ExampleBridgeContract(rollupProcessor, new Subsidy());
 
         // Set ETH balance to 0 for clarity (somebody sent ETH to that address on mainnet)
         vm.deal(address(bridge), 0);

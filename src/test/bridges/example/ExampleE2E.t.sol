@@ -9,6 +9,7 @@ import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ExampleBridgeContract} from "../../../bridges/example/ExampleBridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
+import {Subsidy} from "../../../aztec/Subsidy.sol";
 
 /**
  * @notice The purpose of this test is to test the bridge in an environment that is as close to the final deployment
@@ -25,7 +26,7 @@ contract ExampleE2ETest is BridgeTestBase {
 
     function setUp() public {
         // Deploy a new example bridge
-        bridge = new ExampleBridgeContract(address(ROLLUP_PROCESSOR));
+        bridge = new ExampleBridgeContract(address(ROLLUP_PROCESSOR), new Subsidy());
 
         // Use the label cheatcode to mark the address with "Example Bridge" in the traces
         vm.label(address(bridge), "Example Bridge");
@@ -35,7 +36,7 @@ contract ExampleE2ETest is BridgeTestBase {
 
         // List the example-bridge with a gasLimit of 100K
         // WARNING: If you set this value to low the interaction will fail for seemingly no reason!
-        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 100000);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 120000);
 
         // List USDC with a gasLimit of 100k
         // Note: necessary for assets which are not already registered on RollupProcessor
@@ -54,13 +55,13 @@ contract ExampleE2ETest is BridgeTestBase {
         vm.assume(_depositAmount > 1);
 
         // Use the helper function to fetch the support AztecAsset for DAI
-        AztecTypes.AztecAsset memory daiAsset = getRealAztecAsset(address(USDC));
+        AztecTypes.AztecAsset memory usdcAsset = getRealAztecAsset(address(USDC));
 
         // Mint the depositAmount of Dai to rollupProcessor
         deal(address(USDC), address(ROLLUP_PROCESSOR), _depositAmount);
 
         // Computes the encoded data for the specific bridge interaction
-        uint256 bridgeCallData = encodeBridgeCallData(id, daiAsset, emptyAsset, daiAsset, emptyAsset, 0);
+        uint256 bridgeCallData = encodeBridgeCallData(id, usdcAsset, emptyAsset, usdcAsset, emptyAsset, 0);
 
         // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, _depositAmount);
