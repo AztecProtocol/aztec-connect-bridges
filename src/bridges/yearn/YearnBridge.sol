@@ -104,9 +104,6 @@ contract YearnBridge is BridgeBase {
             bool
         )
     {
-        if (_inputValue == 0) {
-            revert ErrorLib.InvalidInputAmount();
-        }
         if (_auxData == 0) {
             if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) {
                 revert ErrorLib.InvalidOutputA();
@@ -139,10 +136,6 @@ contract YearnBridge is BridgeBase {
      * @param _outputAssetA - Vault we want to deposit to
      */
     function _zapETH(uint256 _inputValue, AztecTypes.AztecAsset memory _outputAssetA) private {
-        if (msg.value == 0 || msg.value != _inputValue) {
-            revert ErrorLib.InvalidInputAmount();
-        }
-
         IYearnVault yVault = IYearnVault(_outputAssetA.erc20Address);
         address underlyingToken = yVault.token();
         if (underlyingToken != WETH) {
