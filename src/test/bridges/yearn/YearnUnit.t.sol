@@ -62,7 +62,7 @@ contract YearnBridgeUnitTest is Test {
         });
 
         vm.prank(rollupProcessor);
-        vm.expectRevert(ErrorLib.InvalidInputAmount.selector);
+        vm.expectRevert(ErrorLib.InvalidInputA.selector);
         bridge.convert(ethAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 1, address(0));
     }
 
@@ -85,7 +85,7 @@ contract YearnBridgeUnitTest is Test {
         });
 
         vm.prank(rollupProcessor);
-        vm.expectRevert(ErrorLib.InvalidInputAmount.selector);
+        vm.expectRevert();
         bridge.convert(depositInputAssetA, emptyAsset, depositOutputAssetA, emptyAsset, 100, 0, 0, address(0));
     }
 
