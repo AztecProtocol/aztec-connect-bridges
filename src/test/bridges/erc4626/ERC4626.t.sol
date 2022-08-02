@@ -77,7 +77,7 @@ contract ERC4626 is Test {
         assertEq(0, outputValueB);
     }
 
-    /*function testVaultBridge2(uint256 _depositAmount) public {
+    function testVaultBridge2(uint256 _depositAmount) public {
         uint256 depositAmount = bound(_depositAmount, 5000, type(uint96).max);
 
         deal(address(STETH), address(vaultbridge), depositAmount);
@@ -96,7 +96,7 @@ contract ERC4626 is Test {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-          (uint256 outputValueA, uint256 outputValueB, bool isAsync) = vaultbridge.convert(
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = vaultbridge.convert(
             inputAsset,
             empty,
             outputAsset,
@@ -109,7 +109,7 @@ contract ERC4626 is Test {
 
         uint256 rollupMAPLEShares = VAULT2.balanceOf(address(vaultbridge));
 
-         assertEq(0, outputValueB);
+        assertEq(0, outputValueB);
         assertEq(rollupMAPLEShares, outputValueA);
         (outputValueA, outputValueB, isAsync) = vaultbridge.convert(
             outputAsset,
@@ -126,9 +126,8 @@ contract ERC4626 is Test {
 
         assertEq(outputValueA, rollupMAPLEToken);
         assertEq(0, outputValueB);
-        
     }
-    **/
+
     function setUp() public {
         rollupProcessor = address(this);
 

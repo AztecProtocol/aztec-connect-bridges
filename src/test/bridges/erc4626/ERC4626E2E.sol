@@ -8,7 +8,7 @@ import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 // Example-specific imports
 import {IERC4626} from "../../../interfaces/erc4626/IERC4626.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ExampleBridgeContract} from "../../../bridges/example/ExampleBridge.sol";
+import {VaultBridge} from "../../../bridges/erc4626/VaultBridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
 /**
@@ -19,14 +19,14 @@ contract ERC4626E2ETest is BridgeTestBase {
     IERC20 public constant MAPLE = IERC20(0x33349B282065b0284d756F0577FB39c158F935e6);
     IERC4626 public constant VAULT = IERC4626(0x4937A209D4cDbD3ecD48857277cfd4dA4D82914c);
     // The reference to the example bridge
-    ExampleBridgeContract internal bridge;
+    VaultBridge internal bridge;
 
     // To store the id of the example bridge after being added
-    uint256 private id = 1;
+    uint256 private id;
 
     function setUp() public {
         // Deploy a new example bridge
-        bridge = new ExampleBridgeContract(address(ROLLUP_PROCESSOR));
+        bridge = new VaultBridge(address(ROLLUP_PROCESSOR));
 
         // Use the label cheatcode to mark the address with "Example Bridge" in the traces
         vm.label(address(bridge), "ERC4626 Bridge");
