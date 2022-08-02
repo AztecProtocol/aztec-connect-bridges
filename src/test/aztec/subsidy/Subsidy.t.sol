@@ -70,11 +70,17 @@ contract SubsidyTest is Test {
         assertEq(gasPerSecond, 10, "gasPerSecond incorrectly set");
     }
 
-    function testBridgeRevertsIfBeneficiaryDoesntImplementReceive() public {
+    function testClaimRevertsIfBeneficiaryIsContractAndDoesntImplementReceive() public {
         // 1st set min gas per second values for different criterias
         _setGasUsage();
 
         subsidy.subsidize{value: 1 ether}(BRIDGE, 1, 10);
+
+        vm.warp(block.timestamp + 1 days);
+
+        vm.prank(BRIDGE);
+        vm.expectRevert(Subsidy.EthTransferFailed.selector);
+        subsidy.claimSubsidy(1, address(this));
     }
 
     function _setGasUsage() private {

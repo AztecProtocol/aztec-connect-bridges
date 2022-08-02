@@ -15,6 +15,7 @@ contract Subsidy is ISubsidy {
     error AlreadySubsidized();
     error GasUsageNotSet();
     error SubsidyTooLow();
+    error EthTransferFailed();
 
     // TODO: is gasUsage granular enough for low use bridges?
     struct Subsidy {
@@ -94,8 +95,11 @@ contract Subsidy is ISubsidy {
 
         subsidies[msg.sender][_criteria] = sub;
 
-        // Reverts, if beneficiary cannot receive funds
-        _beneficiary.call{value: subsidyAmount, gas: 30000}("");
+        (bool success, ) = _beneficiary.call{value: subsidyAmount, gas: 30000}("");
+        if (!success) {
+            // Reverts, if beneficiary is a contract and doesn't implement receive()/fallback()
+            revert EthTransferFailed();
+        }
 
         return subsidyAmount;
     }
