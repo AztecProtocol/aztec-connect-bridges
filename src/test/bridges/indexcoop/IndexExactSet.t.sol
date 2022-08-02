@@ -62,6 +62,9 @@ contract IndexExactSetTest is BridgeTestBase {
 
     event Diff(int256 main);
 
+    receive() external payable {}
+    fallback() external payable {}
+
     function setUp() public {
         uint24[] memory fee;
         address[] memory pathToSt = new address[](2);
@@ -85,9 +88,6 @@ contract IndexExactSetTest is BridgeTestBase {
         );
     }
 
-    fallback() external payable {}
-
-    receive() external payable {}
 
     /** Testing if we can calculate an amount of icETH that is as close as possible 
     to requiring inputValue amount of ETH to issue. 
@@ -132,7 +132,7 @@ contract IndexExactSetTest is BridgeTestBase {
         console2.log("Exit Balance", currentBalance);
     }
 
-    function _getExactSet(uint256 _inputValue, int256 _limit) private returns (uint256, uint256) {
+    function _getExactSet(uint256 _inputValue, int256 _limit) public returns (uint256, uint256) {
         int256 limit = (_limit * int256(_inputValue)) / 1e18;
         uint256 exactSet = _getIcethBasedOnOracle(_inputValue);
         console2.log("exactSet from oracle", exactSet); //1077741459418592978
@@ -232,7 +232,7 @@ contract IndexExactSetTest is BridgeTestBase {
         console2.log("currentBalance stETH", currentBalanceSt);
     }
 
-    function _getExactSetSt(uint256 _inputValue, int256 _limit) private returns (uint256, uint256) {
+    function _getExactSetSt(uint256 _inputValue, int256 _limit) public returns (uint256, uint256) {
         int256 limit = (_limit * int256(_inputValue)) / 1e18;
         uint256 exactSet = _getIcethBasedOnOracle(_inputValue);
         console2.log("exactSet from oracle", exactSet); // 1077741459418592978
