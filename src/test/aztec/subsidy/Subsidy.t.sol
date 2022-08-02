@@ -57,6 +57,19 @@ contract SubsidyTest is Test {
         subsidy.subsidize{value: 1e17 - 1}(BRIDGE, 3, 55);
     }
 
+    function testSubsidyGetsCorrectlySet() public {
+        _setGasUsage();
+
+        subsidy.subsidize{value: 1 ether}(BRIDGE, 1, 10);
+
+        (uint64 gasUsage, uint128 available, uint32 lastUpdated, uint32 gasPerSecond) = subsidy.subsidies(BRIDGE, 1);
+
+        assertEq(gasUsage, 10 * 7 days, "gasUsage incorrectly set");
+        assertEq(available, 1 ether, "available incorrectly set");
+        assertEq(lastUpdated, block.timestamp, "lastUpdated incorrectly set");
+        assertEq(gasPerSecond, 10, "gasPerSecond incorrectly set");
+    }
+
     function testBridgeRevertsIfBeneficiaryDoesntImplementReceive() public {
         // 1st set min gas per second values for different criterias
         _setGasUsage();

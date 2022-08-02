@@ -14,4 +14,13 @@ interface ISubsidy {
     ) external payable;
 
     function claimSubsidy(uint256 _criteria, address _beneficiary) external returns (uint256);
+
+    function subsidies(address _bridge, uint256 _criteria)
+        external
+        returns (
+            uint64,
+            uint128,
+            uint32,
+            uint32
+        );
 }
