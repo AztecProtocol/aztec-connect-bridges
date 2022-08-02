@@ -22,7 +22,7 @@ import {IUniswapV3PoolDerivedState} from "../../../interfaces/uniswapv3/pool/IUn
 import {ICurvePool} from "../../../interfaces/curve/ICurvePool.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "forge-std/console2.sol";
+import {console2} from "forge-std/console2.sol";
 
 contract IndexExactSetTest is BridgeTestBase {
     using SafeERC20 for IERC20;
@@ -52,15 +52,15 @@ contract IndexExactSetTest is BridgeTestBase {
     // To store the id of the example bridge after being added
     uint256 private id;
 
-    event Diff(int256 main);
-
     AztecTypes.AztecAsset public wethAsset;
     AztecTypes.AztecAsset public icethAsset;
     AztecTypes.AztecAsset public ethAsset;
     AztecTypes.AztecAsset public empty;
 
-    IExchangeIssuanceLeveraged.SwapData issueData;
-    IExchangeIssuanceLeveraged.SwapData issueDataSt;
+    IExchangeIssuanceLeveraged.SwapData public issueData;
+    IExchangeIssuanceLeveraged.SwapData public issueDataSt;
+
+    event Diff(int256 main);
 
     function setUp() public {
         uint24[] memory fee;
@@ -77,7 +77,7 @@ contract IndexExactSetTest is BridgeTestBase {
         address[] memory pathToStFromSt = new address[](2);
         pathToStFromSt[0] = STETH;
         pathToStFromSt[1] = STETH;
-        IExchangeIssuanceLeveraged.SwapData memory issueDataSt = IExchangeIssuanceLeveraged.SwapData(
+        issueDataSt = IExchangeIssuanceLeveraged.SwapData(
             pathToStFromSt,
             fee,
             CURVE,
@@ -111,7 +111,7 @@ contract IndexExactSetTest is BridgeTestBase {
         uint256 inputValue = 100 ether;
         int256 limit = 0.001 ether; //% of inputValue that is acceptable to not use.
 
-        (uint256 exactSet, uint256 calcInputValue) = getExactSet(inputValue, limit);
+        (uint256 exactSet, uint256 calcInputValue) = _getExactSet(inputValue, limit);
 
         console2.log("Final exactSet", exactSet);
         console2.log("Final calcInputValue", calcInputValue);
@@ -132,7 +132,7 @@ contract IndexExactSetTest is BridgeTestBase {
         console2.log("Exit Balance", currentBalance);
     }
 
-    function getExactSet(uint256 _inputValue, int256 _limit) private returns (uint256, uint256) {
+    function _getExactSet(uint256 _inputValue, int256 _limit) private returns (uint256, uint256) {
         int256 limit = (_limit * int256(_inputValue)) / 1e18;
         uint256 exactSet = _getIcethBasedOnOracle(_inputValue);
         console2.log("exactSet from oracle", exactSet); //1077741459418592978
@@ -204,7 +204,7 @@ contract IndexExactSetTest is BridgeTestBase {
         uint256 inputValue = 300 ether;
         int256 limit = 0.0001 ether; //% of inputValue that is acceptable to leave behind.
 
-        (uint256 exactSet, uint256 calcInputValue) = getExactSetSt(inputValue, limit);
+        (uint256 exactSet, uint256 calcInputValue) = _getExactSetSt(inputValue, limit);
 
         console2.log("Final exactSet", exactSet);
         console2.log("Final calcInputValue", calcInputValue);
@@ -232,7 +232,7 @@ contract IndexExactSetTest is BridgeTestBase {
         console2.log("currentBalance stETH", currentBalanceSt);
     }
 
-    function getExactSetSt(uint256 _inputValue, int256 _limit) private returns (uint256, uint256) {
+    function _getExactSetSt(uint256 _inputValue, int256 _limit) private returns (uint256, uint256) {
         int256 limit = (_limit * int256(_inputValue)) / 1e18;
         uint256 exactSet = _getIcethBasedOnOracle(_inputValue);
         console2.log("exactSet from oracle", exactSet); // 1077741459418592978
