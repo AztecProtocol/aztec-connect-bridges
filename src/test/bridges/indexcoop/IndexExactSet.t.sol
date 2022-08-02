@@ -63,6 +63,7 @@ contract IndexExactSetTest is BridgeTestBase {
     event Diff(int256 main);
 
     receive() external payable {}
+
     fallback() external payable {}
 
     function setUp() public {
@@ -87,7 +88,6 @@ contract IndexExactSetTest is BridgeTestBase {
             IExchangeIssuanceLeveraged.Exchange.Curve
         );
     }
-
 
     /** Testing if we can calculate an amount of icETH that is as close as possible 
     to requiring inputValue amount of ETH to issue. 
