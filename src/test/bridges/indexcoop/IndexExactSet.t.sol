@@ -111,7 +111,7 @@ contract IndexExactSetTest is BridgeTestBase {
         uint256 inputValue = 100 ether;
         int256 limit = 0.001 ether; //% of inputValue that is acceptable to not use.
 
-        (uint256 exactSet, uint256 calcInputValue) = _getExactSet(inputValue, limit);
+        (uint256 exactSet, uint256 calcInputValue) = getExactSet(inputValue, limit);
 
         console2.log("Final exactSet", exactSet);
         console2.log("Final calcInputValue", calcInputValue);
@@ -204,7 +204,7 @@ contract IndexExactSetTest is BridgeTestBase {
         uint256 inputValue = 300 ether;
         int256 limit = 0.0001 ether; //% of inputValue that is acceptable to leave behind.
 
-        (uint256 exactSet, uint256 calcInputValue) = _getExactSetSt(inputValue, limit);
+        (uint256 exactSet, uint256 calcInputValue) = getExactSetSt(inputValue, limit);
 
         console2.log("Final exactSet", exactSet);
         console2.log("Final calcInputValue", calcInputValue);
