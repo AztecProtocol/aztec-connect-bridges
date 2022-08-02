@@ -16,7 +16,7 @@ import {ISubsidy} from "../../aztec/interfaces/ISubsidy.sol";
  *      sent to it.
  */
 contract ExampleBridgeContract is BridgeBase {
-    ISubsidy immutable SUBSIDY;
+    ISubsidy public immutable SUBSIDY;
 
     /**
      * @notice Set address of rollup processor

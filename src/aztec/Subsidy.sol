@@ -10,18 +10,23 @@ import {ISubsidy} from "./interfaces/ISubsidy.sol";
  * @author Jan Benes
  */
 contract Subsidy is ISubsidy {
-    error ArrayLengthsDontMatch();
+    error ArrayLengthsDoNotMatch();
+    error GasPerSecondTooLow();
     error AlreadySubsidized();
     error GasUsageNotSet();
     error SubsidyTooLow();
-    error Overflow();
 
+    // TODO: is gasUsage granular enough for low use bridges?
     struct Subsidy {
+        uint64 gasUsage; // minimum acceptable subsidy slope per 1 week
         uint128 available;
-        uint64 gasUsage;
         uint32 lastUpdated;
         uint32 gasPerSecond;
     }
+
+    // @dev Using min possible `msg.value` upon subsidizing in order to limit possibility of front running attacks
+    // --> e.g. attacker front-running real subsidy tx by sending 1 wei value tx making the real one revert
+    uint256 public constant MIN_SUBSIDY_VALUE = 1e17;
 
     // address bridge => uint256 criteria => Subsidy subsidy
     mapping(address => mapping(uint256 => Subsidy)) public subsidies;
@@ -30,10 +35,10 @@ contract Subsidy is ISubsidy {
         subsidies[msg.sender][_criteria].gasUsage = _gasUsage;
     }
 
-    function setGasUsages(uint256[] calldata _criterias, uint64[] calldata _gasUsages) external {
+    function setGasUsage(uint256[] calldata _criterias, uint64[] calldata _gasUsages) external {
         uint256 criteriasLength = _criterias.length;
         if (criteriasLength != _gasUsages.length) {
-            revert ArrayLengthsDontMatch();
+            revert ArrayLengthsDoNotMatch();
         }
 
         for (uint256 i; i < criteriasLength; ) {
@@ -52,19 +57,17 @@ contract Subsidy is ISubsidy {
         // Caching subsidy in order to minimize number of SLOADs and SSTOREs
         Subsidy memory sub = subsidies[_bridge][_criteria];
 
+        if (_gasPerSecond < sub.gasUsage / 7 days) {
+            revert GasPerSecondTooLow();
+        }
         if (sub.available > 0) {
             revert AlreadySubsidized();
         }
         if (sub.gasUsage == 0) {
             revert GasUsageNotSet();
         }
-
-        if (_gasPerSecond < sub.gasUsage / 7 days) {
+        if (msg.value < MIN_SUBSIDY_VALUE) {
             revert SubsidyTooLow();
-        }
-        if (msg.value > type(uint128).max) {
-            // This condition could happen if subsidy was be bigger than ~340 ETH
-            revert Overflow();
         }
 
         sub.available = uint128(msg.value);
