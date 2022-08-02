@@ -95,6 +95,7 @@ contract Subsidy is ISubsidy {
 
         subsidies[msg.sender][_criteria] = sub;
 
+        // Sending 30k gas in a call to allow fur receiver to be a multi-sig and write to storage
         (bool success, ) = _beneficiary.call{value: subsidyAmount, gas: 30000}("");
         if (!success) {
             // Reverts, if beneficiary is a contract and doesn't implement receive()/fallback()

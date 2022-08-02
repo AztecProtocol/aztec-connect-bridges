@@ -120,6 +120,31 @@ contract SubsidyTest is Test {
         assertEq(available, 1 ether, "available incorrectly set in refill");
     }
 
+    function testAvailableDropsByExpectedAmount() public {
+        _setGasUsage();
+
+        uint256 dt = 7 days;
+        uint32 gasPerSecond = 10;
+
+        subsidy.subsidize{value: 1 ether}(BRIDGE, 1, gasPerSecond);
+        (, uint128 available, uint32 lastUpdated, ) = subsidy.subsidies(BRIDGE, 1);
+        assertEq(available, 1 ether, "available incorrectly set");
+
+        uint256 expectedSubsidyAmount = dt * gasPerSecond * block.basefee;
+
+        vm.warp(block.timestamp + dt);
+
+        vm.prank(BRIDGE);
+        uint256 subsidyAmount = subsidy.claimSubsidy(1, BENEFICIARY);
+
+        assertEq(subsidyAmount, expectedSubsidyAmount);
+        assertEq(subsidyAmount, BENEFICIARY.balance, "subsidyAmount differs from beneficiary's balance");
+
+        (, available, , ) = subsidy.subsidies(BRIDGE, 1);
+
+        assertEq(available, 1 ether - subsidyAmount, "unexpected value of available");
+    }
+
     function _setGasUsage() private {
         uint256[] memory criterias = new uint256[](4);
         uint64[] memory gasUsage = new uint64[](4);
