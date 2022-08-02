@@ -52,6 +52,15 @@ interface IExchangeIssuanceLeveraged {
         SwapData memory
     ) external payable;
 
+    function issueExactSetFromERC20(
+        ISetToken,
+        uint256,
+        address,
+        uint256,
+        SwapData memory,
+        SwapData memory
+    ) external;
+
     function redeemExactSetForETH(
         ISetToken,
         uint256,
