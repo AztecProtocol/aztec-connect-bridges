@@ -7,11 +7,19 @@ import {ISubsidy, Subsidy} from "../../../aztec/Subsidy.sol";
 
 contract SubsidyTest is Test {
     address private constant BRIDGE = address(10);
+    address private constant BENEFICIARY = address(11);
 
     ISubsidy private subsidy;
 
     function setUp() public {
         subsidy = new Subsidy();
+
+        vm.label(BRIDGE, "BRIDGE");
+        vm.label(BENEFICIARY, "TEST_EOA");
+
+        // Make sure test addresses don't hold any ETH
+        vm.deal(BRIDGE, 0);
+        vm.deal(BENEFICIARY, 0);
     }
 
     function testArrayLengthsDontMatchError() public {
@@ -78,9 +86,38 @@ contract SubsidyTest is Test {
 
         vm.warp(block.timestamp + 1 days);
 
+        // This should revert because address(this) is a contract and doesn't implement receive/fallback functions
         vm.prank(BRIDGE);
         vm.expectRevert(Subsidy.EthTransferFailed.selector);
         subsidy.claimSubsidy(1, address(this));
+    }
+
+    function testAllSubsidyGetsClaimedAndSubsidyCanBeRefilledAfterThat() public {
+        // Set huge gasUsage so that everything can be claimed within 1 week
+        uint64 gasUsage = 1000 * 7 days;
+        vm.prank(BRIDGE);
+        subsidy.setGasUsage(1, gasUsage);
+
+        subsidy.subsidize{value: 1 ether}(BRIDGE, 1, 1000);
+        (, uint128 available, uint32 lastUpdated, ) = subsidy.subsidies(BRIDGE, 1);
+        assertEq(available, 1 ether, "available incorrectly set");
+        assertEq(lastUpdated, block.timestamp, "lastUpdated incorrectly set");
+
+        vm.warp(block.timestamp + 7 days);
+
+        vm.prank(BRIDGE);
+        subsidy.claimSubsidy(1, BENEFICIARY);
+
+        (, available, lastUpdated, ) = subsidy.subsidies(BRIDGE, 1);
+
+        assertEq(BENEFICIARY.balance, 1 ether, "beneficiary didn't receive full subsidy");
+        assertEq(available, 0, "not all subsidy was claimed");
+        assertEq(lastUpdated, block.timestamp, "lastUpdated incorrectly updated");
+
+        subsidy.subsidize{value: 1 ether}(BRIDGE, 1, 1000);
+        (, available, , ) = subsidy.subsidies(BRIDGE, 1);
+
+        assertEq(available, 1 ether, "available incorrectly set in refill");
     }
 
     function _setGasUsage() private {

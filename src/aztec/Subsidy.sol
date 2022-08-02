@@ -17,12 +17,11 @@ contract Subsidy is ISubsidy {
     error SubsidyTooLow();
     error EthTransferFailed();
 
-    // TODO: is gasUsage granular enough for low use bridges?
     struct Subsidy {
-        uint64 gasUsage; // minimum acceptable subsidy slope per 1 week
-        uint128 available;
-        uint32 lastUpdated;
-        uint32 gasPerSecond;
+        uint64 gasUsage; // @dev minimum acceptable subsidy slope per 1 week - for how much gas is the
+        uint128 available; // @dev amount of ETH remaining to be paid out
+        uint32 lastUpdated; // @dev last time subsidy was paid out or funded (if not subsidy was yet claimed)
+        uint32 gasPerSecond; // @dev how much gas per second is the funder willing to subsidize
     }
 
     // @dev Using min possible `msg.value` upon subsidizing in order to limit possibility of front running attacks
@@ -87,6 +86,7 @@ contract Subsidy is ISubsidy {
 
         uint256 dt = block.timestamp - sub.lastUpdated;
         uint256 gasToCover = dt * sub.gasPerSecond;
+        // At maximum `sub.gasUsage` gets covered
         uint256 ethToCover = (gasToCover < sub.gasUsage ? gasToCover : sub.gasUsage) * block.basefee;
         uint256 subsidyAmount = (ethToCover < sub.available ? ethToCover : sub.available);
 
