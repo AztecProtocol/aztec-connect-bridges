@@ -85,6 +85,7 @@ contract IndexTest is BridgeTestBase {
         (uint256 newICETH, uint256 returnedEth) = _issueSet(_depositAmount, auxData);
 
         uint256 minAmountOut = _getMinIceth((_depositAmount - returnedEth), maxSlipAux);
+
         assertGe(newICETH, minAmountOut, "Less than expected was returned when issuing icETH");
     }
 
@@ -186,19 +187,28 @@ contract IndexTest is BridgeTestBase {
         _sellSetExpectRevert(_depositAmount, auxData, emptyBytes, ErrorLib.InvalidAuxData.selector);
     }
 
-    function testInvalidInput() public {
-        vm.prank(address(ROLLUP_PROCESSOR));
+    function testErrorCodes() public {
+        vm.startPrank(address(ROLLUP_PROCESSOR));
         vm.expectRevert(ErrorLib.InvalidInput.selector);
-        bridge.convert(
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-            AztecTypes.AztecAsset(0, address(0), AztecTypes.AztecAssetType.NOT_USED),
-            0,
-            0,
-            0,
-            address(0)
-        );
+        //Invalid inputAssetA
+        bridge.convert(icethAsset, emptyAsset, icethAsset, ethAsset, 0, 0, 0, address(0));
+
+        //Invalid inputAssetB
+        vm.expectRevert(ErrorLib.InvalidInput.selector);
+        bridge.convert(ethAsset, icethAsset, icethAsset, ethAsset, 0, 0, 0, address(0));
+
+        //Invalid outputAssetA
+        vm.expectRevert(ErrorLib.InvalidInput.selector);
+        bridge.convert(icethAsset, emptyAsset, wethAsset, emptyAsset, 0, 0, 0, address(0));
+
+        //Invalid outputAssetB
+        vm.expectRevert(ErrorLib.InvalidInput.selector);
+        bridge.convert(ethAsset, emptyAsset, icethAsset, icethAsset, 0, 0, 0, address(0));
+
+        vm.expectRevert(ErrorLib.AsyncDisabled.selector);
+        bridge.finalise(ethAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0);
+
+        vm.stopPrank();
     }
 
     /* 
@@ -494,7 +504,7 @@ contract IndexTest is BridgeTestBase {
 
         uint256 costOfOneIc = ((((data.collateralAmount * (1.0009 ether)) / 1e18) * price) / 1e18) - data.debtAmount;
 
-        minIcToReceive = ((_totalInputValue * (_maxSlipAux)) / 1e14) / costOfOneIc;
+        minIcToReceive = (((_totalInputValue * (_maxSlipAux)) / 1e4) * 1e18) / costOfOneIc;
     }
 
     function _getAmountBasedOnTwap(
