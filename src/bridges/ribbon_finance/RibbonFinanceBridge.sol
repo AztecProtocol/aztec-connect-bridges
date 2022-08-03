@@ -39,6 +39,10 @@ contract RibbonFinanceBridgeContract is IDefiBridge {
 
   address public immutable WETH = 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2;
 
+  // TODO(sj)
+  address public immutable zkRbnAccountingToken = ...;
+  address public immutable zkRbnWithdrawalToken = ...;
+
   mapping(address => address) public underlyingToZkRToken;
 
   constructor(address _rollupProcessor) public {
@@ -71,6 +75,20 @@ contract RibbonFinanceBridgeContract is IDefiBridge {
         "RibbonFinanceBridge: INVALID_CALLER"
     );
 
+    // check that the input asset is of a supported type
+    require(
+      inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20,
+      "RibbonFinanceBridge: INVALID_ASSET_TYPE"
+    )
+
+    require(
+      inputAssetA.erc20Address == WETH ||
+      inputAssetA.erc20Address == zkRbnAccountingToken ||
+      inputAssetA.erc20Address == zkRbnWithdrawalToken ||,
+      "RibbonFinanceBridge: INVALID_ERC20_ADDRESS"
+    )
+    
+    // deposit crypto --> get back accounting tokens
     Vault.DepositReceipt depositReceipt;
     // RibbonThetaVaultV2 ETH Call vault (deposit/withdraw WETH)
     if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && inputAssetA.erc20Address == WETH) {
@@ -100,16 +118,28 @@ contract RibbonFinanceBridgeContract is IDefiBridge {
       // 5. Mint numSharesAfter - numSharesBefore to reflect the # of unredeemed shares
       // created in this interaction
       uint256 diff = numSharesAfterDeposit.sub(numSharesBeforeDeposit);
-      IERC20Detailed(underlyingToZkRToken[inputAssetA]).mint(
-          address(this),
-          diff
-      );
+      IERC20(zkRbnAccountingToken).mint(
+        address(this),
+        diff,
+      )
 
       // 6. Approve transfer of minted rTokens to rollup processor
       IERC20Detailed(underlyingToZkRToken[inputAssetA]).approve(
           rollupProcessor,
           diff
       );
+    } else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && inputAssetA.erc20Address == zkRbnAccountingToken){
+      // deposit accounting tokens --> get back withdrawal tokens
+      // TODO(sj): convert accounting tokens round x to current round number
+      
+      // burn accounting tokens
+
+
+      // mint withdrawal tokens
+    } else if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 && inputAssetA.erc20Address == zkRbnWithdrawalToken){
+      // deposit withdrawal tokens --> get back crypto
+    } else {
+      require(false);
     }
   }
 
@@ -123,10 +153,4 @@ contract RibbonFinanceBridgeContract is IDefiBridge {
   ) external payable override returns (uint256, uint256, bool) {
     require(false);
   }
-
-    function setUnderlyingToZkRToken(address underlyingAsset) external {
-        underlyingToZkRToken[underlyingAsset] = address(
-            new ZkAToken(aToken.name(), aToken.symbol(), aToken.decimals())
-        );
-    }
 }
