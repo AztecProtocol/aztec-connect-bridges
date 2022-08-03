@@ -4,9 +4,17 @@ pragma solidity >=0.8.4;
 
 // @dev documentation of this interface is in its implementation (Subsidy contract)
 interface ISubsidy {
-    function setGasUsage(uint256 _criteria, uint64 _gasUsage) external;
+    function setGasUsageAndMinGasPerSecond(
+        uint256 _criteria,
+        uint32 _gasUsage,
+        uint32 _minGasPerSecond
+    ) external;
 
-    function setGasUsage(uint256[] calldata _criterias, uint64[] calldata _gasUsages) external;
+    function setGasUsageAndMinGasPerSecond(
+        uint256[] calldata _criteria,
+        uint32[] calldata _gasUsage,
+        uint32[] calldata _minGasPerSecond
+    ) external;
 
     function subsidize(
         address _bridge,
@@ -19,8 +27,9 @@ interface ISubsidy {
     function subsidies(address _bridge, uint256 _criteria)
         external
         returns (
-            uint64,
             uint128,
+            uint32,
+            uint32,
             uint32,
             uint32
         );

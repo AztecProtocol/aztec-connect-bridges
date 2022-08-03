@@ -28,7 +28,7 @@ contract ExampleBridgeContract is BridgeBase {
         address dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
         // We set gas usage in the subsidy contract
         // We only want to incentivize the bridge when input and output token is Dai
-        SUBSIDY.setGasUsage(_computeCriteria(dai, dai), 50000);
+        SUBSIDY.setGasUsageAndMinGasPerSecond(_computeCriteria(dai, dai), 50000, 10);
     }
 
     /**

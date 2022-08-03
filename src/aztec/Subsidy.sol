@@ -13,23 +13,22 @@ import {ISubsidy} from "./interfaces/ISubsidy.sol";
  *      the beneficiary. Beneficiary is expected to be the rollup provider or an address controlled by the rollup
  *      provider. When sufficient subsidy is present it makes it profitable for the rollup provider to execute
  *      a bridge call even when only a small amounts of user fees can be extracted. This effectively makes it possible
- *      for calls to low-use bridges to be included in a rollup block called. Without subsidy, it might happen that
+ *      for calls to low-use bridges to be included in a rollup block. Without subsidy, it might happen that
  *      UX of these brides would dramatically deteriorate since user might wait for a long time before her/his bridge
  *      call gets processed.
  *
  *      The subsidy is defined by a `gasPerSecond` amount and along with time since last interaction and the current
  *      base fee will be used to compute the amount of Eth that should be paid out to the rollup beneficiary.
- *      The subsidy will only ever grow to `Subsidy.gasUsage` gas. This value is the expected weekly gas usage
- *      of the bridge. Since only the base-fee is used, there will practically not be a free bridge interaction
- *      as the priority fee is paid on top However the fee could be tiny in comparison -> over time user fee goes
+ *      The subsidy will only ever grow to `Subsidy.gasUsage` gas. This value is the expected gas usage of the specific
+ *      bridge interaction. Since only the base-fee is used, there will practically not be a free bridge interaction
+ *      because the priority fee is paid on top. However the fee could be tiny in comparison -> over time user fee goes
  *      toward just paying the priority fee/tip. Making the subsidy payout dependent upon the time since last bridge
  *      call/interaction makes the probability of the bridge call being executed grow with time.
  *
- *      `Subsidy.gasUsage` is not only used to define max subsidy payout but we also use it to compute minimum
- *      acceptable value of `Subsidy.gasPerSecond'. This is necessary because only 1 subsidy can be present at one time
- *      and not doing the check would open an opportunity for a griefing attack - attacker setting low subsidy which
- *      would take a long time to run out and effectively making it impossible for a legitimate subsidizer to subsidize
- *      a bridge.
+ *      `Subsidy.minGasPerSecond` is used to define minimum acceptable value of `Subsidy.gasPerSecond' when subsidy
+ *      is created. This is necessary because only 1 subsidy can be present at one time and not doing the check would
+ *      open an opportunity for a griefing attack - attacker setting low subsidy which would take a long time to run
+ *      out and effectively making it impossible for a legitimate subsidizer to subsidize a bridge.
  *
  *      Since we want to allow subsidizer to subsidize only a specific bridge call/interaction and not all
  *      calls/interactions we use identifier called `criteria` to distinguish different calls. `criteria` value
@@ -45,11 +44,20 @@ contract Subsidy is ISubsidy {
     error SubsidyTooLow();
     error EthTransferFailed();
 
+    /**
+     * @notice Container for Subsidy related information
+     * @member available Amount of ETH remaining to be paid out
+     * @member gasUsage Amount of gas the interaction consumes (used to define max possible payout)
+     * @member minGasPerSecond Minimum amount of gas per second the subsidizer has to subsidize
+     * @member gasPerSecond Amount of gas per second the subsidizer is willing to subsidize
+     * @member lastUpdated Last time subsidy was paid out or funded (if not subsidy was yet claimed after funding)
+     */
     struct Subsidy {
-        uint64 gasUsage; // @dev minimum subsidizable gas usage per 1 week
-        uint128 available; // @dev amount of ETH remaining to be paid out
-        uint32 lastUpdated; // @dev last time subsidy was paid out or funded (if not subsidy was yet claimed)
-        uint32 gasPerSecond; // @dev how much gas per second is the funder willing to subsidize
+        uint128 available;
+        uint32 gasUsage;
+        uint32 minGasPerSecond;
+        uint32 gasPerSecond;
+        uint32 lastUpdated;
     }
 
     // @dev Using min possible `msg.value` upon subsidizing in order to limit possibility of front running attacks
@@ -64,26 +72,37 @@ contract Subsidy is ISubsidy {
      * @dev This function has to be called from the bridge
      * @param _criteria A value defining a specific bridge call
      * @param _gasUsage An estimated weekly gas usage of a specific bridge call/interaction
+     * @param _minGasPerSecond Minimum amount of gas per second the subsidizer has to subsidize
      */
-    function setGasUsage(uint256 _criteria, uint64 _gasUsage) external {
-        subsidies[msg.sender][_criteria].gasUsage = _gasUsage;
+    function setGasUsageAndMinGasPerSecond(
+        uint256 _criteria,
+        uint32 _gasUsage,
+        uint32 _minGasPerSecond
+    ) external {
+        subsidies[msg.sender][_criteria] = Subsidy(0, _gasUsage, _minGasPerSecond, 0, 0);
     }
 
     /**
      * @notice Sets multiple `Subsidy.gasUsage` values for multiple criteria values
      * @dev This function has to be called from the bridge
-     * @param _criterias An array of values each defining a specific bridge call
-     * @param _gasUsages An array of estimated weekly gas usage values corresponding to criteria values defined
+     * @param _criteria An array of values each defining a specific bridge call
+     * @param _gasUsage An array of estimated weekly gas usage values corresponding to criteria values defined
      *                  at the same index in `_criterias` array
+     * @param _minGasPerSecond An array of minimum gas per second amounts the subsidizer has to subsidize corresponding
+     *                         to criteria values defined at the same index in `_criterias` array
      */
-    function setGasUsage(uint256[] calldata _criterias, uint64[] calldata _gasUsages) external {
-        uint256 criteriasLength = _criterias.length;
-        if (criteriasLength != _gasUsages.length) {
+    function setGasUsageAndMinGasPerSecond(
+        uint256[] calldata _criteria,
+        uint32[] calldata _gasUsage,
+        uint32[] calldata _minGasPerSecond
+    ) external {
+        uint256 criteriasLength = _criteria.length;
+        if (criteriasLength != _gasUsage.length || criteriasLength != _minGasPerSecond.length) {
             revert ArrayLengthsDoNotMatch();
         }
 
         for (uint256 i; i < criteriasLength; ) {
-            subsidies[msg.sender][_criterias[i]].gasUsage = _gasUsages[i];
+            subsidies[msg.sender][_criteria[i]] = Subsidy(0, _gasUsage[i], _minGasPerSecond[i], 0, 0);
             unchecked {
                 ++i;
             }
@@ -108,7 +127,7 @@ contract Subsidy is ISubsidy {
         // Caching subsidy in order to minimize number of SLOADs and SSTOREs
         Subsidy memory sub = subsidies[_bridge][_criteria];
 
-        if (_gasPerSecond < sub.gasUsage / 7 days) {
+        if (_gasPerSecond < sub.minGasPerSecond) {
             revert GasPerSecondTooLow();
         }
         if (sub.available > 0) {

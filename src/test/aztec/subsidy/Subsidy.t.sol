@@ -23,25 +23,26 @@ contract SubsidyTest is Test {
     }
 
     function testArrayLengthsDontMatchError() public {
-        // First set min gas per second values for different criterias
-        uint256[] memory criterias = new uint256[](1);
-        uint64[] memory gasUsages = new uint64[](2);
+        // First set min gas per second values for different criteria
+        uint256[] memory criteria = new uint256[](1);
+        uint32[] memory gasUsage = new uint32[](2);
+        uint32[] memory minGasPerSecond = new uint32[](2);
 
         vm.expectRevert(Subsidy.ArrayLengthsDoNotMatch.selector);
-        subsidy.setGasUsage(criterias, gasUsages);
+        subsidy.setGasUsageAndMinGasPerSecond(criteria, gasUsage, minGasPerSecond);
     }
 
     function testGasPerSecondTooLowError() public {
-        // 1st set min gas per second values for different criterias
-        _setGasUsage();
+        // 1st set min gas per second values for different criteria
+        _setGasUsageAndMinGasPerSecond();
 
         vm.expectRevert(Subsidy.GasPerSecondTooLow.selector);
-        subsidy.subsidize{value: 1 ether}(BRIDGE, 1, 9);
+        subsidy.subsidize{value: 1 ether}(BRIDGE, 1, 4);
     }
 
     function testAlreadySubsidizedError() public {
-        // 1st set min gas per second values for different criterias
-        _setGasUsage();
+        // 1st set min gas per second values for different criteria
+        _setGasUsageAndMinGasPerSecond();
 
         // 2nd subsidize criteria 3
         subsidy.subsidize{value: 1 ether}(BRIDGE, 3, 45);
@@ -57,8 +58,8 @@ contract SubsidyTest is Test {
     }
 
     function testSubsidyTooLowError() public {
-        // 1st set min gas per second values for different criterias
-        _setGasUsage();
+        // 1st set min gas per second values for different criteria
+        _setGasUsageAndMinGasPerSecond();
 
         // 2nd check the call reverts with SubsidyTooLow error
         vm.expectRevert(Subsidy.SubsidyTooLow.selector);
@@ -66,21 +67,23 @@ contract SubsidyTest is Test {
     }
 
     function testSubsidyGetsCorrectlySet() public {
-        _setGasUsage();
+        _setGasUsageAndMinGasPerSecond();
 
         subsidy.subsidize{value: 1 ether}(BRIDGE, 1, 10);
 
-        (uint64 gasUsage, uint128 available, uint32 lastUpdated, uint32 gasPerSecond) = subsidy.subsidies(BRIDGE, 1);
+        (uint128 available, uint32 gasUsage, uint32 minGasPerSecond, uint32 gasPerSecond, uint32 lastUpdated) = subsidy
+            .subsidies(BRIDGE, 1);
 
-        assertEq(gasUsage, 10 * 7 days, "gasUsage incorrectly set");
         assertEq(available, 1 ether, "available incorrectly set");
-        assertEq(lastUpdated, block.timestamp, "lastUpdated incorrectly set");
+        assertEq(gasUsage, 5e4, "gasUsage incorrectly set");
+        assertEq(minGasPerSecond, 5, "minGasPerSecond incorrectly set");
         assertEq(gasPerSecond, 10, "gasPerSecond incorrectly set");
+        assertEq(lastUpdated, block.timestamp, "lastUpdated incorrectly set");
     }
 
     function testClaimRevertsIfBeneficiaryIsContractAndDoesntImplementReceive() public {
         // 1st set min gas per second values for different criterias
-        _setGasUsage();
+        _setGasUsageAndMinGasPerSecond();
 
         subsidy.subsidize{value: 1 ether}(BRIDGE, 1, 10);
 
@@ -93,13 +96,13 @@ contract SubsidyTest is Test {
     }
 
     function testAllSubsidyGetsClaimedAndSubsidyCanBeRefilledAfterThat() public {
-        // Set huge gasUsage so that everything can be claimed within 1 week
-        uint64 gasUsage = 1000 * 7 days;
+        // Set huge gasUsage so that everything can be claimed in 1 call
+        uint32 gasUsage = type(uint32).max;
         vm.prank(BRIDGE);
-        subsidy.setGasUsage(1, gasUsage);
+        subsidy.setGasUsageAndMinGasPerSecond(1, gasUsage, 10);
 
         subsidy.subsidize{value: 1 ether}(BRIDGE, 1, 1000);
-        (, uint128 available, uint32 lastUpdated, ) = subsidy.subsidies(BRIDGE, 1);
+        (uint128 available, , , , uint32 lastUpdated) = subsidy.subsidies(BRIDGE, 1);
         assertEq(available, 1 ether, "available incorrectly set");
         assertEq(lastUpdated, block.timestamp, "lastUpdated incorrectly set");
 
@@ -108,26 +111,26 @@ contract SubsidyTest is Test {
         vm.prank(BRIDGE);
         subsidy.claimSubsidy(1, BENEFICIARY);
 
-        (, available, lastUpdated, ) = subsidy.subsidies(BRIDGE, 1);
+        (available, , , , lastUpdated) = subsidy.subsidies(BRIDGE, 1);
 
         assertEq(BENEFICIARY.balance, 1 ether, "beneficiary didn't receive full subsidy");
         assertEq(available, 0, "not all subsidy was claimed");
         assertEq(lastUpdated, block.timestamp, "lastUpdated incorrectly updated");
 
         subsidy.subsidize{value: 1 ether}(BRIDGE, 1, 1000);
-        (, available, , ) = subsidy.subsidies(BRIDGE, 1);
+        (available, , , , ) = subsidy.subsidies(BRIDGE, 1);
 
         assertEq(available, 1 ether, "available incorrectly set in refill");
     }
 
     function testAvailableDropsByExpectedAmount() public {
-        _setGasUsage();
+        _setGasUsageAndMinGasPerSecond();
 
-        uint256 dt = 7 days;
+        uint256 dt = 3600;
         uint32 gasPerSecond = 10;
 
         subsidy.subsidize{value: 1 ether}(BRIDGE, 1, gasPerSecond);
-        (, uint128 available, uint32 lastUpdated, ) = subsidy.subsidies(BRIDGE, 1);
+        (uint128 available, , , , uint32 lastUpdated) = subsidy.subsidies(BRIDGE, 1);
         assertEq(available, 1 ether, "available incorrectly set");
 
         uint256 expectedSubsidyAmount = dt * gasPerSecond * block.basefee;
@@ -140,26 +143,32 @@ contract SubsidyTest is Test {
         assertEq(subsidyAmount, expectedSubsidyAmount);
         assertEq(subsidyAmount, BENEFICIARY.balance, "subsidyAmount differs from beneficiary's balance");
 
-        (, available, , ) = subsidy.subsidies(BRIDGE, 1);
+        (available, , , , ) = subsidy.subsidies(BRIDGE, 1);
 
         assertEq(available, 1 ether - subsidyAmount, "unexpected value of available");
     }
 
-    function _setGasUsage() private {
+    function _setGasUsageAndMinGasPerSecond() private {
         uint256[] memory criterias = new uint256[](4);
-        uint64[] memory gasUsage = new uint64[](4);
+        uint32[] memory gasUsage = new uint32[](4);
+        uint32[] memory minGasPerSecond = new uint32[](4);
 
         criterias[0] = 1;
         criterias[1] = 2;
         criterias[2] = 3;
         criterias[3] = 4;
 
-        gasUsage[0] = 10 * 7 days;
-        gasUsage[1] = 20 * 7 days;
-        gasUsage[2] = 30 * 7 days;
-        gasUsage[3] = 40 * 7 days;
+        gasUsage[0] = 5e4;
+        gasUsage[1] = 10e4;
+        gasUsage[2] = 15e4;
+        gasUsage[3] = 20e4;
+
+        minGasPerSecond[0] = 5;
+        minGasPerSecond[1] = 10;
+        minGasPerSecond[2] = 15;
+        minGasPerSecond[3] = 20;
 
         vm.prank(BRIDGE);
-        subsidy.setGasUsage(criterias, gasUsage);
+        subsidy.setGasUsageAndMinGasPerSecond(criterias, gasUsage, minGasPerSecond);
     }
 }
