@@ -10,11 +10,12 @@ import {ISubsidy} from "./interfaces/ISubsidy.sol";
  * @author Jan Benes
  * @dev The goal of this contract is to allow anyone to subsidize a bridge. How the subsidy works is that when a bridge
  *      is subsidized it can call `claimSubsidy(...)` method and in that method the corresponding subsidy gets sent to
- *      the beneficiary. Beneficiary is expected to be the rollup provider or an address controlled by the rollup
- *      provider. When sufficient subsidy is present it makes it profitable for the rollup provider to execute a bridge
- *      call even when only a small amounts of user fees can be extracted. This effectively makes it possible for calls
- *      to low-use bridges to be included in a rollup block. Without subsidy, it might happen that UX of these brides
- *      would dramatically deteriorate since user might wait for a long time before her/his bridge call gets processed.
+ *      the beneficiary. Beneficiary is expected to be the beneficiary address passed as part of the rollup data by
+ *      the provider. When sufficient subsidy is present it makes it profitable for the rollup provider to execute
+ *      a bridge call even when only a small amounts of user fees can be extracted. This effectively makes it possible
+ *      for calls to low-use bridges to be included in a rollup block. Without subsidy, it might happen that the UX
+ *      of these bridges would dramatically deteriorate since user might wait for a long time before her/his bridge
+ *      call gets processed.
  *
  *      The subsidy is defined by a `gasPerMinute` amount and along with time since last interaction and the current
  *      base fee will be used to compute the amount of Eth that should be paid out to the rollup beneficiary.
@@ -30,10 +31,10 @@ import {ISubsidy} from "./interfaces/ISubsidy.sol";
  *      out and effectively making it impossible for a legitimate subsidizer to subsidize a bridge.
  *
  *      Since we want to allow a subsidizer to subsidize specific bridge calls/interactions and not only all
- *      calls/interactions we use a `criteria` to distinguish different calls. The `criteria` value
- *      is computed in the bridge, and may use the inputs to `convert(...)`. It is expected to be 
- *      different in different bridges (e.g. Uniswap bridge might compute this value based on `_inputAssetA`,
- *      `_outputAssetA` and a path defined in `_auxData`).
+ *      calls/interactions we use a `criteria` to distinguish different calls. The `criteria` value is computed in
+ *      the bridge, and may use the inputs to `convert(...)`. It is expected to be different in different bridges
+ *      (e.g. Uniswap bridge might compute this value based on `_inputAssetA`, `_outputAssetA` and a path defined in
+ *      `_auxData`).
  */
 contract Subsidy is ISubsidy {
     error ArrayLengthsDoNotMatch();
@@ -88,9 +89,9 @@ contract Subsidy is ISubsidy {
      * @dev This function has to be called from the bridge
      * @param _criteria An array of values each defining a specific bridge call
      * @param _gasUsage An array of gas usage for subsidized bridge calls.
-     *                  at the same index in `_criterias` array
-     * @param _minGasPerMinute An array of minimum amounts of gas per minute that subsidizer has to subsidize for the provided criterias.
-     *                         to criteria values defined at the same index in `_criterias` array
+     *                  at the same index in `_criteria` array
+     * @param _minGasPerMinute An array of minimum amounts of gas per minute that subsidizer has to subsidize for
+     *                         the provided criteria.
      */
     function setGasUsageAndMinGasPerMinute(
         uint256[] calldata _criteria,
@@ -115,8 +116,8 @@ contract Subsidy is ISubsidy {
      * @param _bridge Address of the bridge to subsidize
      * @param _criteria A value defining the specific bridge call to subsidize
      * @param _gasPerMinute A value defining the "rate" at which the subsidy will be released
-     * @dev reverts if any of these is true: 1) `_gasPerMinute` <= `Subsidy.gasUsage` divided by seconds in a week,
-     *                                       2) subsidy funded before and not yet drained: `subsidy.available` > 0,
+     * @dev reverts if any of these is true: 1) `_gasPerMinute` <= `sub.minGasPerMinute`,
+     *                                       2) subsidy funded before and not yet claimed: `subsidy.available` > 0,
      *                                       3) subsidy.gasUsage not set: `subsidy.gasUsage` == 0,
      *                                       4) ETH value sent too low: `msg.value` < `MIN_SUBSIDY_VALUE`.
      */
