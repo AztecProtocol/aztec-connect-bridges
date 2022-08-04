@@ -11,6 +11,8 @@ contract SubsidyTest is Test {
 
     ISubsidy private subsidy;
 
+    event Subsidized(address indexed bridge, uint256 indexed criteria, uint128 available, uint32 gasPerMinute);
+
     function setUp() public {
         subsidy = new Subsidy();
 
@@ -79,6 +81,18 @@ contract SubsidyTest is Test {
         assertEq(minGasPerMinute, 50, "minGasPerMinute incorrectly set");
         assertEq(gasPerMinute, 100, "gasPerMinute incorrectly set");
         assertEq(lastUpdated, block.timestamp, "lastUpdated incorrectly set");
+    }
+
+    function testEventsGetCorrectlyEmitted() public {
+        _setGasUsageAndMinGasPerMinute();
+
+        uint256 criteria = 1;
+        uint32 gasPerMinute = 100;
+        uint128 subsidyAmount = 1 ether;
+
+        vm.expectEmit(true, true, false, true);
+        emit Subsidized(BRIDGE, criteria, subsidyAmount, gasPerMinute);
+        subsidy.subsidize{value: subsidyAmount}(BRIDGE, criteria, gasPerMinute);
     }
 
     function testAllSubsidyGetsClaimedAndSubsidyCanBeRefilledAfterThat() public {

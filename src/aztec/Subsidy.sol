@@ -43,6 +43,8 @@ contract Subsidy is ISubsidy {
     error SubsidyTooLow();
     error EthTransferFailed();
 
+    event Subsidized(address indexed bridge, uint256 indexed criteria, uint128 available, uint32 gasPerMinute);
+
     /**
      * @notice Container for Subsidy related information
      * @member available Amount of ETH remaining to be paid out
@@ -145,6 +147,8 @@ contract Subsidy is ISubsidy {
         sub.gasPerMinute = uint32(_gasPerMinute);
 
         subsidies[_bridge][_criteria] = sub;
+
+        emit Subsidized(_bridge, _criteria, sub.available, sub.gasPerMinute);
     }
 
     /**
