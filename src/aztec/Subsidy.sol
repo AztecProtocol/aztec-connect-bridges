@@ -29,9 +29,9 @@ import {ISubsidy} from "./interfaces/ISubsidy.sol";
  *      open an opportunity for a griefing attack - attacker setting low subsidy which would take a long time to run
  *      out and effectively making it impossible for a legitimate subsidizer to subsidize a bridge.
  *
- *      Since we want to allow subsidizer to subsidize only a specific bridge call/interaction and not all
- *      calls/interactions we use identifier called `criteria` to distinguish different calls. `criteria` value
- *      is computed based on the inputs of `IDefiBridge.convert(...)` function and this computation is expected to be
+ *      Since we want to allow a subsidizer to subsidize specific bridge calls/interactions and not only all
+ *      calls/interactions we use a `criteria` to distinguish different calls. The `criteria` value
+ *      is computed in the bridge, and may use the inputs to `convert(...)`. It is expected to be 
  *      different in different bridges (e.g. Uniswap bridge might compute this value based on `_inputAssetA`,
  *      `_outputAssetA` and a path defined in `_auxData`).
  */
@@ -72,8 +72,8 @@ contract Subsidy is ISubsidy {
      * @notice Sets `Subsidy.gasUsage` value for a given criteria
      * @dev This function has to be called from the bridge
      * @param _criteria A value defining a specific bridge call
-     * @param _gasUsage An estimated weekly gas usage of a specific bridge call/interaction
-     * @param _minGasPerMinute Minimum amount of gas per second the subsidizer has to subsidize
+     * @param _gasUsage The gas usage of the subsidized action. Used as upper limit for subsidy.
+     * @param _minGasPerMinute Minimum amount of gas per minute that subsidizer has to subsidize
      */
     function setGasUsageAndMinGasPerMinute(
         uint256 _criteria,
@@ -87,9 +87,9 @@ contract Subsidy is ISubsidy {
      * @notice Sets multiple `Subsidy.gasUsage` values for multiple criteria values
      * @dev This function has to be called from the bridge
      * @param _criteria An array of values each defining a specific bridge call
-     * @param _gasUsage An array of estimated weekly gas usage values corresponding to criteria values defined
+     * @param _gasUsage An array of gas usage for subsidized bridge calls.
      *                  at the same index in `_criterias` array
-     * @param _minGasPerMinute An array of minimum gas per second amounts the subsidizer has to subsidize corresponding
+     * @param _minGasPerMinute An array of minimum amounts of gas per minute that subsidizer has to subsidize for the provided criterias.
      *                         to criteria values defined at the same index in `_criterias` array
      */
     function setGasUsageAndMinGasPerMinute(
@@ -113,8 +113,8 @@ contract Subsidy is ISubsidy {
     /**
      * @notice Sets subsidy for a given `_bridge` and `_criteria`
      * @param _bridge Address of the bridge to subsidize
-     * @param _criteria A value defining a specific bridge call
-     * @param _gasPerMinute A value defining a "speed" at which the subsidy will be released
+     * @param _criteria A value defining the specific bridge call to subsidize
+     * @param _gasPerMinute A value defining the "rate" at which the subsidy will be released
      * @dev reverts if any of these is true: 1) `_gasPerMinute` <= `Subsidy.gasUsage` divided by seconds in a week,
      *                                       2) subsidy funded before and not yet drained: `subsidy.available` > 0,
      *                                       3) subsidy.gasUsage not set: `subsidy.gasUsage` == 0,
@@ -142,9 +142,9 @@ contract Subsidy is ISubsidy {
             revert GasUsageNotSet();
         }
 
-        sub.available = uint128(msg.value);
+        sub.available = uint128(msg.value); // safe as an overflow would require more assets than exists.
         sub.lastUpdated = uint32(block.timestamp);
-        sub.gasPerMinute = uint32(_gasPerMinute);
+        sub.gasPerMinute = _gasPerMinute;
 
         subsidies[_bridge][_criteria] = sub;
 
@@ -170,7 +170,7 @@ contract Subsidy is ISubsidy {
         uint256 ethToCover = (gasToCover < sub.gasUsage ? gasToCover : sub.gasUsage) * block.basefee;
         uint256 subsidyAmount = (ethToCover < sub.available ? ethToCover : sub.available);
 
-        sub.available -= uint128(subsidyAmount);
+        sub.available -= uint128(subsidyAmount); // safe cast as `subsidyAmount` is bounded by `sub.available`
         sub.lastUpdated = uint32(block.timestamp);
 
         subsidies[msg.sender][_criteria] = sub;
