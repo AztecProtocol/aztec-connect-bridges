@@ -159,6 +159,9 @@ contract Subsidy is ISubsidy {
      * @return subsidy ETH amount which was sent to the `_beneficiary`
      */
     function claimSubsidy(uint256 _criteria, address _beneficiary) external returns (uint256) {
+        if (_beneficiary == address(0)) {
+            return 0;
+        }
         // Caching subsidy in order to minimize number of SLOADs and SSTOREs
         Subsidy memory sub = subsidies[msg.sender][_criteria];
         if (sub.available == 0) {

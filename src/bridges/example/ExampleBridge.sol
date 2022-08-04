@@ -28,7 +28,7 @@ contract ExampleBridgeContract is BridgeBase {
         address dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
         // We set gas usage in the subsidy contract
         // We only want to incentivize the bridge when input and output token is Dai
-        SUBSIDY.setGasUsageAndMinGasPerMinute(_computeCriteria(dai, dai), 50000, 100);
+        SUBSIDY.setGasUsageAndMinGasPerMinute(computeCriteria(dai, dai), 50000, 100);
     }
 
     /**
@@ -70,12 +70,12 @@ contract ExampleBridgeContract is BridgeBase {
 
         // Pay out subsidy to the rollupBeneficiary
         SUBSIDY.claimSubsidy(
-            _computeCriteria(_inputAssetA.erc20Address, _outputAssetA.erc20Address),
+            computeCriteria(_inputAssetA.erc20Address, _outputAssetA.erc20Address),
             _rollupBeneficiary
         );
     }
 
-    function _computeCriteria(address _input, address _output) private pure returns (uint256) {
+    function computeCriteria(address _input, address _output) public pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(_input, _output)));
     }
 }
