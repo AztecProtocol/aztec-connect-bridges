@@ -69,8 +69,6 @@ contract AngleBridge is BridgeBase {
         if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidInputA();
         if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
 
-        uint256 outputAssetBalanceBefore = IERC20(_outputAssetA.erc20Address).balanceOf(address(this));
-
         IERC20(_inputAssetA.erc20Address).approve(address(STABLE_MASTER), _totalInputValue);
 
         if (_auxData == 0) {
@@ -91,7 +89,7 @@ contract AngleBridge is BridgeBase {
             STABLE_MASTER.withdraw(_totalInputValue, address(this), address(this), poolManager);
         }
 
-        outputValueA = IERC20(_outputAssetA.erc20Address).balanceOf(address(this)) - outputAssetBalanceBefore;
+        outputValueA = IERC20(_outputAssetA.erc20Address).balanceOf(address(this));
 
         // Approve rollup processor to take input value of input asset
         IERC20(_outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, outputValueA);
