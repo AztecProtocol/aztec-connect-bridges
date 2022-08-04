@@ -11,3 +11,5 @@ Please provide a paragraph or two giving a summary of the change, including rele
 - [ ] I'm happy for the PR to be merged at the reviewers next convenience.
 - [ ] NatSpec documentation of all the non-test functions is present and is complete.
 - [ ] Continuous integration (CI) passes.
+- [ ] Command `forge coverage --match-contract MyContract` returns 100% line coverage.
+- [ ] All the possible reverts are tested.
