@@ -105,6 +105,7 @@ describe("curve steth bridge data", () => {
     wstethContract = {
       ...wstethContract,
       getWstETHByStETH: jest.fn().mockResolvedValue(BigNumber.from(wstEthAmount)),
+      getStETHByWstETH: jest.fn().mockResolvedValue(BigNumber.from(stEthAmountOut)),
     };
 
     curveBridgeData = createCurveStethBridgeData(
@@ -122,6 +123,9 @@ describe("curve steth bridge data", () => {
       depositAmount,
     );
     expect(expectedOutput == output[0]).toBeTruthy();
+
+    const underlying = await curveBridgeData.getUnderlyingAmount(wstETHAsset, expectedOutput);
+    expect(underlying.amount == stEthAmountOut).toBeTruthy();
   });
   it("should exit to ETH when deposit WstETH", async () => {
     const depositAmount = BigInt(100e18);

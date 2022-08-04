@@ -88,6 +88,7 @@ describe("lido bridge data", () => {
     wstethContract = {
       ...wstethContract,
       getWstETHByStETH: jest.fn().mockResolvedValue(BigNumber.from(wstEthAmount)),
+      getStETHByWstETH: jest.fn().mockResolvedValue(BigNumber.from(depositAmount)),
     };
 
     lidoBridgeData = createLidoBridgeData(wstethContract as any, curvePoolContract as any, lidoOracleContract as any);
@@ -101,6 +102,8 @@ describe("lido bridge data", () => {
       depositAmount,
     );
     expect(expectedOutput == output[0]).toBeTruthy();
+    const underlying = await lidoBridgeData.getUnderlyingAmount(wstETHAsset, expectedOutput);
+    expect(underlying.amount == depositAmount).toBeTruthy();
   });
   it("should exit to ETH when deposit WstETH", async () => {
     const depositAmount = BigInt(100e18);
