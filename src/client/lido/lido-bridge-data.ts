@@ -5,6 +5,7 @@ import {
   SolidityType,
   AztecAssetType,
   BridgeDataFieldGetters,
+  UnderlyingAsset,
 } from "../bridge-data";
 
 import {
@@ -125,5 +126,19 @@ export class LidoBridgeData implements BridgeDataFieldGetters {
         amount: postTotalPooledEther.toBigInt(),
       },
     ];
+  }
+
+  async getUnderlyingAmount(asset: AztecAsset, amount: bigint): Promise<UnderlyingAsset> {
+    if (!asset.erc20Address.equals(EthAddress.fromString("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"))) {
+      throw new Error("Eth have no underlying");
+    }
+    const stETHBalance = await this.wstETHContract.getStETHByWstETH(amount);
+    return {
+      address: EthAddress.fromString("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"),
+      name: "Liquid staked Ether 2.0 ",
+      symbol: "stETH",
+      decimals: 18,
+      amount: stETHBalance.toBigInt(),
+    };
   }
 }
