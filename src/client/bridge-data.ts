@@ -157,7 +157,7 @@ export interface BridgeDataFieldGetters {
    * @notice This function gets the underlying amount for wrapped assets or shares
    * @param asset The wrapped asset
    * @param amount The amount of wrapped asset
-   * @return The assetValue for the underlying
+   * @return The underlying asset (address, name, symbol, decimals, amount)
    */
   getUnderlyingAmount?(asset: AztecAsset, amount: bigint): Promise<UnderlyingAsset>;
 }
