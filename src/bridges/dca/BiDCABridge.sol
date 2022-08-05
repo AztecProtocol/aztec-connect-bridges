@@ -506,25 +506,25 @@ abstract contract BiDCABridge is BridgeBase {
      *
      */
     function _rebalanceTickInternally(
-        RebalanceValues memory vars,
-        Tick memory tick,
+        RebalanceValues memory _vars,
+        Tick memory _tick,
         uint256 _tickId
     ) internal view {
         // Only perform internal rebalance if we have both assets available, otherwise nothing to rebalance
-        if (tick.availableA > 0 && tick.availableB > 0) {
-            uint256 price = tick.priceAToB;
+        if (_tick.availableA > 0 && _tick.availableB > 0) {
+            uint256 price = _tick.priceAToB;
 
             // If a price is stored at tick, update the last used price and timestamp. Otherwise interpolate.
             if (price > 0) {
-                vars.lastUsedPrice = price;
-                vars.lastUsedPriceTs = tick.priceUpdated;
+                _vars.lastUsedPrice = price;
+                _vars.lastUsedPriceTs = _tick.priceUpdated;
             } else {
-                int256 slope = (int256(vars.currentPrice) - int256(vars.lastUsedPrice)) /
-                    int256(block.timestamp - vars.lastUsedPriceTs);
+                int256 slope = (int256(_vars.currentPrice) - int256(_vars.lastUsedPrice)) /
+                    int256(block.timestamp - _vars.lastUsedPriceTs);
                 // Could we ever enter a case where DT is in the past?
                 // lastUsedPriceTs will always be an earlier tick than this.
-                uint256 dt = _tickId * TICK_SIZE + TICK_SIZE / 2 - vars.lastUsedPriceTs;
-                int256 _price = int256(vars.lastUsedPrice) + slope * int256(dt);
+                uint256 dt = _tickId * TICK_SIZE + TICK_SIZE / 2 - _vars.lastUsedPriceTs;
+                int256 _price = int256(_vars.lastUsedPrice) + slope * int256(dt);
                 if (_price <= 0) {
                     price = 0;
                 } else {
@@ -533,38 +533,38 @@ abstract contract BiDCABridge is BridgeBase {
             }
 
             // To compare we need same basis. Compute value of the available A in base B. Round down
-            uint128 availableADenominatedInB = denominateAssetAInB(tick.availableA, price, false).toU128();
+            uint128 availableADenominatedInB = denominateAssetAInB(_tick.availableA, price, false).toU128();
 
             // If more value in A than B, we can use all available B. Otherwise, use all available A
-            if (availableADenominatedInB > tick.availableB) {
+            if (availableADenominatedInB > _tick.availableB) {
                 // The value of all available B in asset A. Round down
-                uint128 availableBDenominatedInA = denominateAssetBInA(tick.availableB, price, false).toU128();
+                uint128 availableBDenominatedInA = denominateAssetBInA(_tick.availableB, price, false).toU128();
 
                 // Update Asset A
-                tick.assetAToB.bought += tick.availableB;
-                tick.assetAToB.sold += availableBDenominatedInA;
+                _tick.assetAToB.bought += _tick.availableB;
+                _tick.assetAToB.sold += availableBDenominatedInA;
 
                 // Update Asset B
-                tick.assetBToA.bought += availableBDenominatedInA;
-                tick.assetBToA.sold += tick.availableB;
+                _tick.assetBToA.bought += availableBDenominatedInA;
+                _tick.assetBToA.sold += _tick.availableB;
 
                 // Update available values
-                tick.availableA -= availableBDenominatedInA.toU120();
-                tick.availableB = 0;
+                _tick.availableA -= availableBDenominatedInA.toU120();
+                _tick.availableB = 0;
             } else {
                 // We got more B than A, fill everything in A and part of B
 
                 // Update Asset B
-                tick.assetBToA.bought += tick.availableA;
-                tick.assetBToA.sold += availableADenominatedInB;
+                _tick.assetBToA.bought += _tick.availableA;
+                _tick.assetBToA.sold += availableADenominatedInB;
 
                 // Update Asset A
-                tick.assetAToB.bought += availableADenominatedInB;
-                tick.assetAToB.sold += tick.availableA;
+                _tick.assetAToB.bought += availableADenominatedInB;
+                _tick.assetAToB.sold += _tick.availableA;
 
                 // Update available values
-                tick.availableA = 0;
-                tick.availableB -= availableADenominatedInB.toU120();
+                _tick.availableA = 0;
+                _tick.availableB -= availableADenominatedInB.toU120();
             }
         }
     }
@@ -575,26 +575,26 @@ abstract contract BiDCABridge is BridgeBase {
      * @param _self True if buying from "self" false otherwise.
      */
     function _useAOffer(
-        RebalanceValues memory vars,
-        Tick memory tick,
+        RebalanceValues memory _vars,
+        Tick memory _tick,
         bool _self
     ) internal pure {
-        if (vars.offerAInB > 0 && tick.availableB > 0) {
-            uint128 amountBSold = vars.offerAInB.toU128();
+        if (_vars.offerAInB > 0 && _tick.availableB > 0) {
+            uint128 amountBSold = _vars.offerAInB.toU128();
             // We cannot buy more than available
-            if (vars.offerAInB > tick.availableB) {
-                amountBSold = tick.availableB;
+            if (_vars.offerAInB > _tick.availableB) {
+                amountBSold = _tick.availableB;
             }
             // Underpays actual price if self, otherwise overpay (to not mess rounding)
-            uint128 assetAPayment = denominateAssetBInA(amountBSold, vars.currentPrice, !_self).toU128();
+            uint128 assetAPayment = denominateAssetBInA(amountBSold, _vars.currentPrice, !_self).toU128();
 
-            tick.availableB -= amountBSold.toU120();
-            tick.assetBToA.sold += amountBSold;
-            tick.assetBToA.bought += assetAPayment;
+            _tick.availableB -= amountBSold.toU120();
+            _tick.assetBToA.sold += amountBSold;
+            _tick.assetBToA.bought += assetAPayment;
 
-            vars.offerAInB -= amountBSold;
-            vars.protocolSoldB += amountBSold;
-            vars.protocolBoughtA += assetAPayment;
+            _vars.offerAInB -= amountBSold;
+            _vars.protocolSoldB += amountBSold;
+            _vars.protocolBoughtA += assetAPayment;
         }
     }
 
@@ -604,44 +604,44 @@ abstract contract BiDCABridge is BridgeBase {
      * @param _self True if buying from "self" false otherwise.
      */
     function _useBOffer(
-        RebalanceValues memory vars,
-        Tick memory tick,
+        RebalanceValues memory _vars,
+        Tick memory _tick,
         bool _self
     ) internal pure {
-        if (vars.offerBInA > 0 && tick.availableA > 0) {
+        if (_vars.offerBInA > 0 && _tick.availableA > 0) {
             // Buying Asset A using Asset B
-            uint128 amountASold = vars.offerBInA.toU128();
-            if (vars.offerBInA > tick.availableA) {
-                amountASold = tick.availableA;
+            uint128 amountASold = _vars.offerBInA.toU128();
+            if (_vars.offerBInA > _tick.availableA) {
+                amountASold = _tick.availableA;
             }
             // Underpays actual price if self, otherwise overpay (to not mess rounding)
-            uint128 assetBPayment = denominateAssetAInB(amountASold, vars.currentPrice, !_self).toU128();
+            uint128 assetBPayment = denominateAssetAInB(amountASold, _vars.currentPrice, !_self).toU128();
 
-            tick.availableA -= amountASold.toU120();
-            tick.assetAToB.sold += amountASold;
-            tick.assetAToB.bought += assetBPayment;
+            _tick.availableA -= amountASold.toU120();
+            _tick.assetAToB.sold += amountASold;
+            _tick.assetAToB.bought += assetBPayment;
 
-            vars.offerBInA -= amountASold;
-            vars.protocolSoldA += amountASold;
-            vars.protocolBoughtB += assetBPayment;
+            _vars.offerBInA -= amountASold;
+            _vars.protocolSoldA += amountASold;
+            _vars.protocolBoughtB += assetBPayment;
         }
     }
 
     /**
-     * @notice Computes the earliest tick where we had nothing available
-     * @param _lastTickA The oldest tick with no available A
-     * @param _lastTickB The oldest tick with no available B
-     * @return The oldest tick with available assets
+     * @notice Computes the earliest tick where we had available funds
+     * @param _earliestTickA The ealiest tick with available A
+     * @param _earliestTickB The ealiest tick with available B
+     * @return The earliest tick with available assets
      */
-    function _earliestUsedTick(uint256 _lastTickA, uint256 _lastTickB) internal pure returns (uint256) {
+    function _earliestUsedTick(uint256 _earliestTickA, uint256 _earliestTickB) internal pure returns (uint256) {
         uint256 start;
-        if (_lastTickA == 0 && _lastTickB == 0) {
+        if (_earliestTickA == 0 && _earliestTickB == 0) {
             revert("No deposits");
-        } else if (_lastTickA * _lastTickB == 0) {
+        } else if (_earliestTickA * _earliestTickB == 0) {
             // one are zero (the both case is handled explicitly above)
-            start = _lastTickA > _lastTickB ? _lastTickA : _lastTickB;
+            start = _earliestTickA > _earliestTickB ? _earliestTickA : _earliestTickB;
         } else {
-            start = _lastTickA < _lastTickB ? _lastTickA : _lastTickB;
+            start = _earliestTickA < _earliestTickB ? _earliestTickA : _earliestTickB;
         }
         return start;
     }
