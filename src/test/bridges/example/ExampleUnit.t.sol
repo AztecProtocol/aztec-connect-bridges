@@ -47,8 +47,8 @@ contract ExampleUnitTest is Test {
         uint32 gasPerMinute = 200;
         subsidy.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
 
-        // Make sure beneficiary doesn't hold any ETH (to make testing easy)
-        vm.deal(BENEFICIARY, 0);
+        // Make sure beneficiary holds only 1 wei of ETH (to make testing easy)
+        vm.deal(BENEFICIARY, 1);
     }
 
     function testInvalidCaller(address _callerAddress) public {
@@ -66,10 +66,9 @@ contract ExampleUnitTest is Test {
 
     // @notice The purpose of this test is to directly test convert functionality of the bridge.
     // @dev In order to avoid overflows we set _depositAmount to be uint96 instead of uint256.
-    //    function testExampleBridgeUnitTest(uint96 _depositAmount) public {
-    function testExampleBridgeUnitTest() public {
+    function testExampleBridgeUnitTest(uint96 _depositAmount) public {
         vm.warp(block.timestamp + 1 days);
-        uint96 _depositAmount = 1e18;
+
         // Define input and output assets
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
             id: 1,
