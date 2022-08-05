@@ -21,14 +21,17 @@ Users of your bridge will get the full benefits of ironclad privacy and 10-30x g
 
 To get started follow the steps bellow:
 
-1. Fork / clone this repository:
+1. Fork this repository on GitHub, clone your fork and create a new branch:
 
-   `git clone git@github.com:AztecProtocol/aztec-connect-bridges.git`
+   ```
+   git clone https://github.com/YOUR_USERNAME/aztec-connect-bridges.git
+   git checkout -b your_username/bridge-name
+   ```
 
 2. Install dependencies and build the repo:
    ```
-      cd aztec-connect-bridges
-      yarn setup
+   cd aztec-connect-bridges
+   yarn setup
    ```
 3. Copy and rename the following folders (e.g. rename example to uniswap):
 
@@ -63,7 +66,7 @@ Before submitting a PR for a review make sure that the following is true:
 
 1. All the tests you wrote pass (`forge test --match-contract TestName`),
 2. there are no linting errors (`yarn lint`),
-3. your branch has been rebased against the head of the `master` branch (**_not merged_**, if you are not sure how to rebase check out [this article](https://blog.verslu.is/git/git-rebase/)),
+3. you fetched upstream changes to your fork on GitHub and your branch has been rebased against the head of the `master` branch (**_not merged_**, if you are not sure how to rebase check out [this article](https://blog.verslu.is/git/git-rebase/)),
 4. the diff contains only changes related to the PR description,
 5. NatSpec documentation has already been written.
 
