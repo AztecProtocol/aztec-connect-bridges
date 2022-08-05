@@ -123,6 +123,7 @@ contract BridgeTestBaseTest is BridgeTestBase {
 
     // copied from Decoder.sol
     function _extractRollupBeneficiary(bytes memory _proofData) internal pure returns (address rollupBeneficiary) {
+        /* solhint-disable no-inline-assembly */
         assembly {
             rollupBeneficiary := mload(add(_proofData, ROLLUP_BENEFICIARY_OFFSET))
             // Validate `rollupBeneficiary` is an address
@@ -130,5 +131,6 @@ contract BridgeTestBaseTest is BridgeTestBase {
                 revert(0, 0)
             }
         }
+        /* solhint-enable no-inline-assembly */
     }
 }
