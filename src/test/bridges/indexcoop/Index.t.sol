@@ -174,6 +174,207 @@ contract IndexTest is BridgeTestBase {
         }
     }
 
+    // ================= Tests directly calling convert() to get icETH and then convert it back to ETH
+    function testIssueRedeem() public {
+        uint256 _depositAmount = 10 ether;
+        uint64 flowSelector = 1; // Selects issue/redeem flow
+        uint64 maxSlipAux = 9800; //maxSlip has 4 decimals
+        uint64 oracleLimit = 9850; // ETH/stETH upper limit
+        uint64 auxData = _encodeData(flowSelector, maxSlipAux, oracleLimit);
+
+        vm.deal(address(bridge), _depositAmount);
+
+        vm.startPrank(address(ROLLUP_PROCESSOR));
+        (uint256 newICETH, uint256 returnedEth, ) = bridge.convert(
+            ethAsset,
+            emptyAsset,
+            icethAsset,
+            ethAsset,
+            _depositAmount,
+            1,
+            auxData,
+            address(0)
+        );
+        uint256 minIcOut = _getMinIceth((_depositAmount - returnedEth), maxSlipAux);
+        assertGe(newICETH, minIcOut);
+
+        maxSlipAux = 9800;
+        oracleLimit = 9000; // ETH/stETH lower limit.
+        auxData = _encodeData(flowSelector, maxSlipAux, oracleLimit);
+
+        (uint256 redeemedEth, , ) = bridge.convert(
+            icethAsset,
+            emptyAsset,
+            ethAsset,
+            emptyAsset,
+            newICETH,
+            2,
+            auxData,
+            address(0)
+        );
+
+        uint256 minBasedOnMinIcOut = _getMinEth(minIcOut, maxSlipAux);
+        uint256 minEthOut = _getMinEth(newICETH, maxSlipAux);
+
+        assertGe(redeemedEth, minEthOut);
+        assertGe(redeemedEth, minBasedOnMinIcOut);
+    }
+
+    function testBuyRedeem() public {
+        uint256 _depositAmount = 1 ether;
+        uint64 flowSelector = 5; // Selects flow to swap with 0.05% pool
+        uint64 maxSlipAux = 9800;
+        uint64 oracleLimit = 9900; // ETH/icETH upper limit
+        uint64 auxData = _encodeData(flowSelector, maxSlipAux, oracleLimit);
+
+        vm.deal(address(bridge), _depositAmount);
+
+        uint24 uniFee = 500;
+        uint256 minIcOut = (_getAmountBasedOnTwap(uint128(_depositAmount), WETH, ICETH, uniFee) * maxSlipAux) / 1e4;
+
+        vm.startPrank(address(ROLLUP_PROCESSOR));
+        (uint256 newICETH, , ) = bridge.convert(
+            ethAsset,
+            emptyAsset,
+            icethAsset,
+            emptyAsset,
+            _depositAmount,
+            1,
+            auxData,
+            address(0)
+        );
+        assertGe(newICETH, minIcOut);
+
+        maxSlipAux = 9800;
+        flowSelector = 1;
+        oracleLimit = 9000; // ETH/stETH lower limit.
+        auxData = _encodeData(flowSelector, maxSlipAux, oracleLimit);
+
+        (uint256 redeemedEth, , ) = bridge.convert(
+            icethAsset,
+            emptyAsset,
+            ethAsset,
+            emptyAsset,
+            newICETH,
+            2,
+            auxData,
+            address(0)
+        );
+
+        uint256 minBasedOnMinIcOut = _getMinEth(minIcOut, maxSlipAux);
+        uint256 minEthOut = _getMinEth(newICETH, maxSlipAux);
+
+        assertGe(redeemedEth, minEthOut);
+        assertGe(redeemedEth, minBasedOnMinIcOut);
+    }
+
+    function testBuySell() public {
+        uint256 _depositAmount = 1 ether;
+        uint64 flowSelector = 5; // Selects flow to swap with 0.05% pool
+        uint64 maxSlipAux = 9800;
+        uint64 oracleLimit = 9900; // ETH/icETH upper limit
+        uint64 auxData = _encodeData(flowSelector, maxSlipAux, oracleLimit);
+
+        vm.deal(address(bridge), _depositAmount);
+
+        uint24 uniFee = 500;
+        uint256 minIcOut = (_getAmountBasedOnTwap(uint128(_depositAmount), WETH, ICETH, uniFee) * maxSlipAux) / 1e4;
+
+        vm.startPrank(address(ROLLUP_PROCESSOR));
+        (uint256 newICETH, , ) = bridge.convert(
+            ethAsset,
+            emptyAsset,
+            icethAsset,
+            emptyAsset,
+            _depositAmount,
+            1,
+            auxData,
+            address(0)
+        );
+        assertGe(newICETH, minIcOut);
+
+        /* The rest of this test can not be done until the cardinality of the TWAP oracle has been increased.
+            it is currently 1 and therefore any other use of it in the same block will fail. 
+
+        uint256 minReceivedDex = (_getAmountBasedOnTwap(uint128(newICETH), ICETH, WETH, uniFee) *
+            maxSlipAux) / 1e4;
+
+        uint256 minReceivedDexBasedOnMinIc = (_getAmountBasedOnTwap(uint128(minIcOut), ICETH, WETH, uniFee) *
+            maxSlipAux) / 1e4;
+
+        flowSelector = 5;
+        maxSlipAux = 9800;
+        oracleLimit = 8000; // ETH/icETH price lower limit. Hisotrically ~0.81-1
+        auxData = _encodeData(flowSelector, maxSlipAux, oracleLimit);
+
+
+        console2.log("hello");
+         (uint256 ethFromSell,,) = bridge.convert(
+            icethAsset, 
+            emptyAsset, 
+            ethAsset,
+            emptyAsset,
+            newICETH,
+            2,
+            auxData,
+            address(0)
+        );
+
+        assertGe(ethFromSell, minReceivedDex);
+        assertGe(ethFromSell, minReceivedDexBasedOnMinIc);
+
+        */
+    }
+
+    function testIssueSell() public {
+        uint256 _depositAmount = 10 ether;
+        uint64 flowSelector = 1; // Selects issue/redeem flow
+        uint64 maxSlipAux = 9800; //maxSlip has 4 decimals
+        uint64 oracleLimit = 9850; // ETH/stETH upper limit
+        uint64 auxData = _encodeData(flowSelector, maxSlipAux, oracleLimit);
+
+        vm.deal(address(bridge), _depositAmount);
+
+        vm.startPrank(address(ROLLUP_PROCESSOR));
+        (uint256 newICETH, uint256 returnedEth, ) = bridge.convert(
+            ethAsset,
+            emptyAsset,
+            icethAsset,
+            ethAsset,
+            _depositAmount,
+            1,
+            auxData,
+            address(0)
+        );
+        uint256 minIcOut = _getMinIceth((_depositAmount - returnedEth), maxSlipAux);
+        assertGe(newICETH, minIcOut);
+
+        uint24 uniFee = 500;
+        uint256 minReceivedDex = (_getAmountBasedOnTwap(uint128(newICETH), ICETH, WETH, uniFee) * maxSlipAux) / 1e4;
+
+        uint256 minReceivedDexBasedOnMinIc = (_getAmountBasedOnTwap(uint128(minIcOut), ICETH, WETH, uniFee) *
+            maxSlipAux) / 1e4;
+
+        flowSelector = 5;
+        maxSlipAux = 9800;
+        oracleLimit = 8000; // ETH/icETH price lower limit. Hisotrically ~0.81-1
+        auxData = _encodeData(flowSelector, maxSlipAux, oracleLimit);
+
+        (uint256 ethFromSell, , ) = bridge.convert(
+            icethAsset,
+            emptyAsset,
+            ethAsset,
+            emptyAsset,
+            newICETH,
+            2,
+            auxData,
+            address(0)
+        );
+
+        assertGe(ethFromSell, minReceivedDex);
+        assertGe(ethFromSell, minReceivedDexBasedOnMinIc);
+    }
+
     // ====== Tests that contract reverts if the inputs are incorrect ==========
     function testIncorrectFlowSelector() public {
         uint256 _depositAmount = 5 ether;
