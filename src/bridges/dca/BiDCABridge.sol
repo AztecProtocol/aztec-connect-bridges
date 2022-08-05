@@ -12,26 +12,28 @@ import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 
 import {IWETH} from "../../interfaces/IWETH.sol";
 
+import {SafeCastLib} from "./SafeCastLib.sol";
+
 /**
  * @notice Initial abstract implementation of "Dollar" Cost Averaging.
  * Supports bidirectional "selling", e.g., A -> B and B -> A in same bridge
  * Will match internal orders first, before allowing external parties to trade.
  * @dev Built for assets with 18 decimals precision
  * @dev A contract that inherits must handle the case for forcing a swap through a DEX.
- * @dev DO NOT USE THIS IS PRODUCTION, UNFINISHED CODE.
  * @author Lasse Herskind (LHerskind on GitHub).
  */
 abstract contract BiDCABridge is BridgeBase {
     using SafeERC20 for IERC20;
+    using SafeCastLib for uint256;
+    using SafeCastLib for uint128;
 
     error PositionAlreadyExists();
 
+    // Struct used in-memory to get around stack-to-deep
     struct RebalanceValues {
         uint256 currentPrice;
-        uint256 oldestTickA;
-        uint256 oldestTickB;
-        uint256 oldestTickAvailableA;
-        uint256 oldestTickAvailableB;
+        uint256 earliestTickWithAvailableA;
+        uint256 earliestTickWithAvailableB;
         uint256 offerAInB;
         uint256 offerBInA;
         uint256 protocolSoldA;
@@ -44,6 +46,7 @@ abstract contract BiDCABridge is BridgeBase {
         uint256 availableB;
     }
 
+    // Struct packing a DCA position for storage
     struct DCA {
         uint128 total;
         uint32 start;
@@ -51,11 +54,13 @@ abstract contract BiDCABridge is BridgeBase {
         bool assetA;
     }
 
+    // Struct used for defining one direction in a tick
     struct SubTick {
         uint128 sold;
         uint128 bought;
     }
 
+    // Struct describing a specific tick
     struct Tick {
         uint120 availableA;
         uint120 availableB;
@@ -68,19 +73,30 @@ abstract contract BiDCABridge is BridgeBase {
 
     IWETH internal constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
+    // The assets that are DCAed between
     IERC20 public immutable ASSET_A;
     IERC20 public immutable ASSET_B;
 
+    // The timespan that a tick covers
     uint256 public immutable TICK_SIZE;
 
-    uint32 public oldestTickAvailableA;
-    uint32 public lastTickAvailableB;
+    // The earliest tick where we had available A or B respectively.
+    uint32 public earliestTickWithAvailableA;
+    uint32 public earliestTickWithAvailableB;
 
-    // tick id => Tick
+    // tick id => Tick.
     mapping(uint256 => Tick) public ticks;
     // nonce => DCA
     mapping(uint256 => DCA) public dcas;
 
+    /**
+     * @notice Constructor
+     * @param _rollupProcessor The address of the rollup processor for the bridge
+     * @param _assetA The address of asset A
+     * @param _assetB The address of asset B
+     * @param _tickSize The time-span that each tick covers in seconds
+     * @dev Smaller _tickSizes will increase looping and gas costs
+     */
     constructor(
         address _rollupProcessor,
         address _assetA,
@@ -101,7 +117,7 @@ abstract contract BiDCABridge is BridgeBase {
      * @notice Helper used to poke storage from next tick and `_ticks` forwards
      * @param _ticks The number of ticks to poke
      */
-    function pokeNextTicks(uint256 _ticks) public {
+    function pokeNextTicks(uint256 _ticks) external {
         uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
         pokeTicks(nextTick, _ticks);
     }
@@ -144,6 +160,15 @@ abstract contract BiDCABridge is BridgeBase {
         return (flowA, flowB);
     }
 
+    /**
+     * @notice Function to create DCA position from `_inputAssetA` to `_outputAssetA` over `_ticks` ticks.
+     * @param _inputAssetA The asset to be sold
+     * @param _outputAssetA The asset to be bought
+     * @param _inputValue The value of `_inputAssetA` to be sold
+     * @param _interactionNonce The unique identifier for the interaction, used to identify the DCA position
+     * @param _ticks The auxdata, passing the number of ticks the position should run
+     * @return Will always return 0 assets, and isAsync = true.
+     */
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata,
@@ -191,6 +216,13 @@ abstract contract BiDCABridge is BridgeBase {
         return (0, 0, true);
     }
 
+    /**
+     * @notice Function used to close a completed DCA position
+     * @param _outputAssetA The asset bought with the DCA position
+     * @param _interactionNonce The identifier for the DCA position
+     * @return outputValueA The amount of assets bought
+     * @return interactionComplete True if the interaction is completed and can be executed, false otherwise
+     */
     function finalise(
         AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata,
@@ -246,14 +278,14 @@ abstract contract BiDCABridge is BridgeBase {
      * @notice Computes the value of `_amount` A tokens in B tokens
      * @param _amount The amount of A tokens
      * @param _priceAToB The price of A tokens in B
-     * @param _up Flag to round up, if true rounding up, otherwise rounding down
+     * @param _roundUp Flag to round up, if true rounding up, otherwise rounding down
      */
-    function assetAInAssetB(
+    function denominateAssetAInB(
         uint256 _amount,
         uint256 _priceAToB,
-        bool _up
+        bool _roundUp
     ) public pure returns (uint256) {
-        if (_up) {
+        if (_roundUp) {
             return (_amount * _priceAToB + 1e18 - 1) / 1e18;
         }
         return (_amount * _priceAToB) / 1e18;
@@ -263,14 +295,14 @@ abstract contract BiDCABridge is BridgeBase {
      * @notice Computes the value of `_amount` A tokens in B tokens
      * @param _amount The amount of A tokens
      * @param _priceAToB The price of A tokens in B
-     * @param _up Flag to round up, if true rounding up, otherwise rounding down
+     * @param _roundUp Flag to round up, if true rounding up, otherwise rounding down
      */
-    function assetBInAssetA(
+    function denominateAssetBInA(
         uint256 _amount,
         uint256 _priceAToB,
-        bool _up
+        bool _roundUp
     ) public pure returns (uint256) {
-        if (_up) {
+        if (_roundUp) {
             return (_amount * 1e18 + _priceAToB - 1) / _priceAToB;
         }
         return (_amount * 1e18) / _priceAToB;
@@ -300,7 +332,7 @@ abstract contract BiDCABridge is BridgeBase {
      * @return availableB The amount of token B that is available
      */
     function getAvailable() public view returns (uint256 availableA, uint256 availableB) {
-        uint256 start = _lastUsedTick(oldestTickAvailableA, lastTickAvailableB);
+        uint256 start = _earliestUsedTick(earliestTickWithAvailableA, earliestTickWithAvailableB);
         uint256 lastTick = block.timestamp / TICK_SIZE;
         for (uint256 i = start; i <= lastTick; i++) {
             availableA += ticks[i].availableA;
@@ -315,7 +347,7 @@ abstract contract BiDCABridge is BridgeBase {
      * @return ready A flag that is true if the accumulation has completed, false otherwise
      */
     function getAccumulated(uint256 _nonce) public view returns (uint256 accumulated, bool ready) {
-        DCA storage dca = dcas[_nonce];
+        DCA memory dca = dcas[_nonce];
         uint256 start = dca.start;
         uint256 end = dca.end;
         uint256 tickAmount = dca.total / (end - start);
@@ -347,28 +379,28 @@ abstract contract BiDCABridge is BridgeBase {
         bool _assetA
     ) internal {
         uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
-        if (_assetA && oldestTickAvailableA == 0) {
-            oldestTickAvailableA = _toU32(nextTick);
+        if (_assetA && earliestTickWithAvailableA == 0) {
+            earliestTickWithAvailableA = nextTick.toU32();
         }
-        if (!_assetA && lastTickAvailableB == 0) {
-            lastTickAvailableB = _toU32(nextTick);
+        if (!_assetA && earliestTickWithAvailableB == 0) {
+            earliestTickWithAvailableB = nextTick.toU32();
         }
         // Update prices of last tick, might be 1 second in the past.
-        ticks[nextTick - 1].priceAToB = _toU128(getPrice());
-        ticks[nextTick - 1].priceUpdated = _toU32(block.timestamp);
+        ticks[nextTick - 1].priceAToB = getPrice().toU128();
+        ticks[nextTick - 1].priceUpdated = block.timestamp.toU32();
 
         uint256 tickAmount = _amount / _ticks;
         for (uint256 i = nextTick; i < nextTick + _ticks; i++) {
             if (_assetA) {
-                ticks[i].availableA += _toU120(tickAmount);
+                ticks[i].availableA += tickAmount.toU120();
             } else {
-                ticks[i].availableB += _toU120(tickAmount);
+                ticks[i].availableB += tickAmount.toU120();
             }
         }
         dcas[_nonce] = DCA({
-            total: _toU128(_amount),
-            start: _toU32(nextTick),
-            end: _toU32(nextTick + _ticks),
+            total: _amount.toU128(),
+            start: nextTick.toU32(),
+            end: (nextTick + _ticks).toU32(),
             assetA: _assetA
         });
     }
@@ -386,7 +418,6 @@ abstract contract BiDCABridge is BridgeBase {
      * @return availableA The amount of asset A that is available after the rebalancing
      * @return availableB The amount of asset B that is available after the rebalancing
      */
-
     function _rebalanceAndFill(
         uint256 _offerA,
         uint256 _offerB,
@@ -404,16 +435,16 @@ abstract contract BiDCABridge is BridgeBase {
         RebalanceValues memory vars;
         vars.currentPrice = _currentPrice;
 
-        // Cache the oldest ticks, and compute earliest tick for the loop
-        vars.oldestTickA = vars.oldestTickAvailableA = oldestTickAvailableA;
-        vars.oldestTickB = vars.oldestTickAvailableB = lastTickAvailableB;
-        uint256 oldestTick = _lastUsedTick(vars.oldestTickA, vars.oldestTickB);
+        // Cache and use earliest ticks with available funds
+        vars.earliestTickWithAvailableA = earliestTickWithAvailableA;
+        vars.earliestTickWithAvailableB = earliestTickWithAvailableB;
+        uint256 earliestTick = _earliestUsedTick(vars.earliestTickWithAvailableA, vars.earliestTickWithAvailableB);
 
         // Cache last used price for use in case we don't have a fresh price.
-        vars.lastUsedPrice = ticks[oldestTick].priceAToB;
-        vars.lastUsedPriceTs = ticks[oldestTick].priceUpdated;
+        vars.lastUsedPrice = ticks[earliestTick].priceAToB;
+        vars.lastUsedPriceTs = ticks[earliestTick].priceUpdated;
         if (vars.lastUsedPrice == 0) {
-            uint256 lookBack = oldestTick;
+            uint256 lookBack = earliestTick;
             while (vars.lastUsedPrice == 0) {
                 lookBack--;
                 vars.lastUsedPrice = ticks[lookBack].priceAToB;
@@ -421,120 +452,33 @@ abstract contract BiDCABridge is BridgeBase {
             }
         }
 
-        // Compute values in opposite asset to do comparisons. Round down.
-        vars.offerAInB = assetAInAssetB(_offerA, vars.currentPrice, false);
-        vars.offerBInA = assetBInAssetA(_offerB, vars.currentPrice, false);
+        // Compute the amount of B that can be bought at current prices for A given the offer. Round down
+        vars.offerAInB = denominateAssetAInB(_offerA, vars.currentPrice, false);
+        // Compute the amount of A that can be bought at current prices for B given the offer. Round down
+        vars.offerBInA = denominateAssetBInA(_offerB, vars.currentPrice, false);
 
         uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
         // Update the latest tick, might be 1 second in the past.
-        ticks[nextTick - 1].priceAToB = _toU128(vars.currentPrice);
-        ticks[nextTick - 1].priceUpdated = _toU32(block.timestamp);
-        for (uint256 i = oldestTick; i < nextTick; i++) {
+        ticks[nextTick - 1].priceAToB = vars.currentPrice.toU128();
+        ticks[nextTick - 1].priceUpdated = block.timestamp.toU32();
+
+        for (uint256 i = earliestTick; i < nextTick; i++) {
             // Load a cache
             Tick memory tick = ticks[i];
 
-            // Rebalance the tick using available balances
-            if (tick.availableA > 0 && tick.availableB > 0) {
-                uint256 price = tick.priceAToB;
+            _rebalanceTickInternally(vars, tick, i);
+            _useAOffer(vars, tick, _self);
+            _useBOffer(vars, tick, _self);
 
-                // If a price is stored, update the last used price and timestamp. Otherwise interpolate.
-                if (price > 0) {
-                    vars.lastUsedPrice = price;
-                    vars.lastUsedPriceTs = tick.priceUpdated;
-                } else {
-                    int256 slope = (int256(vars.currentPrice) - int256(vars.lastUsedPrice)) /
-                        int256(block.timestamp - vars.lastUsedPriceTs);
-                    uint256 dt = i * TICK_SIZE + TICK_SIZE / 2 - vars.lastUsedPriceTs;
-                    int256 _price = int256(vars.lastUsedPrice) + slope * int256(dt);
-                    if (_price <= 0) {
-                        price = 0;
-                    } else {
-                        price = uint256(_price);
-                    }
-                }
-
-                // To compare we need same basis. Compute value of the available A in base B. Round down
-                uint128 buyableBWithA = _toU128(assetAInAssetB(tick.availableA, price, false));
-
-                // If more value in A than B, we can use all available B. Otherwise, use all available A
-                if (buyableBWithA > tick.availableB) {
-                    // The value of all available B in asset A. Round down
-                    uint128 buyableAWithB = _toU128(assetBInAssetA(tick.availableB, price, false));
-
-                    // Update Asset A
-                    tick.assetAToB.sold += buyableAWithB;
-                    tick.assetAToB.bought += tick.availableB;
-
-                    // Update Asset B
-                    tick.assetBToA.bought += buyableAWithB;
-                    tick.assetBToA.sold += tick.availableB;
-
-                    // Update available values
-                    tick.availableA -= _toU120(buyableAWithB);
-                    tick.availableB = 0;
-                } else {
-                    // We got more B than A, fill everything in A and part of B
-
-                    // Update Asset B
-                    tick.assetBToA.sold += buyableBWithA;
-                    tick.assetBToA.bought += tick.availableA;
-
-                    // Update Asset A
-                    tick.assetAToB.bought += buyableBWithA;
-                    tick.assetAToB.sold += tick.availableA;
-
-                    // Update available values
-                    tick.availableA = 0;
-                    tick.availableB -= _toU120(buyableBWithA);
-                }
+            // If no more available and earliest is current tick, increment tick.
+            if (tick.availableA == 0 && vars.earliestTickWithAvailableA == i) {
+                vars.earliestTickWithAvailableA += 1;
+            }
+            if (tick.availableB == 0 && vars.earliestTickWithAvailableB == i) {
+                vars.earliestTickWithAvailableB += 1;
             }
 
-            // If there is still available B, use the offer with A to buy it
-            if (vars.offerAInB > 0 && tick.availableB > 0) {
-                uint128 amountBSold = _toU128(vars.offerAInB);
-                // We cannot buy more than available
-                if (vars.offerAInB > tick.availableB) {
-                    amountBSold = tick.availableB;
-                }
-                // Underpays actual price if self, otherwise overpay (to not mess rounding)
-                uint128 assetAPayment = _toU128(assetBInAssetA(amountBSold, vars.currentPrice, !_self));
-
-                tick.availableB -= _toU120(amountBSold);
-                tick.assetBToA.sold += amountBSold;
-                tick.assetBToA.bought += assetAPayment;
-
-                vars.offerAInB -= amountBSold;
-                vars.protocolSoldB += amountBSold;
-                vars.protocolBoughtA += assetAPayment;
-            }
-
-            // If there is still available A, use the offer with B to buy it
-            if (vars.offerBInA > 0 && tick.availableA > 0) {
-                // Buying Asset A using Asset B
-                uint128 amountASold = _toU128(vars.offerBInA);
-                if (vars.offerBInA > tick.availableA) {
-                    amountASold = tick.availableA;
-                }
-                // Underpays actual price if self, otherwise overpay (to not mess rounding)
-                uint128 assetBPayment = _toU128(assetAInAssetB(amountASold, vars.currentPrice, !_self));
-
-                tick.availableA -= _toU120(amountASold);
-                tick.assetAToB.sold += amountASold;
-                tick.assetAToB.bought += assetBPayment;
-
-                vars.offerBInA -= amountASold;
-                vars.protocolSoldA += amountASold;
-                vars.protocolBoughtB += assetBPayment;
-            }
-
-            // If no more available, increase tick to the next. Can be expensive if nothing happened for a long time
-            if (tick.availableA == 0 && vars.oldestTickAvailableA == i) {
-                vars.oldestTickAvailableA = i + 1;
-            }
-            if (tick.availableB == 0 && vars.oldestTickAvailableB == i) {
-                vars.oldestTickAvailableB = i + 1;
-            }
-
+            // Add the leftover A and B from the tick to total available
             vars.availableA += tick.availableA;
             vars.availableB += tick.availableB;
 
@@ -542,17 +486,145 @@ abstract contract BiDCABridge is BridgeBase {
             ticks[i] = tick;
         }
 
-        if (vars.oldestTickAvailableA > vars.oldestTickA) {
-            oldestTickAvailableA = _toU32(vars.oldestTickAvailableA);
+        if (vars.earliestTickWithAvailableA > earliestTickWithAvailableA) {
+            earliestTickWithAvailableA = vars.earliestTickWithAvailableA.toU32();
         }
-        if (vars.oldestTickAvailableB > vars.oldestTickB) {
-            lastTickAvailableB = _toU32(vars.oldestTickAvailableB);
+        if (vars.earliestTickWithAvailableB > earliestTickWithAvailableB) {
+            earliestTickWithAvailableB = vars.earliestTickWithAvailableB.toU32();
         }
 
+        // Compute flow of tokens, from the POV of this contract, e.g., >0 is inflow, <0 outflow
         int256 flowA = int256(vars.protocolBoughtA) - int256(vars.protocolSoldA);
         int256 flowB = int256(vars.protocolBoughtB) - int256(vars.protocolSoldB);
 
         return (flowA, flowB, vars.availableA, vars.availableB);
+    }
+
+    /**
+     * @notice Perform internal rebalancing of a single tick using available balances
+     * @dev Heavily uses that internal functions are passing reference to memory structures
+     *
+     */
+    function _rebalanceTickInternally(
+        RebalanceValues memory vars,
+        Tick memory tick,
+        uint256 _tickId
+    ) internal view {
+        // Only perform internal rebalance if we have both assets available, otherwise nothing to rebalance
+        if (tick.availableA > 0 && tick.availableB > 0) {
+            uint256 price = tick.priceAToB;
+
+            // If a price is stored at tick, update the last used price and timestamp. Otherwise interpolate.
+            if (price > 0) {
+                vars.lastUsedPrice = price;
+                vars.lastUsedPriceTs = tick.priceUpdated;
+            } else {
+                int256 slope = (int256(vars.currentPrice) - int256(vars.lastUsedPrice)) /
+                    int256(block.timestamp - vars.lastUsedPriceTs);
+                // Could we ever enter a case where DT is in the past?
+                // lastUsedPriceTs will always be an earlier tick than this.
+                uint256 dt = _tickId * TICK_SIZE + TICK_SIZE / 2 - vars.lastUsedPriceTs;
+                int256 _price = int256(vars.lastUsedPrice) + slope * int256(dt);
+                if (_price <= 0) {
+                    price = 0;
+                } else {
+                    price = uint256(_price);
+                }
+            }
+
+            // To compare we need same basis. Compute value of the available A in base B. Round down
+            uint128 availableADenominatedInB = denominateAssetAInB(tick.availableA, price, false).toU128();
+
+            // If more value in A than B, we can use all available B. Otherwise, use all available A
+            if (availableADenominatedInB > tick.availableB) {
+                // The value of all available B in asset A. Round down
+                uint128 availableBDenominatedInA = denominateAssetBInA(tick.availableB, price, false).toU128();
+
+                // Update Asset A
+                tick.assetAToB.bought += tick.availableB;
+                tick.assetAToB.sold += availableBDenominatedInA;
+
+                // Update Asset B
+                tick.assetBToA.bought += availableBDenominatedInA;
+                tick.assetBToA.sold += tick.availableB;
+
+                // Update available values
+                tick.availableA -= availableBDenominatedInA.toU120();
+                tick.availableB = 0;
+            } else {
+                // We got more B than A, fill everything in A and part of B
+
+                // Update Asset B
+                tick.assetBToA.bought += tick.availableA;
+                tick.assetBToA.sold += availableADenominatedInB;
+
+                // Update Asset A
+                tick.assetAToB.bought += availableADenominatedInB;
+                tick.assetAToB.sold += tick.availableA;
+
+                // Update available values
+                tick.availableA = 0;
+                tick.availableB -= availableADenominatedInB.toU120();
+            }
+        }
+    }
+
+    /**
+     * @notice Fills as much of the A offered as possible
+     * @dev Heavily uses that internal functions are passing reference to memory structures
+     * @param _self True if buying from "self" false otherwise.
+     */
+    function _useAOffer(
+        RebalanceValues memory vars,
+        Tick memory tick,
+        bool _self
+    ) internal pure {
+        if (vars.offerAInB > 0 && tick.availableB > 0) {
+            uint128 amountBSold = vars.offerAInB.toU128();
+            // We cannot buy more than available
+            if (vars.offerAInB > tick.availableB) {
+                amountBSold = tick.availableB;
+            }
+            // Underpays actual price if self, otherwise overpay (to not mess rounding)
+            uint128 assetAPayment = denominateAssetBInA(amountBSold, vars.currentPrice, !_self).toU128();
+
+            tick.availableB -= amountBSold.toU120();
+            tick.assetBToA.sold += amountBSold;
+            tick.assetBToA.bought += assetAPayment;
+
+            vars.offerAInB -= amountBSold;
+            vars.protocolSoldB += amountBSold;
+            vars.protocolBoughtA += assetAPayment;
+        }
+    }
+
+    /**
+     * @notice Fills as much of the A offered as possible
+     * @dev Heavily uses that internal functions are passing reference to memory structures
+     * @param _self True if buying from "self" false otherwise.
+     */
+    function _useBOffer(
+        RebalanceValues memory vars,
+        Tick memory tick,
+        bool _self
+    ) internal pure {
+        if (vars.offerBInA > 0 && tick.availableA > 0) {
+            // Buying Asset A using Asset B
+            uint128 amountASold = vars.offerBInA.toU128();
+            if (vars.offerBInA > tick.availableA) {
+                amountASold = tick.availableA;
+            }
+            // Underpays actual price if self, otherwise overpay (to not mess rounding)
+            uint128 assetBPayment = denominateAssetAInB(amountASold, vars.currentPrice, !_self).toU128();
+
+            tick.availableA -= amountASold.toU120();
+            tick.assetAToB.sold += amountASold;
+            tick.assetAToB.bought += assetBPayment;
+
+            vars.offerBInA -= amountASold;
+            vars.protocolSoldA += amountASold;
+            vars.protocolBoughtB += assetBPayment;
+        }
     }
 
     /**
@@ -561,7 +633,7 @@ abstract contract BiDCABridge is BridgeBase {
      * @param _lastTickB The oldest tick with no available B
      * @return The oldest tick with available assets
      */
-    function _lastUsedTick(uint256 _lastTickA, uint256 _lastTickB) internal pure returns (uint256) {
+    function _earliestUsedTick(uint256 _lastTickA, uint256 _lastTickB) internal pure returns (uint256) {
         uint256 start;
         if (_lastTickA == 0 && _lastTickB == 0) {
             revert("No deposits");
@@ -572,26 +644,5 @@ abstract contract BiDCABridge is BridgeBase {
             start = _lastTickA < _lastTickB ? _lastTickA : _lastTickB;
         }
         return start;
-    }
-
-    function _toU128(uint256 _a) internal pure returns (uint128) {
-        if (_a > type(uint128).max) {
-            revert("Overflow");
-        }
-        return uint128(_a);
-    }
-
-    function _toU120(uint256 _a) internal pure returns (uint120) {
-        if (_a > type(uint120).max) {
-            revert("Overflow");
-        }
-        return uint120(_a);
-    }
-
-    function _toU32(uint256 _a) internal pure returns (uint32) {
-        if (_a > type(uint32).max) {
-            revert("Overflow");
-        }
-        return uint32(_a);
     }
 }
