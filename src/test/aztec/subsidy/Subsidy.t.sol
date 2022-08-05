@@ -149,14 +149,14 @@ contract SubsidyTest is Test {
     }
 
     function _setGasUsageAndMinGasPerMinute() private {
-        uint256[] memory criterias = new uint256[](4);
+        uint256[] memory criteria = new uint256[](4);
         uint32[] memory gasUsage = new uint32[](4);
         uint32[] memory minGasPerMinute = new uint32[](4);
 
-        criterias[0] = 1;
-        criterias[1] = 2;
-        criterias[2] = 3;
-        criterias[3] = 4;
+        criteria[0] = 1;
+        criteria[1] = 2;
+        criteria[2] = 3;
+        criteria[3] = 4;
 
         gasUsage[0] = 5e4;
         gasUsage[1] = 10e4;
@@ -169,6 +169,6 @@ contract SubsidyTest is Test {
         minGasPerMinute[3] = 200;
 
         vm.prank(BRIDGE);
-        subsidy.setGasUsageAndMinGasPerMinute(criterias, gasUsage, minGasPerMinute);
+        subsidy.setGasUsageAndMinGasPerMinute(criteria, gasUsage, minGasPerMinute);
     }
 }
