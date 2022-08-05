@@ -37,19 +37,13 @@ contract UniswapDCABridge is BiDCABridge {
     uint256 public constant MAX_AGE = 1 days; // Heartbeat of oracle is 24 hours.
     uint256 public constant SLIPPAGE = 100; // Basis points
 
-    IChainlinkOracle public immutable ORACLE;
+    IChainlinkOracle public constant ORACLE = IChainlinkOracle(0x773616E4d11A78F511299002da57A0a94577F1f4);
 
-    constructor(
-        address _rollupProcessor,
-        address _assetA,
-        address _assetB,
-        uint256 _tickSize,
-        address _oracle
-    ) BiDCABridge(_rollupProcessor, DAI, address(WETH), _tickSize) {
-        ORACLE = IChainlinkOracle(_oracle);
-
-        IERC20(_assetA).safeApprove(address(UNI_ROUTER), type(uint256).max);
-        IERC20(_assetB).safeApprove(address(UNI_ROUTER), type(uint256).max);
+    constructor(address _rollupProcessor, uint256 _tickSize)
+        BiDCABridge(_rollupProcessor, DAI, address(WETH), _tickSize)
+    {
+        IERC20(DAI).safeApprove(address(UNI_ROUTER), type(uint256).max);
+        IERC20(address(WETH)).safeApprove(address(UNI_ROUTER), type(uint256).max);
     }
 
     /**
@@ -65,12 +59,13 @@ contract UniswapDCABridge is BiDCABridge {
         uint256 oraclePrice = getPrice();
         (int256 aFlow, int256 bFlow, uint256 a, uint256 b) = _rebalanceAndFill(0, 0, oraclePrice, true);
 
+        // If we have avaiable A and B, we can do internal rebalancing across ticks with these values.
         if (a > 0 && b > 0) {
             (aFlow, bFlow, a, b) = _rebalanceAndFill(a, b, oraclePrice, true);
         }
 
         if (a > 0) {
-            // Trade all A to B using uniswap. Then compute the price using output of that price, rounding DOWN as the price passed rebalance. Rounding DOWN ensures that B received / price >= A available
+            // Trade all A to B using uniswap.
             uint256 bOffer = UNI_ROUTER.exactInput(
                 ISwapRouter.ExactInputParams({
                     path: abi.encodePacked(ASSET_A, uint24(100), USDC, uint24(500), ASSET_B),
@@ -81,13 +76,14 @@ contract UniswapDCABridge is BiDCABridge {
                 })
             );
 
+            // Rounding DOWN ensures that B received / price >= A available
             uint256 price = (bOffer * 1e18) / a;
 
             (aFlow, bFlow, , ) = _rebalanceAndFill(0, bOffer, price, true);
         }
 
         if (b > 0) {
-            // Trade all B to A using uniswap. Then compute the price using output of that price, rounding UP as the price passed rebalance. Rounding UP to ensure that A received * price >= B available
+            // Trade all B to A using uniswap.
             uint256 aOffer = UNI_ROUTER.exactInput(
                 ISwapRouter.ExactInputParams({
                     path: abi.encodePacked(ASSET_B, uint24(500), USDC, uint24(100), ASSET_A),
@@ -98,6 +94,7 @@ contract UniswapDCABridge is BiDCABridge {
                 })
             );
 
+            // Rounding UP to ensure that A received * price >= B available
             uint256 price = (b * 1e18 + aOffer - 1) / aOffer;
 
             (aFlow, bFlow, , ) = _rebalanceAndFill(aOffer, 0, price, true);
