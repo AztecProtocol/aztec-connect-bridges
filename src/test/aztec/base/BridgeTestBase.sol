@@ -369,6 +369,7 @@ abstract contract BridgeTestBase is Test {
             mstore(add(data, 0x60), mul(nextRollupId_, 2))
             mstore(add(data, 0x180), _encodedBridgeCallData)
             mstore(add(data, 0x580), _totalInputValue)
+            mstore(add(data, 0x11a0), sload(rollupBeneficiary.slot))
 
             // Mock values
             // mstore(add(data, 0x20), 0x0000000000000000000000000000000000000000000000000000000000000000)
@@ -511,7 +512,7 @@ abstract contract BridgeTestBase is Test {
             mstore(add(data, 0x1140), 0x0000000000000000000000000000000000000000000000000000000000000000)
             mstore(add(data, 0x1160), 0x0000000000000000000000000000000000000000000000000000000000000000)
             mstore(add(data, 0x1180), 0x14e0f351ade4ba10438e9b15f66ab2e6389eea5ae870d6e8b2df1418b2e6fd5b)
-            mstore(add(data, 0x11a0), sload(rollupBeneficiary.slot))
+            // mstore(add(data, 0x11a0), 0x000000000000000000000000ddb3b44eaf58792a5a8dded7da7561a671138b80)
             mstore(add(data, 0x11c0), 0x0000000000000000000000000000000000000000000000000000000000000001)
             mstore(add(data, 0x11e0), 0x0000000000000000000000000000000000000000000000000000000000000003)
             mstore(add(data, 0x1200), 0xc7336c7aeff11bdfcb8203789aea9cfbaf54d9a60a590d3dbc3bac681126be84)
