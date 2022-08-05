@@ -61,7 +61,7 @@ contract UniswapDCABridge is BiDCABridge {
      * @return aFlow The flow of token A
      * @return bFlow The flow of token B
      */
-    function rebalanceAndFillUniswap() public returns (int256, int256) {
+    function rebalanceAndFillUniswap() external returns (int256, int256) {
         uint256 oraclePrice = getPrice();
         (int256 aFlow, int256 bFlow, uint256 a, uint256 b) = _rebalanceAndFill(0, 0, oraclePrice, true);
 
@@ -77,7 +77,7 @@ contract UniswapDCABridge is BiDCABridge {
                     recipient: address(this),
                     deadline: block.timestamp,
                     amountIn: a,
-                    amountOutMinimum: (assetAInAssetB(a, oraclePrice, false) * (10000 - SLIPPAGE)) / 10000
+                    amountOutMinimum: (denominateAssetAInB(a, oraclePrice, false) * (10000 - SLIPPAGE)) / 10000
                 })
             );
 
@@ -94,7 +94,7 @@ contract UniswapDCABridge is BiDCABridge {
                     recipient: address(this),
                     deadline: block.timestamp,
                     amountIn: b,
-                    amountOutMinimum: (assetBInAssetA(b, oraclePrice, false) * (10000 - SLIPPAGE)) / 10000
+                    amountOutMinimum: (denominateAssetBInA(b, oraclePrice, false) * (10000 - SLIPPAGE)) / 10000
                 })
             );
 
