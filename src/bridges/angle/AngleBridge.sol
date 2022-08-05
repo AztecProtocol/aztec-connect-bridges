@@ -22,6 +22,10 @@ contract AngleBridge is BridgeBase {
     // collateralAddress => poolManagerAddress
     mapping(address => address) internal poolManagers;
 
+    // The amount of dust to leave in the contract
+    // Optimization based on EIP-1087
+    uint256 internal constant DUST = 1;
+
     /**
      * @notice Set address of rollup processor
      * @param _rollupProcessor Address of rollup processor
@@ -32,10 +36,10 @@ contract AngleBridge is BridgeBase {
         poolManagers[0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2] = 0x3f66867b4b6eCeBA0dBb6776be15619F73BC30A2;
         poolManagers[0x853d955aCEf822Db058eb8505911ED77F175b99e] = 0x6b4eE7352406707003bC6f6b96595FD35925af48;
 
-        // _preApprove(0xc9daabC677F3d1301006e723bD21C60be57a5915);
-        // _preApprove(0xe9f183FC656656f1F17af1F2b0dF79b8fF9ad8eD);
-        // _preApprove(0x3f66867b4b6eCeBA0dBb6776be15619F73BC30A2);
-        // _preApprove(0x6b4eE7352406707003bC6f6b96595FD35925af48);
+        _preApprove(0xc9daabC677F3d1301006e723bD21C60be57a5915);
+        _preApprove(0xe9f183FC656656f1F17af1F2b0dF79b8fF9ad8eD);
+        _preApprove(0x3f66867b4b6eCeBA0dBb6776be15619F73BC30A2);
+        _preApprove(0x6b4eE7352406707003bC6f6b96595FD35925af48);
     }
 
     /**
@@ -68,8 +72,9 @@ contract AngleBridge is BridgeBase {
     {
         if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidInputA();
         if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
+        if (_totalInputValue < 10) revert ErrorLib.InvalidInputAmount();
 
-        IERC20(_inputAssetA.erc20Address).approve(address(STABLE_MASTER), _totalInputValue);
+        uint256 totalInputValue = _totalInputValue - DUST;
 
         if (_auxData == 0) {
             address poolManager = poolManagers[_inputAssetA.erc20Address];
@@ -78,7 +83,7 @@ contract AngleBridge is BridgeBase {
             (, address sanToken, , , , , , , ) = STABLE_MASTER.collateralMap(poolManager);
             if (sanToken != _outputAssetA.erc20Address) revert ErrorLib.InvalidOutputA();
 
-            STABLE_MASTER.deposit(_totalInputValue, address(this), poolManager);
+            STABLE_MASTER.deposit(totalInputValue, address(this), poolManager);
         } else if (_auxData == 1) {
             address poolManager = poolManagers[_outputAssetA.erc20Address];
             if (poolManager == address(0)) revert ErrorLib.InvalidOutputA();
@@ -86,16 +91,12 @@ contract AngleBridge is BridgeBase {
             (, address sanToken, , , , , , , ) = STABLE_MASTER.collateralMap(poolManager);
             if (sanToken != _inputAssetA.erc20Address) revert ErrorLib.InvalidInputA();
 
-            STABLE_MASTER.withdraw(_totalInputValue, address(this), address(this), poolManager);
+            STABLE_MASTER.withdraw(totalInputValue, address(this), address(this), poolManager);
         }
 
-        outputValueA = IERC20(_outputAssetA.erc20Address).balanceOf(address(this));
-
-        // Approve rollup processor to take input value of input asset
-        IERC20(_outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, outputValueA);
+        outputValueA = IERC20(_outputAssetA.erc20Address).balanceOf(address(this)) - DUST;
     }
 
-    // (not used for now)
     // Pre-approval of all tokens, should be done in the constructor
     function _preApprove(address _poolManager) private {
         (IERC20 token, address sanToken, , , , , , , ) = STABLE_MASTER.collateralMap(_poolManager);
