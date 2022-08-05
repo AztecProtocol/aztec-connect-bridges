@@ -187,17 +187,18 @@ contract Subsidy is ISubsidy {
         if (_beneficiary == address(0)) {
             return 0;
         }
-        // Caching subsidy in order to minimize number of SLOADs and SSTOREs
-        Subsidy memory sub = subsidies[msg.sender][_criteria];
-        if (sub.available == 0) {
-            return 0;
-        }
 
         uint256 withdrawableBalance = withdrawableBalances[_beneficiary];
         if (withdrawableBalance == 0) {
             // Beneficiary address was not registered --> this would result in setting a new storage slot when updating
             // `claimableBalances` and this would cost 20k gas instead of 5k gas. For these reason we don't claim
             // the balance if that is the case.
+            return 0;
+        }
+
+        // Caching subsidy in order to minimize number of SLOADs and SSTOREs
+        Subsidy memory sub = subsidies[msg.sender][_criteria];
+        if (sub.available == 0) {
             return 0;
         }
 
@@ -230,8 +231,6 @@ contract Subsidy is ISubsidy {
         /* solhint-disable avoid-low-level-calls */
         (bool success, ) = _beneficiary.call{value: withdrawableBalance, gas: 30000}("");
         if (!success) {
-            // We don't revert here in order to not allow adversarial rollup provider to cause the bridge to revert
-            // --> the bridge call would not succeed and provider would still get a fee
             revert EthTransferFailed();
         }
         return withdrawableBalance;
