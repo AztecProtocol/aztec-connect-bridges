@@ -9,13 +9,13 @@ import {ISubsidy} from "./interfaces/ISubsidy.sol";
  * @notice A contract which allows anyone to subsidize a bridge
  * @author Jan Benes
  * @dev The goal of this contract is to allow anyone to subsidize a bridge. How the subsidy works is that when a bridge
- *      is subsidized it can call `claimSubsidy(...)` method and in that method the corresponding subsidy gets sent to
- *      the beneficiary. Beneficiary is expected to be the beneficiary address passed as part of the rollup data by
- *      the provider. When sufficient subsidy is present it makes it profitable for the rollup provider to execute
- *      a bridge call even when only a small amounts of user fees can be extracted. This effectively makes it possible
- *      for calls to low-use bridges to be included in a rollup block. Without subsidy, it might happen that the UX
- *      of these bridges would dramatically deteriorate since user might wait for a long time before her/his bridge
- *      call gets processed.
+ *      is subsidized it can call `claimSubsidy(...)` method and in that method the corresponding subsidy amount
+ *      unlocks and can be claimed by the beneficiary. Beneficiary is expected to be the beneficiary address passed as
+ *      part of the rollup data by the provider. When sufficient subsidy is present it makes it profitable for
+ *      the rollup provider to execute a bridge call even when only a small amounts of user fees can be extracted. This
+ *      effectively makes it possible for calls to low-use bridges to be included in a rollup block. Without subsidy,
+ *      it might happen that the UX of these bridges would dramatically deteriorate since user might wait for a long
+ *      time before her/his bridge call gets processed.
  *
  *      The subsidy is defined by a `gasPerMinute` amount and along with time since last interaction and the current
  *      base fee will be used to compute the amount of Eth that should be paid out to the rollup beneficiary.
@@ -38,6 +38,7 @@ import {ISubsidy} from "./interfaces/ISubsidy.sol";
  */
 contract Subsidy is ISubsidy {
     error ArrayLengthsDoNotMatch();
+    error ZeroValue();
     error GasPerMinuteTooLow();
     error AlreadySubsidized();
     error GasUsageNotSet();
@@ -45,6 +46,7 @@ contract Subsidy is ISubsidy {
     error EthTransferFailed();
 
     event Subsidized(address indexed bridge, uint256 indexed criteria, uint128 available, uint32 gasPerMinute);
+    event BeneficiaryRegistered(address indexed beneficiary);
 
     /**
      * @notice Container for Subsidy related information
@@ -65,9 +67,14 @@ contract Subsidy is ISubsidy {
     // @dev Using min possible `msg.value` upon subsidizing in order to limit possibility of front running attacks
     // --> e.g. attacker front-running real subsidy tx by sending 1 wei value tx making the real one revert
     uint256 public constant MIN_SUBSIDY_VALUE = 1e17;
+    // @dev 1 wei of Ether
+    uint256 public constant MIN_REGISTRATION_VALUE = 1;
 
     // address bridge => uint256 criteria => Subsidy subsidy
     mapping(address => mapping(uint256 => Subsidy)) public subsidies;
+
+    // address beneficiary => uint256 withdrawableBalance
+    mapping(address => uint256) public withdrawableBalances;
 
     /**
      * @notice Sets `Subsidy.gasUsage` value for a given criteria
@@ -112,11 +119,29 @@ contract Subsidy is ISubsidy {
     }
 
     /**
+     * @notice Registers address of a beneficiary by setting a non-zero withdrawable balance
+     * @param _beneficiary Address which is going to receive the subsidy
+     * @dev This registration is necessary in order to have a constant gas costs in the `claimSubsidy(...)` function.
+     *      By setting a balance to a non-zero value we make sure that the storage slot is set and later on we pay
+     *      constant 5000 gas when updating the value. This is important because it's desirable for the cost of
+     *      IDefiBridge.convert(...) function to be as predictable as possible. If the cost is too variable users would
+     *      overpay plenty of the times since RollupProcessor works with constant gas limits.
+     * @dev Reverts if msg.value is 0.
+     */
+    function registerBeneficiary(address _beneficiary) external payable {
+        if (msg.value < MIN_REGISTRATION_VALUE) {
+            revert ZeroValue();
+        }
+        withdrawableBalances[_beneficiary] = msg.value;
+        emit BeneficiaryRegistered(_beneficiary);
+    }
+
+    /**
      * @notice Sets subsidy for a given `_bridge` and `_criteria`
      * @param _bridge Address of the bridge to subsidize
      * @param _criteria A value defining the specific bridge call to subsidize
      * @param _gasPerMinute A value defining the "rate" at which the subsidy will be released
-     * @dev reverts if any of these is true: 1) `_gasPerMinute` <= `sub.minGasPerMinute`,
+     * @dev Reverts if any of these is true: 1) `_gasPerMinute` <= `sub.minGasPerMinute`,
      *                                       2) subsidy funded before and not yet claimed: `subsidy.available` > 0,
      *                                       3) subsidy.gasUsage not set: `subsidy.gasUsage` == 0,
      *                                       4) ETH value sent too low: `msg.value` < `MIN_SUBSIDY_VALUE`.
@@ -168,6 +193,14 @@ contract Subsidy is ISubsidy {
             return 0;
         }
 
+        uint256 withdrawableBalance = withdrawableBalances[_beneficiary];
+        if (withdrawableBalance == 0) {
+            // Beneficiary address was not registered --> this would result in setting a new storage slot when updating
+            // `claimableBalances` and this would cost 20k gas instead of 5k gas. For these reason we don't claim
+            // the balance if that is the case.
+            return 0;
+        }
+
         uint256 dt = block.timestamp - sub.lastUpdated;
         uint256 gasToCover = (dt * sub.gasPerMinute) / 1 minutes;
         // At maximum `sub.gasUsage` gets covered
@@ -178,15 +211,29 @@ contract Subsidy is ISubsidy {
         sub.lastUpdated = uint32(block.timestamp);
 
         subsidies[msg.sender][_criteria] = sub;
+        withdrawableBalances[_beneficiary] = withdrawableBalance + subsidyAmount;
+
+        return subsidyAmount;
+    }
+
+    /**
+     * @notice Withdraws beneficiary's withdrawable balance
+     * @param _beneficiary Address which is going to receive the subsidy
+     * @return - ETH amount which was sent to the `_beneficiary`
+     */
+    function withdraw(address _beneficiary) external returns (uint256) {
+        uint256 withdrawableBalance = withdrawableBalances[_beneficiary] - MIN_REGISTRATION_VALUE;
+        // Immediately updating the balance to avoid re-entrancy attack
+        withdrawableBalances[_beneficiary] = MIN_REGISTRATION_VALUE;
 
         // Sending 30k gas in a call to allow receiver to be a multi-sig and write to storage
-        (bool success, ) = _beneficiary.call{value: subsidyAmount, gas: 30000}("");
+        /* solhint-disable avoid-low-level-calls */
+        (bool success, ) = _beneficiary.call{value: withdrawableBalance, gas: 30000}("");
         if (!success) {
             // We don't revert here in order to not allow adversarial rollup provider to cause the bridge to revert
             // --> the bridge call would not succeed and provider would still get a fee
-            return 0;
+            revert EthTransferFailed();
         }
-
-        return subsidyAmount;
+        return withdrawableBalance;
     }
 }

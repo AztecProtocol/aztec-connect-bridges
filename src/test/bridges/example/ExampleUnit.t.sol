@@ -42,10 +42,12 @@ contract ExampleUnitTest is Test {
         // Use the label cheatcode to mark the address with "Example Bridge" in the traces
         vm.label(address(bridge), "Example Bridge");
 
-        // Subsidize the bridge when used with Dai
+        // Subsidize the bridge when used with Dai and register a beneficiary
         uint256 criteria = bridge.computeCriteria(DAI, DAI);
         uint32 gasPerMinute = 200;
         subsidy.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
+
+        subsidy.registerBeneficiary{value: 1}(BENEFICIARY);
 
         // Make sure beneficiary holds only 1 wei of ETH (to make testing easy)
         vm.deal(BENEFICIARY, 1);

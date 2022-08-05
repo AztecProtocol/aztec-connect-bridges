@@ -3,15 +3,16 @@
 pragma solidity >=0.8.4;
 
 import {Test} from "forge-std/Test.sol";
-import {ISubsidy, Subsidy} from "../../../aztec/Subsidy.sol";
+import {Subsidy} from "../../../aztec/Subsidy.sol";
 
 contract SubsidyTest is Test {
     address private constant BRIDGE = address(10);
     address private constant BENEFICIARY = address(11);
 
-    ISubsidy private subsidy;
+    Subsidy private subsidy;
 
     event Subsidized(address indexed bridge, uint256 indexed criteria, uint128 available, uint32 gasPerMinute);
+    event BeneficiaryRegistered(address indexed beneficiary);
 
     function setUp() public {
         subsidy = new Subsidy();
@@ -93,6 +94,10 @@ contract SubsidyTest is Test {
         vm.expectEmit(true, true, false, true);
         emit Subsidized(BRIDGE, criteria, subsidyAmount, gasPerMinute);
         subsidy.subsidize{value: subsidyAmount}(BRIDGE, criteria, gasPerMinute);
+
+        vm.expectEmit(true, true, false, true);
+        emit BeneficiaryRegistered(BENEFICIARY);
+        subsidy.registerBeneficiary{value: 1}(BENEFICIARY);
     }
 
     function testAllSubsidyGetsClaimedAndSubsidyCanBeRefilledAfterThat() public {
@@ -108,14 +113,18 @@ contract SubsidyTest is Test {
 
         vm.warp(block.timestamp + 7 days);
 
+        subsidy.registerBeneficiary{value: subsidy.MIN_REGISTRATION_VALUE()}(BENEFICIARY);
+
         vm.prank(BRIDGE);
         subsidy.claimSubsidy(1, BENEFICIARY);
 
         (available, , , , lastUpdated) = subsidy.subsidies(BRIDGE, 1);
 
-        assertEq(BENEFICIARY.balance, 1 ether, "beneficiary didn't receive full subsidy");
         assertEq(available, 0, "not all subsidy was claimed");
         assertEq(lastUpdated, block.timestamp, "lastUpdated incorrectly updated");
+
+        subsidy.withdraw(BENEFICIARY);
+        assertEq(BENEFICIARY.balance, 1 ether, "beneficiary didn't receive full subsidy");
 
         subsidy.subsidize{value: 1 ether}(BRIDGE, 1, 10000);
         (available, , , , ) = subsidy.subsidies(BRIDGE, 1);
@@ -123,7 +132,7 @@ contract SubsidyTest is Test {
         assertEq(available, 1 ether, "available incorrectly set in refill");
     }
 
-    function testAvailableDropsByExpectedAmount() public {
+    function testAvailableDropsByExpectedAmountAndGetsCorrectlyWithdrawn() public {
         _setGasUsageAndMinGasPerMinute();
 
         uint256 dt = 3600;
@@ -137,15 +146,24 @@ contract SubsidyTest is Test {
 
         vm.warp(block.timestamp + dt);
 
+        subsidy.registerBeneficiary{value: subsidy.MIN_REGISTRATION_VALUE()}(BENEFICIARY);
+
         vm.prank(BRIDGE);
         uint256 subsidyAmount = subsidy.claimSubsidy(1, BENEFICIARY);
 
         assertEq(subsidyAmount, expectedSubsidyAmount);
-        assertEq(subsidyAmount, BENEFICIARY.balance, "subsidyAmount differs from beneficiary's balance");
+        assertEq(
+            subsidyAmount,
+            subsidy.withdrawableBalances(BENEFICIARY) - subsidy.MIN_REGISTRATION_VALUE(),
+            "subsidyAmount differs from beneficiary's withdrawable balance"
+        );
 
         (available, , , , ) = subsidy.subsidies(BRIDGE, 1);
 
         assertEq(available, 1 ether - subsidyAmount, "unexpected value of available");
+
+        subsidy.withdraw(BENEFICIARY);
+        assertEq(subsidyAmount, BENEFICIARY.balance, "withdrawable balance was not withdrawn");
     }
 
     function _setGasUsageAndMinGasPerMinute() private {

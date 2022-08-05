@@ -54,10 +54,12 @@ contract ExampleE2ETest is BridgeTestBase {
         // Fetch the id of the example bridge
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
-        // Subsidize the bridge when used with Dai
+        // Subsidize the bridge when used with USDC and register a beneficiary
         uint256 criteria = bridge.computeCriteria(USDC, USDC);
         uint32 gasPerMinute = 200;
         subsidy.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
+
+        subsidy.registerBeneficiary{value: 1}(BENEFICIARY);
 
         // Set the rollupBeneficiary on BridgeTestBase so that it gets included in the proofData
         setRollupBeneficiary(BENEFICIARY);
@@ -107,6 +109,6 @@ contract ExampleE2ETest is BridgeTestBase {
         // Check that the balance of the rollup is same as before interaction (bridge just sends funds back)
         assertEq(_depositAmount, IERC20(USDC).balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
 
-        assertGt(BENEFICIARY.balance, 1, "Subsidy was not claimed");
+        assertGt(subsidy.withdrawableBalances(BENEFICIARY), 1, "Withdrawable was not updated");
     }
 }
