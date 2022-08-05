@@ -47,10 +47,7 @@ contract ExampleUnitTest is Test {
         uint32 gasPerMinute = 200;
         subsidy.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
 
-        subsidy.registerBeneficiary{value: 1}(BENEFICIARY);
-
-        // Make sure beneficiary holds only 1 wei of ETH (to make testing easy)
-        vm.deal(BENEFICIARY, 1);
+        subsidy.registerBeneficiary(BENEFICIARY);
     }
 
     function testInvalidCaller(address _callerAddress) public {
@@ -64,6 +61,10 @@ contract ExampleUnitTest is Test {
     function testInvalidInputAssetType() public {
         vm.expectRevert(ErrorLib.InvalidInputA.selector);
         bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
+    }
+
+    function testExampleBridgeUnitTestFixed() public {
+        testExampleBridgeUnitTest(10 ether);
     }
 
     // @notice The purpose of this test is to directly test convert functionality of the bridge.

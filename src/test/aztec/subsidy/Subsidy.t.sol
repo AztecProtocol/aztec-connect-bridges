@@ -74,14 +74,13 @@ contract SubsidyTest is Test {
 
         subsidy.subsidize{value: 1 ether}(BRIDGE, 1, 100);
 
-        (uint128 available, uint32 gasUsage, uint32 minGasPerMinute, uint32 gasPerMinute, uint32 lastUpdated) = subsidy
-            .subsidies(BRIDGE, 1);
+        Subsidy.Subsidy memory sub = subsidy.getSubsidy(BRIDGE, 1);
 
-        assertEq(available, 1 ether, "available incorrectly set");
-        assertEq(gasUsage, 5e4, "gasUsage incorrectly set");
-        assertEq(minGasPerMinute, 50, "minGasPerMinute incorrectly set");
-        assertEq(gasPerMinute, 100, "gasPerMinute incorrectly set");
-        assertEq(lastUpdated, block.timestamp, "lastUpdated incorrectly set");
+        assertEq(sub.available, 1 ether, "available incorrectly set");
+        assertEq(sub.gasUsage, 5e4, "gasUsage incorrectly set");
+        assertEq(sub.minGasPerMinute, 50, "minGasPerMinute incorrectly set");
+        assertEq(sub.gasPerMinute, 100, "gasPerMinute incorrectly set");
+        assertEq(sub.lastUpdated, block.timestamp, "lastUpdated incorrectly set");
     }
 
     function testEventsGetCorrectlyEmitted() public {
@@ -97,7 +96,7 @@ contract SubsidyTest is Test {
 
         vm.expectEmit(true, true, false, true);
         emit BeneficiaryRegistered(BENEFICIARY);
-        subsidy.registerBeneficiary{value: 1}(BENEFICIARY);
+        subsidy.registerBeneficiary(BENEFICIARY);
     }
 
     function testAllSubsidyGetsClaimedAndSubsidyCanBeRefilledAfterThat() public {
@@ -107,29 +106,29 @@ contract SubsidyTest is Test {
         subsidy.setGasUsageAndMinGasPerMinute(1, gasUsage, 100);
 
         subsidy.subsidize{value: 1 ether}(BRIDGE, 1, 100000);
-        (uint128 available, , , , uint32 lastUpdated) = subsidy.subsidies(BRIDGE, 1);
-        assertEq(available, 1 ether, "available incorrectly set");
-        assertEq(lastUpdated, block.timestamp, "lastUpdated incorrectly set");
+        Subsidy.Subsidy memory sub = subsidy.getSubsidy(BRIDGE, 1);
+        assertEq(sub.available, 1 ether, "available incorrectly set");
+        assertEq(sub.lastUpdated, block.timestamp, "lastUpdated incorrectly set");
 
         vm.warp(block.timestamp + 7 days);
 
-        subsidy.registerBeneficiary{value: subsidy.MIN_REGISTRATION_VALUE()}(BENEFICIARY);
+        subsidy.registerBeneficiary(BENEFICIARY);
 
         vm.prank(BRIDGE);
         subsidy.claimSubsidy(1, BENEFICIARY);
 
-        (available, , , , lastUpdated) = subsidy.subsidies(BRIDGE, 1);
+        sub = subsidy.getSubsidy(BRIDGE, 1);
 
-        assertEq(available, 0, "not all subsidy was claimed");
-        assertEq(lastUpdated, block.timestamp, "lastUpdated incorrectly updated");
+        assertEq(sub.available, 0, "not all subsidy was claimed");
+        assertEq(sub.lastUpdated, block.timestamp, "lastUpdated incorrectly updated");
 
         subsidy.withdraw(BENEFICIARY);
         assertEq(BENEFICIARY.balance, 1 ether, "beneficiary didn't receive full subsidy");
 
         subsidy.subsidize{value: 1 ether}(BRIDGE, 1, 10000);
-        (available, , , , ) = subsidy.subsidies(BRIDGE, 1);
+        sub = subsidy.getSubsidy(BRIDGE, 1);
 
-        assertEq(available, 1 ether, "available incorrectly set in refill");
+        assertEq(sub.available, 1 ether, "available incorrectly set in refill");
     }
 
     function testAvailableDropsByExpectedAmountAndGetsCorrectlyWithdrawn() public {
@@ -139,14 +138,14 @@ contract SubsidyTest is Test {
         uint32 gasPerMinute = 100;
 
         subsidy.subsidize{value: 1 ether}(BRIDGE, 1, gasPerMinute);
-        (uint128 available, , , , uint32 lastUpdated) = subsidy.subsidies(BRIDGE, 1);
-        assertEq(available, 1 ether, "available incorrectly set");
+        Subsidy.Subsidy memory sub = subsidy.getSubsidy(BRIDGE, 1);
+        assertEq(sub.available, 1 ether, "available incorrectly set");
 
         uint256 expectedSubsidyAmount = ((dt * gasPerMinute) / 60) * block.basefee;
 
         vm.warp(block.timestamp + dt);
 
-        subsidy.registerBeneficiary{value: subsidy.MIN_REGISTRATION_VALUE()}(BENEFICIARY);
+        subsidy.registerBeneficiary(BENEFICIARY);
 
         vm.prank(BRIDGE);
         uint256 subsidyAmount = subsidy.claimSubsidy(1, BENEFICIARY);
@@ -154,13 +153,91 @@ contract SubsidyTest is Test {
         assertEq(subsidyAmount, expectedSubsidyAmount);
         assertEq(
             subsidyAmount,
-            subsidy.withdrawableBalances(BENEFICIARY) - subsidy.MIN_REGISTRATION_VALUE(),
+            subsidy.claimableAmount(BENEFICIARY),
             "subsidyAmount differs from beneficiary's withdrawable balance"
         );
 
-        (available, , , , ) = subsidy.subsidies(BRIDGE, 1);
+        sub = subsidy.getSubsidy(BRIDGE, 1);
 
-        assertEq(available, 1 ether - subsidyAmount, "unexpected value of available");
+        assertEq(sub.available, 1 ether - subsidyAmount, "unexpected value of available");
+
+        subsidy.withdraw(BENEFICIARY);
+        assertEq(subsidyAmount, BENEFICIARY.balance, "withdrawable balance was not withdrawn");
+    }
+
+    function testZeroClaims() public {
+        _setGasUsageAndMinGasPerMinute();
+
+        uint256 dt = 3600;
+        uint32 gasPerMinute = 100;
+
+        subsidy.subsidize{value: 1 ether}(BRIDGE, 1, gasPerMinute);
+        Subsidy.Subsidy memory sub = subsidy.getSubsidy(BRIDGE, 1);
+        assertEq(sub.available, 1 ether, "available incorrectly set");
+
+        uint256 expectedSubsidyAmount = ((dt * gasPerMinute) / 60) * block.basefee;
+
+        vm.warp(block.timestamp + dt);
+        vm.startPrank(BRIDGE);
+        assertEq(subsidy.claimSubsidy(1, address(0)), 0);
+        assertEq(subsidy.claimSubsidy(1, BENEFICIARY), 0);
+    }
+
+    function testEthTransferFailed() public {
+        _setGasUsageAndMinGasPerMinute();
+
+        uint256 dt = 3600;
+        uint32 gasPerMinute = 100;
+
+        subsidy.subsidize{value: 1 ether}(BRIDGE, 1, gasPerMinute);
+        Subsidy.Subsidy memory sub = subsidy.getSubsidy(BRIDGE, 1);
+        assertEq(sub.available, 1 ether, "available incorrectly set");
+
+        uint256 expectedSubsidyAmount = ((dt * gasPerMinute) / 60) * block.basefee;
+
+        vm.warp(block.timestamp + dt);
+
+        subsidy.registerBeneficiary(address(this));
+
+        vm.startPrank(BRIDGE);
+        subsidy.claimSubsidy(1, address(this));
+
+        vm.expectRevert(Subsidy.EthTransferFailed.selector);
+        subsidy.withdraw(address(this));
+    }
+
+    function testClaimSameBlock() public {
+        _setGasUsageAndMinGasPerMinute();
+
+        uint256 dt = 3600;
+        uint32 gasPerMinute = 100;
+
+        subsidy.subsidize{value: 1 ether}(BRIDGE, 1, gasPerMinute);
+        Subsidy.Subsidy memory sub = subsidy.getSubsidy(BRIDGE, 1);
+        assertEq(sub.available, 1 ether, "available incorrectly set");
+
+        uint256 expectedSubsidyAmount = ((dt * gasPerMinute) / 60) * block.basefee;
+
+        vm.warp(block.timestamp + dt);
+
+        subsidy.registerBeneficiary(BENEFICIARY);
+        assertTrue(subsidy.isRegistered(BENEFICIARY));
+
+        vm.prank(BRIDGE);
+        uint256 subsidyAmount = subsidy.claimSubsidy(1, BENEFICIARY);
+        uint256 subsidyAmount2 = subsidy.claimSubsidy(1, BENEFICIARY);
+        assertEq(subsidyAmount2, 0, "Second claim in same block not 0");
+
+        assertEq(subsidyAmount, expectedSubsidyAmount);
+        assertEq(
+            subsidyAmount,
+            subsidy.claimableAmount(BENEFICIARY),
+            "subsidyAmount differs from beneficiary's withdrawable balance"
+        );
+
+        sub = subsidy.getSubsidy(BRIDGE, 1);
+
+        assertEq(sub.available, 1 ether - subsidyAmount, "unexpected value of available");
 
         subsidy.withdraw(BENEFICIARY);
         assertEq(subsidyAmount, BENEFICIARY.balance, "withdrawable balance was not withdrawn");

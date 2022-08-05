@@ -14,7 +14,7 @@ interface ISubsidy {
             uint32
         );
 
-    function withdrawableBalances(address _beneficiary) external returns (uint256);
+    function claimableAmount(address _beneficiary) external returns (uint256);
 
     function setGasUsageAndMinGasPerMinute(
         uint256 _criteria,
@@ -28,7 +28,7 @@ interface ISubsidy {
         uint32[] calldata _minGasPerMinute
     ) external;
 
-    function registerBeneficiary(address _beneficiary) external payable;
+    function registerBeneficiary(address _beneficiary) external;
 
     function subsidize(
         address _bridge,

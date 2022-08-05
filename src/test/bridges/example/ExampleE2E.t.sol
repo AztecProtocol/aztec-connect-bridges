@@ -59,13 +59,10 @@ contract ExampleE2ETest is BridgeTestBase {
         uint32 gasPerMinute = 200;
         subsidy.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
 
-        subsidy.registerBeneficiary{value: 1}(BENEFICIARY);
+        subsidy.registerBeneficiary(BENEFICIARY);
 
         // Set the rollupBeneficiary on BridgeTestBase so that it gets included in the proofData
         setRollupBeneficiary(BENEFICIARY);
-
-        // Make sure beneficiary holds only 1 wei of ETH (to make testing easy)
-        vm.deal(BENEFICIARY, 1);
     }
 
     // @dev In order to avoid overflows we set _depositAmount to be uint96 instead of uint256.
@@ -109,6 +106,6 @@ contract ExampleE2ETest is BridgeTestBase {
         // Check that the balance of the rollup is same as before interaction (bridge just sends funds back)
         assertEq(_depositAmount, IERC20(USDC).balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
 
-        assertGt(subsidy.withdrawableBalances(BENEFICIARY), 1, "Withdrawable was not updated");
+        assertGt(subsidy.claimableAmount(BENEFICIARY), 1, "Claimable was not updated");
     }
 }

@@ -38,7 +38,6 @@ import {ISubsidy} from "./interfaces/ISubsidy.sol";
  */
 contract Subsidy is ISubsidy {
     error ArrayLengthsDoNotMatch();
-    error ZeroValue();
     error GasPerMinuteTooLow();
     error AlreadySubsidized();
     error GasUsageNotSet();
@@ -64,17 +63,53 @@ contract Subsidy is ISubsidy {
         uint32 lastUpdated;
     }
 
+    /**
+     * @notice Container for Beneficiary related information
+     * @member claimable The amount of eth that is owed this beneficiary
+     * @member registered A flag indicating if registered or not. Used to "poke" storage
+     */
+    struct Beneficiary {
+        uint248 claimable;
+        bool registered;
+    }
+
     // @dev Using min possible `msg.value` upon subsidizing in order to limit possibility of front running attacks
     // --> e.g. attacker front-running real subsidy tx by sending 1 wei value tx making the real one revert
     uint256 public constant MIN_SUBSIDY_VALUE = 1e17;
-    // @dev 1 wei of Ether
-    uint256 public constant MIN_REGISTRATION_VALUE = 1;
 
     // address bridge => uint256 criteria => Subsidy subsidy
     mapping(address => mapping(uint256 => Subsidy)) public subsidies;
 
-    // address beneficiary => uint256 withdrawableBalance
-    mapping(address => uint256) public withdrawableBalances;
+    // address beneficiaryAddress => Beneficiary beneficiary
+    mapping(address => Beneficiary) public beneficiaries;
+
+    /**
+     * @notice Fetch the claimable amount for a specific beneficiary
+     * @param _beneficiary The address of the beneficiary to query
+     * @return The amount of claimable ETH for `_beneficiary`
+     */
+    function claimableAmount(address _beneficiary) external view override(ISubsidy) returns (uint256) {
+        return beneficiaries[_beneficiary].claimable;
+    }
+
+    /**
+     * @notice Is the `_beneficiary` registered or not
+     * @param _beneficiary The address of the beneficiary to check
+     * @return True if the `_beneficiary` is registered, false otherwise
+     */
+    function isRegistered(address _beneficiary) external view returns (bool) {
+        return beneficiaries[_beneficiary].registered;
+    }
+
+    /**
+     * @notice Get the data related to a specific subsidy
+     * @param _bridge The address of the bridge getting the subsidy
+     * @param _criteria The criteria of the subsidy
+     * @return The subsidy data object
+     */
+    function getSubsidy(address _bridge, uint256 _criteria) external view returns (Subsidy memory) {
+        return subsidies[_bridge][_criteria];
+    }
 
     /**
      * @notice Sets `Subsidy.gasUsage` value for a given criteria
@@ -87,8 +122,14 @@ contract Subsidy is ISubsidy {
         uint256 _criteria,
         uint32 _gasUsage,
         uint32 _minGasPerMinute
-    ) external {
-        subsidies[msg.sender][_criteria] = Subsidy(0, _gasUsage, _minGasPerMinute, 0, 0);
+    ) external override(ISubsidy) {
+        subsidies[msg.sender][_criteria] = Subsidy({
+            available: 0,
+            gasUsage: _gasUsage,
+            minGasPerMinute: _minGasPerMinute,
+            gasPerMinute: 0,
+            lastUpdated: 0
+        });
     }
 
     /**
@@ -104,14 +145,20 @@ contract Subsidy is ISubsidy {
         uint256[] calldata _criteria,
         uint32[] calldata _gasUsage,
         uint32[] calldata _minGasPerMinute
-    ) external {
+    ) external override(ISubsidy) {
         uint256 criteriasLength = _criteria.length;
         if (criteriasLength != _gasUsage.length || criteriasLength != _minGasPerMinute.length) {
             revert ArrayLengthsDoNotMatch();
         }
 
         for (uint256 i; i < criteriasLength; ) {
-            subsidies[msg.sender][_criteria[i]] = Subsidy(0, _gasUsage[i], _minGasPerMinute[i], 0, 0);
+            subsidies[msg.sender][_criteria[i]] = Subsidy({
+                available: 0,
+                gasUsage: _gasUsage[i],
+                minGasPerMinute: _minGasPerMinute[i],
+                gasPerMinute: 0,
+                lastUpdated: 0
+            });
             unchecked {
                 ++i;
             }
@@ -119,20 +166,16 @@ contract Subsidy is ISubsidy {
     }
 
     /**
-     * @notice Registers address of a beneficiary by setting a non-zero withdrawable balance
+     * @notice Registers address of a beneficiary to receive subsidies
      * @param _beneficiary Address which is going to receive the subsidy
-     * @dev This registration is necessary in order to have a constant gas costs in the `claimSubsidy(...)` function.
-     *      By setting a balance to a non-zero value we make sure that the storage slot is set and later on we pay
-     *      constant 5000 gas when updating the value. This is important because it's desirable for the cost of
+     * @dev This registration is necessary in order to have near constant gas costs in the `claimSubsidy(...)` function.
+     *      By writing to the storage slot we make sure that the storage slot is set and later on we pay
+     *      a reliable gas cost when updating it. This is important because it's desirable for the cost of
      *      IDefiBridge.convert(...) function to be as predictable as possible. If the cost is too variable users would
-     *      overpay plenty of the times since RollupProcessor works with constant gas limits.
-     * @dev Reverts if msg.value is 0.
+     *      overpay since RollupProcessor works with constant gas limits.
      */
-    function registerBeneficiary(address _beneficiary) external payable {
-        if (msg.value < MIN_REGISTRATION_VALUE) {
-            revert ZeroValue();
-        }
-        withdrawableBalances[_beneficiary] = msg.value;
+    function registerBeneficiary(address _beneficiary) external override(ISubsidy) {
+        beneficiaries[_beneficiary].registered = true;
         emit BeneficiaryRegistered(_beneficiary);
     }
 
@@ -181,18 +224,15 @@ contract Subsidy is ISubsidy {
      * @notice Computes and sends subsidy
      * @param _criteria A value defining a specific bridge call
      * @param _beneficiary Address which is going to receive the subsidy
-     * @return subsidy ETH amount which was sent to the `_beneficiary`
+     * @return subsidy ETH amount which was added to the `_beneficiary` claimable balance
      */
     function claimSubsidy(uint256 _criteria, address _beneficiary) external returns (uint256) {
         if (_beneficiary == address(0)) {
             return 0;
         }
 
-        uint256 withdrawableBalance = withdrawableBalances[_beneficiary];
-        if (withdrawableBalance == 0) {
-            // Beneficiary address was not registered --> this would result in setting a new storage slot when updating
-            // `claimableBalances` and this would cost 20k gas instead of 5k gas. For these reason we don't claim
-            // the balance if that is the case.
+        Beneficiary memory beneficiary = beneficiaries[_beneficiary];
+        if (!beneficiary.registered) {
             return 0;
         }
 
@@ -202,30 +242,42 @@ contract Subsidy is ISubsidy {
             return 0;
         }
 
-        uint256 dt = block.timestamp - sub.lastUpdated;
-        uint256 gasToCover = (dt * sub.gasPerMinute) / 1 minutes;
-        // At maximum `sub.gasUsage` gets covered
-        uint256 ethToCover = (gasToCover < sub.gasUsage ? gasToCover : sub.gasUsage) * block.basefee;
-        uint256 subsidyAmount = (ethToCover < sub.available ? ethToCover : sub.available);
+        uint256 subsidyAmount;
 
-        sub.available -= uint128(subsidyAmount); // safe cast as `subsidyAmount` is bounded by `sub.available`
-        sub.lastUpdated = uint32(block.timestamp);
+        unchecked {
+            uint256 dt = block.timestamp - sub.lastUpdated; // sub.lastUpdated only update to block.timestamp, so can never be in the future
 
-        subsidies[msg.sender][_criteria] = sub;
-        withdrawableBalances[_beneficiary] = withdrawableBalance + subsidyAmount;
+            // time need to have passed for an incentive to have accrued
+            if (dt > 0) {
+                // The following should never overflow due to constraints on values. But if they do, it is bounded by the available subsidy
+                uint256 gasToCover = (dt * sub.gasPerMinute) / 1 minutes;
+                uint256 ethToCover = (gasToCover < sub.gasUsage ? gasToCover : sub.gasUsage) * block.basefee; // At maximum `sub.gasUsage` gas covered
+
+                subsidyAmount = ethToCover < sub.available ? ethToCover : sub.available;
+
+                sub.available -= uint128(subsidyAmount); // safe as `subsidyAmount` is bounded by `sub.available`
+                sub.lastUpdated = uint32(block.timestamp);
+
+                // Update storage
+                beneficiaries[_beneficiary].claimable = beneficiary.claimable + uint248(subsidyAmount); // safe as available is limited to u128
+                subsidies[msg.sender][_criteria] = sub;
+            }
+        }
 
         return subsidyAmount;
     }
 
     /**
      * @notice Withdraws beneficiary's withdrawable balance
+     * @dev Beware that this can be called by anyone to force a payout to the beneficiary.
+     *      Done like this to support smart-contract beneficiaries that can handle eth, but not make the call itself.
      * @param _beneficiary Address which is going to receive the subsidy
      * @return - ETH amount which was sent to the `_beneficiary`
      */
     function withdraw(address _beneficiary) external returns (uint256) {
-        uint256 withdrawableBalance = withdrawableBalances[_beneficiary] - MIN_REGISTRATION_VALUE;
+        uint256 withdrawableBalance = beneficiaries[_beneficiary].claimable;
         // Immediately updating the balance to avoid re-entrancy attack
-        withdrawableBalances[_beneficiary] = MIN_REGISTRATION_VALUE;
+        beneficiaries[_beneficiary].claimable = 0;
 
         // Sending 30k gas in a call to allow receiver to be a multi-sig and write to storage
         /* solhint-disable avoid-low-level-calls */
