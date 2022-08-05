@@ -175,8 +175,6 @@ contract SubsidyTest is Test {
         Subsidy.Subsidy memory sub = subsidy.getSubsidy(BRIDGE, 1);
         assertEq(sub.available, 1 ether, "available incorrectly set");
 
-        uint256 expectedSubsidyAmount = ((dt * gasPerMinute) / 60) * block.basefee;
-
         vm.warp(block.timestamp + dt);
         vm.startPrank(BRIDGE);
         assertEq(subsidy.claimSubsidy(1, address(0)), 0);
@@ -192,8 +190,6 @@ contract SubsidyTest is Test {
         subsidy.subsidize{value: 1 ether}(BRIDGE, 1, gasPerMinute);
         Subsidy.Subsidy memory sub = subsidy.getSubsidy(BRIDGE, 1);
         assertEq(sub.available, 1 ether, "available incorrectly set");
-
-        uint256 expectedSubsidyAmount = ((dt * gasPerMinute) / 60) * block.basefee;
 
         vm.warp(block.timestamp + dt);
 
