@@ -98,6 +98,8 @@ abstract contract BridgeTestBase is Test {
     uint256 private constant MASK_THIRTY_TWO_BITS = 0xffffffff;
     uint256 private constant MASK_THIRTY_BITS = 0x3fffffff;
     uint256 private constant MASK_SIXTY_FOUR_BITS = 0xffffffffffffffff;
+    // offset we add to `proofData` to point to rollupBeneficiary
+    uint256 internal constant ROLLUP_BENEFICIARY_OFFSET = 4512; // ROLLUP_HEADER_LENGTH - 0x20
 
     IRollupProcessor internal constant ROLLUP_PROCESSOR = IRollupProcessor(0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455);
     IRollupProcessor internal constant IMPLEMENTATION = IRollupProcessor(0x3f972e325CecD99a6be267fd36ceB46DCa7C3F28);
@@ -113,6 +115,7 @@ abstract contract BridgeTestBase is Test {
     AztecTypes.AztecAsset internal emptyAsset;
 
     uint256 public nextRollupId = 0;
+    address public rollupBeneficiary;
 
     constructor() {
         vm.label(address(ROLLUP_PROCESSOR), "Rollup");
@@ -253,6 +256,14 @@ abstract contract BridgeTestBase is Test {
     }
 
     /**
+     * @notice Sets `rollupBeneficiary` storage variable
+     * @param _rollupBeneficiary An address which receives rollup block's fee
+     */
+    function setRollupBeneficiary(address _rollupBeneficiary) public {
+        rollupBeneficiary = _rollupBeneficiary;
+    }
+
+    /**
      * @notice A function which iterates through logs, decodes relevant events and returns values which were originally
      *         returned from bridge's `convert(...)` function.
      * @dev You have to call `vm.recordLogs()` before calling this function
@@ -292,7 +303,7 @@ abstract contract BridgeTestBase is Test {
      * @dev if first run, also resets the data size and start index of the rollup
      * @dev Mock any verifier call to return true to let builder focus on contract side of things
      */
-    function _prepareRollup() private {
+    function _prepareRollup() internal {
         // Overwrite the rollup state hash
         {
             bytes32 rollupStateHash = keccak256(
@@ -326,7 +337,7 @@ abstract contract BridgeTestBase is Test {
         vm.mockCall(ROLLUP_PROCESSOR.verifier(), "", abi.encode(true));
     }
 
-    function _encodeAsset(AztecTypes.AztecAsset memory _asset) private pure returns (uint256) {
+    function _encodeAsset(AztecTypes.AztecAsset memory _asset) internal pure returns (uint256) {
         if (_asset.assetType == AztecTypes.AztecAssetType.VIRTUAL) {
             return (_asset.id & MASK_THIRTY_BITS) | VIRTUAL_ASSET_ID_FLAG;
         }
@@ -340,7 +351,7 @@ abstract contract BridgeTestBase is Test {
      * @return res The bytes of the encoded mock proof.
      */
     function _getProofData(uint256 _encodedBridgeCallData, uint256 _totalInputValue)
-        private
+        internal
         view
         returns (bytes memory res)
     {
@@ -499,7 +510,7 @@ abstract contract BridgeTestBase is Test {
             mstore(add(res, 0x1140), 0x0000000000000000000000000000000000000000000000000000000000000000)
             mstore(add(res, 0x1160), 0x0000000000000000000000000000000000000000000000000000000000000000)
             mstore(add(res, 0x1180), 0x14e0f351ade4ba10438e9b15f66ab2e6389eea5ae870d6e8b2df1418b2e6fd5b)
-            mstore(add(res, 0x11a0), 0x000000000000000000000000ddb3b44eaf58792a5a8dded7da7561a671138b80)
+            mstore(add(res, 0x11a0), sload(rollupBeneficiary.slot))
             mstore(add(res, 0x11c0), 0x0000000000000000000000000000000000000000000000000000000000000001)
             mstore(add(res, 0x11e0), 0x0000000000000000000000000000000000000000000000000000000000000003)
             mstore(add(res, 0x1200), 0xc7336c7aeff11bdfcb8203789aea9cfbaf54d9a60a590d3dbc3bac681126be84)
