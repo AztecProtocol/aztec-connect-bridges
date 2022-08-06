@@ -19,14 +19,14 @@ contract ERC4626 is Test {
     VaultBridge private vaultbridge;
     IERC20 public constant MAPLE = IERC20(0x33349B282065b0284d756F0577FB39c158F935e6);
 
-    IERC20 public constant STETH = IERC20(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
-
+    IERC20 public constant THOR = IERC20(0xa5f2211B9b8170F694421f2046281775E8468044);
+    //xMPL Maple Vault
     IERC4626 public constant VAULT = IERC4626(0x4937A209D4cDbD3ecD48857277cfd4dA4D82914c);
 
-    // Timeless Fi Vault https://etherscan.io/address/0xf9a98a9452485ed55cd3ce5260c2b71c9807b11a#readContract
-    IERC4626 public constant VAULT2 = IERC4626(0xF9A98A9452485ed55cd3Ce5260C2b71c9807b11a);
+    // https://etherscan.io/address/0x815C23eCA83261b6Ec689b60Cc4a58b54BC24D8D#readContract
+    IERC4626 public constant VAULT2 = IERC4626(0x815C23eCA83261b6Ec689b60Cc4a58b54BC24D8D);
 
-    function testVaultBridge1(uint256 _depositAmount) public {
+    function testxMPL(uint256 _depositAmount) public {
         uint256 depositAmount = bound(_depositAmount, 5000, type(uint96).max);
 
         deal(address(MAPLE), address(vaultbridge), depositAmount);
@@ -77,17 +77,17 @@ contract ERC4626 is Test {
         assertEq(0, outputValueB);
     }
 
-    function testVaultBridge2(uint256 _depositAmount) public {
+    function testTimelessFi(uint256 _depositAmount) public {
         uint256 depositAmount = bound(_depositAmount, 5000, type(uint96).max);
 
-        deal(address(STETH), address(vaultbridge), depositAmount);
+        deal(address(THOR), address(vaultbridge), depositAmount);
 
-        vaultbridge.approvePair(address(VAULT2), address(STETH));
+        vaultbridge.approvePair(address(VAULT2), address(THOR));
 
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: address(STETH),
+            erc20Address: address(THOR),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
         AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
@@ -122,9 +122,9 @@ contract ERC4626 is Test {
             address(0) // _rollupBeneficiary - not relevant in this context
         );
 
-        uint256 rollupMAPLEToken = STETH.balanceOf(address(vaultbridge));
+        uint256 rollupThorToken = THOR.balanceOf(address(vaultbridge));
 
-        assertEq(outputValueA, rollupMAPLEToken);
+        assertEq(outputValueA, rollupThorToken);
         assertEq(0, outputValueB);
     }
 

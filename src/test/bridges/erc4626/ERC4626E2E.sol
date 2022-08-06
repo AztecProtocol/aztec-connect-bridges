@@ -24,54 +24,42 @@ contract ERC4626E2ETest is BridgeTestBase {
     // To store the id of the example bridge after being added
     uint256 private id;
 
-    function setUp() public {
-        // Deploy a new example bridge
+    // @dev In order to avoid overflows we set _depositAmount to be uint96 instead of uint256.
+    function test4626E2ETest(uint96 _depositAmount) public {
         bridge = new VaultBridge(address(ROLLUP_PROCESSOR));
 
         // Use the label cheatcode to mark the address with "Example Bridge" in the traces
         vm.label(address(bridge), "ERC4626 Bridge");
 
         // Impersonate the multi-sig to add a new bridge
-        vm.prank(MULTI_SIG);
+        vm.startPrank(MULTI_SIG);
 
         // List the example-bridge with a gasLimit of 100K
         ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 1000000);
 
         ROLLUP_PROCESSOR.setSupportedAsset(address(MAPLE), 100000);
-
+        ROLLUP_PROCESSOR.setSupportedAsset(address(VAULT), 100000);
         vm.stopPrank();
 
         // Fetch the id of the example bridge
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
-    }
-
-    // @dev In order to avoid overflows we set _depositAmount to be uint96 instead of uint256.
-    function test4626E2ETest(uint96 _depositAmount) public {
         vm.assume(_depositAmount > 1);
 
-        AztecTypes.AztecAsset memory mapleAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(MAPLE),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-        AztecTypes.AztecAsset memory vaultAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(VAULT),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        AztecTypes.AztecAsset memory mapleAsset = getRealAztecAsset(address(MAPLE));
+        AztecTypes.AztecAsset memory vaultAsset = getRealAztecAsset(address(VAULT));
         // Mint the depositAmount of Dai to rollupProcessor
         deal(address(MAPLE), address(ROLLUP_PROCESSOR), _depositAmount);
-
+        bridge.approvePair(address(VAULT), address(MAPLE));
         // Computes the encoded data for the specific bridge interaction
         // encodeBridgeCallData(id, daiAsset, emptyAsset, daiAsset, emptyAsset, 0);
         uint256 bridgeCallData = encodeBridgeCallData(id, mapleAsset, emptyAsset, vaultAsset, emptyAsset, 0);
 
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, _depositAmount);
-
+        uint256 rollupMAPLEToken = MAPLE.balanceOf(address(bridge));
         // Note: Unlike in unit tests there is no need to manually transfer the tokens - RollupProcessor does this
 
         // Check the output values are as expected
-        assertEq(outputValueA, _depositAmount, "outputValueA doesn't equal deposit");
+        assertEq(outputValueA, _depositAmount - 1, "outputValueA doesn't equal deposit");
         assertEq(outputValueB, 0, "Non-zero outputValueB");
         assertFalse(isAsync, "Bridge is not synchronous");
     }
