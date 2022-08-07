@@ -413,11 +413,11 @@ contract IndexTest is BridgeTestBase {
     }
 
     // Test using 0.3% pool with no liqduiity
-    function testEmptyUniPool() public{
+    function testEmptyUniPool() public {
         uint256 _depositAmount = 1 ether;
         uint64 flowSelector = 3; //Select pool with no liqduiity
         uint64 maxSlipAux = 9900;
-        uint64 oracleLimit = 9900; 
+        uint64 oracleLimit = 9900;
         uint64 auxData = _encodeData(flowSelector, maxSlipAux, oracleLimit);
 
         bytes4 emptyByte4;
@@ -425,7 +425,7 @@ contract IndexTest is BridgeTestBase {
         _buySetExpectRevert(_depositAmount, auxData, emptyBytes, emptyByte4);
 
         maxSlipAux = 9900;
-        oracleLimit = 8000; 
+        oracleLimit = 8000;
         auxData = _encodeData(flowSelector, maxSlipAux, oracleLimit);
         _sellSetExpectRevert(_depositAmount, auxData, emptyBytes, emptyByte4);
     }

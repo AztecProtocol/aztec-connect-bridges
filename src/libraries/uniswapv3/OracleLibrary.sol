@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.6.10 <=0.8.10;
 
-import './FullMath.sol';
-import './TickMath.sol';
-import '../../interfaces/uniswapv3/pool/IUniswapV3PoolDerivedState.sol';
+import "./FullMath.sol";
+import "./TickMath.sol";
+import "../../interfaces/uniswapv3/pool/IUniswapV3PoolDerivedState.sol";
 
-/// @title Oracle library
+/// @title Copy of uniswaps's Oracle library using modified Fullmath and TickMath to support solidity 0.8.x.
+/// The only changes done to the code is explicit type conversion to int32(). Changes done on line 47 and 40
 /// @notice Provides functions to integrate with V3 pool oracle
 library OracleLibrary {
     /// @notice Calculates time-weighted means of tick and liquidity for a given Uniswap V3 pool
@@ -18,24 +19,24 @@ library OracleLibrary {
         view
         returns (int24 arithmeticMeanTick, uint128 harmonicMeanLiquidity)
     {
-        require(secondsAgo != 0, 'BP');
+        require(secondsAgo != 0, "BP");
 
         uint32[] memory secondsAgos = new uint32[](2);
         secondsAgos[0] = secondsAgo;
         secondsAgos[1] = 0;
 
-        (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) =
-            IUniswapV3PoolDerivedState(pool).observe(secondsAgos); 
+        (
+            int56[] memory tickCumulatives,
+            uint160[] memory secondsPerLiquidityCumulativeX128s
+        ) = IUniswapV3PoolDerivedState(pool).observe(secondsAgos);
 
         int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
-        uint160 secondsPerLiquidityCumulativesDelta =
-            secondsPerLiquidityCumulativeX128s[1] - secondsPerLiquidityCumulativeX128s[0];
+        uint160 secondsPerLiquidityCumulativesDelta = secondsPerLiquidityCumulativeX128s[1] -
+            secondsPerLiquidityCumulativeX128s[0];
 
-        // @note Casting to int32 
-        arithmeticMeanTick = int24(tickCumulativesDelta / int32(secondsAgo)); 
+        arithmeticMeanTick = int24(tickCumulativesDelta / int32(secondsAgo));
         // Always round to negative infinity
 
-        // @note Casting to int32 
         if (tickCumulativesDelta < 0 && (tickCumulativesDelta % int32(secondsAgo) != 0)) arithmeticMeanTick--;
 
         // We are multiplying here instead of shifting to ensure that harmonicMeanLiquidity doesn't overflow uint128
@@ -70,5 +71,4 @@ library OracleLibrary {
                 : FullMath.mulDiv(1 << 128, baseAmount, ratioX128);
         }
     }
-
 }
