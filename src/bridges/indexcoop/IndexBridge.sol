@@ -5,8 +5,7 @@ pragma solidity >=0.8.4;
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
-import {TickMath} from "../../libraries/uniswapv3/TickMath.sol";
-import {FullMath} from "../../libraries/uniswapv3/FullMath.sol";
+import {OracleLibrary} from "../../libraries/uniswapv3/OracleLibrary.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {ISwapRouter} from "../../interfaces/uniswapv3/ISwapRouter.sol";
@@ -296,20 +295,9 @@ contract IndexBridgeContract is BridgeBase {
         {
             uint32 secondsAgo = 10;
 
-            uint32[] memory secondsAgos = new uint32[](2);
-            secondsAgos[0] = secondsAgo;
-            secondsAgos[1] = 0;
+            (int24 arithmeticmeanTick, ) = OracleLibrary.consult(pool, secondsAgo);
 
-            (int56[] memory tickCumulatives, ) = IUniswapV3PoolDerivedState(pool).observe(secondsAgos);
-
-            int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
-            int24 arithmeticmeanTick = int24(tickCumulativesDelta / int32(secondsAgo));
-
-            if (tickCumulativesDelta < 0 && (tickCumulativesDelta % int32(secondsAgo) != 0)) {
-                arithmeticmeanTick--;
-            }
-
-            amountOut = _getQuoteAtTick(arithmeticmeanTick, uint128(_amountIn), _baseToken, _quoteToken);
+            amountOut = OracleLibrary.getQuoteAtTick(arithmeticmeanTick, uint128(_amountIn), _baseToken, _quoteToken);
         }
 
         uint256 price;
@@ -319,38 +307,6 @@ contract IndexBridgeContract is BridgeBase {
         } else {
             price = (_amountIn * 1e18) / amountOut;
             if (price > uint256(_oracleLimit) * 1e14) revert UnsafeOraclePrice();
-        }
-    }
-
-    /**
-     * @dev Calculates the quote based on an an arithmetic mean tick.
-     * From v3-peripher/contracts/libraries/OracleLibrary.sol using modified Fullmath and Tickmath for 0.8.x 
-     * 
-     * @param _tick - the arithmetic mean tick.
-     * @param _baseAmount - The amount of base token.
-     * @param _baseToken - Address of the base token. 
-     * @param _quoteToken - Address of the quote token.
-     % @return quoteAmount - returned amount of quote token
-     */
-    function _getQuoteAtTick(
-        int24 _tick,
-        uint128 _baseAmount,
-        address _baseToken,
-        address _quoteToken
-    ) internal pure returns (uint256 quoteAmount) {
-        uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(_tick);
-
-        // Calculate quoteAmount with better precision if it doesn't overflow when multiplied by itself
-        if (sqrtRatioX96 <= type(uint128).max) {
-            uint256 ratioX192 = uint256(sqrtRatioX96) * sqrtRatioX96;
-            quoteAmount = _baseToken < _quoteToken
-                ? FullMath.mulDiv(ratioX192, _baseAmount, 1 << 192)
-                : FullMath.mulDiv(1 << 192, _baseAmount, ratioX192);
-        } else {
-            uint256 ratioX128 = FullMath.mulDiv(sqrtRatioX96, sqrtRatioX96, 1 << 64);
-            quoteAmount = _baseToken < _quoteToken
-                ? FullMath.mulDiv(ratioX128, _baseAmount, 1 << 128)
-                : FullMath.mulDiv(1 << 128, _baseAmount, ratioX128);
         }
     }
 
