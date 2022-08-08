@@ -15,6 +15,7 @@ import {IWETH} from "../../../interfaces/IWETH.sol";
 
 import {ISwapRouter} from "../../../interfaces/uniswapv3/ISwapRouter.sol";
 
+import {BiDCABridge} from "../../../bridges/dca/BiDCABridge.sol";
 import {UniswapDCABridge} from "../../../bridges/dca/UniswapDCABridge.sol";
 
 /**
@@ -99,12 +100,52 @@ contract BiDCATestUnit is Test {
         assertGe(_a, a);
     }
 
+    function testBadInput() public {
+        // Deposit with asset A
+        vm.expectRevert(ErrorLib.InvalidInputA.selector);
+        bridge.convert(
+            AztecTypes.AztecAsset({id: 1, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ERC20}),
+            emptyAsset,
+            emptyAsset,
+            emptyAsset,
+            1,
+            0,
+            1,
+            address(0)
+        );
+
+        vm.expectRevert(ErrorLib.InvalidOutputA.selector);
+        bridge.convert(
+            aztecAssetA,
+            emptyAsset,
+            AztecTypes.AztecAsset({id: 1, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ERC20}),
+            emptyAsset,
+            1,
+            0,
+            1,
+            address(0)
+        );
+
+        bridge.convert(aztecAssetA, emptyAsset, aztecAssetB, emptyAsset, 1, 0, 1, address(0));
+
+        vm.expectRevert(BiDCABridge.PositionAlreadyExists.selector);
+        bridge.convert(aztecAssetA, emptyAsset, aztecAssetB, emptyAsset, 1, 0, 1, address(0));
+    }
+
     function testUniswapForceFillAB() public {
         testFuzzUniswapForceFill(1000e18, 6, 1e18, 6, false, 1, 8);
     }
 
     function testUniswapForceFillBA() public {
         testFuzzUniswapForceFill(1e18, 6, 1000e18, 6, true, 1, 8);
+    }
+
+    function testUniswapForceFillABEth() public {
+        testFuzzUniswapForceFillEth(1e18, 1000e18, false);
+    }
+
+    function testUniswapForceFillBEEth() public {
+        testFuzzUniswapForceFillEth(1000e18, 1e18, true);
     }
 
     /**
