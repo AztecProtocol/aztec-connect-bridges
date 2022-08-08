@@ -17,8 +17,6 @@ import {ErrorLib} from "../base/ErrorLib.sol";
 contract ERC4626Bridge is BridgeBase {
     using SafeERC20 for IERC20;
 
-    // TODO: EIP-1087 based optimization
-
     /**
      * @notice Sets the address of RollupProcessor.sol
      * @param _rollupProcessor Address of RollupProcessor.sol

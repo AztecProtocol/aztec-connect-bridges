@@ -35,12 +35,12 @@ contract ERC4626Test is BridgeTestBase {
 
         vm.startPrank(MULTI_SIG);
 
-        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 1000000);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 180000);
 
-        ROLLUP_PROCESSOR.setSupportedAsset(xMPL, 100000);
-        ROLLUP_PROCESSOR.setSupportedAsset(mpl, 100000);
-        ROLLUP_PROCESSOR.setSupportedAsset(vTHOR, 100000);
-        ROLLUP_PROCESSOR.setSupportedAsset(thor, 100000);
+        ROLLUP_PROCESSOR.setSupportedAsset(xMPL, 30000);
+        ROLLUP_PROCESSOR.setSupportedAsset(mpl, 30000);
+        ROLLUP_PROCESSOR.setSupportedAsset(vTHOR, 30000);
+        ROLLUP_PROCESSOR.setSupportedAsset(thor, 30000);
         vm.stopPrank();
 
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
@@ -49,29 +49,26 @@ contract ERC4626Test is BridgeTestBase {
         assets.push(getRealAztecAsset(mpl));
         shares.push(getRealAztecAsset(vTHOR));
         assets.push(getRealAztecAsset(thor));
+
+        // EIP-1087 optimization related mints
+        deal(xMPL, address(bridge), 1);
+        deal(mpl, address(bridge), 1);
+        deal(vTHOR, address(bridge), 1);
+        deal(thor, address(bridge), 1);
     }
 
     function testFullFlow(uint96 _assetAmount) public {
         uint256 assetAmount = bound(_assetAmount, 10, type(uint256).max);
 
         for (uint256 i = 0; i < shares.length; ++i) {
-            deal(assets[i].erc20Address, address(bridge), assetAmount);
+            deal(assets[i].erc20Address, address(ROLLUP_PROCESSOR), assetAmount);
 
             uint256 expectedAmount = IERC4626(shares[i].erc20Address).previewDeposit(assetAmount);
 
             bridge.listVault(shares[i].erc20Address);
 
-            vm.prank(address(ROLLUP_PROCESSOR));
-            (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
-                assets[i],
-                emptyAsset,
-                shares[i],
-                emptyAsset,
-                assetAmount,
-                0,
-                0, // issuance flow
-                address(0)
-            );
+            uint256 bridgeCallData = encodeBridgeCallData(id, assets[i], emptyAsset, shares[i], emptyAsset, 0);
+            (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, assetAmount);
 
             assertEq(outputValueA, expectedAmount, "Received amount of shares differs from the expected one");
             assertEq(outputValueB, 0, "Non-zero outputValueB");
@@ -80,17 +77,8 @@ contract ERC4626Test is BridgeTestBase {
             // Immediately redeem the shares
             uint256 redeemAmount = outputValueA;
 
-            vm.prank(address(ROLLUP_PROCESSOR));
-            (outputValueA, outputValueB, isAsync) = bridge.convert(
-                shares[i],
-                emptyAsset,
-                assets[i],
-                emptyAsset,
-                redeemAmount,
-                0,
-                1, // redeem flow
-                address(0)
-            );
+            bridgeCallData = encodeBridgeCallData(id, shares[i], emptyAsset, assets[i], emptyAsset, 1);
+            (outputValueA, outputValueB, isAsync) = sendDefiRollup(bridgeCallData, redeemAmount);
 
             assertApproxEqAbs(outputValueA, assetAmount, 2, "Received amount of asset differs from the expected one");
             assertEq(outputValueB, 0, "Non-zero outputValueB");
