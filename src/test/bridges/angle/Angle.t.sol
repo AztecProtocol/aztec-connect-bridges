@@ -185,17 +185,17 @@ contract AngleTest is BridgeTestBase {
 
     function testMultipleWithdraws(uint96 _amount) public {
         // the protocol might not have so many sanDAI available, so we limit what can be withdrawn
-        vm.assume(_amount >= 10 && _amount < 10000 ether);
+        uint256 amount = uint256(bound(_amount, 10, 50000 ether));
 
         vm.startPrank(address(ROLLUP_PROCESSOR));
 
-        deal(sanDaiAsset.erc20Address, address(bridge), uint256(_amount));
+        deal(sanDaiAsset.erc20Address, address(bridge), amount);
         (uint256 outputValueA, , ) = bridge.convert(
             sanDaiAsset,
             emptyAsset,
             daiAsset,
             emptyAsset,
-            uint256(_amount),
+            amount,
             0,
             1,
             address(0)
@@ -205,9 +205,9 @@ contract AngleTest is BridgeTestBase {
         (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(
             0xc9daabC677F3d1301006e723bD21C60be57a5915
         );
-        assertEq(outputValueA, ((uint256(_amount) - DUST) * sanRate) / 1e18 - DUST);
+        assertEq(outputValueA, ((amount - DUST) * sanRate) / 1e18 - DUST);
 
-        uint256 input2 = 5 * uint256(_amount);
+        uint256 input2 = 5 * amount;
         deal(sanDaiAsset.erc20Address, address(bridge), input2);
         deal(daiAsset.erc20Address, address(bridge), 0); // reset DAI balance
         (outputValueA, , ) = bridge.convert(sanDaiAsset, emptyAsset, daiAsset, emptyAsset, input2, 0, 1, address(0));
@@ -220,10 +220,9 @@ contract AngleTest is BridgeTestBase {
     }
 
     function testValidDepositE2E(uint96 _amount) public {
-        vm.assume(_amount >= 10);
         uint256 balanceRollupBeforeDAI = IERC20(daiAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 amount = uint256(_amount);
-        vm.assume(amount < balanceRollupBeforeDAI);
+        amount = bound(amount, 10, balanceRollupBeforeDAI - 1);
 
         uint256 balanceRollupBeforeSanDAI = IERC20(sanDaiAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
 
@@ -247,8 +246,7 @@ contract AngleTest is BridgeTestBase {
 
     function testValidWithdrawE2E(uint96 _amount) public {
         // the protocol might not have so many sanDAI available, so we limit what can be withdrawn
-        vm.assume(_amount >= 10 && _amount < 100000 ether);
-        uint256 amount = uint256(_amount);
+        uint256 amount = uint256(bound(_amount, 10, 100000 ether));
 
         deal(sanDaiAsset.erc20Address, address(ROLLUP_PROCESSOR), amount);
 
