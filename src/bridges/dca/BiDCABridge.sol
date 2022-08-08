@@ -143,7 +143,7 @@ abstract contract BiDCABridge is BridgeBase {
      * @return flowA The flow of asset A from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
      * @return flowB The flow of asset B from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
      */
-    function rebalanceAndFill(uint256 _offerA, uint256 _offerB) public returns (int256, int256) {
+    function rebalanceAndFill(uint256 _offerA, uint256 _offerB) external returns (int256, int256) {
         (int256 flowA, int256 flowB, , ) = _rebalanceAndFill(_offerA, _offerB, getPrice(), false);
         if (flowA > 0) {
             ASSET_A.safeTransferFrom(msg.sender, address(this), uint256(flowA));
