@@ -21,5 +21,5 @@ interface IERC4626 is IERC20 {
         address owner
     ) external returns (uint256 assets);
 
-    function asset() external view returns (IERC20);
+    function asset() external view returns (address);
 }

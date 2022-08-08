@@ -1,22 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec.
-pragma solidity 0.8.10;
+pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IERC4626} from "../../../interfaces/erc4626/IERC4626.sol";
-import {VaultBridge} from "../../../bridges/erc4626/VaultBridge.sol";
+import {ERC4626Bridge} from "../../../bridges/erc4626/ERC4626Bridge.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 
 import {Test} from "forge-std/Test.sol";
 
-import {console} from "forge-std/console.sol";
-
-//Tested at block 14886873 may not work at other blocks
-// forge test --fork-block-number 14886873  --match-contract ERC4626 --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c
 contract ERC4626 is Test {
     address private rollupProcessor;
-    VaultBridge private vaultbridge;
+    ERC4626Bridge private bridge;
     IERC20 public constant MAPLE = IERC20(0x33349B282065b0284d756F0577FB39c158F935e6);
 
     IERC20 public constant THOR = IERC20(0xa5f2211B9b8170F694421f2046281775E8468044);
@@ -26,12 +22,20 @@ contract ERC4626 is Test {
     // https://etherscan.io/address/0x815C23eCA83261b6Ec689b60Cc4a58b54BC24D8D#readContract
     IERC4626 public constant VAULT2 = IERC4626(0x815C23eCA83261b6Ec689b60Cc4a58b54BC24D8D);
 
+    function setUp() public {
+        rollupProcessor = address(this);
+
+        bridge = new ERC4626Bridge(rollupProcessor);
+        vm.deal(address(bridge), 0);
+        vm.label(address(bridge), "ERC4626 Bridge");
+    }
+
     function testxMPL(uint256 _depositAmount) public {
         uint256 depositAmount = bound(_depositAmount, 5000, type(uint96).max);
 
-        deal(address(MAPLE), address(vaultbridge), depositAmount);
+        deal(address(MAPLE), address(bridge), depositAmount);
 
-        vaultbridge.approvePair(address(VAULT), address(MAPLE));
+        bridge.listVault(address(VAULT));
 
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
@@ -45,33 +49,33 @@ contract ERC4626 is Test {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = vaultbridge.convert(
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
             inputAsset,
             empty,
             outputAsset,
             empty,
             depositAmount,
-            0, // _interactionNonce
-            0, // _auxData - not used in the example bridge
-            address(0) // _rollupBeneficiary - not relevant in this context
+            0,
+            0,
+            address(0)
         );
 
-        uint256 rollupMAPLEShares = VAULT.balanceOf(address(vaultbridge));
+        uint256 rollupMAPLEShares = VAULT.balanceOf(address(bridge));
 
         assertEq(0, outputValueB);
         assertEq(rollupMAPLEShares, outputValueA);
-        (outputValueA, outputValueB, isAsync) = vaultbridge.convert(
+        (outputValueA, outputValueB, isAsync) = bridge.convert(
             outputAsset,
             empty,
             inputAsset,
             empty,
             outputValueA,
-            0, // _interactionNonce
-            0, // _auxData - not used in the example bridge
-            address(0) // _rollupBeneficiary - not relevant in this context
+            0,
+            1,
+            address(0)
         );
 
-        uint256 rollupMAPLEToken = MAPLE.balanceOf(address(vaultbridge));
+        uint256 rollupMAPLEToken = MAPLE.balanceOf(address(bridge));
 
         assertEq(outputValueA, rollupMAPLEToken);
         assertEq(0, outputValueB);
@@ -80,9 +84,9 @@ contract ERC4626 is Test {
     function testTimelessFi(uint256 _depositAmount) public {
         uint256 depositAmount = bound(_depositAmount, 5000, type(uint96).max);
 
-        deal(address(THOR), address(vaultbridge), depositAmount);
+        deal(address(THOR), address(bridge), depositAmount);
 
-        vaultbridge.approvePair(address(VAULT2), address(THOR));
+        bridge.listVault(address(VAULT2));
 
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
@@ -96,43 +100,35 @@ contract ERC4626 is Test {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = vaultbridge.convert(
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
             inputAsset,
             empty,
             outputAsset,
             empty,
             depositAmount,
-            0, // _interactionNonce
-            0, // _auxData - not used in the example bridge
-            address(0) // _rollupBeneficiary - not relevant in this context
+            0,
+            0,
+            address(0)
         );
 
-        uint256 rollupMAPLEShares = VAULT2.balanceOf(address(vaultbridge));
+        uint256 rollupMAPLEShares = VAULT2.balanceOf(address(bridge));
 
         assertEq(0, outputValueB);
         assertEq(rollupMAPLEShares, outputValueA);
-        (outputValueA, outputValueB, isAsync) = vaultbridge.convert(
+        (outputValueA, outputValueB, isAsync) = bridge.convert(
             outputAsset,
             empty,
             inputAsset,
             empty,
             outputValueA,
-            0, // _interactionNonce
-            0, // _auxData - not used in the example bridge
-            address(0) // _rollupBeneficiary - not relevant in this context
+            0,
+            1,
+            address(0)
         );
 
-        uint256 rollupThorToken = THOR.balanceOf(address(vaultbridge));
+        uint256 rollupThorToken = THOR.balanceOf(address(bridge));
 
         assertEq(outputValueA, rollupThorToken);
         assertEq(0, outputValueB);
-    }
-
-    function setUp() public {
-        rollupProcessor = address(this);
-
-        vaultbridge = new VaultBridge(rollupProcessor);
-        vm.deal(address(vaultbridge), 0);
-        vm.label(address(vaultbridge), "ERC4626 Bridge");
     }
 }
