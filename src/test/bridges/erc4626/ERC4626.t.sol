@@ -12,7 +12,9 @@ import {ERC4626Bridge} from "../../../bridges/erc4626/ERC4626Bridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
 contract ERC4626Test is BridgeTestBase {
+    // solhint-disable-next-line
     address public constant xMPL = 0x4937A209D4cDbD3ecD48857277cfd4dA4D82914c;
+    // solhint-disable-next-line
     address public constant vTHOR = 0x815C23eCA83261b6Ec689b60Cc4a58b54BC24D8D;
 
     ERC4626Bridge internal bridge;
