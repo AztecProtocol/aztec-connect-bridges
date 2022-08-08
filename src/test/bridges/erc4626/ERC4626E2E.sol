@@ -51,15 +51,12 @@ contract ERC4626E2ETest is BridgeTestBase {
         deal(address(MAPLE), address(ROLLUP_PROCESSOR), _depositAmount);
         bridge.approvePair(address(VAULT), address(MAPLE));
         // Computes the encoded data for the specific bridge interaction
-        // encodeBridgeCallData(id, daiAsset, emptyAsset, daiAsset, emptyAsset, 0);
         uint256 bridgeCallData = encodeBridgeCallData(id, mapleAsset, emptyAsset, vaultAsset, emptyAsset, 0);
 
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, _depositAmount);
-        uint256 rollupMAPLEToken = MAPLE.balanceOf(address(bridge));
-        // Note: Unlike in unit tests there is no need to manually transfer the tokens - RollupProcessor does this
 
         // Check the output values are as expected
-        assertEq(outputValueA, _depositAmount - 1, "outputValueA doesn't equal deposit");
+        assertGt(outputValueA, 0, "zero outputValueA");
         assertEq(outputValueB, 0, "Non-zero outputValueB");
         assertFalse(isAsync, "Bridge is not synchronous");
     }
