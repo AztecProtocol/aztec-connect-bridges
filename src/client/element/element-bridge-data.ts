@@ -11,8 +11,7 @@ import { AsyncDefiBridgeProcessedEvent } from "../../../typechain-types/IRollupP
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { createWeb3Provider } from "../aztec/provider";
 import { EthAddress } from "@aztec/barretenberg/address";
-// TODO: simply import BridgeCallData once the name is changed on defi-bridge-project
-import { BridgeId as BridgeCallData } from "@aztec/barretenberg/bridge_id";
+import { BridgeCallData } from "@aztec/barretenberg/bridge_call_data";
 
 export type BatchSwapStep = {
   poolId: string;
