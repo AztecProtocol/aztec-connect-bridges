@@ -293,9 +293,6 @@ contract BiDCATestE2E is BridgeTestBase {
                 }
             }
 
-            emit log_named_decimal_uint("A", _aFirst ? deposit1 : deposit2, 18);
-            emit log_named_decimal_uint("B", !_aFirst ? deposit1 : deposit2, 18);
-
             // We accumulate quite a large amount of dust from rounding errors etc with the amount of matching internally and crosstick. However, ensure it is less than 1 millionth
             assertLe(unaccountedA, (_aFirst ? deposit1 : deposit2) / 1e6, "too much A left as 'dust'");
             assertLe(unaccountedB, (_aFirst ? deposit2 : deposit1) / 1e6, "too much B left as 'dust'");
