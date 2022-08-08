@@ -194,14 +194,7 @@ contract BiDCATestE2E is BridgeTestBase {
                 outputValueA = (_aFirst ? assetB : assetA).balanceOf(address(ROLLUP_PROCESSOR)) - outputValueA;
                 outputValueB = (_aFirst ? assetA : assetB).balanceOf(address(ROLLUP_PROCESSOR)) - outputValueB;
             }
-            /*            (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = bridge.finalise(
-                _aFirst ? aztecAssetA : aztecAssetB,
-                emptyAsset,
-                _aFirst ? aztecAssetB : aztecAssetA,
-                emptyAsset,
-                0,
-                0
-            );*/
+
             if (bridge.getDCA(0).end <= (block.timestamp / bridge.TICK_SIZE())) {
                 assertTrue(ready, "Not ready to finalise 0");
                 assertEq(outputValueA, acc, "outputValueA not matching");
@@ -211,11 +204,9 @@ contract BiDCATestE2E is BridgeTestBase {
                 if (_aFirst) {
                     uint256 aToBDirect = bridge.denominateAssetAInB(deposit1, priceBefore, false);
                     assertGt(outputValueA, aToBDirect, "0 Received too little");
-                    //assetB.safeTransferFrom(address(bridge), address(this), outputValueA);
                 } else {
                     uint256 bToADirect = bridge.denominateAssetBInA(deposit1, priceBefore, false);
                     assertLt(outputValueA, bToADirect, "0 Received too much A");
-                    //assetA.safeTransferFrom(address(bridge), address(this), outputValueA);
                 }
             } else {
                 assertFalse(ready, "Ready to finalise 0");
@@ -267,10 +258,6 @@ contract BiDCATestE2E is BridgeTestBase {
         {
             vm.warp(block.timestamp + 100 days);
             (uint256 availableA, uint256 availableB) = bridge.getAvailable();
-            //            assertEq(availableA, 0, "Available A != 0");
-            //            assertEq(availableB, 0, "Available B != 0");
-            // This would need to take into account the amount of tokens that was already in there
-            // WAIT, there should not be a lot in the actual bridge :thinking:
 
             uint256 unaccountedA = assetA.balanceOf(address(bridge)) - availableA;
             uint256 unaccountedB = assetB.balanceOf(address(bridge)) - availableB;
