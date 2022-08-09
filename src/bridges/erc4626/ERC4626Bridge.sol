@@ -5,9 +5,11 @@ pragma solidity >=0.8.4;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
+import {IWETH} from "../../interfaces/IWETH.sol";
 
 /**
  * @title Aztec Connect Bridge for ERC4626 compatible vaults
@@ -16,6 +18,8 @@ import {ErrorLib} from "../base/ErrorLib.sol";
  */
 contract ERC4626Bridge is BridgeBase {
     using SafeERC20 for IERC20;
+
+    IWETH public constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     /**
      * @notice Sets the address of RollupProcessor.sol
@@ -44,10 +48,12 @@ contract ERC4626Bridge is BridgeBase {
      * @param _inputAssetA Vault asset (deposit) or vault shares (redeem)
      * @param _outputAssetA Vault shares (deposit) or vault asset (redeem)
      * @param _totalInputValue The amount of assets to deposit or shares to redeem
+     * @param _interactionNonce A globally unique identifier of this call
      * @param _auxData Number indicating which flow to execute (0 is deposit flow, 1 is redeem flow)
      * @return outputValueA The amount of shares (deposit) or assets (redeem) returned
      * @dev Not checking validity of input/output assets because if they were invalid, approvals could not get set
      *      in the `listVault(...)` method.
+     * @dev In case input or output asset is ETH, the bridge wraps/unwraps it.
      */
     function convert(
         AztecTypes.AztecAsset memory _inputAssetA,
@@ -55,7 +61,7 @@ contract ERC4626Bridge is BridgeBase {
         AztecTypes.AztecAsset memory _outputAssetA,
         AztecTypes.AztecAsset memory,
         uint256 _totalInputValue,
-        uint256,
+        uint256 _interactionNonce,
         uint64 _auxData,
         address
     )
@@ -70,9 +76,19 @@ contract ERC4626Bridge is BridgeBase {
         )
     {
         if (_auxData == 0) {
+            // Issuing new shares - input can be ETH
+            if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+                WETH.deposit{value: _totalInputValue}();
+            }
             outputValueA = IERC4626(_outputAssetA.erc20Address).deposit(_totalInputValue, address(this));
         } else if (_auxData == 1) {
+            // Redeeming shares
             outputValueA = IERC4626(_inputAssetA.erc20Address).redeem(_totalInputValue, address(this), address(this));
+
+            if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+                IWETH(WETH).withdraw(outputValueA);
+                IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
+            }
         } else {
             revert ErrorLib.InvalidAuxData();
         }
