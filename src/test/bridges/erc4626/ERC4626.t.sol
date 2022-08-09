@@ -6,63 +6,58 @@ import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 
 // Example-specific imports
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {ERC4626Bridge} from "../../../bridges/erc4626/ERC4626Bridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
 contract ERC4626Test is BridgeTestBase {
-    // solhint-disable-next-line
-    address public constant xMPL = 0x4937A209D4cDbD3ecD48857277cfd4dA4D82914c;
-    // solhint-disable-next-line
-    address public constant vTHOR = 0x815C23eCA83261b6Ec689b60Cc4a58b54BC24D8D;
-
-    ERC4626Bridge internal bridge;
-    uint256 private id;
-
+    address[] private shareAddresses = [
+        0x4937A209D4cDbD3ecD48857277cfd4dA4D82914c, // xMPL
+        0x815C23eCA83261b6Ec689b60Cc4a58b54BC24D8D, // vTHOR
+        0x5DcaAF1F0B32244131FEd00dE9c4598Ae526dAb2 // TTV - Tokemak vault
+    ];
     AztecTypes.AztecAsset[] private shares;
     AztecTypes.AztecAsset[] private assets;
+
+    ERC4626Bridge private bridge;
+    uint256 private id;
 
     mapping(address => bool) private fuzzerIgnoreList;
 
     function setUp() public {
         bridge = new ERC4626Bridge(address(ROLLUP_PROCESSOR));
 
-        address mpl = IERC4626(xMPL).asset();
-        address thor = IERC4626(vTHOR).asset();
-
         vm.label(address(bridge), "ERC4626 Bridge");
-        vm.label(mpl, "MPL");
-        vm.label(xMPL, "xMPL");
-        vm.label(thor, "THOR");
-        vm.label(vTHOR, "vTHOR");
 
-        vm.startPrank(MULTI_SIG);
-
+        vm.prank(MULTI_SIG);
         ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 180000);
-
-        ROLLUP_PROCESSOR.setSupportedAsset(xMPL, 30000);
-        ROLLUP_PROCESSOR.setSupportedAsset(mpl, 30000);
-        ROLLUP_PROCESSOR.setSupportedAsset(vTHOR, 30000);
-        ROLLUP_PROCESSOR.setSupportedAsset(thor, 30000);
-        vm.stopPrank();
 
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
-        shares.push(getRealAztecAsset(xMPL));
-        assets.push(getRealAztecAsset(mpl));
-        shares.push(getRealAztecAsset(vTHOR));
-        assets.push(getRealAztecAsset(thor));
+        for (uint256 i = 0; i < shareAddresses.length; ++i) {
+            address share = shareAddresses[i];
+            address asset = IERC4626(share).asset();
 
-        // EIP-1087 optimization related mints
-        deal(xMPL, address(bridge), 1);
-        deal(mpl, address(bridge), 1);
-        deal(vTHOR, address(bridge), 1);
-        deal(thor, address(bridge), 1);
+            vm.label(share, IERC20Metadata(share).symbol());
+            vm.label(asset, IERC20Metadata(asset).symbol());
 
-        // Set addresses to be ignored by the fuzzer
-        fuzzerIgnoreList[vTHOR] = true;
-        fuzzerIgnoreList[xMPL] = true;
+            vm.startPrank(MULTI_SIG);
+            ROLLUP_PROCESSOR.setSupportedAsset(share, 30000);
+            ROLLUP_PROCESSOR.setSupportedAsset(asset, 30000);
+            vm.stopPrank();
+
+            shares.push(getRealAztecAsset(share));
+            assets.push(getRealAztecAsset(asset));
+
+            // EIP-1087 optimization related mints
+            deal(share, address(bridge), 1);
+            deal(asset, address(bridge), 1);
+
+            // Set the share address to be ignored by the fuzzer
+            fuzzerIgnoreList[share] = true;
+        }
+
         // For the following 2 addresses `testListingNonERC4626Reverts` fails as well just with a different error
         fuzzerIgnoreList[0x7109709ECfa91a80626fF3989D68f67F5b1DD12D] = true; // HEVM
         fuzzerIgnoreList[0x0000000000000000000000000000000000000003] = true; // precompile address
