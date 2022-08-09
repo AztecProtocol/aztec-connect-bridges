@@ -10,6 +10,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/interfaces/IERC20Metadata.
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {ERC4626Bridge} from "../../../bridges/erc4626/ERC4626Bridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
+import {WETHVault} from "./mocks/WETHVault.sol";
 
 contract ERC4626Test is BridgeTestBase {
     address[] private shareAddresses = [
@@ -22,6 +23,7 @@ contract ERC4626Test is BridgeTestBase {
 
     ERC4626Bridge private bridge;
     uint256 private id;
+    address private wethVault;
 
     mapping(address => bool) private fuzzerIgnoreList;
 
@@ -34,6 +36,9 @@ contract ERC4626Test is BridgeTestBase {
         ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 180000);
 
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
+
+        wethVault = address(new WETHVault());
+        shareAddresses.push(address(wethVault));
 
         for (uint256 i = 0; i < shareAddresses.length; ++i) {
             address share = shareAddresses[i];
