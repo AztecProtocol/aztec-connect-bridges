@@ -23,6 +23,8 @@ contract ERC4626Test is BridgeTestBase {
     AztecTypes.AztecAsset[] private shares;
     AztecTypes.AztecAsset[] private assets;
 
+    mapping(address => bool) fuzzerIgnoreList;
+
     function setUp() public {
         bridge = new ERC4626Bridge(address(ROLLUP_PROCESSOR));
 
@@ -57,6 +59,26 @@ contract ERC4626Test is BridgeTestBase {
         deal(mpl, address(bridge), 1);
         deal(vTHOR, address(bridge), 1);
         deal(thor, address(bridge), 1);
+
+        // Set addresses to be ignored by the fuzzer
+        fuzzerIgnoreList[vTHOR] = true;
+        fuzzerIgnoreList[xMPL] = true;
+        // For the following 2 addresses `testListingNonERC4626Reverts` fails as well just with a different error
+        fuzzerIgnoreList[0x7109709ECfa91a80626fF3989D68f67F5b1DD12D] = true; // HEVM
+        fuzzerIgnoreList[0x0000000000000000000000000000000000000003] = true; // precompile address
+    }
+
+    function testInvalidCaller(address _caller) public {
+        vm.assume(_caller != address(ROLLUP_PROCESSOR));
+        vm.prank(_caller);
+        vm.expectRevert(ErrorLib.InvalidCaller.selector);
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
+    }
+
+    function testListingNonERC4626Reverts(address _vault) public {
+        vm.assume(!fuzzerIgnoreList[_vault]);
+        vm.expectRevert();
+        bridge.listVault(_vault);
     }
 
     function testFullFlow(uint96 _assetAmount) public {
