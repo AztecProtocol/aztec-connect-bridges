@@ -19,9 +19,6 @@ contract AngleBridge is BridgeBase {
 
     IStableMaster public constant STABLE_MASTER = IStableMaster(0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87);
 
-    // collateralAddress => poolManagerAddress
-    mapping(address => address) internal poolManagers;
-
     // The amount of dust to leave in the contract
     // Optimization based on EIP-1087
     uint256 internal constant DUST = 1;
@@ -31,11 +28,6 @@ contract AngleBridge is BridgeBase {
      * @param _rollupProcessor Address of rollup processor
      */
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {
-        poolManagers[0x6B175474E89094C44Da98b954EedeAC495271d0F] = 0xc9daabC677F3d1301006e723bD21C60be57a5915;
-        poolManagers[0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48] = 0xe9f183FC656656f1F17af1F2b0dF79b8fF9ad8eD;
-        poolManagers[0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2] = 0x3f66867b4b6eCeBA0dBb6776be15619F73BC30A2;
-        poolManagers[0x853d955aCEf822Db058eb8505911ED77F175b99e] = 0x6b4eE7352406707003bC6f6b96595FD35925af48;
-
         _preApprove(0xc9daabC677F3d1301006e723bD21C60be57a5915);
         _preApprove(0xe9f183FC656656f1F17af1F2b0dF79b8fF9ad8eD);
         _preApprove(0x3f66867b4b6eCeBA0dBb6776be15619F73BC30A2);
@@ -74,10 +66,10 @@ contract AngleBridge is BridgeBase {
         if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
         if (_totalInputValue < 10) revert ErrorLib.InvalidInputAmount();
 
-        uint256 totalInputValue = _totalInputValue - DUST;
+        uint256 totalInputValue = _totalInputValue;
 
         if (_auxData == 0) {
-            address poolManager = poolManagers[_inputAssetA.erc20Address];
+            address poolManager = getPoolManager(_inputAssetA.erc20Address);
             if (poolManager == address(0)) revert ErrorLib.InvalidInputA();
 
             (, address sanToken, , , , , , , ) = STABLE_MASTER.collateralMap(poolManager);
@@ -85,16 +77,31 @@ contract AngleBridge is BridgeBase {
 
             STABLE_MASTER.deposit(totalInputValue, address(this), poolManager);
         } else if (_auxData == 1) {
-            address poolManager = poolManagers[_outputAssetA.erc20Address];
+            address poolManager = getPoolManager(_outputAssetA.erc20Address);
             if (poolManager == address(0)) revert ErrorLib.InvalidOutputA();
 
             (, address sanToken, , , , , , , ) = STABLE_MASTER.collateralMap(poolManager);
             if (sanToken != _inputAssetA.erc20Address) revert ErrorLib.InvalidInputA();
 
             STABLE_MASTER.withdraw(totalInputValue, address(this), address(this), poolManager);
+        } else {
+            revert ErrorLib.InvalidAuxData();
         }
 
         outputValueA = IERC20(_outputAssetA.erc20Address).balanceOf(address(this)) - DUST;
+    }
+
+    // collateralAddress => poolManagerAddress
+    function getPoolManager(address _collateral) public pure returns (address) {
+        if (_collateral == 0x6B175474E89094C44Da98b954EedeAC495271d0F) {
+            return 0xc9daabC677F3d1301006e723bD21C60be57a5915;
+        } else if (_collateral == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48) {
+            return 0xe9f183FC656656f1F17af1F2b0dF79b8fF9ad8eD;
+        } else if (_collateral == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) {
+            return 0x3f66867b4b6eCeBA0dBb6776be15619F73BC30A2;
+        } else if (_collateral == 0x853d955aCEf822Db058eb8505911ED77F175b99e) {
+            return 0x6b4eE7352406707003bC6f6b96595FD35925af48;
+        }
     }
 
     // Pre-approval of all tokens, should be done in the constructor

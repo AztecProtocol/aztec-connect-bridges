@@ -11,8 +11,6 @@ import {ICERC20} from "../../../interfaces/compound/ICERC20.sol";
 import {AngleBridge} from "../../../bridges/angle/AngleBridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
-import {console} from "forge-std/Test.sol";
-
 contract AngleTest is BridgeTestBase {
     using SafeERC20 for IERC20;
 
@@ -35,23 +33,26 @@ contract AngleTest is BridgeTestBase {
         vm.deal(address(bridge), 0);
 
         vm.startPrank(MULTI_SIG);
-        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 5000000);
-        ROLLUP_PROCESSOR.setSupportedAsset(address(0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450), 1000000);
-        ROLLUP_PROCESSOR.setSupportedAsset(address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2), 1000000);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 200000);
+        ROLLUP_PROCESSOR.setSupportedAsset(0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450, 100000);
+        ROLLUP_PROCESSOR.setSupportedAsset(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2, 100000);
         vm.stopPrank();
 
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
-        daiAsset = getRealAztecAsset(address(0x6B175474E89094C44Da98b954EedeAC495271d0F));
+        daiAsset = getRealAztecAsset(0x6B175474E89094C44Da98b954EedeAC495271d0F);
         ethAsset = getRealAztecAsset(address(0));
-        wethAsset = getRealAztecAsset(address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
-        sanDaiAsset = getRealAztecAsset(address(0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450));
+        wethAsset = getRealAztecAsset(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+        sanDaiAsset = getRealAztecAsset(0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450);
 
         unsupportedAsset = AztecTypes.AztecAsset({
             id: 456,
-            erc20Address: address(0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5),
+            erc20Address: 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5,
             assetType: AztecTypes.AztecAssetType.ERC20
         });
+
+        deal(daiAsset.erc20Address, address(bridge), DUST);
+        deal(sanDaiAsset.erc20Address, address(bridge), DUST);
     }
 
     function testWrongInputOutputAssets() public {
@@ -101,7 +102,9 @@ contract AngleTest is BridgeTestBase {
 
         uint256 amount = 1 ether;
 
-        deal(daiAsset.erc20Address, address(bridge), amount);
+        uint256 balance = IERC20(daiAsset.erc20Address).balanceOf(address(bridge));
+        deal(daiAsset.erc20Address, address(bridge), amount + balance);
+
         (uint256 outputValueA, , ) = bridge.convert(
             daiAsset,
             emptyAsset,
@@ -118,7 +121,7 @@ contract AngleTest is BridgeTestBase {
         (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(
             0xc9daabC677F3d1301006e723bD21C60be57a5915
         );
-        assertEq(outputValueA, ((amount - DUST) * 1e18) / sanRate - DUST);
+        assertEq(outputValueA, (amount * 1e18) / sanRate);
 
         vm.stopPrank();
     }
@@ -127,7 +130,9 @@ contract AngleTest is BridgeTestBase {
         vm.assume(_amount > 10);
         vm.startPrank(address(ROLLUP_PROCESSOR));
 
-        deal(daiAsset.erc20Address, address(bridge), _amount);
+        uint256 balance = IERC20(daiAsset.erc20Address).balanceOf(address(bridge));
+        deal(daiAsset.erc20Address, address(bridge), _amount + balance);
+
         (uint256 outputValueA, , ) = bridge.convert(
             daiAsset,
             emptyAsset,
@@ -144,16 +149,19 @@ contract AngleTest is BridgeTestBase {
         (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(
             0xc9daabC677F3d1301006e723bD21C60be57a5915
         );
-        assertEq(outputValueA, ((uint256(_amount) - DUST) * 1e18) / sanRate - DUST);
+        assertEq(outputValueA, (uint256(_amount) * 1e18) / sanRate);
 
         uint256 input2 = 3 * uint256(_amount);
-        deal(daiAsset.erc20Address, address(bridge), input2);
-        deal(sanDaiAsset.erc20Address, address(bridge), 0); // reset sanDAI balance
+        balance = IERC20(daiAsset.erc20Address).balanceOf(address(bridge));
+
+        deal(daiAsset.erc20Address, address(bridge), input2 + balance);
+        deal(sanDaiAsset.erc20Address, address(bridge), DUST); // reset sanDAI balance
+
         (outputValueA, , ) = bridge.convert(daiAsset, emptyAsset, sanDaiAsset, emptyAsset, input2, 0, 0, address(0));
         assertEq(IERC20(daiAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
         (, , , , , sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(0xc9daabC677F3d1301006e723bD21C60be57a5915);
-        assertEq(outputValueA, ((input2 - DUST) * 1e18) / sanRate - DUST);
+        assertEq(outputValueA, (input2 * 1e18) / sanRate);
 
         vm.stopPrank();
     }
@@ -162,7 +170,9 @@ contract AngleTest is BridgeTestBase {
         vm.startPrank(address(ROLLUP_PROCESSOR));
 
         uint256 amount = 1 ether;
-        deal(sanDaiAsset.erc20Address, address(bridge), amount);
+        uint256 balance = IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge));
+        deal(sanDaiAsset.erc20Address, address(bridge), amount + balance);
+
         (uint256 outputValueA, , ) = bridge.convert(
             sanDaiAsset,
             emptyAsset,
@@ -178,7 +188,7 @@ contract AngleTest is BridgeTestBase {
         (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(
             0xc9daabC677F3d1301006e723bD21C60be57a5915
         );
-        assertEq(outputValueA, ((amount - DUST) * sanRate) / 1e18 - DUST);
+        assertEq(outputValueA, (amount * sanRate) / 1e18);
 
         vm.stopPrank();
     }
@@ -189,7 +199,9 @@ contract AngleTest is BridgeTestBase {
 
         vm.startPrank(address(ROLLUP_PROCESSOR));
 
-        deal(sanDaiAsset.erc20Address, address(bridge), amount);
+        uint256 balance = IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge));
+        deal(sanDaiAsset.erc20Address, address(bridge), amount + balance);
+
         (uint256 outputValueA, , ) = bridge.convert(
             sanDaiAsset,
             emptyAsset,
@@ -205,16 +217,19 @@ contract AngleTest is BridgeTestBase {
         (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(
             0xc9daabC677F3d1301006e723bD21C60be57a5915
         );
-        assertEq(outputValueA, ((amount - DUST) * sanRate) / 1e18 - DUST);
+        assertEq(outputValueA, (amount * sanRate) / 1e18);
 
         uint256 input2 = 5 * amount;
-        deal(sanDaiAsset.erc20Address, address(bridge), input2);
-        deal(daiAsset.erc20Address, address(bridge), 0); // reset DAI balance
+
+        balance = IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge));
+        deal(sanDaiAsset.erc20Address, address(bridge), input2 + balance);
+        deal(daiAsset.erc20Address, address(bridge), DUST); // reset DAI balance
+
         (outputValueA, , ) = bridge.convert(sanDaiAsset, emptyAsset, daiAsset, emptyAsset, input2, 0, 1, address(0));
         assertEq(IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(IERC20(daiAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
         (, , , , , sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(0xc9daabC677F3d1301006e723bD21C60be57a5915);
-        assertEq(outputValueA, ((input2 - DUST) * sanRate) / 1e18 - DUST);
+        assertEq(outputValueA, (input2 * sanRate) / 1e18);
 
         vm.stopPrank();
     }
@@ -233,7 +248,7 @@ contract AngleTest is BridgeTestBase {
             0xc9daabC677F3d1301006e723bD21C60be57a5915
         );
 
-        assertEq(outputValueA, ((amount - DUST) * 1e18) / sanRate - DUST);
+        assertEq(outputValueA, (amount * 1e18) / sanRate);
         assertEq(IERC20(daiAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge)), DUST);
 
@@ -260,7 +275,7 @@ contract AngleTest is BridgeTestBase {
             0xc9daabC677F3d1301006e723bD21C60be57a5915
         );
 
-        assertEq(outputValueA, ((amount - DUST) * sanRate) / 1e18 - DUST);
+        assertEq(outputValueA, (amount * sanRate) / 1e18);
         assertEq(IERC20(daiAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge)), DUST);
 
