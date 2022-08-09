@@ -27,6 +27,10 @@ contract ERC4626Bridge is BridgeBase {
      */
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
+    receive() external payable {}
+
+    fallback() external payable {}
+
     /**
      * @notice Sets all the approvals necessary for issuance and redemption of `_vault` shares
      * @param _vault An address of erc4626 vault

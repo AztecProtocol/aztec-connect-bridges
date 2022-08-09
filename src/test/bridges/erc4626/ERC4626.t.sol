@@ -4,8 +4,7 @@ pragma solidity >=0.8.4;
 
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
-
-// Example-specific imports
+import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {ERC4626Bridge} from "../../../bridges/erc4626/ERC4626Bridge.sol";
@@ -115,5 +114,40 @@ contract ERC4626Test is BridgeTestBase {
             assertEq(outputValueB, 0, "Non-zero outputValueB");
             assertFalse(isAsync, "Bridge is not synchronous");
         }
+    }
+
+    function testEthWrappingAndUnwrapping(uint96 _assetAmount) public {
+        uint256 assetAmount = bound(_assetAmount, 10, type(uint256).max);
+        IERC20 weth = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+
+        bridge.listVault(wethVault);
+
+        AztecTypes.AztecAsset memory shareAsset = getRealAztecAsset(wethVault);
+        AztecTypes.AztecAsset memory ethAsset = getRealAztecAsset(address(0));
+
+        // Mint ETH to RollupProcessor
+        deal(address(ROLLUP_PROCESSOR), assetAmount);
+
+        uint256 expectedAmount = IERC4626(shareAsset.erc20Address).previewDeposit(assetAmount);
+
+        uint256 bridgeCallData = encodeBridgeCallData(id, ethAsset, emptyAsset, shareAsset, emptyAsset, 0);
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, assetAmount);
+
+        assertEq(outputValueA, expectedAmount, "Received amount of shares differs from the expected one");
+        assertEq(weth.balanceOf(wethVault), assetAmount, "Unexpected vault WETH balance");
+        assertEq(outputValueB, 0, "Non-zero outputValueB");
+        assertFalse(isAsync, "Bridge is not synchronous");
+
+        // Immediately redeem the shares
+        uint256 redeemAmount = outputValueA;
+
+        bridgeCallData = encodeBridgeCallData(id, shareAsset, emptyAsset, ethAsset, emptyAsset, 1);
+        (outputValueA, outputValueB, isAsync) = sendDefiRollup(bridgeCallData, redeemAmount);
+
+        assertApproxEqAbs(outputValueA, assetAmount, 2, "Received amount of asset differs from the expected one");
+        assertEq(weth.balanceOf(wethVault), 0, "Non-zero vault WETH balance");
+        assertEq(address(ROLLUP_PROCESSOR).balance, assetAmount, "Unexpected RollupProcessor ETH balance");
+        assertEq(outputValueB, 0, "Non-zero outputValueB");
+        assertFalse(isAsync, "Bridge is not synchronous");
     }
 }
