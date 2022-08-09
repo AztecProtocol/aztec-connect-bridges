@@ -40,10 +40,10 @@ import {IQuoter} from "../../interfaces/uniswapv3/IQuoter.sol";
  *          (inputValue * (significand * 10**exponent)) / (10 ** inputAssetDecimals)
  *      Here are 2 examples.
  *      1) If I want to receive 10k Dai for 1 ETH I would set significand to 1 and exponent to 22.
- *         _inputValue = 1e18, asset = ETH (18 decimals), outputAssetA: Dai (18 decimals)
+ *         _totalInputValue = 1e18, asset = ETH (18 decimals), outputAssetA: Dai (18 decimals)
  *         (1e18 * (1 * 10**22)) / (10**18) = 1e22 --> 10k Dai
  *      2) If I want to receive 2000 USDC for 1 ETH, I set significand to 2 and exponent to 9.
- *         _inputValue = 1e18, asset = ETH (18 decimals), outputAssetA: USDC (6 decimals)
+ *         _totalInputValue = 1e18, asset = ETH (18 decimals), outputAssetA: USDC (6 decimals)
  *         (1e18 * (2 * 10**9)) / (10**18) = 2e9 --> 2000 USDC
  *
  *      Definition of split path: Split path is a term we use when there are multiple (in this case 2) paths between
@@ -160,7 +160,7 @@ contract UniswapBridge is BridgeBase {
      * @notice A function which swaps input token for output token along the path encoded in _auxData.
      * @param _inputAssetA - Input ERC20 token
      * @param _outputAssetA - Output ERC20 token
-     * @param _inputValue - Amount of input token to swap
+     * @param _totalInputValue - Amount of input token to swap
      * @param _interactionNonce - Interaction nonce
      * @param _auxData - Encoded path (gets decoded to Path struct)
      * @return outputValueA - The amount of output token received
@@ -170,7 +170,7 @@ contract UniswapBridge is BridgeBase {
         AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
-        uint256 _inputValue,
+        uint256 _totalInputValue,
         uint256 _interactionNonce,
         uint64 _auxData,
         address
@@ -201,7 +201,7 @@ contract UniswapBridge is BridgeBase {
             outputIsEth ? WETH : _outputAssetA.erc20Address
         );
 
-        uint256 inputValueSplitPath1 = (_inputValue * path.percentage1) / 100;
+        uint256 inputValueSplitPath1 = (_totalInputValue * path.percentage1) / 100;
 
         if (path.percentage1 != 0) {
             // Swap using the first swap path
@@ -218,7 +218,7 @@ contract UniswapBridge is BridgeBase {
 
         if (path.percentage2 != 0) {
             // Swap using the second swap path
-            uint256 inputValueSplitPath2 = _inputValue - inputValueSplitPath1;
+            uint256 inputValueSplitPath2 = _totalInputValue - inputValueSplitPath1;
             outputValueA += ROUTER.exactInput{value: inputIsEth ? inputValueSplitPath2 : 0}(
                 ISwapRouter.ExactInputParams({
                     path: path.splitPath2,
@@ -238,7 +238,7 @@ contract UniswapBridge is BridgeBase {
                 emit DefaultDecimalsWarning();
             }
         }
-        uint256 amountOutMinimum = (_inputValue * path.minPrice) / 10**tokenInDecimals;
+        uint256 amountOutMinimum = (_totalInputValue * path.minPrice) / 10**tokenInDecimals;
         if (outputValueA < amountOutMinimum) revert InsufficientAmountOut();
 
         if (outputIsEth) {

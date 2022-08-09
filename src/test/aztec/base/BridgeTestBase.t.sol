@@ -8,6 +8,7 @@ import {BridgeTestBase} from "./BridgeTestBase.sol";
 contract BridgeTestBaseTest is BridgeTestBase {
     uint256 private constant VIRTUAL_ASSET_ID_FLAG_SHIFT = 29;
     uint256 private constant VIRTUAL_ASSET_ID_FLAG = 0x20000000; // 2 ** 29
+    uint256 internal constant ADDRESS_MASK = 0x00ffffffffffffffffffffffffffffffffffffffff;
 
     function testVirtualAssetFlagApplied(uint32 _assetId) public {
         uint256 assetId = bound(_assetId, 0, VIRTUAL_ASSET_ID_FLAG - 1);
@@ -90,6 +91,15 @@ contract BridgeTestBaseTest is BridgeTestBase {
         _getDefiBridgeProcessedData();
     }
 
+    function testRollupBeneficiaryEncoding() public {
+        address beneficiary = 0x508383c4cbD351dC2d4F632C65Ee9d2BC79612EC;
+        this.setRollupBeneficiary(beneficiary);
+        uint256 bridgeCallData = encodeBridgeCallData(5, emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0);
+        bytes memory proofData = _getProofData(bridgeCallData, 1e18);
+        address decodedBeneficiary = _extractRollupBeneficiary(proofData);
+        assertEq(decodedBeneficiary, beneficiary, "Decoded address does not match");
+    }
+
     function _decodeAsset(uint256 _assetId) internal view returns (AztecTypes.AztecAsset memory) {
         if (_assetId >> VIRTUAL_ASSET_ID_FLAG_SHIFT == 1) {
             return
@@ -109,5 +119,18 @@ contract BridgeTestBaseTest is BridgeTestBase {
                         : AztecTypes.AztecAssetType.ERC20
                 });
         }
+    }
+
+    // copied from Decoder.sol
+    function _extractRollupBeneficiary(bytes memory _proofData) internal pure returns (address rollupBeneficiary) {
+        /* solhint-disable no-inline-assembly */
+        assembly {
+            rollupBeneficiary := mload(add(_proofData, ROLLUP_BENEFICIARY_OFFSET))
+            // Validate `rollupBeneficiary` is an address
+            if gt(rollupBeneficiary, ADDRESS_MASK) {
+                revert(0, 0)
+            }
+        }
+        /* solhint-enable no-inline-assembly */
     }
 }

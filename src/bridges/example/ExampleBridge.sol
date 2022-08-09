@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
+import {ISubsidy} from "../../aztec/interfaces/ISubsidy.sol";
 
 /**
  * @title An example bridge contract.
@@ -15,16 +16,42 @@ import {BridgeBase} from "../base/BridgeBase.sol";
  *      sent to it.
  */
 contract ExampleBridgeContract is BridgeBase {
+    ISubsidy public immutable SUBSIDY;
+
     /**
      * @notice Set address of rollup processor
      * @param _rollupProcessor Address of rollup processor
      */
-    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
+    constructor(address _rollupProcessor, ISubsidy _subsidy) BridgeBase(_rollupProcessor) {
+        SUBSIDY = _subsidy;
+
+        address dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+        address usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+
+        uint256[] memory criterias = new uint256[](2);
+        uint32[] memory gasUsage = new uint32[](2);
+        uint32[] memory minGasPerMinute = new uint32[](2);
+
+        criterias[0] = computeCriteria(dai, dai);
+        criterias[1] = computeCriteria(usdc, usdc);
+
+        gasUsage[0] = 72896;
+        gasUsage[1] = 80249;
+
+        minGasPerMinute[0] = 100;
+        minGasPerMinute[1] = 150;
+
+        // We set gas usage in the subsidy contract
+        // We only want to incentivize the bridge when input and output token is Dai or USDC
+        SUBSIDY.setGasUsageAndMinGasPerMinute(criterias, gasUsage, minGasPerMinute);
+    }
 
     /**
-     * @notice A function which returns an _inputValue amount of _inputAssetA
+     * @notice A function which returns an _totalInputValue amount of _inputAssetA
      * @param _inputAssetA - Arbitrary ERC20 token
      * @param _outputAssetA - Equal to _inputAssetA
+     * @param _rollupBeneficiary - Address of the contract which receives subsidy in case subsidy was set for a given
+     *                             criteria
      * @return outputValueA - the amount of output asset to return
      * @dev In this case _outputAssetA equals _inputAssetA
      */
@@ -33,10 +60,10 @@ contract ExampleBridgeContract is BridgeBase {
         AztecTypes.AztecAsset memory,
         AztecTypes.AztecAsset memory _outputAssetA,
         AztecTypes.AztecAsset memory,
-        uint256 _inputValue,
+        uint256 _totalInputValue,
         uint256,
         uint64,
-        address
+        address _rollupBeneficiary
     )
         external
         payable
@@ -52,8 +79,18 @@ contract ExampleBridgeContract is BridgeBase {
         if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidInputA();
         if (_outputAssetA.erc20Address != _inputAssetA.erc20Address) revert ErrorLib.InvalidOutputA();
         // Return the input value of input asset
-        outputValueA = _inputValue;
+        outputValueA = _totalInputValue;
         // Approve rollup processor to take input value of input asset
-        IERC20(_outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, _inputValue);
+        IERC20(_outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, _totalInputValue);
+
+        // Pay out subsidy to the rollupBeneficiary
+        SUBSIDY.claimSubsidy(
+            computeCriteria(_inputAssetA.erc20Address, _outputAssetA.erc20Address),
+            _rollupBeneficiary
+        );
+    }
+
+    function computeCriteria(address _input, address _output) public pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(_input, _output)));
     }
 }

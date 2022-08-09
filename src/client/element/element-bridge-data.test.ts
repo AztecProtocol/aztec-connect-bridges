@@ -9,8 +9,7 @@ import {
   IRollupProcessor__factory,
   IVault__factory,
 } from "../../../typechain-types";
-// TODO: simply import BridgeCallData once the name is changed on defi-bridge-project branch
-import { BridgeId as BridgeCallData } from "@aztec/barretenberg/bridge_id";
+import { BridgeCallData } from "@aztec/barretenberg/bridge_call_data";
 import { AztecAssetType } from "../bridge-data";
 import { EthAddress } from "@aztec/barretenberg/address";
 

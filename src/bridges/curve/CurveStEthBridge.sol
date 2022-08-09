@@ -57,7 +57,7 @@ contract CurveStEthBridge is BridgeBase {
      * @notice Swaps between the eth<->wstEth tokens through the curve eth/stEth pool and wrapping stEth
      * @param _inputAssetA The inputAsset (eth or wstEth)
      * @param _outputAssetA The output asset (eth or wstEth) opposite `_inputAssetB`
-     * @param _inputValue The amount of token deposited
+     * @param _totalInputValue The amount of token deposited
      * @param _interactionNonce The nonce of the DeFi interaction, used when swapping wstEth -> eth
      * @param _auxData For eth->wstEth, the minimum acceptable amount of stEth per 1 eth, for wstEth->eth, the minimum
      *                 acceptable amount of eth per 1 wstEth.
@@ -68,7 +68,7 @@ contract CurveStEthBridge is BridgeBase {
         AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
-        uint256 _inputValue,
+        uint256 _totalInputValue,
         uint256 _interactionNonce,
         uint64 _auxData,
         address
@@ -91,25 +91,23 @@ contract CurveStEthBridge is BridgeBase {
             revert ErrorLib.InvalidInputA();
         }
 
-        uint256 minDy = (_inputValue * _auxData) / PRECISION;
-
         outputValueA = isETHInput
-            ? _wrapETH(_inputValue, _outputAssetA, minDy)
-            : _unwrapETH(_inputValue, _outputAssetA, minDy, _interactionNonce);
+            ? _wrapETH(_totalInputValue, _outputAssetA, _auxData)
+            : _unwrapETH(_totalInputValue, _outputAssetA, _auxData, _interactionNonce);
     }
 
     /**
      * @notice Swaps eth to stEth through curve and wrap the stEth into wstEth
      * @dev Reverts if `_outputAsset` is not wstEth
-     * @param _inputValue The amount of token that is deposited
-     * @param _minDy Smallest acceptable dy (amount of stEth received from curve)
+     * @param _totalInputValue The amount of token that is deposited
      * @param _outputAsset The asset that the DeFi interaction specify as output, must be wstEth
+     * @param _minStEthPerEth Smallest acceptable amount of steth for each eth
      * @return outputValue The amount of wstEth received from the interaction
      */
     function _wrapETH(
-        uint256 _inputValue,
+        uint256 _totalInputValue,
         AztecTypes.AztecAsset calldata _outputAsset,
-        uint256 _minDy
+        uint256 _minStEthPerEth
     ) private returns (uint256 outputValue) {
         if (
             _outputAsset.assetType != AztecTypes.AztecAssetType.ERC20 ||
@@ -118,8 +116,15 @@ contract CurveStEthBridge is BridgeBase {
             revert ErrorLib.InvalidOutputA();
         }
 
+        uint256 minDy = (_totalInputValue * _minStEthPerEth) / PRECISION;
+
         // Swap eth -> stEth on curve
-        uint256 dy = CURVE_POOL.exchange{value: _inputValue}(CURVE_ETH_INDEX, CURVE_STETH_INDEX, _inputValue, _minDy);
+        uint256 dy = CURVE_POOL.exchange{value: _totalInputValue}(
+            CURVE_ETH_INDEX,
+            CURVE_STETH_INDEX,
+            _totalInputValue,
+            minDy
+        );
 
         // wrap stEth
         outputValue = WRAPPED_STETH.wrap(dy);
@@ -128,15 +133,15 @@ contract CurveStEthBridge is BridgeBase {
     /**
      * @notice Unwraps wstEth and swap stEth to eth through curve
      * @dev Reverts if `_outputAsset` is not eth
-     * @param _inputValue The amount of token that is deposited
+     * @param _totalInputValue The amount of token that is deposited
      * @param _outputAsset The asset that the DeFi interaction specify as output, must be eth
-     * @param _minDy Smallest acceptable dy (amount of eth to receive from curve)
+     * @param _minEthPerStEth Smallest acceptable amount of eth for each steth
      * @return outputValue The amount of eth received from the interaction
      */
     function _unwrapETH(
-        uint256 _inputValue,
+        uint256 _totalInputValue,
         AztecTypes.AztecAsset calldata _outputAsset,
-        uint256 _minDy,
+        uint256 _minEthPerStEth,
         uint256 _interactionNonce
     ) private returns (uint256 outputValue) {
         if (_outputAsset.assetType != AztecTypes.AztecAssetType.ETH) {
@@ -144,10 +149,11 @@ contract CurveStEthBridge is BridgeBase {
         }
 
         // Convert wstETH to stETH so we can exchange it on curve
-        uint256 stETH = WRAPPED_STETH.unwrap(_inputValue);
+        uint256 stETH = WRAPPED_STETH.unwrap(_totalInputValue);
 
+        uint256 minDy = (stETH * _minEthPerStEth) / PRECISION;
         // Exchange stETH to ETH via curve
-        uint256 dy = CURVE_POOL.exchange(CURVE_STETH_INDEX, CURVE_ETH_INDEX, stETH, _minDy);
+        uint256 dy = CURVE_POOL.exchange(CURVE_STETH_INDEX, CURVE_ETH_INDEX, stETH, minDy);
 
         outputValue = address(this).balance;
         if (outputValue < dy) {
