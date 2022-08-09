@@ -71,4 +71,19 @@ abstract contract BridgeBase is IDefiBridge {
     {
         revert ErrorLib.AsyncDisabled();
     }
+
+    /**
+     * @notice Computes the criteria that is passed on to the subsidy contract when claiming
+     * @dev Should be overridden by bridge implementation if intended to limit subsidy.
+     * @return The criteria to be passed along
+     */
+    function computeCriteria(
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        uint64
+    ) public view virtual returns (uint256) {
+        return 0;
+    }
 }

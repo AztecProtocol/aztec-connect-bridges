@@ -32,8 +32,8 @@ contract ExampleBridgeContract is BridgeBase {
         uint32[] memory gasUsage = new uint32[](2);
         uint32[] memory minGasPerMinute = new uint32[](2);
 
-        criterias[0] = computeCriteria(dai, dai);
-        criterias[1] = computeCriteria(usdc, usdc);
+        criterias[0] = uint256(keccak256(abi.encodePacked(dai, dai)));
+        criterias[1] = uint256(keccak256(abi.encodePacked(usdc, usdc)));
 
         gasUsage[0] = 72896;
         gasUsage[1] = 80249;
@@ -56,13 +56,13 @@ contract ExampleBridgeContract is BridgeBase {
      * @dev In this case _outputAssetA equals _inputAssetA
      */
     function convert(
-        AztecTypes.AztecAsset memory _inputAssetA,
-        AztecTypes.AztecAsset memory,
-        AztecTypes.AztecAsset memory _outputAssetA,
-        AztecTypes.AztecAsset memory,
+        AztecTypes.AztecAsset calldata _inputAssetA,
+        AztecTypes.AztecAsset calldata _inputAssetB,
+        AztecTypes.AztecAsset calldata _outputAssetA,
+        AztecTypes.AztecAsset calldata _outputAssetB,
         uint256 _totalInputValue,
         uint256,
-        uint64,
+        uint64 _auxData,
         address _rollupBeneficiary
     )
         external
@@ -85,12 +85,24 @@ contract ExampleBridgeContract is BridgeBase {
 
         // Pay out subsidy to the rollupBeneficiary
         SUBSIDY.claimSubsidy(
-            computeCriteria(_inputAssetA.erc20Address, _outputAssetA.erc20Address),
+            computeCriteria(_inputAssetA, _inputAssetB, _outputAssetA, _outputAssetB, _auxData),
             _rollupBeneficiary
         );
     }
 
-    function computeCriteria(address _input, address _output) public pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(_input, _output)));
+    /**
+     * @notice Computes the criteria that is passed when claiming subsidy.
+     * @param _inputAssetA The input asset
+     * @param _outputAssetA The output asset
+     * @return The criteria
+     */
+    function computeCriteria(
+        AztecTypes.AztecAsset calldata _inputAssetA,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata _outputAssetA,
+        AztecTypes.AztecAsset calldata,
+        uint64
+    ) public view override(BridgeBase) returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(_inputAssetA.erc20Address, _outputAssetA.erc20Address)));
     }
 }

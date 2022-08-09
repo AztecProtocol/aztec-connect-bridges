@@ -2,7 +2,7 @@
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
-import {Test} from "forge-std/Test.sol";
+import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 
 // Example-specific imports
@@ -12,11 +12,10 @@ import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {ISubsidy, Subsidy} from "../../../aztec/Subsidy.sol";
 
 // @notice The purpose of this test is to directly test convert functionality of the bridge.
-contract ExampleUnitTest is Test {
+contract ExampleUnitTest is BridgeTestBase {
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address private constant BENEFICIARY = address(11);
 
-    AztecTypes.AztecAsset private emptyAsset;
     address private rollupProcessor;
     ISubsidy private subsidy;
     // The reference to the example bridge
@@ -43,7 +42,8 @@ contract ExampleUnitTest is Test {
         vm.label(address(bridge), "Example Bridge");
 
         // Subsidize the bridge when used with Dai and register a beneficiary
-        uint256 criteria = bridge.computeCriteria(DAI, DAI);
+        AztecTypes.AztecAsset memory daiAsset = getRealAztecAsset(DAI);
+        uint256 criteria = bridge.computeCriteria(daiAsset, emptyAsset, daiAsset, emptyAsset, 0);
         uint32 gasPerMinute = 200;
         subsidy.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
 

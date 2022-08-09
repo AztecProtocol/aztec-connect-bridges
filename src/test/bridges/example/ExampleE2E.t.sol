@@ -55,7 +55,8 @@ contract ExampleE2ETest is BridgeTestBase {
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
         // Subsidize the bridge when used with USDC and register a beneficiary
-        uint256 criteria = bridge.computeCriteria(USDC, USDC);
+        AztecTypes.AztecAsset memory usdcAsset = getRealAztecAsset(USDC);
+        uint256 criteria = bridge.computeCriteria(usdcAsset, emptyAsset, usdcAsset, emptyAsset, 0);
         uint32 gasPerMinute = 200;
         subsidy.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
 
