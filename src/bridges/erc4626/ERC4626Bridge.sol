@@ -46,6 +46,8 @@ contract ERC4626Bridge is BridgeBase {
      * @param _totalInputValue The amount of assets to deposit or shares to redeem
      * @param _auxData Number indicating which flow to execute (0 is deposit flow, 1 is redeem flow)
      * @return outputValueA The amount of shares (deposit) or assets (redeem) returned
+     * @dev Not checking validity of input/output assets because if they were invalid, approvals could not get set
+     *      in the `listVault(...)` method.
      */
     function convert(
         AztecTypes.AztecAsset memory _inputAssetA,
@@ -72,7 +74,7 @@ contract ERC4626Bridge is BridgeBase {
         } else if (_auxData == 1) {
             outputValueA = IERC4626(_inputAssetA.erc20Address).redeem(_totalInputValue, address(this), address(this));
         } else {
-            revert ErrorLib.InvalidInput();
+            revert ErrorLib.InvalidAuxData();
         }
     }
 }

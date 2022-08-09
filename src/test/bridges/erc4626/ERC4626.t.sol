@@ -23,7 +23,7 @@ contract ERC4626Test is BridgeTestBase {
     AztecTypes.AztecAsset[] private shares;
     AztecTypes.AztecAsset[] private assets;
 
-    mapping(address => bool) fuzzerIgnoreList;
+    mapping(address => bool) private fuzzerIgnoreList;
 
     function setUp() public {
         bridge = new ERC4626Bridge(address(ROLLUP_PROCESSOR));
@@ -73,6 +73,13 @@ contract ERC4626Test is BridgeTestBase {
         vm.prank(_caller);
         vm.expectRevert(ErrorLib.InvalidCaller.selector);
         bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
+    }
+
+    function testInvalidAuxData(uint64 _auxData) public {
+        vm.assume(_auxData > 1);
+        vm.expectRevert(ErrorLib.InvalidAuxData.selector);
+        vm.prank(address(ROLLUP_PROCESSOR));
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, _auxData, address(0));
     }
 
     function testListingNonERC4626Reverts(address _vault) public {
