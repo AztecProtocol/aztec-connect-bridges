@@ -63,6 +63,16 @@ contract ExampleUnitTest is BridgeTestBase {
         bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
+    function testInvalidOutputAssetType() public {
+        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: DAI,
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        vm.expectRevert(ErrorLib.InvalidOutputA.selector);
+        bridge.convert(inputAssetA, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
+    }
+
     function testExampleBridgeUnitTestFixed() public {
         testExampleBridgeUnitTest(10 ether);
     }
