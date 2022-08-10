@@ -87,6 +87,14 @@ contract ERC4626Test is BridgeTestBase {
         bridge.listVault(_vault);
     }
 
+    function testConvertRevertsWithoutApprovals() public {
+        // I wanted to fuzz the addresses here but there doesn't seem to be a cheat-code catching all reverts
+        // irrespective of revert message
+        vm.prank(address(ROLLUP_PROCESSOR));
+        vm.expectRevert("RDT:M:TRANSFER_FROM");
+        bridge.convert(assets[0], emptyAsset, shares[0], emptyAsset, 1 ether, 0, 0, address(0));
+    }
+
     function testFullFlow(uint96 _assetAmount) public {
         uint256 assetAmount = bound(_assetAmount, 10, type(uint256).max);
 
