@@ -22,14 +22,12 @@ contract ERC4626Bridge is BridgeBase {
     IWETH public constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     /**
-     * @notice Sets the address of RollupProcessor.sol
-     * @param _rollupProcessor Address of RollupProcessor.sol
+     * @notice Sets the address of RollupProcessor
+     * @param _rollupProcessor Address of RollupProcessor
      */
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
 
     receive() external payable {}
-
-    fallback() external payable {}
 
     /**
      * @notice Sets all the approvals necessary for issuance and redemption of `_vault` shares
@@ -84,9 +82,13 @@ contract ERC4626Bridge is BridgeBase {
             if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 WETH.deposit{value: _totalInputValue}();
             }
+            // If input asset is not the vault asset (or ETH if vault asset is WETH) the following will revert when
+            // trying to pull the funds from the bridge
             outputValueA = IERC4626(_outputAssetA.erc20Address).deposit(_totalInputValue, address(this));
         } else if (_auxData == 1) {
             // Redeeming shares
+            // If output asset is not the vault asset the convert call will revert when RollupProcessor tries to pull
+            // the funds from the bridge
             outputValueA = IERC4626(_inputAssetA.erc20Address).redeem(_totalInputValue, address(this), address(this));
 
             if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {

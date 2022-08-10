@@ -88,38 +88,4 @@ export class ERC4626BridgeData implements BridgeDataFieldGetters {
       throw "Invalid auxData";
     }
   }
-
-  async getMarketSize(
-    inputAssetA: AztecAsset,
-    inputAssetB: AztecAsset,
-    outputAssetA: AztecAsset,
-    outputAssetB: AztecAsset,
-    auxData: bigint,
-  ): Promise<AssetValue[]> {
-    let shareAddress;
-    let asset;
-    if (auxData === 0n) {
-      // Issuing
-      shareAddress = outputAssetA.erc20Address;
-      asset = inputAssetA;
-    } else if (auxData === 1n) {
-      // Redeeming
-      shareAddress = inputAssetA.erc20Address;
-      asset = outputAssetA;
-    } else {
-      throw "Invalid auxData";
-    }
-
-    const assetAddress = asset.assetType === AztecAssetType.ETH ? this.WETH : asset.erc20Address;
-
-    const marketSize = await IERC20__factory.connect(assetAddress.toString(), this.ethersProvider).balanceOf(
-      shareAddress.toString(),
-    );
-    return [
-      {
-        assetId: asset.id,
-        amount: marketSize.toBigInt(),
-      },
-    ];
-  }
 }

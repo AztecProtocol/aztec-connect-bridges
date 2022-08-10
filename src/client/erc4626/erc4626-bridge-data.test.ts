@@ -107,23 +107,4 @@ describe("ERC4626 bridge data", () => {
     )[0];
     expect(expectedOutput).toBe(111111n);
   });
-
-  it("should correctly compute market size", async () => {
-    // Setup mocks
-    erc20Contract = {
-      ...erc20Contract,
-      balanceOf: jest.fn().mockResolvedValue(BigNumber.from("111111")),
-    };
-    IERC20__factory.connect = () => erc20Contract as any;
-
-    const erc4626BridgeData = ERC4626BridgeData.create({} as any);
-
-    // Test the code using mocked controller
-    const marketSizeMint = (await erc4626BridgeData.getMarketSize(mplAsset, emptyAsset, xmplAsset, emptyAsset, 0n))[0];
-    const marketSizeRedeem = (
-      await erc4626BridgeData.getMarketSize(xmplAsset, emptyAsset, mplAsset, emptyAsset, 1n)
-    )[0];
-    expect(marketSizeMint.amount).toBe(marketSizeRedeem.amount);
-    expect(marketSizeMint.amount).toBe(111111n);
-  });
 });

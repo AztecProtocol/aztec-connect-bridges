@@ -17,14 +17,17 @@ The bridge only support 2 flows:
 
 ## Please list any edge cases that may restrict the usefulness of the bridge or that the bridge explicitly prevents.
 
-Vault has to be listed first before using the bridge with it.
+Vault has to be listed first in the bridge contract before using the bridge with it.
+On top of that the vault share nad asset tokens have to be registered on the RollupProcessor.
 
 ## How can the accounting of the bridge be impacted by interactions performed by other parties than the bridge? Example, if borrowing, how does it handle liquidations etc.
 
 The only state the contract works with are the approvals of share and asset tokens.
-The only time this could cause any damage is if we use the EIP-1087 based optimization of seeding bridge's token balances to non-zero values and then a hacker would set approvals on his hacker vault and steal that non-zero balance.
-This would cause the bridge to suddenly be 15k gas more expensive to use which could cause the interactions to run out of cas.
+This could cause damage if we use the EIP-1087 based optimization of seeding bridge's token balances to non-zero values and then a hacker would set approvals on his hacker vault and steal that non-zero balance.
+This would cause the bridge to suddenly be 15k gas more expensive to use which could cause the interactions to run out of gas.
 This is a griefing attack since the hacker would not gain any value (e.g. 1 wei of WETH is way more costly to steal than is its value).
+
+Another potential scenario of accounting being affected is if the ERC4626 vault unexpectedly modifies balance of the RollupProcessor (e.g. vault burning RollupProcessor's share balance out of bridge interaction).
 
 ## Is this contract upgradable? If so, what are the restrictions on upgradability?
 
