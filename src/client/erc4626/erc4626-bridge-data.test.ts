@@ -1,5 +1,6 @@
 import { EthAddress } from "@aztec/barretenberg/address";
-import { IComptroller, IERC20, IRollupProcessor } from "../../../typechain-types";
+import { BigNumber } from "ethers";
+import { IERC20, IERC20__factory, IERC4626, IERC4626__factory } from "../../../typechain-types";
 import { AztecAsset, AztecAssetType } from "../bridge-data";
 import { ERC4626BridgeData } from "./erc4626-bridge-data";
 
@@ -12,9 +13,8 @@ type Mockify<T> = {
 };
 
 describe("ERC4626 bridge data", () => {
-  let comptrollerContract: Mockify<IComptroller>;
-  let rollupProcessorContract: Mockify<IRollupProcessor>;
   let erc20Contract: Mockify<IERC20>;
+  let erc4626Contract: Mockify<IERC4626>;
 
   let ethAsset: AztecAsset;
   let mplAsset: AztecAsset;
@@ -45,45 +45,85 @@ describe("ERC4626 bridge data", () => {
   });
 
   it("should correctly fetch auxData when issuing shares", async () => {
-    const erc4626BridgeData = ERC4626BridgeData.create();
+    // Setup mocks
+    erc4626Contract = {
+      ...erc4626Contract,
+      asset: jest.fn().mockResolvedValue(mplAsset.erc20Address.toString()),
+    };
+    IERC4626__factory.connect = () => erc4626Contract as any;
 
+    const erc4626BridgeData = ERC4626BridgeData.create({} as any);
+
+    // Test the code using mocked controller
     const auxDataIssue = await erc4626BridgeData.getAuxData(mplAsset, emptyAsset, xmplAsset, emptyAsset);
     expect(auxDataIssue[0]).toBe(0n);
   });
 
   it("should correctly fetch auxData when redeeming shares", async () => {
-    const erc4626BridgeData = ERC4626BridgeData.create();
+    // Setup mocks
+    erc4626Contract = {
+      ...erc4626Contract,
+      asset: jest.fn().mockResolvedValue(mplAsset.erc20Address.toString()),
+    };
+    IERC4626__factory.connect = () => erc4626Contract as any;
 
+    const erc4626BridgeData = ERC4626BridgeData.create({} as any);
+
+    // Test the code using mocked controller
     const auxDataRedeem = await erc4626BridgeData.getAuxData(xmplAsset, emptyAsset, mplAsset, emptyAsset);
     expect(auxDataRedeem[0]).toBe(1n);
   });
 
   it("should correctly compute expected output when issuing shares", async () => {
-    const erc4626BridgeData = ERC4626BridgeData.create();
+    // Setup mocks
+    erc4626Contract = {
+      ...erc4626Contract,
+      previewDeposit: jest.fn().mockResolvedValue(BigNumber.from("111111")),
+    };
+    IERC4626__factory.connect = () => erc4626Contract as any;
 
+    const erc4626BridgeData = ERC4626BridgeData.create({} as any);
+
+    // Test the code using mocked controller
     const expectedOutput = (
       await erc4626BridgeData.getExpectedOutput(mplAsset, emptyAsset, xmplAsset, emptyAsset, 0n, 10n ** 18n)
     )[0];
-    expect(expectedOutput).toBeGreaterThan(0n);
+    expect(expectedOutput).toBe(111111n);
   });
 
-  it("should correctly compute expected output when issuing shares", async () => {
-    const erc4626BridgeData = ERC4626BridgeData.create();
+  it("should correctly compute expected output when redeeming shares", async () => {
+    // Setup mocks
+    erc4626Contract = {
+      ...erc4626Contract,
+      previewRedeem: jest.fn().mockResolvedValue(BigNumber.from("111111")),
+    };
+    IERC4626__factory.connect = () => erc4626Contract as any;
 
+    const erc4626BridgeData = ERC4626BridgeData.create({} as any);
+
+    // Test the code using mocked controller
     const expectedOutput = (
       await erc4626BridgeData.getExpectedOutput(xmplAsset, emptyAsset, mplAsset, emptyAsset, 1n, 10n ** 18n)
     )[0];
-    expect(expectedOutput).toBeGreaterThan(0n);
+    expect(expectedOutput).toBe(111111n);
   });
 
   it("should correctly compute market size", async () => {
-    const erc4626BridgeData = ERC4626BridgeData.create();
+    // Setup mocks
+    erc20Contract = {
+      ...erc20Contract,
+      balanceOf: jest.fn().mockResolvedValue(BigNumber.from("111111")),
+    };
+    IERC20__factory.connect = () => erc20Contract as any;
 
+    const erc4626BridgeData = ERC4626BridgeData.create({} as any);
+
+    // Test the code using mocked controller
     const marketSizeMint = (await erc4626BridgeData.getMarketSize(mplAsset, emptyAsset, xmplAsset, emptyAsset, 0n))[0];
     const marketSizeRedeem = (
       await erc4626BridgeData.getMarketSize(xmplAsset, emptyAsset, mplAsset, emptyAsset, 1n)
     )[0];
     expect(marketSizeMint.amount).toBe(marketSizeRedeem.amount);
-    expect(marketSizeMint.amount).toBeGreaterThan(0n);
+    expect(marketSizeMint.amount).toBe(111111n);
   });
 });

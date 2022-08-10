@@ -1,6 +1,8 @@
 import { EthAddress } from "@aztec/barretenberg/address";
-import { JsonRpcProvider } from "@ethersproject/providers";
+import { EthereumProvider } from "@aztec/barretenberg/blockchain";
+import { Web3Provider } from "@ethersproject/providers";
 import { IERC20__factory, IERC4626__factory } from "../../../typechain-types";
+import { createWeb3Provider } from "../aztec/provider";
 import {
   AssetValue,
   AuxDataConfig,
@@ -13,12 +15,10 @@ import {
 export class ERC4626BridgeData implements BridgeDataFieldGetters {
   readonly WETH = EthAddress.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
 
-  private constructor(private ethersProvider: JsonRpcProvider) {}
+  private constructor(private ethersProvider: Web3Provider) {}
 
-  // static create(provider: EthereumProvider) {
-  static create() {
-    // const ethersProvider = createWeb3Provider(provider);
-    const ethersProvider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+  static create(provider: EthereumProvider) {
+    const ethersProvider = createWeb3Provider(provider);
     return new ERC4626BridgeData(ethersProvider);
   }
 
@@ -37,19 +37,23 @@ export class ERC4626BridgeData implements BridgeDataFieldGetters {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
+    // First check whether outputAssetA is a share by calling asset() on it
     let vault = IERC4626__factory.connect(outputAssetA.erc20Address.toString(), this.ethersProvider);
     try {
-      let vaultAsset = EthAddress.fromString(await vault.asset());
+      const vaultAsset = EthAddress.fromString(await vault.asset());
       if (vaultAsset.equals(inputAssetA.erc20Address)) {
         return [0n];
       } else {
         throw "Address of vault's asset isn't equal to inputAssetA.erc20address";
       }
-    } catch {}
+    } catch {
+      // Calling asset() on outputAssetA failed --> outputAssetA is not a share but probably an asset
+    }
 
+    // Check whether inputAssetA is a share
     vault = IERC4626__factory.connect(inputAssetA.erc20Address.toString(), this.ethersProvider);
     try {
-      let vaultAsset = EthAddress.fromString(await vault.asset());
+      const vaultAsset = EthAddress.fromString(await vault.asset());
       if (vaultAsset.equals(outputAssetA.erc20Address)) {
         return [1n];
       } else {
