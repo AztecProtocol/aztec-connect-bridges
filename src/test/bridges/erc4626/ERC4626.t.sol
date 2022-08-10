@@ -95,7 +95,7 @@ contract ERC4626Test is BridgeTestBase {
         bridge.convert(assets[0], emptyAsset, shares[0], emptyAsset, 1 ether, 0, 0, address(0));
     }
 
-    function testFullFlow(uint96 _assetAmount) public {
+    function testFullFlow(uint96 _assetAmount, uint96 _shareAmount) public {
         uint256 assetAmount = bound(_assetAmount, 10, type(uint256).max);
 
         for (uint256 i = 0; i < shares.length; ++i) {
@@ -112,13 +112,30 @@ contract ERC4626Test is BridgeTestBase {
             assertEq(outputValueB, 0, "Non-zero outputValueB");
             assertFalse(isAsync, "Bridge is not synchronous");
 
+            uint256 processorShareBalanceBeforeRedeem = IERC20(shares[i].erc20Address).balanceOf(
+                address(ROLLUP_PROCESSOR)
+            );
+
             // Immediately redeem the shares
-            uint256 redeemAmount = outputValueA;
+            uint256 redeemAmount = bound(_shareAmount, 1, outputValueA);
+
+            // expectedAssetAmountReturned = sharesRedeemed/sharesMinted * inputAssetAmount
+            uint256 expectedAssetAmountReturned = (redeemAmount * assetAmount) / outputValueA;
 
             bridgeCallData = encodeBridgeCallData(id, shares[i], emptyAsset, assets[i], emptyAsset, 1);
             (outputValueA, outputValueB, isAsync) = sendDefiRollup(bridgeCallData, redeemAmount);
 
-            assertApproxEqAbs(outputValueA, assetAmount, 2, "Received amount of asset differs from the expected one");
+            assertEq(
+                IERC20(shares[i].erc20Address).balanceOf(address(ROLLUP_PROCESSOR)) + redeemAmount,
+                processorShareBalanceBeforeRedeem,
+                "Incorrect RollupProcessor share balance after redeem"
+            );
+            assertApproxEqAbs(
+                outputValueA,
+                expectedAssetAmountReturned,
+                2,
+                "Received amount of asset differs from the expected one"
+            );
             assertEq(outputValueB, 0, "Non-zero outputValueB");
             assertFalse(isAsync, "Bridge is not synchronous");
         }
