@@ -175,4 +175,58 @@ contract ERC4626Test is BridgeTestBase {
         assertEq(outputValueB, 0, "Non-zero outputValueB");
         assertFalse(isAsync, "Bridge is not synchronous");
     }
+
+    function testFullFlowWithYield(
+        uint96 _assetAmount,
+        uint96 _shareAmount,
+        uint96 _yield
+    ) public {
+        uint256 assetAmount = bound(_assetAmount, 10, type(uint256).max);
+        IERC20 weth = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+
+        bridge.listVault(wethVault);
+
+        AztecTypes.AztecAsset memory shareAsset = getRealAztecAsset(wethVault);
+        AztecTypes.AztecAsset memory ethAsset = getRealAztecAsset(address(0));
+
+        // Mint ETH to RollupProcessor
+        deal(address(ROLLUP_PROCESSOR), assetAmount);
+
+        uint256 expectedAmount = IERC4626(shareAsset.erc20Address).previewDeposit(assetAmount);
+
+        uint256 bridgeCallData = encodeBridgeCallData(id, ethAsset, emptyAsset, shareAsset, emptyAsset, 0);
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, assetAmount);
+
+        assertEq(outputValueA, expectedAmount, "Received amount of shares differs from the expected one");
+        assertEq(weth.balanceOf(wethVault), assetAmount, "Unexpected vault WETH balance");
+
+        // Mint "yield" to the vault
+        uint256 newVaultBalance = bound(_yield, assetAmount, assetAmount + 100 ether);
+        deal(address(weth), wethVault, newVaultBalance);
+
+        uint256 processorShareBalanceBeforeRedeem = IERC20(shareAsset.erc20Address).balanceOf(
+            address(ROLLUP_PROCESSOR)
+        );
+
+        // Immediately redeem the shares
+        uint256 redeemAmount = bound(_shareAmount, 1, outputValueA);
+
+        // expectedAssetAmountReturned = sharesRedeemed/sharesMinted * inputAssetAmount
+        uint256 expectedAssetAmountReturned = (redeemAmount * newVaultBalance) / outputValueA;
+
+        bridgeCallData = encodeBridgeCallData(id, shareAsset, emptyAsset, ethAsset, emptyAsset, 1);
+        (outputValueA, outputValueB, isAsync) = sendDefiRollup(bridgeCallData, redeemAmount);
+
+        assertEq(
+            IERC20(shareAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR)) + redeemAmount,
+            processorShareBalanceBeforeRedeem,
+            "Incorrect RollupProcessor share balance after redeem"
+        );
+        assertApproxEqAbs(
+            outputValueA,
+            expectedAssetAmountReturned,
+            2,
+            "Received amount of asset differs from the expected one"
+        );
+    }
 }
