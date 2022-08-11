@@ -222,26 +222,17 @@ contract Subsidy is ISubsidy {
             return 0;
         }
 
-        uint256 subsidyAmount;
+        uint256 subsidyAmount = _computeAccumulatedSubsidyAmount(sub);
 
-        unchecked {
-            uint256 dt = block.timestamp - sub.lastUpdated; // sub.lastUpdated only update to block.timestamp, so can never be in the future
-
-            // time need to have passed for an incentive to have accrued
-            if (dt > 0) {
-                // The following should never overflow due to constraints on values. But if they do, it is bounded by the available subsidy
-                uint256 gasToCover = (dt * sub.gasPerMinute) / 1 minutes;
-                uint256 ethToCover = (gasToCover < sub.gasUsage ? gasToCover : sub.gasUsage) * block.basefee; // At maximum `sub.gasUsage` gas covered
-
-                subsidyAmount = ethToCover < sub.available ? ethToCover : sub.available;
-
-                sub.available -= uint128(subsidyAmount); // safe as `subsidyAmount` is bounded by `sub.available`
-                sub.lastUpdated = uint32(block.timestamp);
-
-                // Update storage
-                beneficiaries[_beneficiary].claimable = beneficiary.claimable + uint248(subsidyAmount); // safe as available is limited to u128
-                subsidies[msg.sender][_criteria] = sub;
+        if (subsidyAmount > 0) {
+            sub.lastUpdated = uint32(block.timestamp);
+            unchecked {
+                // safe as `subsidyAmount` is bounded by `sub.available`
+                sub.available -= uint128(subsidyAmount);
+                // safe as available is limited to u128
+                beneficiaries[_beneficiary].claimable = beneficiary.claimable + uint248(subsidyAmount);
             }
+            subsidies[msg.sender][_criteria] = sub;
         }
 
         return subsidyAmount;
@@ -269,6 +260,17 @@ contract Subsidy is ISubsidy {
     }
 
     /**
+     * @notice Gets current accumulated subsidy amount for a given `_bridge` and `_criteria`
+     * @param _bridge Address of the subsidized bridge
+     * @param _criteria A value defining a specific bridge call
+     * @return - Accumulated subsidy amount (would paid out if the bridge called `claimSubsidy(_criteria, ...)`)
+     */
+    function getAccumulatedSubsidyAmount(address _bridge, uint256 _criteria) external view returns (uint256) {
+        Subsidy memory sub = subsidies[_bridge][_criteria];
+        return _computeAccumulatedSubsidyAmount(sub);
+    }
+
+    /**
      * @notice Sets `Subsidy.gasUsage` value for a given criteria
      * @dev This function has to be called from the bridge
      * @param _criteria A value defining a specific bridge call
@@ -288,5 +290,31 @@ contract Subsidy is ISubsidy {
         sub.minGasPerMinute = _minGasPerMinute;
 
         subsidies[msg.sender][_criteria] = sub;
+    }
+
+    /**
+     * @notice Computes accumulated subsidy amount based on Subsidy struct and current block
+     * @param _subsidy Subsidy based on which to compute accumulated subsidy amount
+     * @return - Accumulated subsidy amount
+     */
+    function _computeAccumulatedSubsidyAmount(Subsidy memory _subsidy) private view returns (uint256) {
+        uint256 subsidyAmount;
+
+        unchecked {
+            // _sub.lastUpdated only update to block.timestamp, so can never be in the future
+            uint256 dt = block.timestamp - _subsidy.lastUpdated;
+
+            // time need to have passed for an incentive to have accrued
+            if (dt > 0) {
+                // The following should never overflow due to constraints on values.
+                // But if they do, it is bounded by the available subsidy
+                uint256 gasToCover = (dt * _subsidy.gasPerMinute) / 1 minutes;
+                uint256 ethToCover = (gasToCover < _subsidy.gasUsage ? gasToCover : _subsidy.gasUsage) * block.basefee;
+
+                return ethToCover < _subsidy.available ? ethToCover : _subsidy.available;
+            }
+        }
+
+        return subsidyAmount;
     }
 }

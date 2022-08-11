@@ -54,4 +54,6 @@ interface ISubsidy {
     function isRegistered(address _beneficiary) external view returns (bool);
 
     function getSubsidy(address _bridge, uint256 _criteria) external view returns (Subsidy memory);
+
+    function getAccumulatedSubsidyAmount(address _bridge, uint256 _criteria) external view returns (uint256);
 }
