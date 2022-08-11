@@ -212,7 +212,7 @@ contract ERC4626Test is BridgeTestBase {
         uint256 redeemAmount = bound(_shareAmount, 1, outputValueA);
 
         // expectedAssetAmountReturned = sharesRedeemed/sharesMinted * inputAssetAmount
-        uint256 expectedAssetAmountReturned = (redeemAmount * newVaultBalance) / outputValueA;
+        uint256 expectedAssetAmountReturned = IERC4626(shareAsset.erc20Address).previewRedeem(redeemAmount);
 
         bridgeCallData = encodeBridgeCallData(id, shareAsset, emptyAsset, ethAsset, emptyAsset, 1);
         (outputValueA, outputValueB, isAsync) = sendDefiRollup(bridgeCallData, redeemAmount);

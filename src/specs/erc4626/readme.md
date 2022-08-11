@@ -18,7 +18,7 @@ The bridge only support 2 flows:
 ## Please list any edge cases that may restrict the usefulness of the bridge or that the bridge explicitly prevents.
 
 Vault has to be listed first in the bridge contract before using the bridge with it.
-On top of that the vault share nad asset tokens have to be registered on the RollupProcessor.
+On top of that, the vault share and asset tokens have to be registered on the RollupProcessor.
 
 ## How can the accounting of the bridge be impacted by interactions performed by other parties than the bridge? Example, if borrowing, how does it handle liquidations etc.
 
