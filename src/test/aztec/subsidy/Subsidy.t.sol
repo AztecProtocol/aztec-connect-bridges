@@ -88,6 +88,12 @@ contract SubsidyTest is Test {
         subsidy.subsidize{value: 1e17 - 1}(BRIDGE, 3, 550);
     }
 
+    function testNotSubsidizedError() public {
+        // 3rd try to set subsidy again
+        vm.expectRevert(Subsidy.NotSubsidised.selector);
+        subsidy.topUp{value: 2 ether}(BRIDGE, 1);
+    }
+
     function testSubsidyGetsCorrectlySet() public {
         _setGasUsageAndMinGasPerMinute();
 
@@ -148,6 +154,21 @@ contract SubsidyTest is Test {
         sub = subsidy.getSubsidy(BRIDGE, 1);
 
         assertEq(sub.available, 1 ether, "available incorrectly set in refill");
+    }
+
+    function testTopUpWorks(uint96 _value1, uint96 _value2) public {
+        // Set huge gasUsage and gasPerMinute so that everything can be claimed in 1 call
+        uint32 gasUsage = type(uint32).max;
+        vm.prank(BRIDGE);
+        subsidy.setGasUsageAndMinGasPerMinute(1, gasUsage, 100);
+
+        uint256 value1 = bound(_value1, subsidy.MIN_SUBSIDY_VALUE(), 1000 ether);
+        uint256 value2 = bound(_value2, subsidy.MIN_SUBSIDY_VALUE(), 1000 ether);
+        subsidy.subsidize{value: value1}(BRIDGE, 1, 100000);
+        subsidy.topUp{value: value2}(BRIDGE, 1);
+
+        Subsidy.Subsidy memory sub = subsidy.getSubsidy(BRIDGE, 1);
+        assertEq(sub.available, value1 + value2, "available incorrectly set");
     }
 
     function testAvailableDropsByExpectedAmountAndGetsCorrectlyWithdrawn() public {

@@ -41,6 +41,7 @@ contract Subsidy is ISubsidy {
     error GasPerMinuteTooLow();
     error AlreadySubsidized();
     error GasUsageNotSet();
+    error NotSubsidised();
     error SubsidyTooLow();
     error EthTransferFailed();
 
@@ -188,6 +189,28 @@ contract Subsidy is ISubsidy {
         sub.lastUpdated = uint32(block.timestamp);
         sub.gasPerMinute = _gasPerMinute;
 
+        subsidies[_bridge][_criteria] = sub;
+
+        emit Subsidized(_bridge, _criteria, sub.available, sub.gasPerMinute);
+    }
+
+    /**
+     * @notice Tops up an existing subsidy corresponding to a given `_bridge` and `_criteria` with `msg.value`
+     * @param _bridge Address of the bridge to subsidize
+     * @param _criteria A value defining the specific bridge call to subsidize
+     * @dev Reverts if `available` is 0.
+     */
+    function topUp(address _bridge, uint256 _criteria) external payable {
+        // Caching subsidy in order to minimize number of SLOADs and SSTOREs
+        Subsidy memory sub = subsidies[_bridge][_criteria];
+
+        if (sub.available == 0) {
+            revert NotSubsidised();
+        }
+
+        unchecked {
+            sub.available += uint128(msg.value);
+        }
         subsidies[_bridge][_criteria] = sub;
 
         emit Subsidized(_bridge, _criteria, sub.available, sub.gasPerMinute);

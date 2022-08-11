@@ -36,6 +36,8 @@ interface ISubsidy {
         uint32 _gasPerMinute
     ) external payable;
 
+    function topUp(address _bridge, uint256 _criteria) external payable;
+
     function claimSubsidy(uint256 _criteria, address _beneficiary) external returns (uint256);
 
     function withdraw(address _beneficiary) external returns (uint256);
