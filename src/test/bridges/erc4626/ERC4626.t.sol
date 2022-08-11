@@ -118,9 +118,7 @@ contract ERC4626Test is BridgeTestBase {
 
             // Immediately redeem the shares
             uint256 redeemAmount = bound(_shareAmount, 1, outputValueA);
-
-            // expectedAssetAmountReturned = sharesRedeemed/sharesMinted * inputAssetAmount
-            uint256 expectedAssetAmountReturned = (redeemAmount * assetAmount) / outputValueA;
+            uint256 expectedAssetAmountReturned = IERC4626(shares[i].erc20Address).previewRedeem(redeemAmount);
 
             bridgeCallData = encodeBridgeCallData(id, shares[i], emptyAsset, assets[i], emptyAsset, 1);
             (outputValueA, outputValueB, isAsync) = sendDefiRollup(bridgeCallData, redeemAmount);
@@ -130,10 +128,9 @@ contract ERC4626Test is BridgeTestBase {
                 processorShareBalanceBeforeRedeem,
                 "Incorrect RollupProcessor share balance after redeem"
             );
-            assertApproxEqAbs(
+            assertEq(
                 outputValueA,
                 expectedAssetAmountReturned,
-                2,
                 "Received amount of asset differs from the expected one"
             );
             assertEq(outputValueB, 0, "Non-zero outputValueB");
@@ -210,8 +207,6 @@ contract ERC4626Test is BridgeTestBase {
 
         // Immediately redeem the shares
         uint256 redeemAmount = bound(_shareAmount, 1, outputValueA);
-
-        // expectedAssetAmountReturned = sharesRedeemed/sharesMinted * inputAssetAmount
         uint256 expectedAssetAmountReturned = IERC4626(shareAsset.erc20Address).previewRedeem(redeemAmount);
 
         bridgeCallData = encodeBridgeCallData(id, shareAsset, emptyAsset, ethAsset, emptyAsset, 1);
@@ -222,11 +217,6 @@ contract ERC4626Test is BridgeTestBase {
             processorShareBalanceBeforeRedeem,
             "Incorrect RollupProcessor share balance after redeem"
         );
-        assertApproxEqAbs(
-            outputValueA,
-            expectedAssetAmountReturned,
-            2,
-            "Received amount of asset differs from the expected one"
-        );
+        assertEq(outputValueA, expectedAssetAmountReturned, "Received amount of asset differs from the expected one");
     }
 }
