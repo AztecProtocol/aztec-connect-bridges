@@ -49,22 +49,6 @@ contract Subsidy is ISubsidy {
     event BeneficiaryRegistered(address indexed beneficiary);
 
     /**
-     * @notice Container for Subsidy related information
-     * @member available Amount of ETH remaining to be paid out
-     * @member gasUsage Amount of gas the interaction consumes (used to define max possible payout)
-     * @member minGasPerMinute Minimum amount of gas per minute the subsidizer has to subsidize
-     * @member gasPerMinute Amount of gas per minute the subsidizer is willing to subsidize
-     * @member lastUpdated Last time subsidy was paid out or funded (if not subsidy was yet claimed after funding)
-     */
-    struct Subsidy {
-        uint128 available;
-        uint32 gasUsage;
-        uint32 minGasPerMinute;
-        uint32 gasPerMinute;
-        uint32 lastUpdated;
-    }
-
-    /**
      * @notice Container for Beneficiary related information
      * @member claimable The amount of eth that is owed this beneficiary
      * @member registered A flag indicating if registered or not. Used to "poke" storage
@@ -76,7 +60,7 @@ contract Subsidy is ISubsidy {
 
     // @dev Using min possible `msg.value` upon subsidizing in order to limit possibility of front running attacks
     // --> e.g. attacker front-running real subsidy tx by sending 1 wei value tx making the real one revert
-    uint256 public constant MIN_SUBSIDY_VALUE = 1e17;
+    uint256 public constant override(ISubsidy) MIN_SUBSIDY_VALUE = 1e17;
 
     // address bridge => uint256 criteria => Subsidy subsidy
     mapping(address => mapping(uint256 => Subsidy)) public subsidies;
@@ -98,7 +82,7 @@ contract Subsidy is ISubsidy {
      * @param _beneficiary The address of the beneficiary to check
      * @return True if the `_beneficiary` is registered, false otherwise
      */
-    function isRegistered(address _beneficiary) external view returns (bool) {
+    function isRegistered(address _beneficiary) external view override(ISubsidy) returns (bool) {
         return beneficiaries[_beneficiary].registered;
     }
 
@@ -108,7 +92,7 @@ contract Subsidy is ISubsidy {
      * @param _criteria The criteria of the subsidy
      * @return The subsidy data object
      */
-    function getSubsidy(address _bridge, uint256 _criteria) external view returns (Subsidy memory) {
+    function getSubsidy(address _bridge, uint256 _criteria) external view override(ISubsidy) returns (Subsidy memory) {
         return subsidies[_bridge][_criteria];
     }
 
@@ -167,7 +151,7 @@ contract Subsidy is ISubsidy {
         address _bridge,
         uint256 _criteria,
         uint32 _gasPerMinute
-    ) external payable {
+    ) external payable override(ISubsidy) {
         if (msg.value < MIN_SUBSIDY_VALUE) {
             revert SubsidyTooLow();
         }
@@ -200,7 +184,7 @@ contract Subsidy is ISubsidy {
      * @param _criteria A value defining the specific bridge call to subsidize
      * @dev Reverts if `available` is 0.
      */
-    function topUp(address _bridge, uint256 _criteria) external payable {
+    function topUp(address _bridge, uint256 _criteria) external payable override(ISubsidy) {
         // Caching subsidy in order to minimize number of SLOADs and SSTOREs
         Subsidy memory sub = subsidies[_bridge][_criteria];
 
@@ -222,7 +206,7 @@ contract Subsidy is ISubsidy {
      * @param _beneficiary Address which is going to receive the subsidy
      * @return subsidy ETH amount which was added to the `_beneficiary` claimable balance
      */
-    function claimSubsidy(uint256 _criteria, address _beneficiary) external returns (uint256) {
+    function claimSubsidy(uint256 _criteria, address _beneficiary) external override(ISubsidy) returns (uint256) {
         if (_beneficiary == address(0)) {
             return 0;
         }
@@ -270,7 +254,7 @@ contract Subsidy is ISubsidy {
      * @param _beneficiary Address which is going to receive the subsidy
      * @return - ETH amount which was sent to the `_beneficiary`
      */
-    function withdraw(address _beneficiary) external returns (uint256) {
+    function withdraw(address _beneficiary) external override(ISubsidy) returns (uint256) {
         uint256 withdrawableBalance = beneficiaries[_beneficiary].claimable;
         // Immediately updating the balance to avoid re-entrancy attack
         beneficiaries[_beneficiary].claimable = 0;

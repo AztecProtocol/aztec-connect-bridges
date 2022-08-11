@@ -3,13 +3,13 @@
 pragma solidity >=0.8.4;
 
 import {Test} from "forge-std/Test.sol";
-import {Subsidy} from "../../../aztec/Subsidy.sol";
+import {ISubsidy, Subsidy} from "../../../aztec/Subsidy.sol";
 
 contract SubsidyTest is Test {
     address private constant BRIDGE = address(10);
     address private constant BENEFICIARY = address(11);
 
-    Subsidy private subsidy;
+    ISubsidy private subsidy;
 
     event Subsidized(address indexed bridge, uint256 indexed criteria, uint128 available, uint32 gasPerMinute);
     event BeneficiaryRegistered(address indexed beneficiary);
