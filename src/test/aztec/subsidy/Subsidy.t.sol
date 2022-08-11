@@ -156,6 +156,30 @@ contract SubsidyTest is Test {
         assertEq(sub.available, 1 ether, "available incorrectly set in refill");
     }
 
+    function testGetAccumulatedSubsidyAmount() public {
+        // Set huge gasUsage and gasPerMinute so that everything can be claimed in 1 call
+        uint256 criteria = 1;
+        uint32 gasUsage = type(uint32).max;
+        vm.prank(BRIDGE);
+        subsidy.setGasUsageAndMinGasPerMinute(criteria, gasUsage, 100);
+
+        subsidy.subsidize{value: 1 ether}(BRIDGE, criteria, 100000);
+
+        vm.warp(block.timestamp + 7 days);
+
+        subsidy.registerBeneficiary(BENEFICIARY);
+
+        uint256 accumulatedSubsidyAmount = subsidy.getAccumulatedSubsidyAmount(BRIDGE, criteria);
+
+        vm.prank(BRIDGE);
+        uint256 referenceAccumulatedSubsidyAmount = subsidy.claimSubsidy(criteria, BENEFICIARY);
+        assertEq(
+            accumulatedSubsidyAmount,
+            referenceAccumulatedSubsidyAmount,
+            "getAccumulatedSubsidyAmount(...) and claimSubsidy(...) returned different amounts"
+        );
+    }
+
     function testTopUpWorks(uint96 _value1, uint96 _value2) public {
         // Set huge gasUsage and gasPerMinute so that everything can be claimed in 1 call
         uint32 gasUsage = type(uint32).max;
