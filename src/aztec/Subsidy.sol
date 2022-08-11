@@ -52,8 +52,8 @@ contract Subsidy is ISubsidy {
      * @notice Container for Subsidy related information
      * @member available Amount of ETH remaining to be paid out
      * @member gasUsage Amount of gas the interaction consumes (used to define max possible payout)
-     * @member minGasPerMinute Minimum amount of gas per second the subsidizer has to subsidize
-     * @member gasPerMinute Amount of gas per second the subsidizer is willing to subsidize
+     * @member minGasPerMinute Minimum amount of gas per minute the subsidizer has to subsidize
+     * @member gasPerMinute Amount of gas per minute the subsidizer is willing to subsidize
      * @member lastUpdated Last time subsidy was paid out or funded (if not subsidy was yet claimed after funding)
      */
     struct Subsidy {
