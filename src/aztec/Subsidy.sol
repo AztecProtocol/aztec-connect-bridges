@@ -112,27 +112,6 @@ contract Subsidy is ISubsidy {
     }
 
     /**
-     * @notice Sets `Subsidy.gasUsage` value for a given criteria
-     * @dev This function has to be called from the bridge
-     * @param _criteria A value defining a specific bridge call
-     * @param _gasUsage The gas usage of the subsidized action. Used as upper limit for subsidy.
-     * @param _minGasPerMinute Minimum amount of gas per minute that subsidizer has to subsidize
-     */
-    function setGasUsageAndMinGasPerMinute(
-        uint256 _criteria,
-        uint32 _gasUsage,
-        uint32 _minGasPerMinute
-    ) external override(ISubsidy) {
-        subsidies[msg.sender][_criteria] = Subsidy({
-            available: 0,
-            gasUsage: _gasUsage,
-            minGasPerMinute: _minGasPerMinute,
-            gasPerMinute: 0,
-            lastUpdated: 0
-        });
-    }
-
-    /**
      * @notice Sets multiple `Subsidy.gasUsage` values for multiple criteria values
      * @dev This function has to be called from the bridge
      * @param _criteria An array of values each defining a specific bridge call
@@ -152,13 +131,7 @@ contract Subsidy is ISubsidy {
         }
 
         for (uint256 i; i < criteriasLength; ) {
-            subsidies[msg.sender][_criteria[i]] = Subsidy({
-                available: 0,
-                gasUsage: _gasUsage[i],
-                minGasPerMinute: _minGasPerMinute[i],
-                gasPerMinute: 0,
-                lastUpdated: 0
-            });
+            setGasUsageAndMinGasPerMinute(_criteria[i], _gasUsage[i], _minGasPerMinute[i]);
             unchecked {
                 ++i;
             }
@@ -286,5 +259,27 @@ contract Subsidy is ISubsidy {
             revert EthTransferFailed();
         }
         return withdrawableBalance;
+    }
+
+    /**
+     * @notice Sets `Subsidy.gasUsage` value for a given criteria
+     * @dev This function has to be called from the bridge
+     * @param _criteria A value defining a specific bridge call
+     * @param _gasUsage The gas usage of the subsidized action. Used as upper limit for subsidy.
+     * @param _minGasPerMinute Minimum amount of gas per minute that subsidizer has to subsidize
+     */
+    function setGasUsageAndMinGasPerMinute(
+        uint256 _criteria,
+        uint32 _gasUsage,
+        uint32 _minGasPerMinute
+    ) public override(ISubsidy) {
+        // Loading `sub` first in order to not overwrite `sub.available` in case this function was already called
+        // before and subsidy was set. This should not be needed for well written bridges.
+        Subsidy memory sub = subsidies[msg.sender][_criteria];
+
+        sub.gasUsage = _gasUsage;
+        sub.minGasPerMinute = _minGasPerMinute;
+
+        subsidies[msg.sender][_criteria] = sub;
     }
 }

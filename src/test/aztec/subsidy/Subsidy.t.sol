@@ -25,6 +25,25 @@ contract SubsidyTest is Test {
         vm.deal(BENEFICIARY, 0);
     }
 
+    function testSettingGasUsageAndMinGasPerMinuteDoesntOverwriteAvailable() public {
+        uint256 criteria = 1;
+        uint32 gasUsage = 5e4;
+        uint32 minGasPerMinute = 100;
+        vm.prank(BRIDGE);
+        subsidy.setGasUsageAndMinGasPerMinute(criteria, gasUsage, minGasPerMinute);
+
+        subsidy.subsidize{value: 1 ether}(BRIDGE, criteria, minGasPerMinute);
+
+        Subsidy.Subsidy memory sub = subsidy.getSubsidy(BRIDGE, 1);
+        assertEq(sub.available, 1 ether, "available incorrectly set");
+
+        vm.prank(BRIDGE);
+        subsidy.setGasUsageAndMinGasPerMinute(criteria, gasUsage, minGasPerMinute);
+
+        sub = subsidy.getSubsidy(BRIDGE, 1);
+        assertEq(sub.available, 1 ether, "available got reset to 0");
+    }
+
     function testArrayLengthsDontMatchError() public {
         // First set min gas per second values for different criteria
         uint256[] memory criteria = new uint256[](1);
