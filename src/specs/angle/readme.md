@@ -9,7 +9,7 @@ It is build to allow users to earn yield on their tokens.
 
 The bridge interacts with [Angle Protocol](https://angle.money/).
 Angle is the first decentralized, capital efficient and over-collateralized stablecoin protocol.
-[Angle's Github](https://github.com/AngleProtocol/app)
+[Angle's Github](https://github.com/AngleProtocol/)
 
 ## What is the flow of the bridge?
 

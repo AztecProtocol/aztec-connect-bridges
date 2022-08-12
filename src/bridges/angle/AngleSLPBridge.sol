@@ -14,28 +14,38 @@ import {IStableMaster} from "../../interfaces/angle/IStableMaster.sol";
  * @notice Allows a user to deposit/withdraw his tokens to/from Angle Protocol
  * @dev Enter Angle Protocol as an SLP by depositing authorized tokens
  */
-contract AngleBridge is BridgeBase {
+contract AngleSLPBridge is BridgeBase {
     using SafeERC20 for IERC20;
 
     IStableMaster public constant STABLE_MASTER = IStableMaster(0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87);
+
+    address public constant POOLMANAGER_DAI = 0xc9daabC677F3d1301006e723bD21C60be57a5915;
+    address public constant POOLMANAGER_USDC = 0xe9f183FC656656f1F17af1F2b0dF79b8fF9ad8eD;
+    address public constant POOLMANAGER_WETH = 0x3f66867b4b6eCeBA0dBb6776be15619F73BC30A2;
+    address public constant POOLMANAGER_FRAX = 0x6b4eE7352406707003bC6f6b96595FD35925af48;
+
+    address public constant SANDAI = 0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450;
+    address public constant SANUSDC = 0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad;
+    address public constant SANWETH = 0x30c955906735e48D73080fD20CB488518A6333C8;
+    address public constant SANFRAX = 0xb3B209Bb213A5Da5B947C56f2C770b3E1015f1FE;
 
     // The amount of dust to leave in the contract
     // Optimization based on EIP-1087
     uint256 internal constant DUST = 1;
 
     /**
-     * @notice Set address of rollup processor
+     * @notice Set address of rollup processor and approves all poolManagers
      * @param _rollupProcessor Address of rollup processor
      */
     constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {
-        _preApprove(0xc9daabC677F3d1301006e723bD21C60be57a5915);
-        _preApprove(0xe9f183FC656656f1F17af1F2b0dF79b8fF9ad8eD);
-        _preApprove(0x3f66867b4b6eCeBA0dBb6776be15619F73BC30A2);
-        _preApprove(0x6b4eE7352406707003bC6f6b96595FD35925af48);
+        _preApprove(POOLMANAGER_DAI);
+        _preApprove(POOLMANAGER_USDC);
+        _preApprove(POOLMANAGER_WETH);
+        _preApprove(POOLMANAGER_FRAX);
     }
 
     /**
-     * @notice A function which returns an _totalInputValue amount of _inputAssetA
+     * @notice Deposit tokens into Angle Protocol as an SLP and receive sanTokens (yield bearing)
      * @param _inputAssetA - ERC20/ETH (deposit), or sanToken (withdraw)
      * @param _outputAssetA - sanToken (deposit), or ERC20/ETH (withdraw)
      * @param _totalInputValue - amount of ERC20/ETH to deposit, or the amount of sanToken to withdraw
@@ -66,24 +76,18 @@ contract AngleBridge is BridgeBase {
         if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
         if (_totalInputValue < 10) revert ErrorLib.InvalidInputAmount();
 
-        uint256 totalInputValue = _totalInputValue;
-
         if (_auxData == 0) {
-            address poolManager = getPoolManager(_inputAssetA.erc20Address);
-            if (poolManager == address(0)) revert ErrorLib.InvalidInputA();
-
-            (, address sanToken, , , , , , , ) = STABLE_MASTER.collateralMap(poolManager);
+            (address poolManager, address sanToken) = getPoolManagerAndSanToken(_inputAssetA.erc20Address);
+            if (poolManager == address(0) || sanToken == address(0)) revert ErrorLib.InvalidInputA();
             if (sanToken != _outputAssetA.erc20Address) revert ErrorLib.InvalidOutputA();
 
-            STABLE_MASTER.deposit(totalInputValue, address(this), poolManager);
+            STABLE_MASTER.deposit(_totalInputValue, address(this), poolManager);
         } else if (_auxData == 1) {
-            address poolManager = getPoolManager(_outputAssetA.erc20Address);
-            if (poolManager == address(0)) revert ErrorLib.InvalidOutputA();
-
-            (, address sanToken, , , , , , , ) = STABLE_MASTER.collateralMap(poolManager);
+            (address poolManager, address sanToken) = getPoolManagerAndSanToken(_outputAssetA.erc20Address);
+            if (poolManager == address(0) || sanToken == address(0)) revert ErrorLib.InvalidOutputA();
             if (sanToken != _inputAssetA.erc20Address) revert ErrorLib.InvalidInputA();
 
-            STABLE_MASTER.withdraw(totalInputValue, address(this), address(this), poolManager);
+            STABLE_MASTER.withdraw(_totalInputValue, address(this), address(this), poolManager);
         } else {
             revert ErrorLib.InvalidAuxData();
         }
@@ -91,20 +95,36 @@ contract AngleBridge is BridgeBase {
         outputValueA = IERC20(_outputAssetA.erc20Address).balanceOf(address(this)) - DUST;
     }
 
-    // collateralAddress => poolManagerAddress
-    function getPoolManager(address _collateral) public pure returns (address) {
+    /**
+     * @notice Returns the PoolManager address and the SanToken address associated with a collateral
+     * @param _collateral Address of the collateral
+     * @return poolManager - address of the poolManager
+     * @return sanToken - address of the sanToken
+     */
+    function getPoolManagerAndSanToken(address _collateral)
+        public
+        pure
+        returns (address poolManager, address sanToken)
+    {
         if (_collateral == 0x6B175474E89094C44Da98b954EedeAC495271d0F) {
-            return 0xc9daabC677F3d1301006e723bD21C60be57a5915;
+            poolManager = POOLMANAGER_DAI;
+            sanToken = SANDAI;
         } else if (_collateral == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48) {
-            return 0xe9f183FC656656f1F17af1F2b0dF79b8fF9ad8eD;
+            poolManager = POOLMANAGER_USDC;
+            sanToken = SANUSDC;
         } else if (_collateral == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) {
-            return 0x3f66867b4b6eCeBA0dBb6776be15619F73BC30A2;
+            poolManager = POOLMANAGER_WETH;
+            sanToken = SANWETH;
         } else if (_collateral == 0x853d955aCEf822Db058eb8505911ED77F175b99e) {
-            return 0x6b4eE7352406707003bC6f6b96595FD35925af48;
+            poolManager = POOLMANAGER_FRAX;
+            sanToken = SANFRAX;
         }
     }
 
-    // Pre-approval of all tokens, should be done in the constructor
+    /**
+     * @notice Pre-approval of all tokens related to a poolManager, should be done in the constructor
+     * @param _poolManager Address of the poolManager
+     */
     function _preApprove(address _poolManager) private {
         (IERC20 token, address sanToken, , , , , , , ) = STABLE_MASTER.collateralMap(_poolManager);
 
