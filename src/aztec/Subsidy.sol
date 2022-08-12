@@ -225,6 +225,10 @@ contract Subsidy is ISubsidy {
         uint256 subsidyAmount = _computeAccumulatedSubsidyAmount(sub);
 
         if (subsidyAmount > 0) {
+            // It safe to update only when the value is claimed because this happens only in 3 situations:
+            //      1) Subsidy was already claimed in the same block and is no longer available (dt = 0),
+            //      2) there are no available assets (`sub.available` = 0) --> 0 would be already returned above,
+            //      3) the amount is small and gets rounded down to 0.
             sub.lastUpdated = uint32(block.timestamp);
             unchecked {
                 // safe as `subsidyAmount` is bounded by `sub.available`
@@ -283,7 +287,7 @@ contract Subsidy is ISubsidy {
         uint32 _minGasPerMinute
     ) public override(ISubsidy) {
         // Loading `sub` first in order to not overwrite `sub.available` in case this function was already called
-        // and a subsidy was set. 
+        // and a subsidy was set.
         Subsidy memory sub = subsidies[msg.sender][_criteria];
 
         sub.gasUsage = _gasUsage;
@@ -298,8 +302,6 @@ contract Subsidy is ISubsidy {
      * @return - Accumulated subsidy amount (amount paid out if the bridge called `claimSubsidy(_criteria, ...)`)
      */
     function _computeAccumulatedSubsidyAmount(Subsidy memory _subsidy) private view returns (uint256) {
-        uint256 subsidyAmount;
-
         unchecked {
             // _sub.lastUpdated only update to block.timestamp, so can never be in the future
             uint256 dt = block.timestamp - _subsidy.lastUpdated;
@@ -314,7 +316,6 @@ contract Subsidy is ISubsidy {
                 return ethToCover < _subsidy.available ? ethToCover : _subsidy.available;
             }
         }
-
-        return subsidyAmount;
+        return 0;
     }
 }
