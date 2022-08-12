@@ -59,7 +59,7 @@ contract UniswapDCABridge is BiDCABridge {
         uint256 oraclePrice = getPrice();
         (int256 aFlow, int256 bFlow, uint256 a, uint256 b) = _rebalanceAndFill(0, 0, oraclePrice, true);
 
-        // If we have avaiable A and B, we can do internal rebalancing across ticks with these values.
+        // If we have available A and B, we can do internal rebalancing across ticks with these values.
         if (a > 0 && b > 0) {
             (aFlow, bFlow, a, b) = _rebalanceAndFill(a, b, oraclePrice, true);
         }
