@@ -41,27 +41,12 @@ contract Subsidy is ISubsidy {
     error GasPerMinuteTooLow();
     error AlreadySubsidized();
     error GasUsageNotSet();
+    error NotSubsidised();
     error SubsidyTooLow();
     error EthTransferFailed();
 
     event Subsidized(address indexed bridge, uint256 indexed criteria, uint128 available, uint32 gasPerMinute);
     event BeneficiaryRegistered(address indexed beneficiary);
-
-    /**
-     * @notice Container for Subsidy related information
-     * @member available Amount of ETH remaining to be paid out
-     * @member gasUsage Amount of gas the interaction consumes (used to define max possible payout)
-     * @member minGasPerMinute Minimum amount of gas per second the subsidizer has to subsidize
-     * @member gasPerMinute Amount of gas per second the subsidizer is willing to subsidize
-     * @member lastUpdated Last time subsidy was paid out or funded (if not subsidy was yet claimed after funding)
-     */
-    struct Subsidy {
-        uint128 available;
-        uint32 gasUsage;
-        uint32 minGasPerMinute;
-        uint32 gasPerMinute;
-        uint32 lastUpdated;
-    }
 
     /**
      * @notice Container for Beneficiary related information
@@ -75,7 +60,7 @@ contract Subsidy is ISubsidy {
 
     // @dev Using min possible `msg.value` upon subsidizing in order to limit possibility of front running attacks
     // --> e.g. attacker front-running real subsidy tx by sending 1 wei value tx making the real one revert
-    uint256 public constant MIN_SUBSIDY_VALUE = 1e17;
+    uint256 public constant override(ISubsidy) MIN_SUBSIDY_VALUE = 1e17;
 
     // address bridge => uint256 criteria => Subsidy subsidy
     mapping(address => mapping(uint256 => Subsidy)) public subsidies;
@@ -97,7 +82,7 @@ contract Subsidy is ISubsidy {
      * @param _beneficiary The address of the beneficiary to check
      * @return True if the `_beneficiary` is registered, false otherwise
      */
-    function isRegistered(address _beneficiary) external view returns (bool) {
+    function isRegistered(address _beneficiary) external view override(ISubsidy) returns (bool) {
         return beneficiaries[_beneficiary].registered;
     }
 
@@ -107,29 +92,8 @@ contract Subsidy is ISubsidy {
      * @param _criteria The criteria of the subsidy
      * @return The subsidy data object
      */
-    function getSubsidy(address _bridge, uint256 _criteria) external view returns (Subsidy memory) {
+    function getSubsidy(address _bridge, uint256 _criteria) external view override(ISubsidy) returns (Subsidy memory) {
         return subsidies[_bridge][_criteria];
-    }
-
-    /**
-     * @notice Sets `Subsidy.gasUsage` value for a given criteria
-     * @dev This function has to be called from the bridge
-     * @param _criteria A value defining a specific bridge call
-     * @param _gasUsage The gas usage of the subsidized action. Used as upper limit for subsidy.
-     * @param _minGasPerMinute Minimum amount of gas per minute that subsidizer has to subsidize
-     */
-    function setGasUsageAndMinGasPerMinute(
-        uint256 _criteria,
-        uint32 _gasUsage,
-        uint32 _minGasPerMinute
-    ) external override(ISubsidy) {
-        subsidies[msg.sender][_criteria] = Subsidy({
-            available: 0,
-            gasUsage: _gasUsage,
-            minGasPerMinute: _minGasPerMinute,
-            gasPerMinute: 0,
-            lastUpdated: 0
-        });
     }
 
     /**
@@ -152,13 +116,7 @@ contract Subsidy is ISubsidy {
         }
 
         for (uint256 i; i < criteriasLength; ) {
-            subsidies[msg.sender][_criteria[i]] = Subsidy({
-                available: 0,
-                gasUsage: _gasUsage[i],
-                minGasPerMinute: _minGasPerMinute[i],
-                gasPerMinute: 0,
-                lastUpdated: 0
-            });
+            setGasUsageAndMinGasPerMinute(_criteria[i], _gasUsage[i], _minGasPerMinute[i]);
             unchecked {
                 ++i;
             }
@@ -193,7 +151,7 @@ contract Subsidy is ISubsidy {
         address _bridge,
         uint256 _criteria,
         uint32 _gasPerMinute
-    ) external payable {
+    ) external payable override(ISubsidy) {
         if (msg.value < MIN_SUBSIDY_VALUE) {
             revert SubsidyTooLow();
         }
@@ -221,12 +179,34 @@ contract Subsidy is ISubsidy {
     }
 
     /**
+     * @notice Tops up an existing subsidy corresponding to a given `_bridge` and `_criteria` with `msg.value`
+     * @param _bridge Address of the bridge to subsidize
+     * @param _criteria A value defining the specific bridge call to subsidize
+     * @dev Reverts if `available` is 0.
+     */
+    function topUp(address _bridge, uint256 _criteria) external payable override(ISubsidy) {
+        // Caching subsidy in order to minimize number of SLOADs and SSTOREs
+        Subsidy memory sub = subsidies[_bridge][_criteria];
+
+        if (sub.available == 0) {
+            revert NotSubsidised();
+        }
+
+        unchecked {
+            sub.available += uint128(msg.value);
+        }
+        subsidies[_bridge][_criteria] = sub;
+
+        emit Subsidized(_bridge, _criteria, sub.available, sub.gasPerMinute);
+    }
+
+    /**
      * @notice Computes and sends subsidy
      * @param _criteria A value defining a specific bridge call
      * @param _beneficiary Address which is going to receive the subsidy
      * @return subsidy ETH amount which was added to the `_beneficiary` claimable balance
      */
-    function claimSubsidy(uint256 _criteria, address _beneficiary) external returns (uint256) {
+    function claimSubsidy(uint256 _criteria, address _beneficiary) external override(ISubsidy) returns (uint256) {
         if (_beneficiary == address(0)) {
             return 0;
         }
@@ -242,26 +222,21 @@ contract Subsidy is ISubsidy {
             return 0;
         }
 
-        uint256 subsidyAmount;
+        uint256 subsidyAmount = _computeAccumulatedSubsidyAmount(sub);
 
-        unchecked {
-            uint256 dt = block.timestamp - sub.lastUpdated; // sub.lastUpdated only update to block.timestamp, so can never be in the future
-
-            // time need to have passed for an incentive to have accrued
-            if (dt > 0) {
-                // The following should never overflow due to constraints on values. But if they do, it is bounded by the available subsidy
-                uint256 gasToCover = (dt * sub.gasPerMinute) / 1 minutes;
-                uint256 ethToCover = (gasToCover < sub.gasUsage ? gasToCover : sub.gasUsage) * block.basefee; // At maximum `sub.gasUsage` gas covered
-
-                subsidyAmount = ethToCover < sub.available ? ethToCover : sub.available;
-
-                sub.available -= uint128(subsidyAmount); // safe as `subsidyAmount` is bounded by `sub.available`
-                sub.lastUpdated = uint32(block.timestamp);
-
-                // Update storage
-                beneficiaries[_beneficiary].claimable = beneficiary.claimable + uint248(subsidyAmount); // safe as available is limited to u128
-                subsidies[msg.sender][_criteria] = sub;
+        if (subsidyAmount > 0) {
+            // It safe to update only when the value is claimed because this happens only in 3 situations:
+            //      1) Subsidy was already claimed in the same block and is no longer available (dt = 0),
+            //      2) there are no available assets (`sub.available` = 0) --> 0 would be already returned above,
+            //      3) the amount is small and gets rounded down to 0.
+            sub.lastUpdated = uint32(block.timestamp);
+            unchecked {
+                // safe as `subsidyAmount` is bounded by `sub.available`
+                sub.available -= uint128(subsidyAmount);
+                // safe as available is limited to u128
+                beneficiaries[_beneficiary].claimable = beneficiary.claimable + uint248(subsidyAmount);
             }
+            subsidies[msg.sender][_criteria] = sub;
         }
 
         return subsidyAmount;
@@ -274,7 +249,7 @@ contract Subsidy is ISubsidy {
      * @param _beneficiary Address which is going to receive the subsidy
      * @return - ETH amount which was sent to the `_beneficiary`
      */
-    function withdraw(address _beneficiary) external returns (uint256) {
+    function withdraw(address _beneficiary) external override(ISubsidy) returns (uint256) {
         uint256 withdrawableBalance = beneficiaries[_beneficiary].claimable;
         // Immediately updating the balance to avoid re-entrancy attack
         beneficiaries[_beneficiary].claimable = 0;
@@ -286,5 +261,61 @@ contract Subsidy is ISubsidy {
             revert EthTransferFailed();
         }
         return withdrawableBalance;
+    }
+
+    /**
+     * @notice Gets current accumulated subsidy amount for a given `_bridge` and `_criteria`
+     * @param _bridge Address of the subsidized bridge
+     * @param _criteria A value defining a specific bridge call
+     * @return - Accumulated subsidy amount (amount paid out if the bridge called `claimSubsidy(_criteria, ...)`)
+     */
+    function getAccumulatedSubsidyAmount(address _bridge, uint256 _criteria) external view returns (uint256) {
+        Subsidy memory sub = subsidies[_bridge][_criteria];
+        return _computeAccumulatedSubsidyAmount(sub);
+    }
+
+    /**
+     * @notice Sets `Subsidy.gasUsage` value for a given criteria
+     * @dev This function has to be called from the bridge
+     * @param _criteria A value defining a specific bridge call
+     * @param _gasUsage The gas usage of the subsidized action. Used as upper limit for subsidy.
+     * @param _minGasPerMinute Minimum amount of gas per minute that subsidizer has to subsidize
+     */
+    function setGasUsageAndMinGasPerMinute(
+        uint256 _criteria,
+        uint32 _gasUsage,
+        uint32 _minGasPerMinute
+    ) public override(ISubsidy) {
+        // Loading `sub` first in order to not overwrite `sub.available` in case this function was already called
+        // and a subsidy was set.
+        Subsidy memory sub = subsidies[msg.sender][_criteria];
+
+        sub.gasUsage = _gasUsage;
+        sub.minGasPerMinute = _minGasPerMinute;
+
+        subsidies[msg.sender][_criteria] = sub;
+    }
+
+    /**
+     * @notice Computes accumulated subsidy amount based on Subsidy struct and current block
+     * @param _subsidy Subsidy based on which to compute accumulated subsidy amount
+     * @return - Accumulated subsidy amount (amount paid out if the bridge called `claimSubsidy(_criteria, ...)`)
+     */
+    function _computeAccumulatedSubsidyAmount(Subsidy memory _subsidy) private view returns (uint256) {
+        unchecked {
+            // _sub.lastUpdated only update to block.timestamp, so can never be in the future
+            uint256 dt = block.timestamp - _subsidy.lastUpdated;
+
+            // time need to have passed for an incentive to have accrued
+            if (dt > 0) {
+                // The following should never overflow due to constraints on values.
+                // But if they do, it is bounded by the available subsidy
+                uint256 gasToCover = (dt * _subsidy.gasPerMinute) / 1 minutes;
+                uint256 ethToCover = (gasToCover < _subsidy.gasUsage ? gasToCover : _subsidy.gasUsage) * block.basefee;
+
+                return ethToCover < _subsidy.available ? ethToCover : _subsidy.available;
+            }
+        }
+        return 0;
     }
 }

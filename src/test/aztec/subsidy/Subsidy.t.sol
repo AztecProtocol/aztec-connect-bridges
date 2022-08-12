@@ -3,13 +3,13 @@
 pragma solidity >=0.8.4;
 
 import {Test} from "forge-std/Test.sol";
-import {Subsidy} from "../../../aztec/Subsidy.sol";
+import {ISubsidy, Subsidy} from "../../../aztec/Subsidy.sol";
 
 contract SubsidyTest is Test {
     address private constant BRIDGE = address(10);
     address private constant BENEFICIARY = address(11);
 
-    Subsidy private subsidy;
+    ISubsidy private subsidy;
 
     event Subsidized(address indexed bridge, uint256 indexed criteria, uint128 available, uint32 gasPerMinute);
     event BeneficiaryRegistered(address indexed beneficiary);
@@ -23,6 +23,25 @@ contract SubsidyTest is Test {
         // Make sure test addresses don't hold any ETH
         vm.deal(BRIDGE, 0);
         vm.deal(BENEFICIARY, 0);
+    }
+
+    function testSettingGasUsageAndMinGasPerMinuteDoesntOverwriteAvailable() public {
+        uint256 criteria = 1;
+        uint32 gasUsage = 5e4;
+        uint32 minGasPerMinute = 100;
+        vm.prank(BRIDGE);
+        subsidy.setGasUsageAndMinGasPerMinute(criteria, gasUsage, minGasPerMinute);
+
+        subsidy.subsidize{value: 1 ether}(BRIDGE, criteria, minGasPerMinute);
+
+        Subsidy.Subsidy memory sub = subsidy.getSubsidy(BRIDGE, 1);
+        assertEq(sub.available, 1 ether, "available incorrectly set");
+
+        vm.prank(BRIDGE);
+        subsidy.setGasUsageAndMinGasPerMinute(criteria, gasUsage, minGasPerMinute);
+
+        sub = subsidy.getSubsidy(BRIDGE, 1);
+        assertEq(sub.available, 1 ether, "available got reset to 0");
     }
 
     function testArrayLengthsDontMatchError() public {
@@ -67,6 +86,12 @@ contract SubsidyTest is Test {
         // 2nd check the call reverts with SubsidyTooLow error
         vm.expectRevert(Subsidy.SubsidyTooLow.selector);
         subsidy.subsidize{value: 1e17 - 1}(BRIDGE, 3, 550);
+    }
+
+    function testNotSubsidizedError() public {
+        // 3rd try to set subsidy again
+        vm.expectRevert(Subsidy.NotSubsidised.selector);
+        subsidy.topUp{value: 2 ether}(BRIDGE, 1);
     }
 
     function testSubsidyGetsCorrectlySet() public {
@@ -129,6 +154,45 @@ contract SubsidyTest is Test {
         sub = subsidy.getSubsidy(BRIDGE, 1);
 
         assertEq(sub.available, 1 ether, "available incorrectly set in refill");
+    }
+
+    function testGetAccumulatedSubsidyAmount() public {
+        // Set huge gasUsage and gasPerMinute so that everything can be claimed in 1 call
+        uint256 criteria = 1;
+        uint32 gasUsage = type(uint32).max;
+        vm.prank(BRIDGE);
+        subsidy.setGasUsageAndMinGasPerMinute(criteria, gasUsage, 100);
+
+        subsidy.subsidize{value: 1 ether}(BRIDGE, criteria, 100000);
+
+        vm.warp(block.timestamp + 7 days);
+
+        subsidy.registerBeneficiary(BENEFICIARY);
+
+        uint256 accumulatedSubsidyAmount = subsidy.getAccumulatedSubsidyAmount(BRIDGE, criteria);
+
+        vm.prank(BRIDGE);
+        uint256 referenceAccumulatedSubsidyAmount = subsidy.claimSubsidy(criteria, BENEFICIARY);
+        assertEq(
+            accumulatedSubsidyAmount,
+            referenceAccumulatedSubsidyAmount,
+            "getAccumulatedSubsidyAmount(...) and claimSubsidy(...) returned different amounts"
+        );
+    }
+
+    function testTopUpWorks(uint96 _value1, uint96 _value2) public {
+        // Set huge gasUsage and gasPerMinute so that everything can be claimed in 1 call
+        uint32 gasUsage = type(uint32).max;
+        vm.prank(BRIDGE);
+        subsidy.setGasUsageAndMinGasPerMinute(1, gasUsage, 100);
+
+        uint256 value1 = bound(_value1, subsidy.MIN_SUBSIDY_VALUE(), 1000 ether);
+        uint256 value2 = bound(_value2, subsidy.MIN_SUBSIDY_VALUE(), 1000 ether);
+        subsidy.subsidize{value: value1}(BRIDGE, 1, 100000);
+        subsidy.topUp{value: value2}(BRIDGE, 1);
+
+        Subsidy.Subsidy memory sub = subsidy.getSubsidy(BRIDGE, 1);
+        assertEq(sub.available, value1 + value2, "available incorrectly set");
     }
 
     function testAvailableDropsByExpectedAmountAndGetsCorrectlyWithdrawn() public {
