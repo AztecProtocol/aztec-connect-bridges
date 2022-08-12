@@ -263,7 +263,7 @@ contract Subsidy is ISubsidy {
      * @notice Gets current accumulated subsidy amount for a given `_bridge` and `_criteria`
      * @param _bridge Address of the subsidized bridge
      * @param _criteria A value defining a specific bridge call
-     * @return - Accumulated subsidy amount (would paid out if the bridge called `claimSubsidy(_criteria, ...)`)
+     * @return - Accumulated subsidy amount (amount paid out if the bridge called `claimSubsidy(_criteria, ...)`)
      */
     function getAccumulatedSubsidyAmount(address _bridge, uint256 _criteria) external view returns (uint256) {
         Subsidy memory sub = subsidies[_bridge][_criteria];
@@ -283,7 +283,7 @@ contract Subsidy is ISubsidy {
         uint32 _minGasPerMinute
     ) public override(ISubsidy) {
         // Loading `sub` first in order to not overwrite `sub.available` in case this function was already called
-        // before and subsidy was set. This should not be needed for well written bridges.
+        // and a subsidy was set. 
         Subsidy memory sub = subsidies[msg.sender][_criteria];
 
         sub.gasUsage = _gasUsage;
@@ -295,7 +295,7 @@ contract Subsidy is ISubsidy {
     /**
      * @notice Computes accumulated subsidy amount based on Subsidy struct and current block
      * @param _subsidy Subsidy based on which to compute accumulated subsidy amount
-     * @return - Accumulated subsidy amount
+     * @return - Accumulated subsidy amount (amount paid out if the bridge called `claimSubsidy(_criteria, ...)`)
      */
     function _computeAccumulatedSubsidyAmount(Subsidy memory _subsidy) private view returns (uint256) {
         uint256 subsidyAmount;
