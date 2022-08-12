@@ -63,7 +63,7 @@ abstract contract BiDCABridge is BridgeBase {
 
     /**
      * @notice A struct representing 1 DCA position
-     * @member amount Amount of asset A or B sold
+     * @member amount Amount of asset A or B to be sold
      * @member start Index of the first tick this position touches
      * @member end Index of the last tick this position touches
      * @member aToB True if A is being sold to B, false otherwise
