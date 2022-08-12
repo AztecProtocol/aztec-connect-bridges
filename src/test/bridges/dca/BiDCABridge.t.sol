@@ -491,14 +491,14 @@ contract BiDCATestUnit is Test {
                 assertEq(tick.availableA, 0, "Available A not matching");
                 assertEq(tick.availableB, 0, "Available B not matching");
                 assertEq(tick.priceAToB, i == 2 ? price : 0, "Price not matching");
-                assertEq(tick.assetAToB.sold, userBought, "AToB sold not matching");
+                assertEq(tick.aToBSubTick.sold, userBought, "AToB sold not matching");
                 assertEq(
-                    tick.assetAToB.bought,
+                    tick.aToBSubTick.bought,
                     bridge.denominateAssetAInB(userBought, price, true),
                     "AToB bought not matching"
                 );
-                assertEq(tick.assetBToA.sold, 0, "BToA sold not matching");
-                assertEq(tick.assetBToA.bought, 0, "AToB bought not matching");
+                assertEq(tick.bToASubTick.sold, 0, "BToA sold not matching");
+                assertEq(tick.bToASubTick.bought, 0, "AToB bought not matching");
             }
         }
 
@@ -588,14 +588,14 @@ contract BiDCATestUnit is Test {
                 assertEq(tick.availableA, 0, "Available A not matching");
                 assertEq(tick.availableB, 0, "Available B not matching");
                 assertEq(tick.priceAToB, price, "Price not matching");
-                assertEq(tick.assetAToB.sold, 100e18, "AToB sold not matching");
+                assertEq(tick.aToBSubTick.sold, 100e18, "AToB sold not matching");
                 assertEq(
-                    tick.assetAToB.bought,
+                    tick.aToBSubTick.bought,
                     bridge.denominateAssetAInB(100e18, price, true),
                     "AToB bought not matching"
                 );
-                assertEq(tick.assetBToA.sold, 0, "BToA sold not matching");
-                assertEq(tick.assetBToA.bought, 0, "AToB bought not matching");
+                assertEq(tick.bToASubTick.sold, 0, "BToA sold not matching");
+                assertEq(tick.bToASubTick.bought, 0, "AToB bought not matching");
             }
             for (uint256 i = 2; i < 4; i++) {
                 // Check tick[i]
@@ -603,14 +603,14 @@ contract BiDCATestUnit is Test {
                 assertEq(tick.availableA, 0, "Available A not matching");
                 assertEq(tick.availableB, 0, "Available B not matching");
                 assertEq(tick.priceAToB, i == 3 ? price : 0, "Price not matching");
-                assertEq(tick.assetAToB.sold, 300e18, "AToB sold not matching");
+                assertEq(tick.aToBSubTick.sold, 300e18, "AToB sold not matching");
                 assertEq(
-                    tick.assetAToB.bought,
+                    tick.aToBSubTick.bought,
                     bridge.denominateAssetAInB(300e18, price, true),
                     "AToB bought not matching"
                 );
-                assertEq(tick.assetBToA.sold, 0, "BToA sold not matching");
-                assertEq(tick.assetBToA.bought, 0, "AToB bought not matching");
+                assertEq(tick.bToASubTick.sold, 0, "BToA sold not matching");
+                assertEq(tick.bToASubTick.bought, 0, "AToB bought not matching");
             }
         }
 
@@ -688,14 +688,14 @@ contract BiDCATestUnit is Test {
                 assertEq(tick.availableA, 0, "Available A not matching");
                 assertEq(tick.availableB, 0, "Available B not matching");
                 assertEq(tick.priceAToB, 0, "Price not matching");
-                assertEq(tick.assetAToB.sold, 100e18, "AToB sold not matching");
+                assertEq(tick.aToBSubTick.sold, 100e18, "AToB sold not matching");
                 assertEq(
-                    tick.assetAToB.bought,
+                    tick.aToBSubTick.bought,
                     bridge.denominateAssetAInB(100e18, price, true),
                     "AToB bought not matching"
                 );
-                assertEq(tick.assetBToA.sold, 0, "BToA sold not matching");
-                assertEq(tick.assetBToA.bought, 0, "AToB bought not matching");
+                assertEq(tick.bToASubTick.sold, 0, "BToA sold not matching");
+                assertEq(tick.bToASubTick.bought, 0, "AToB bought not matching");
             }
         }
 
@@ -773,14 +773,14 @@ contract BiDCATestUnit is Test {
             assertEq(tick.availableA, 0, "Available A not matching");
             assertEq(tick.availableB, 0, "Available B not matching");
             assertEq(tick.priceAToB, 0, "Price not matching");
-            assertEq(tick.assetAToB.sold, 100 ether, "AToB sold not matching");
+            assertEq(tick.aToBSubTick.sold, 100 ether, "AToB sold not matching");
             assertEq(
-                tick.assetAToB.bought,
+                tick.aToBSubTick.bought,
                 bridge.denominateAssetAInB(100e18, price, true),
                 "AToB bought not matching"
             );
-            assertEq(tick.assetBToA.sold, 0, "BToA sold not matching");
-            assertEq(tick.assetBToA.bought, 0, "AToB bought not matching");
+            assertEq(tick.bToASubTick.sold, 0, "BToA sold not matching");
+            assertEq(tick.bToASubTick.bought, 0, "AToB bought not matching");
         }
 
         {
@@ -793,10 +793,10 @@ contract BiDCATestUnit is Test {
             assertEq(tick.availableA, 100e18 - aBought, "Available A not matching");
             assertEq(tick.availableB, 0, "Available B not matching");
             assertEq(tick.priceAToB, 0, "Price not matching");
-            assertEq(tick.assetAToB.sold, aBought, "AToB sold not matching");
-            assertEq(tick.assetAToB.bought, assetBPayment2, "AToB bought not matching");
-            assertEq(tick.assetBToA.sold, 0, "BToA sold not matching");
-            assertEq(tick.assetBToA.bought, 0, "AToB bought not matching");
+            assertEq(tick.aToBSubTick.sold, aBought, "AToB sold not matching");
+            assertEq(tick.aToBSubTick.bought, assetBPayment2, "AToB bought not matching");
+            assertEq(tick.bToASubTick.sold, 0, "BToA sold not matching");
+            assertEq(tick.bToASubTick.bought, 0, "AToB bought not matching");
         }
 
         {
@@ -806,10 +806,10 @@ contract BiDCATestUnit is Test {
                 assertEq(tick.availableA, 100 ether, "Available A not matching");
                 assertEq(tick.availableB, 0, "Available B not matching");
                 assertEq(tick.priceAToB, 0, "Price not matching");
-                assertEq(tick.assetAToB.sold, 0, "AToB sold not matching");
-                assertEq(tick.assetAToB.bought, 0, "AToB bought not matching");
-                assertEq(tick.assetBToA.sold, 0, "BToA sold not matching");
-                assertEq(tick.assetBToA.bought, 0, "AToB bought not matching");
+                assertEq(tick.aToBSubTick.sold, 0, "AToB sold not matching");
+                assertEq(tick.aToBSubTick.bought, 0, "AToB bought not matching");
+                assertEq(tick.bToASubTick.sold, 0, "BToA sold not matching");
+                assertEq(tick.bToASubTick.bought, 0, "AToB bought not matching");
             }
         }
 
@@ -898,10 +898,10 @@ contract BiDCATestUnit is Test {
                 assertEq(tick.availableA, 0, "Available A not matching");
                 assertEq(tick.availableB, 0, "Available B not matching");
                 assertEq(tick.priceAToB, 0, "Price not matching");
-                assertEq(tick.assetAToB.sold, 100e18, "AToB sold not matching");
-                assertEq(tick.assetAToB.bought, _b, "AToB bought not matching");
-                assertEq(tick.assetBToA.sold, _b, "BToA sold not matching");
-                assertEq(tick.assetBToA.bought, 100e18, "AToB bought not matching");
+                assertEq(tick.aToBSubTick.sold, 100e18, "AToB sold not matching");
+                assertEq(tick.aToBSubTick.bought, _b, "AToB bought not matching");
+                assertEq(tick.bToASubTick.sold, _b, "BToA sold not matching");
+                assertEq(tick.bToASubTick.bought, 100e18, "AToB bought not matching");
             }
         }
 
@@ -1021,18 +1021,18 @@ contract BiDCATestUnit is Test {
                 assertEq(tick.availableA, 0, "Available A not matching");
                 assertEq(tick.availableB, 0, "Available B not matching");
                 assertEq(tick.priceAToB, 0, "Price not matching");
-                assertEq(tick.assetAToB.sold, 100e18, "AToB sold not matching");
+                assertEq(tick.aToBSubTick.sold, 100e18, "AToB sold not matching");
                 assertEq(
-                    tick.assetAToB.bought,
+                    tick.aToBSubTick.bought,
                     bridge.denominateAssetAInB(100e18, price, false),
                     "AToB bought not matching"
                 );
                 assertEq(
-                    tick.assetBToA.sold,
+                    tick.bToASubTick.sold,
                     bridge.denominateAssetAInB(100e18, price, false),
                     "BToA sold not matching"
                 );
-                assertEq(tick.assetBToA.bought, 100e18, "AToB bought not matching");
+                assertEq(tick.bToASubTick.bought, 100e18, "AToB bought not matching");
             }
         }
 
@@ -1166,10 +1166,10 @@ contract BiDCATestUnit is Test {
                 assertEq(tick.availableA, 200e18, "Available A not matching");
                 assertEq(tick.availableB, 0, "Available B not matching");
                 assertEq(tick.priceAToB, price, "Price not matching");
-                assertEq(tick.assetAToB.sold, 0, "AToB sold not matching");
-                assertEq(tick.assetAToB.bought, 0, "AToB bought not matching");
-                assertEq(tick.assetBToA.sold, 0, "BToA sold not matching");
-                assertEq(tick.assetBToA.bought, 0, "AToB bought not matching");
+                assertEq(tick.aToBSubTick.sold, 0, "AToB sold not matching");
+                assertEq(tick.aToBSubTick.bought, 0, "AToB bought not matching");
+                assertEq(tick.bToASubTick.sold, 0, "BToA sold not matching");
+                assertEq(tick.bToASubTick.bought, 0, "AToB bought not matching");
             }
             for (uint256 i = 2; i < 8; i++) {
                 // Because of the price change, need to interpolate
@@ -1177,12 +1177,12 @@ contract BiDCATestUnit is Test {
                 {
                     UniswapDCABridge.Tick memory tick = bridge.getTick(startTick + 1);
                     int256 slope = (int256(bridge.getPrice()) - int256(uint256(tick.priceAToB))) /
-                        int256(block.timestamp - uint256(tick.priceUpdated));
+                        int256(block.timestamp - uint256(tick.priceTime));
                     uint256 dt = (startTick + i) *
                         bridge.TICK_SIZE() +
                         bridge.TICK_SIZE() /
                         2 -
-                        uint256(tick.priceUpdated);
+                        uint256(tick.priceTime);
                     interpolatedPrice = uint256(int256(uint256(tick.priceAToB)) + slope * int256(dt));
                 }
                 uint256 _a = bridge.denominateAssetBInA(0.1e18, interpolatedPrice, false);
@@ -1194,10 +1194,10 @@ contract BiDCATestUnit is Test {
                 assertEq(tick.availableA, 200e18 - _a, "Available A not matching 2<8");
                 assertEq(tick.availableB, 0, "Available B not matching");
                 assertEq(tick.priceAToB, 0, "Price not matching");
-                assertEq(tick.assetAToB.sold, _a, "AToB sold not matching");
-                assertEq(tick.assetAToB.bought, 0.1e18, "AToB bought not matching");
-                assertEq(tick.assetBToA.sold, 0.1e18, "BToA sold not matching");
-                assertEq(tick.assetBToA.bought, _a, "AToB bought not matching");
+                assertEq(tick.aToBSubTick.sold, _a, "AToB sold not matching");
+                assertEq(tick.aToBSubTick.bought, 0.1e18, "AToB bought not matching");
+                assertEq(tick.bToASubTick.sold, 0.1e18, "BToA sold not matching");
+                assertEq(tick.bToASubTick.bought, _a, "AToB bought not matching");
             }
         }
 
@@ -1272,10 +1272,10 @@ contract BiDCATestUnit is Test {
         (uint256 accumulated, bool ready) = bridge.getAccumulated(_nonce);
         UniswapDCABridge.DCA memory dca = bridge.getDCA(_nonce);
         emit log_named_uint("DCA at nonce", _nonce);
-        emit log_named_decimal_uint("Total ", dca.total, 18);
+        emit log_named_decimal_uint("Total ", dca.amount, 18);
         emit log_named_uint("start ", dca.start);
         emit log_named_uint("end   ", dca.end);
-        emit log_named_decimal_uint(dca.assetA ? "accumB" : "accumA", accumulated, 18);
+        emit log_named_decimal_uint(dca.aToB ? "accumB" : "accumA", accumulated, 18);
         if (ready) {
             emit log("Ready for harvest");
         }
@@ -1297,11 +1297,11 @@ contract BiDCATestUnit is Test {
         emit log_named_decimal_uint("availableB", tick.availableB, 18);
         emit log_named_decimal_uint("price aToB", tick.priceAToB, 18);
 
-        emit log_named_decimal_uint("A sold    ", tick.assetAToB.sold, 18);
-        emit log_named_decimal_uint("A bought  ", tick.assetAToB.bought, 18);
+        emit log_named_decimal_uint("A sold    ", tick.aToBSubTick.sold, 18);
+        emit log_named_decimal_uint("A bought  ", tick.aToBSubTick.bought, 18);
 
-        emit log_named_decimal_uint("B sold    ", tick.assetBToA.sold, 18);
-        emit log_named_decimal_uint("B bought  ", tick.assetBToA.bought, 18);
+        emit log_named_decimal_uint("B sold    ", tick.bToASubTick.sold, 18);
+        emit log_named_decimal_uint("B bought  ", tick.bToASubTick.bought, 18);
 
         return tick;
     }

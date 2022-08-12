@@ -29,7 +29,22 @@ abstract contract BiDCABridge is BridgeBase {
 
     error PositionAlreadyExists();
 
-    // Struct used in-memory to get around stack-to-deep
+    /**
+     * @notice A struct used in-memory to get around stack-to-deep errors
+     * @member currentPrice Current oracle price
+     * @member earliestTickWithAvailableA Earliest tick with available asset A
+     * @member earliestTickWithAvailableB Earliest tick with available asset B
+     * @member offerAInB Amount of asset B that is offered to be bought at the current price for A
+     * @member offerBInA Amount of asset A that is offered to be bought at the current price for B
+     * @member protocolSoldA Amount of asset A the bridge sold
+     * @member protocolSoldB Amount of asset B the bridge sold
+     * @member protocolBoughtA Amount of asset A the bridge bought
+     * @member protocolBoughtB Amount of asset B the bridge bought
+     * @member lastUsedPrice Last used price during rebalancing (cache in case new price won't be available)
+     * @member lastUsedPriceTime Time at which last used price was set
+     * @member availableA The amount of asset A that is available
+     * @member availableB The amount of asset B that is available
+     */
     struct RebalanceValues {
         uint256 currentPrice;
         uint256 earliestTickWithAvailableA;
@@ -41,34 +56,53 @@ abstract contract BiDCABridge is BridgeBase {
         uint256 protocolBoughtA;
         uint256 protocolBoughtB;
         uint256 lastUsedPrice;
-        uint256 lastUsedPriceTs;
+        uint256 lastUsedPriceTime;
         uint256 availableA;
         uint256 availableB;
     }
 
-    // Struct packing a DCA position for storage
+    /**
+     * @notice A struct representing 1 DCA position
+     * @member amount Amount of asset A or B sold
+     * @member start Index of the first tick this position touches
+     * @member end Index of the last tick this position touches
+     * @member aToB True if A is being sold to B, false otherwise
+     */
     struct DCA {
-        uint128 total;
+        uint128 amount;
         uint32 start;
         uint32 end;
-        bool assetA;
+        bool aToB;
     }
 
-    // Struct used for defining one direction in a tick
+    /**
+     * @notice A struct defining one direction in a tick
+     * @member sold Amount of asset sold
+     * @member bought Amount of asset bought
+     */
     struct SubTick {
         uint128 sold;
         uint128 bought;
     }
 
-    // Struct describing a specific tick
+    /**
+     * @notice A container for Tick related data
+     * @member availableA Amount of A available in a tick for sale
+     * @member availableB Amount of B available in a tick for sale
+     * @member poke A value used only to initialize a storage slot
+     * @member aToBSubTick A struct capturing info of A to B trades
+     * @member aToBSubTick A struct capturing info of B to A trades
+     * @member priceAToB A price of A denominated in B
+     * @member priceTime A time at which price was last updated
+     */
     struct Tick {
         uint120 availableA;
         uint120 availableB;
         uint16 poke;
-        SubTick assetAToB;
-        SubTick assetBToA;
+        SubTick aToBSubTick;
+        SubTick bToASubTick;
         uint128 priceAToB;
-        uint32 priceUpdated;
+        uint32 priceTime;
     }
 
     IWETH internal constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
@@ -203,16 +237,16 @@ abstract contract BiDCABridge is BridgeBase {
         if (inputAssetAddress != address(ASSET_A) && inputAssetAddress != address(ASSET_B)) {
             revert ErrorLib.InvalidInputA();
         }
-        bool assetA = inputAssetAddress == address(ASSET_A);
+        bool aToB = inputAssetAddress == address(ASSET_A);
 
-        if (outputAssetAddress != (assetA ? address(ASSET_B) : address(ASSET_A))) {
+        if (outputAssetAddress != (aToB ? address(ASSET_B) : address(ASSET_A))) {
             revert ErrorLib.InvalidOutputA();
         }
         if (dcas[_interactionNonce].start != 0) {
             revert PositionAlreadyExists();
         }
 
-        _deposit(_interactionNonce, _inputValue, _ticks, assetA);
+        _deposit(_interactionNonce, _inputValue, _ticks, aToB);
         return (0, 0, true);
     }
 
@@ -254,7 +288,7 @@ abstract contract BiDCABridge is BridgeBase {
                 outputAssetAddress = address(WETH);
             }
 
-            if (outputAssetAddress != (dcas[_interactionNonce].assetA ? address(ASSET_B) : address(ASSET_A))) {
+            if (outputAssetAddress != (dcas[_interactionNonce].aToB ? address(ASSET_B) : address(ASSET_A))) {
                 revert ErrorLib.InvalidOutputA();
             }
 
@@ -328,8 +362,8 @@ abstract contract BiDCABridge is BridgeBase {
 
     /**
      * @notice Helper to compute the amount of available tokens (not taking rebalancing into account)
-     * @return availableA The amount of token A that is available
-     * @return availableB The amount of token B that is available
+     * @return availableA Available amount of token A
+     * @return availableB Available amount of token B
      */
     function getAvailable() public view returns (uint256 availableA, uint256 availableB) {
         uint256 start = _earliestUsedTick(earliestTickWithAvailableA, earliestTickWithAvailableB);
@@ -350,16 +384,16 @@ abstract contract BiDCABridge is BridgeBase {
         DCA memory dca = dcas[_nonce];
         uint256 start = dca.start;
         uint256 end = dca.end;
-        uint256 tickAmount = dca.total / (end - start);
-        bool assetA = dca.assetA;
+        uint256 tickAmount = dca.amount / (end - start);
+        bool aToB = dca.aToB;
 
         ready = true;
 
         for (uint256 i = start; i < end; i++) {
             Tick storage tick = ticks[i];
-            (uint256 available, uint256 sold, uint256 bought) = assetA
-                ? (tick.availableA, tick.assetAToB.sold, tick.assetAToB.bought)
-                : (tick.availableB, tick.assetBToA.sold, tick.assetBToA.bought);
+            (uint256 available, uint256 sold, uint256 bought) = aToB
+                ? (tick.availableA, tick.aToBSubTick.sold, tick.aToBSubTick.bought)
+                : (tick.availableB, tick.bToASubTick.sold, tick.bToASubTick.bought);
             ready = ready && available == 0 && sold > 0;
             accumulated += sold == 0 ? 0 : (bought * tickAmount) / (sold + available);
         }
@@ -370,38 +404,38 @@ abstract contract BiDCABridge is BridgeBase {
      * @param _nonce The interaction nonce
      * @param _amount The amount of assets deposited
      * @param _ticks The number of ticks that the position span
-     * @param _assetA A flag that is true if input asset is assetA and false otherwise.
+     * @param _aToB A flag that is true if input asset is assetA and false otherwise.
      */
     function _deposit(
         uint256 _nonce,
         uint256 _amount,
         uint256 _ticks,
-        bool _assetA
+        bool _aToB
     ) internal {
         uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
-        if (_assetA && earliestTickWithAvailableA == 0) {
+        if (_aToB && earliestTickWithAvailableA == 0) {
             earliestTickWithAvailableA = nextTick.toU32();
         }
-        if (!_assetA && earliestTickWithAvailableB == 0) {
+        if (!_aToB && earliestTickWithAvailableB == 0) {
             earliestTickWithAvailableB = nextTick.toU32();
         }
         // Update prices of last tick, might be 1 second in the past.
         ticks[nextTick - 1].priceAToB = getPrice().toU128();
-        ticks[nextTick - 1].priceUpdated = block.timestamp.toU32();
+        ticks[nextTick - 1].priceTime = block.timestamp.toU32();
 
         uint256 tickAmount = _amount / _ticks;
         for (uint256 i = nextTick; i < nextTick + _ticks; i++) {
-            if (_assetA) {
+            if (_aToB) {
                 ticks[i].availableA += tickAmount.toU120();
             } else {
                 ticks[i].availableB += tickAmount.toU120();
             }
         }
         dcas[_nonce] = DCA({
-            total: _amount.toU128(),
+            amount: _amount.toU128(),
             start: nextTick.toU32(),
             end: (nextTick + _ticks).toU32(),
-            assetA: _assetA
+            aToB: _aToB
         });
     }
 
@@ -411,7 +445,7 @@ abstract contract BiDCABridge is BridgeBase {
      * Leftover assets are sold using current price to fill as much of the offer as possible.
      * @param _offerA The amount of asset A that is offered for sale to the bridge
      * @param _offerB The amount of asset B that is offered for sale to the bridge
-     * @param _currentPrice The current price
+     * @param _currentPrice Current oracle price
      * @param _self A flag that is true if rebalancing with self, e.g., swapping available funds with dex and rebalancing, and false otherwise
      * @return flowA The flow of asset A from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
      * @return flowB The flow of asset B from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
@@ -442,25 +476,25 @@ abstract contract BiDCABridge is BridgeBase {
 
         // Cache last used price for use in case we don't have a fresh price.
         vars.lastUsedPrice = ticks[earliestTick].priceAToB;
-        vars.lastUsedPriceTs = ticks[earliestTick].priceUpdated;
+        vars.lastUsedPriceTime = ticks[earliestTick].priceTime;
         if (vars.lastUsedPrice == 0) {
             uint256 lookBack = earliestTick;
             while (vars.lastUsedPrice == 0) {
                 lookBack--;
                 vars.lastUsedPrice = ticks[lookBack].priceAToB;
-                vars.lastUsedPriceTs = ticks[lookBack].priceUpdated;
+                vars.lastUsedPriceTime = ticks[lookBack].priceTime;
             }
         }
 
-        // Compute the amount of B that can be bought at current prices for A given the offer. Round down
+        // Compute the amount of B that is offered to be bought at current price for A. Round down
         vars.offerAInB = denominateAssetAInB(_offerA, vars.currentPrice, false);
-        // Compute the amount of A that can be bought at current prices for B given the offer. Round down
+        // Compute the amount of A that is offered to be bought at current price for B. Round down
         vars.offerBInA = denominateAssetBInA(_offerB, vars.currentPrice, false);
 
         uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
         // Update the latest tick, might be 1 second in the past.
         ticks[nextTick - 1].priceAToB = vars.currentPrice.toU128();
-        ticks[nextTick - 1].priceUpdated = block.timestamp.toU32();
+        ticks[nextTick - 1].priceTime = block.timestamp.toU32();
 
         for (uint256 i = earliestTick; i < nextTick; i++) {
             // Load a cache
@@ -517,13 +551,13 @@ abstract contract BiDCABridge is BridgeBase {
             // If a price is stored at tick, update the last used price and timestamp. Otherwise interpolate.
             if (price > 0) {
                 _vars.lastUsedPrice = price;
-                _vars.lastUsedPriceTs = _tick.priceUpdated;
+                _vars.lastUsedPriceTime = _tick.priceTime;
             } else {
                 int256 slope = (int256(_vars.currentPrice) - int256(_vars.lastUsedPrice)) /
-                    int256(block.timestamp - _vars.lastUsedPriceTs);
+                    int256(block.timestamp - _vars.lastUsedPriceTime);
                 // Could we ever enter a case where DT is in the past?
-                // lastUsedPriceTs will always be an earlier tick than this.
-                uint256 dt = _tickId * TICK_SIZE + TICK_SIZE / 2 - _vars.lastUsedPriceTs;
+                // lastUsedPriceTime will always be an earlier tick than this.
+                uint256 dt = _tickId * TICK_SIZE + TICK_SIZE / 2 - _vars.lastUsedPriceTime;
                 int256 _price = int256(_vars.lastUsedPrice) + slope * int256(dt);
                 if (_price <= 0) {
                     price = 0;
@@ -541,12 +575,12 @@ abstract contract BiDCABridge is BridgeBase {
                 uint128 availableBDenominatedInA = denominateAssetBInA(_tick.availableB, price, false).toU128();
 
                 // Update Asset A
-                _tick.assetAToB.bought += _tick.availableB;
-                _tick.assetAToB.sold += availableBDenominatedInA;
+                _tick.aToBSubTick.bought += _tick.availableB;
+                _tick.aToBSubTick.sold += availableBDenominatedInA;
 
                 // Update Asset B
-                _tick.assetBToA.bought += availableBDenominatedInA;
-                _tick.assetBToA.sold += _tick.availableB;
+                _tick.bToASubTick.bought += availableBDenominatedInA;
+                _tick.bToASubTick.sold += _tick.availableB;
 
                 // Update available values
                 _tick.availableA -= availableBDenominatedInA.toU120();
@@ -555,12 +589,12 @@ abstract contract BiDCABridge is BridgeBase {
                 // We got more B than A, fill everything in A and part of B
 
                 // Update Asset B
-                _tick.assetBToA.bought += _tick.availableA;
-                _tick.assetBToA.sold += availableADenominatedInB;
+                _tick.bToASubTick.bought += _tick.availableA;
+                _tick.bToASubTick.sold += availableADenominatedInB;
 
                 // Update Asset A
-                _tick.assetAToB.bought += availableADenominatedInB;
-                _tick.assetAToB.sold += _tick.availableA;
+                _tick.aToBSubTick.bought += availableADenominatedInB;
+                _tick.aToBSubTick.sold += _tick.availableA;
 
                 // Update available values
                 _tick.availableA = 0;
@@ -589,8 +623,8 @@ abstract contract BiDCABridge is BridgeBase {
             uint128 assetAPayment = denominateAssetBInA(amountBSold, _vars.currentPrice, !_self).toU128();
 
             _tick.availableB -= amountBSold.toU120();
-            _tick.assetBToA.sold += amountBSold;
-            _tick.assetBToA.bought += assetAPayment;
+            _tick.bToASubTick.sold += amountBSold;
+            _tick.bToASubTick.bought += assetAPayment;
 
             _vars.offerAInB -= amountBSold;
             _vars.protocolSoldB += amountBSold;
@@ -618,8 +652,8 @@ abstract contract BiDCABridge is BridgeBase {
             uint128 assetBPayment = denominateAssetAInB(amountASold, _vars.currentPrice, !_self).toU128();
 
             _tick.availableA -= amountASold.toU120();
-            _tick.assetAToB.sold += amountASold;
-            _tick.assetAToB.bought += assetBPayment;
+            _tick.aToBSubTick.sold += amountASold;
+            _tick.aToBSubTick.bought += assetBPayment;
 
             _vars.offerBInA -= amountASold;
             _vars.protocolSoldA += amountASold;
