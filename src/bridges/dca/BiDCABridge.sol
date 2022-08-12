@@ -101,7 +101,7 @@ abstract contract BiDCABridge is BridgeBase {
         uint16 poke;
         SubTick aToBSubTick;
         SubTick bToASubTick;
-        uint128 priceAToB;
+        uint128 priceOfAInB;
         uint32 priceTime;
     }
 
@@ -149,21 +149,21 @@ abstract contract BiDCABridge is BridgeBase {
 
     /**
      * @notice Helper used to poke storage from next tick and `_ticks` forwards
-     * @param _ticks The number of ticks to poke
+     * @param _numTicks The number of ticks to poke
      */
-    function pokeNextTicks(uint256 _ticks) external {
+    function pokeNextTicks(uint256 _numTicks) external {
         uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
-        pokeTicks(nextTick, _ticks);
+        pokeTicks(nextTick, _numTicks);
     }
 
     /**
      * @notice Helper used to poke storage of ticks to make deposits more consistent in gas usage
      * @dev First sstore is very expensive, so by doing it as this, we can prepare it before deposit
      * @param _startTick The first tick to poke
-     * @param _ticks The number of ticks to poke
+     * @param _numTicks The number of ticks to poke
      */
-    function pokeTicks(uint256 _startTick, uint256 _ticks) public {
-        for (uint256 i = _startTick; i < _startTick + _ticks; i++) {
+    function pokeTicks(uint256 _startTick, uint256 _numTicks) public {
+        for (uint256 i = _startTick; i < _startTick + _numTicks; i++) {
             ticks[i].poke++;
         }
     }
@@ -200,7 +200,7 @@ abstract contract BiDCABridge is BridgeBase {
      * @param _outputAssetA The asset to be bought
      * @param _inputValue The value of `_inputAssetA` to be sold
      * @param _interactionNonce The unique identifier for the interaction, used to identify the DCA position
-     * @param _ticks The auxdata, passing the number of ticks the position should run
+     * @param _numTicks The auxdata, passing the number of ticks the position should run
      * @return Will always return 0 assets, and isAsync = true.
      */
     function convert(
@@ -210,7 +210,7 @@ abstract contract BiDCABridge is BridgeBase {
         AztecTypes.AztecAsset calldata,
         uint256 _inputValue,
         uint256 _interactionNonce,
-        uint64 _ticks,
+        uint64 _numTicks,
         address
     )
         external
@@ -246,7 +246,7 @@ abstract contract BiDCABridge is BridgeBase {
             revert PositionAlreadyExists();
         }
 
-        _deposit(_interactionNonce, _inputValue, _ticks, aToB);
+        _deposit(_interactionNonce, _inputValue, _numTicks, aToB);
         return (0, 0, true);
     }
 
@@ -420,7 +420,7 @@ abstract contract BiDCABridge is BridgeBase {
             earliestTickWithAvailableB = nextTick.toU32();
         }
         // Update prices of last tick, might be 1 second in the past.
-        ticks[nextTick - 1].priceAToB = getPrice().toU128();
+        ticks[nextTick - 1].priceOfAInB = getPrice().toU128();
         ticks[nextTick - 1].priceTime = block.timestamp.toU32();
 
         uint256 tickAmount = _amount / _ticks;
@@ -475,13 +475,13 @@ abstract contract BiDCABridge is BridgeBase {
         uint256 earliestTick = _earliestUsedTick(vars.earliestTickWithAvailableA, vars.earliestTickWithAvailableB);
 
         // Cache last used price for use in case we don't have a fresh price.
-        vars.lastUsedPrice = ticks[earliestTick].priceAToB;
+        vars.lastUsedPrice = ticks[earliestTick].priceOfAInB;
         vars.lastUsedPriceTime = ticks[earliestTick].priceTime;
         if (vars.lastUsedPrice == 0) {
             uint256 lookBack = earliestTick;
             while (vars.lastUsedPrice == 0) {
                 lookBack--;
-                vars.lastUsedPrice = ticks[lookBack].priceAToB;
+                vars.lastUsedPrice = ticks[lookBack].priceOfAInB;
                 vars.lastUsedPriceTime = ticks[lookBack].priceTime;
             }
         }
@@ -493,7 +493,7 @@ abstract contract BiDCABridge is BridgeBase {
 
         uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
         // Update the latest tick, might be 1 second in the past.
-        ticks[nextTick - 1].priceAToB = vars.currentPrice.toU128();
+        ticks[nextTick - 1].priceOfAInB = vars.currentPrice.toU128();
         ticks[nextTick - 1].priceTime = block.timestamp.toU32();
 
         for (uint256 i = earliestTick; i < nextTick; i++) {
@@ -546,7 +546,7 @@ abstract contract BiDCABridge is BridgeBase {
     ) internal view {
         // Only perform internal rebalance if we have both assets available, otherwise nothing to rebalance
         if (_tick.availableA > 0 && _tick.availableB > 0) {
-            uint256 price = _tick.priceAToB;
+            uint256 price = _tick.priceOfAInB;
 
             // If a price is stored at tick, update the last used price and timestamp. Otherwise interpolate.
             if (price > 0) {
