@@ -53,7 +53,7 @@ export class LidoBridgeData implements BridgeDataFieldGetters {
   ];
 
   // Lido bridge contract is stateless
-  async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
+  async getInteractionPresentValue(interactionNonce: number): Promise<AssetValue[]> {
     return [];
   }
 

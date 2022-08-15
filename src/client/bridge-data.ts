@@ -43,11 +43,11 @@ export interface AuxDataConfig {
 export interface BridgeDataFieldGetters {
   /**
    * @dev This function should be implemented for stateful bridges
-   * @param interactionNonce A globally unique identifier of a given DeFi interaction
    * @param inputValue User's input value
+   * @param interactionNonce A globally unique identifier of a given DeFi interaction
    * @return The value of the user's share of a given interaction
    */
-  getInteractionPresentValue?(interactionNonce: bigint, inputValue: bigint): Promise<AssetValue[]>;
+  getInteractionPresentValue?(interactionNonce: number, inputValue: bigint): Promise<AssetValue[]>;
 
   /**
    * @dev This function should be implemented for all bridges that use auxData which require on-chain data
@@ -93,14 +93,14 @@ export interface BridgeDataFieldGetters {
    * @param interactionNonce A globally unique identifier of a given DeFi interaction
    * @return The date at which the bridge is expected to be finalised (for limit orders this should be the expiration)
    */
-  getExpiration?(interactionNonce: bigint): Promise<bigint>;
+  getExpiration?(interactionNonce: number): Promise<bigint>;
 
   /**
    * @dev This function should be implemented for async bridges
    * @param interactionNonce A globally unique identifier of a given DeFi interaction
    * @return A boolean indicating whether the interaction has been finilised
    */
-  hasFinalised?(interactionNonce: bigint): Promise<boolean>;
+  hasFinalised?(interactionNonce: number): Promise<boolean>;
 
   /**
    * @notice This function computes annual percentage return (APR) for a given asset
@@ -134,7 +134,7 @@ export interface BridgeDataFieldGetters {
    * @param interactionNonce A globally unique identifier of a given DeFi interaction
    * @return APR based on the information of a given interaction (e.g. token amounts after finalisation etc.)
    */
-  getInteractionAPR?(interactionNonce: bigint): Promise<number[]>;
+  getInteractionAPR?(interactionNonce: number): Promise<number[]>;
 
   /**
    * @notice This function gets the underlying amount for wrapped assets or shares

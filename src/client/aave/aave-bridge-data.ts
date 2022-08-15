@@ -38,7 +38,7 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
   ];
 
   // Unused
-  async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
+  async getInteractionPresentValue(interactionNonce: number): Promise<AssetValue[]> {
     return [];
   }
 

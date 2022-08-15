@@ -6,9 +6,9 @@ export class ExampleBridgeData implements BridgeDataFieldGetters {
 
   // @dev This function should be implemented for stateful bridges. It should return an array of AssetValue's
   // @dev which define how much a given interaction is worth in terms of Aztec asset ids.
-  // @param bigint interactionNonce the interaction nonce to return the value for
+  // @param interactionNonce the nonce to return the value for
 
-  async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
+  async getInteractionPresentValue(interactionNonce: number): Promise<AssetValue[]> {
     return [
       {
         assetId: 1,
