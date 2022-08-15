@@ -183,7 +183,7 @@ describe("compound lending bridge data", () => {
     expect(expectedOutput).toBe(1000002140628525162n);
   });
 
-  it("should correctly compute expected yield when minting", async () => {
+  it("should correctly compute expected APR when minting", async () => {
     // Setup mocks
     cerc20Contract = {
       ...cerc20Contract,
@@ -193,21 +193,21 @@ describe("compound lending bridge data", () => {
     const compoundBridgeData = CompoundBridgeData.create({} as any);
 
     // Test the code using mocked controller
-    const expectedYield = (await compoundBridgeData.getAPR(ethAsset, emptyAsset, cethAsset, emptyAsset, 0n, 0n))[0];
-    expect(expectedYield).toBe(0.0710926465392);
+    const APR = await compoundBridgeData.getAPR(ethAsset, cethAsset);
+    expect(APR).toBe(0.0710926465392);
   });
 
-  it("should compute expected yield to be 0 when redeeming", async () => {
+  it("should compute expected APR to be 0 when redeeming", async () => {
     // Setup mocks
     cerc20Contract = {
       ...cerc20Contract,
-      supplyRatePerBlock: jest.fn().mockResolvedValue(BigNumber.from("338149955")),
+      supplyRatePerBlock: jest.fn().mockResolvedValue(undefined),
     };
     ICERC20__factory.connect = () => cerc20Contract as any;
     const compoundBridgeData = CompoundBridgeData.create({} as any);
 
     // Test the code using mocked controller
-    const expectedYield = (await compoundBridgeData.getAPR(cethAsset, emptyAsset, ethAsset, emptyAsset, 1n, 0n))[0];
+    const expectedYield = await compoundBridgeData.getAPR(cethAsset, ethAsset);
     expect(expectedYield).toBe(0);
   });
 

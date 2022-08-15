@@ -107,25 +107,13 @@ export interface BridgeDataFieldGetters {
   hasFinalised?(interactionNonce: bigint): Promise<boolean>;
 
   /**
-  * @notice This function computes annual percentage return (APR) for given assets, auxData and inputValue
-  * @dev This function should be implemented for all bridges that are stateful
-  * @param inputAssetA A struct detailing the first input asset
-  * @param inputAssetB A struct detailing the second input asset
-  * @param outputAssetA A struct detailing the first output asset
-  * @param outputAssetB A struct detailing the second output asset
-  * @param auxData Arbitrary data to be passed into the bridge contract (slippage / nftID etc)
-  * @param inputValue Amount of inputAssetA (and inputAssetB if used) provided on input
-  * @return The expected APR of outputAssetA and outputAssetB if used (e.g. for Lido the return value would currently
-          be [3.9])
-  */
-  getAPR?(
-    inputAssetA: AztecAsset,
-    inputAssetB: AztecAsset,
-    outputAssetA: AztecAsset,
-    outputAssetB: AztecAsset,
-    auxData: bigint,
-    inputValue: bigint,
-  ): Promise<number[]>;
+   * @notice This function computes annual percentage return (APR) for a given asset
+   * @dev This function should be implemented for all bridges which work with yield-bearing assets
+   * @param inputAssetA A struct detailing the input asset
+   * @param outputAssetA A struct detailing the output asset
+   * @return The expected APR (e.g. for Lido the return value would currently be 3.9)
+   */
+  getAPR?(inputAssetA: AztecAsset, outputAssetA: AztecAsset): Promise<number>;
 
   /** 
   * @dev This function should be implemented for all bridges dealing with L1 liquidity

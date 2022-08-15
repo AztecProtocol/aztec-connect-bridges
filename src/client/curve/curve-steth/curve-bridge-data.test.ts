@@ -160,9 +160,8 @@ describe("curve steth bridge data", () => {
     expect(expectedOutput == output[0]).toBeTruthy();
   });
 
-  it("should correctly return the expectedYearlyOutput", async () => {
-    const depositAmount = BigInt(1 * 10e18);
-    const expectedOutput = 4.32;
+  it("should correctly return the expected APR", async () => {
+    const expectedAPR = 4.32;
 
     wstethContract = {
       ...wstethContract,
@@ -195,7 +194,7 @@ describe("curve steth bridge data", () => {
       lidoOracleContract as any,
     );
 
-    const output = await curveBridgeData.getAPR(wstETHAsset, emptyAsset, ethAsset, emptyAsset, 0n, depositAmount);
-    expect(expectedOutput).toBe(output[0]);
+    const APR = await curveBridgeData.getAPR(wstETHAsset, ethAsset);
+    expect(APR).toBe(expectedAPR);
   });
 });

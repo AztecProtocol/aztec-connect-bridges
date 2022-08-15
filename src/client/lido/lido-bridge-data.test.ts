@@ -134,9 +134,8 @@ describe("lido bridge data", () => {
     expect(expectedOutput == output[0]).toBeTruthy();
   });
 
-  it("should correctly return the expectedYearlyOutput", async () => {
-    const depositAmount = BigInt(1 * 10e18);
-    const expectedOutput = 4.32;
+  it("should correctly return APR", async () => {
+    const expectedAPR = 4.32;
 
     wstethContract = {
       ...wstethContract,
@@ -165,7 +164,7 @@ describe("lido bridge data", () => {
 
     lidoBridgeData = createLidoBridgeData(wstethContract as any, curvePoolContract as any, lidoOracleContract as any);
 
-    const output = await lidoBridgeData.getAPR(wstETHAsset, emptyAsset, ethAsset, emptyAsset, 0n, depositAmount);
-    expect(expectedOutput).toBe(output[0]);
+    const apr = await lidoBridgeData.getAPR(ethAsset, wstETHAsset);
+    expect(apr).toBe(expectedAPR);
   });
 });
