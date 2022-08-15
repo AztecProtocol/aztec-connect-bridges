@@ -1,17 +1,16 @@
-import { ChainProperties, ElementBridgeData } from "./element-bridge-data";
+import { EthAddress } from "@aztec/barretenberg/address";
+import { BridgeCallData } from "@aztec/barretenberg/bridge_call_data";
 import { BigNumber } from "ethers";
-import { randomBytes } from "crypto";
 import {
-  IRollupProcessor,
   ElementBridge,
-  IVault,
   ElementBridge__factory,
+  IRollupProcessor,
   IRollupProcessor__factory,
+  IVault,
   IVault__factory,
 } from "../../../typechain-types";
-import { BridgeCallData } from "@aztec/barretenberg/bridge_call_data";
 import { AztecAssetType } from "../bridge-data";
-import { EthAddress } from "@aztec/barretenberg/address";
+import { ChainProperties, ElementBridgeData } from "./element-bridge-data";
 
 jest.mock("../aztec/provider", () => ({
   createWeb3Provider: jest.fn(),
@@ -301,22 +300,22 @@ describe("element bridge data", () => {
       {
         assetType: AztecAssetType.ERC20,
         erc20Address: testAddress,
-        id: 1n,
+        id: 1,
       },
       {
         assetType: AztecAssetType.NOT_USED,
         erc20Address: EthAddress.ZERO,
-        id: 0n,
+        id: 0,
       },
       {
         assetType: AztecAssetType.ERC20,
         erc20Address: testAddress,
-        id: 1n,
+        id: 1,
       },
       {
         assetType: AztecAssetType.NOT_USED,
         erc20Address: EthAddress.ZERO,
-        id: 0n,
+        id: 0,
       },
       expiry,
       BigInt(inputValue),
@@ -330,57 +329,5 @@ describe("element bridge data", () => {
     const percent = Number(percentage2sf) / 100;
 
     expect(output[0]).toBe(percent);
-  });
-
-  it("should return the correct market size for a given tranche", async () => {
-    const expiry = BigInt(Date.now() + 86400 * 30);
-    const tokenAddress = EthAddress.random().toString();
-    const poolId = "0x90ca5cef5b29342b229fb8ae2db5d8f4f894d6520002000000000000000000b5";
-    const tokenBalance = 10e18,
-      elementBridge = {
-        hashAssetAndExpiry: jest.fn().mockResolvedValue("0xa"),
-        pools: jest.fn().mockResolvedValue([tokenAddress, "", poolId]),
-        provider: {
-          getBlockNumber: jest.fn().mockResolvedValue(200),
-          getBlock: jest.fn().mockResolvedValue({ timestamp: +now.toString(), number: 200 }),
-        },
-      };
-
-    balancerContract = {
-      ...balancerContract,
-      getPoolTokens: jest.fn().mockResolvedValue([[tokenAddress], [BigNumber.from(BigInt(tokenBalance))]]),
-    };
-
-    const elementBridgeData = createElementBridgeData(
-      elementBridge as any,
-      balancerContract as any,
-      rollupContract as any,
-    );
-    const marketSize = await elementBridgeData.getMarketSize(
-      {
-        assetType: AztecAssetType.ERC20,
-        erc20Address: EthAddress.random(),
-        id: 1n,
-      },
-      {
-        assetType: AztecAssetType.NOT_USED,
-        erc20Address: EthAddress.ZERO,
-        id: 0n,
-      },
-      {
-        assetType: AztecAssetType.ERC20,
-        erc20Address: testAddress,
-        id: 1n,
-      },
-      {
-        assetType: AztecAssetType.NOT_USED,
-        erc20Address: EthAddress.ZERO,
-        id: 0n,
-      },
-      expiry,
-    );
-    expect(marketSize[0].assetId).toBe(BigInt(tokenAddress));
-    expect(marketSize[0].value).toBe(BigInt(tokenBalance));
-    expect(marketSize.length).toBe(1);
   });
 });

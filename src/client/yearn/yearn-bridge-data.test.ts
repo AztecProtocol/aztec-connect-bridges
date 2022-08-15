@@ -32,37 +32,37 @@ describe("Testing Yearn auxData", () => {
 
   beforeAll(() => {
     ethAsset = {
-      id: 0n,
+      id: 0,
       assetType: AztecAssetType.ETH,
       erc20Address: EthAddress.ZERO,
     };
     daiAsset = {
-      id: 1n,
+      id: 1,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
     };
     yvDaiAsset = {
-      id: 2n,
+      id: 2,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xdA816459F1AB5631232FE5e97a05BBBb94970c95"),
     };
     yvEthAsset = {
-      id: 3n,
+      id: 3,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xa258c4606ca8206d8aa700ce2143d7db854d168c"),
     };
     wethAsset = {
-      id: 4n,
+      id: 4,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"),
     };
     yvUSDCAsset = {
-      id: 5n,
+      id: 5,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE"),
     };
     emptyAsset = {
-      id: 100n,
+      id: 100,
       assetType: AztecAssetType.NOT_USED,
       erc20Address: EthAddress.ZERO,
     };
@@ -88,14 +88,14 @@ describe("Testing Yearn auxData", () => {
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn((id: bigint) => {
-        if (id === 1n) {
+      getSupportedAsset: jest.fn((id: number) => {
+        if (id === 1) {
           return daiAsset.erc20Address.toString();
-        } else if (id === 2n) {
+        } else if (id === 2) {
           return yvDaiAsset.erc20Address.toString();
-        } else if (id === 3n) {
+        } else if (id === 3) {
           return yvEthAsset.erc20Address.toString();
-        } else if (id === 4n) {
+        } else if (id === 4) {
           return wethAsset.erc20Address.toString();
         }
       }),
@@ -129,14 +129,14 @@ describe("Testing Yearn auxData", () => {
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn((id: bigint) => {
-        if (id === 1n) {
+      getSupportedAsset: jest.fn((id: number) => {
+        if (id === 1) {
           return daiAsset.erc20Address.toString();
-        } else if (id === 2n) {
+        } else if (id === 2) {
           return yvDaiAsset.erc20Address.toString();
-        } else if (id === 3n) {
+        } else if (id === 3) {
           return yvEthAsset.erc20Address.toString();
-        } else if (id === 4n) {
+        } else if (id === 4) {
           return wethAsset.erc20Address.toString();
         }
       }),
@@ -234,16 +234,16 @@ describe("Testing Yearn auxData", () => {
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn((id: bigint) => {
-        if (id === 1n) {
+      getSupportedAsset: jest.fn((id: number) => {
+        if (id === 1) {
           return daiAsset.erc20Address.toString();
-        } else if (id === 2n) {
+        } else if (id === 2) {
           return yvDaiAsset.erc20Address.toString();
-        } else if (id === 3n) {
+        } else if (id === 3) {
           return yvEthAsset.erc20Address.toString();
-        } else if (id === 4n) {
+        } else if (id === 4) {
           return wethAsset.erc20Address.toString();
-        } else if (id === 5n) {
+        } else if (id === 5) {
           return yvUSDCAsset.erc20Address.toString();
         }
       }),
@@ -291,27 +291,27 @@ describe("Testing Yearn expectedOutput", () => {
 
   beforeAll(() => {
     ethAsset = {
-      id: 0n,
+      id: 0,
       assetType: AztecAssetType.ETH,
       erc20Address: EthAddress.ZERO,
     };
     daiAsset = {
-      id: 1n,
+      id: 1,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
     };
     yvDaiAsset = {
-      id: 2n,
+      id: 2,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xdA816459F1AB5631232FE5e97a05BBBb94970c95"),
     };
     yvEthAsset = {
-      id: 3n,
+      id: 3,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xa258c4606ca8206d8aa700ce2143d7db854d168c"),
     };
     emptyAsset = {
-      id: 100n,
+      id: 100,
       assetType: AztecAssetType.NOT_USED,
       erc20Address: EthAddress.ZERO,
     };
@@ -418,27 +418,27 @@ describe("Testing Yearn getExpectedYield", () => {
 
   beforeAll(() => {
     ethAsset = {
-      id: 0n,
+      id: 0,
       assetType: AztecAssetType.ETH,
       erc20Address: EthAddress.ZERO,
     };
     daiAsset = {
-      id: 1n,
+      id: 1,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
     };
     yvDaiAsset = {
-      id: 2n,
+      id: 2,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xdA816459F1AB5631232FE5e97a05BBBb94970c95"),
     };
     wethAsset = {
-      id: 4n,
+      id: 4,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"),
     };
     emptyAsset = {
-      id: 100n,
+      id: 100,
       assetType: AztecAssetType.NOT_USED,
       erc20Address: EthAddress.ZERO,
     };

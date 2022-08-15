@@ -1,7 +1,7 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 
 export interface AssetValue {
-  assetId: bigint; // ID used in `RollupProcessor.getSupportedAsset(assetId)`
+  assetId: number; // ID used in `RollupProcessor.getSupportedAsset(assetId)`
   value: bigint;
 }
 
@@ -32,7 +32,7 @@ export enum SolidityType {
 }
 
 export interface AztecAsset {
-  id: bigint;
+  id: number;
   assetType: AztecAssetType;
   erc20Address: EthAddress;
 }

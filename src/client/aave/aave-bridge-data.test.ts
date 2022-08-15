@@ -24,7 +24,6 @@ describe("aave lending bridge data", () => {
   let aaveLendingBridgeContract: Mockify<IAaveLendingBridge>;
 
   let ethAsset: AztecAsset;
-  let wethAsset: AztecAsset;
   let emptyAsset: AztecAsset;
 
   const createAaveBridgeData = (
@@ -55,17 +54,12 @@ describe("aave lending bridge data", () => {
 
   beforeAll(() => {
     ethAsset = {
-      id: 1n,
+      id: 1,
       assetType: AztecAssetType.ETH,
       erc20Address: EthAddress.ZERO,
     };
-    wethAsset = {
-      id: 2n,
-      assetType: AztecAssetType.ERC20,
-      erc20Address: EthAddress.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
-    };
     emptyAsset = {
-      id: 0n,
+      id: 0,
       assetType: AztecAssetType.NOT_USED,
       erc20Address: EthAddress.ZERO,
     };
@@ -78,7 +72,7 @@ describe("aave lending bridge data", () => {
     const expectedOutput = (depositAmount * precision) / normalizer;
 
     const zkAsset = {
-      id: 3n,
+      id: 3,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.random(),
     };
@@ -108,7 +102,7 @@ describe("aave lending bridge data", () => {
     const expectedOutput = (depositAmount * normalizer) / precision;
 
     const zkAsset = {
-      id: 3n,
+      id: 3,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.random(),
     };
@@ -133,7 +127,7 @@ describe("aave lending bridge data", () => {
 
   it("returns correct APR", async () => {
     const zkAsset = {
-      id: 3n,
+      id: 3,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.random(),
     };
@@ -174,7 +168,7 @@ describe("aave lending bridge data", () => {
 
   it.skip("should return the market size", async () => {
     const zkAsset = {
-      id: 3n,
+      id: 3,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.random(),
     };

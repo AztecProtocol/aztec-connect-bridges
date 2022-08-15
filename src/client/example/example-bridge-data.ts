@@ -10,7 +10,7 @@ export class ExampleBridgeData implements BridgeDataFieldGetters {
   async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
     return [
       {
-        assetId: 1n,
+        assetId: 1,
         value: 1000n,
       },
     ];
@@ -52,6 +52,6 @@ export class ExampleBridgeData implements BridgeDataFieldGetters {
     outputAssetB: AztecAsset,
     auxData: bigint,
   ): Promise<AssetValue[]> {
-    return [{ assetId: 0n, value: 100n }];
+    return [{ assetId: 0, value: 100n }];
   }
 }

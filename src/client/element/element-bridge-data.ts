@@ -204,7 +204,7 @@ export class ElementBridgeData {
 
     return [
       {
-        assetId: BigInt(BridgeCallData.fromBigInt(defiEvent.encodedBridgeCallData).inputAssetIdA),
+        assetId: BridgeCallData.fromBigInt(defiEvent.encodedBridgeCallData).inputAssetIdA,
         value: userPresentValue,
       },
     ];
@@ -322,30 +322,6 @@ export class ElementBridgeData {
     const percentage2sf = (percentageScaled * 10000n) / this.scalingFactor;
 
     return [Number(percentage2sf) / 100];
-  }
-
-  async getMarketSize(
-    inputAssetA: AztecAsset,
-    inputAssetB: AztecAsset,
-    outputAssetA: AztecAsset,
-    outputAssetB: AztecAsset,
-    auxData: bigint,
-  ): Promise<AssetValue[]> {
-    const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(
-      inputAssetA.erc20Address.toString(),
-      auxData,
-    );
-    const pool = await this.elementBridgeContract.pools(assetExpiryHash);
-    const poolId = pool.poolId;
-    const tokenBalances = await this.balancerContract.getPoolTokens(poolId);
-
-    // todo return the correct aztec assetIds
-    return tokenBalances[0].map((address, index) => {
-      return {
-        assetId: BigInt(address), // todo fetch via the sdk @Leila
-        value: tokenBalances[1][index].toBigInt(),
-      };
-    });
   }
 
   async getExpiration(interactionNonce: bigint): Promise<bigint> {
