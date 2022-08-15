@@ -96,19 +96,15 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     }
   }
 
-  async getAPR(inputAssetA: AztecAsset, outputAssetA: AztecAsset): Promise<number> {
+  async getAPR(yieldAsset: AztecAsset): Promise<number> {
     // Not taking into account how the deposited funds will change the yield
     // The approximate number of blocks per year that is assumed by the interest rate model
 
     const blocksPerYear = 2102400;
-    const cToken = ICERC20__factory.connect(outputAssetA.erc20Address.toString(), this.ethersProvider);
+    const cToken = ICERC20__factory.connect(yieldAsset.erc20Address.toString(), this.ethersProvider);
 
-    try {
-      const supplyRatePerBlock = await cToken.supplyRatePerBlock();
-      return supplyRatePerBlock.mul(blocksPerYear).toNumber() / 10 ** 16;
-    } catch {
-      return 0;
-    }
+    const supplyRatePerBlock = await cToken.supplyRatePerBlock();
+    return supplyRatePerBlock.mul(blocksPerYear).toNumber() / 10 ** 16;
   }
 
   async getMarketSize(

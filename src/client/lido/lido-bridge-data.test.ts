@@ -164,7 +164,7 @@ describe("lido bridge data", () => {
 
     lidoBridgeData = createLidoBridgeData(wstethContract as any, curvePoolContract as any, lidoOracleContract as any);
 
-    const apr = await lidoBridgeData.getAPR(ethAsset, wstETHAsset);
+    const apr = await lidoBridgeData.getAPR(wstETHAsset);
     expect(apr).toBe(expectedAPR);
   });
 });

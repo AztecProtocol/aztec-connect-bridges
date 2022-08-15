@@ -90,19 +90,16 @@ export class CurveStethBridgeData implements BridgeDataFieldGetters {
     }
     return [0n];
   }
-  async getAPR(inputAssetA: AztecAsset, outputAssetA: AztecAsset): Promise<number> {
+  async getAPR(yieldAsset: AztecAsset): Promise<number> {
     const YEAR = 60n * 60n * 24n * 365n;
-    if (outputAssetA.assetType === AztecAssetType.ETH) {
-      const { postTotalPooledEther, preTotalPooledEther, timeElapsed } =
-        await this.lidoOracleContract.getLastCompletedReportDelta();
+    const { postTotalPooledEther, preTotalPooledEther, timeElapsed } =
+      await this.lidoOracleContract.getLastCompletedReportDelta();
 
-      const scaledAPR =
-        ((postTotalPooledEther.toBigInt() - preTotalPooledEther.toBigInt()) * YEAR * this.scalingFactor) /
-        (preTotalPooledEther.toBigInt() * timeElapsed.toBigInt());
+    const scaledAPR =
+      ((postTotalPooledEther.toBigInt() - preTotalPooledEther.toBigInt()) * YEAR * this.scalingFactor) /
+      (preTotalPooledEther.toBigInt() * timeElapsed.toBigInt());
 
-      return Number(scaledAPR / (this.scalingFactor / 10000n)) / 100;
-    }
-    return 0;
+    return Number(scaledAPR / (this.scalingFactor / 10000n)) / 100;
   }
 
   async getMarketSize(

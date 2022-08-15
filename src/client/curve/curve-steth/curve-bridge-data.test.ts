@@ -194,7 +194,7 @@ describe("curve steth bridge data", () => {
       lidoOracleContract as any,
     );
 
-    const APR = await curveBridgeData.getAPR(wstETHAsset, ethAsset);
+    const APR = await curveBridgeData.getAPR(wstETHAsset);
     expect(APR).toBe(expectedAPR);
   });
 });

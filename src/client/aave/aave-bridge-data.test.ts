@@ -131,7 +131,7 @@ describe("aave lending bridge data", () => {
     expect(output[0]).toBeGreaterThan(depositAmount);
   });
 
-  it("should return the expected APR when entering", async () => {
+  it("returns correct APR", async () => {
     const zkAsset = {
       id: 3n,
       assetType: AztecAssetType.ERC20,
@@ -167,49 +167,9 @@ describe("aave lending bridge data", () => {
 
     aaveBridgeData = createAaveBridgeData(lendingPoolContract as any, aaveLendingBridgeContract as any);
 
-    const APR = await aaveBridgeData.getAPR(ethAsset, zkAsset);
+    const APR = await aaveBridgeData.getAPR(zkAsset);
 
     expect(APR).toBe(3);
-  });
-
-  it("should return 0 expected APR when exiting", async () => {
-    const zkAsset = {
-      id: 3n,
-      assetType: AztecAssetType.ERC20,
-      erc20Address: EthAddress.random(),
-    };
-
-    const rate = 3n * 10n ** 25n;
-    const reserveData: ReserveDataStruct = {
-      configuration: { data: 0 },
-      liquidityIndex: 0,
-      variableBorrowIndex: 0,
-      currentLiquidityRate: BigNumber.from(rate),
-      currentVariableBorrowRate: 0,
-      currentStableBorrowRate: 0,
-      lastUpdateTimestamp: 0,
-      aTokenAddress: EthAddress.random().toString(),
-      stableDebtTokenAddress: EthAddress.random().toString(),
-      variableDebtTokenAddress: EthAddress.random().toString(),
-      interestRateStrategyAddress: EthAddress.random().toString(),
-      id: 0,
-    };
-
-    aaveLendingBridgeContract = {
-      ...aaveLendingBridgeContract,
-      underlyingToZkAToken: jest.fn().mockResolvedValue(zkAsset.erc20Address.toString()),
-    };
-
-    lendingPoolContract = {
-      ...lendingPoolContract,
-      getReserveData: jest.fn().mockResolvedValue(reserveData),
-    };
-
-    aaveBridgeData = createAaveBridgeData(lendingPoolContract as any, aaveLendingBridgeContract as any);
-
-    const APR = await aaveBridgeData.getAPR(zkAsset, ethAsset);
-
-    expect(APR).toBe(0);
   });
 
   it.skip("should return the market size", async () => {

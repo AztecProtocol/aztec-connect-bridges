@@ -109,11 +109,10 @@ export interface BridgeDataFieldGetters {
   /**
    * @notice This function computes annual percentage return (APR) for a given asset
    * @dev This function should be implemented for all bridges which work with yield-bearing assets
-   * @param inputAssetA A struct detailing the input asset
-   * @param outputAssetA A struct detailing the output asset
+   * @param yieldAsset A struct detailing the yield asset (e.g. cToken, wstETH, aETH, ...)
    * @return The expected APR (e.g. for Lido the return value would currently be 3.9)
    */
-  getAPR?(inputAssetA: AztecAsset, outputAssetA: AztecAsset): Promise<number>;
+  getAPR?(yieldAsset: AztecAsset): Promise<number>;
 
   /** 
   * @dev This function should be implemented for all bridges dealing with L1 liquidity

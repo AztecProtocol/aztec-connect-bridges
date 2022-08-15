@@ -126,15 +126,9 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
     }
   }
 
-  async getAPR(inputAssetA: AztecAsset, outputAssetA: AztecAsset): Promise<number> {
-    const { entering, underlyingAsset } = await this.getUnderlyingAndEntering(inputAssetA, outputAssetA);
-
-    if (!entering) {
-      return 0;
-    }
-
+  async getAPR(yieldAsset: AztecAsset): Promise<number> {
     // Not taking into account how the deposited funds will change the yield
-    const reserveData = await this.lendingPoolContract.getReserveData(underlyingAsset.toString());
+    const reserveData = await this.lendingPoolContract.getReserveData(yieldAsset.toString());
     const rate = reserveData.currentLiquidityRate.toBigInt();
     return Number(rate / 10n ** 25n);
   }
