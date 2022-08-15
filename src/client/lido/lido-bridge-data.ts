@@ -1,5 +1,4 @@
 import {
-  AssetValue,
   AuxDataConfig,
   AztecAsset,
   SolidityType,
@@ -19,6 +18,7 @@ import {
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { createWeb3Provider } from "../aztec/provider";
 import { EthAddress } from "@aztec/barretenberg/address";
+import { AssetValue } from "@aztec/barretenberg/asset";
 
 export class LidoBridgeData implements BridgeDataFieldGetters {
   public scalingFactor: bigint = 1n * 10n ** 18n;

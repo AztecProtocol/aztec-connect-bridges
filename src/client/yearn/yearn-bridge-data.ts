@@ -3,6 +3,7 @@ import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
 import { createWeb3Provider } from "../aztec/provider";
 import { BigNumber } from "ethers";
+
 import "isomorphic-fetch";
 
 import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data";

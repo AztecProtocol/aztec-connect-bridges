@@ -1,17 +1,18 @@
-import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from "../bridge-data";
+import { EthAddress } from "@aztec/barretenberg/address";
+import { AssetValue } from "@aztec/barretenberg/asset";
+import { EthereumProvider } from "@aztec/barretenberg/blockchain";
+import { BridgeCallData } from "@aztec/barretenberg/bridge_call_data";
 import {
   ElementBridge,
-  IVault,
-  IRollupProcessor,
   ElementBridge__factory,
-  IVault__factory,
+  IRollupProcessor,
   IRollupProcessor__factory,
+  IVault,
+  IVault__factory,
 } from "../../../typechain-types";
 import { AsyncDefiBridgeProcessedEvent } from "../../../typechain-types/IRollupProcessor";
-import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { createWeb3Provider } from "../aztec/provider";
-import { EthAddress } from "@aztec/barretenberg/address";
-import { BridgeCallData } from "@aztec/barretenberg/bridge_call_data";
+import { AuxDataConfig, AztecAsset, SolidityType } from "../bridge-data";
 
 export type BatchSwapStep = {
   poolId: string;

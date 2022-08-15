@@ -1,16 +1,9 @@
-import { EthAddress } from "@aztec/barretenberg/address";
+import { AssetValue } from "@aztec/barretenberg/asset";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
 import { IRollupProcessor, IRollupProcessor__factory } from "../../../typechain-types";
 import { createWeb3Provider } from "../aztec/provider";
-import {
-  AssetValue,
-  AuxDataConfig,
-  AztecAsset,
-  AztecAssetType,
-  BridgeDataFieldGetters,
-  SolidityType,
-} from "../bridge-data";
+import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
 
 export class DonationBridgeData implements BridgeDataFieldGetters {
   private constructor(private ethersProvider: Web3Provider, private rollupProcessor: IRollupProcessor) {}

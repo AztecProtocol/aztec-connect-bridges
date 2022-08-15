@@ -11,14 +11,8 @@ import {
   IRollupProcessor__factory,
 } from "../../../typechain-types";
 import { createWeb3Provider } from "../aztec/provider";
-import {
-  AssetValue,
-  AuxDataConfig,
-  AztecAsset,
-  AztecAssetType,
-  BridgeDataFieldGetters,
-  SolidityType,
-} from "../bridge-data";
+import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
+import { AssetValue } from "@aztec/barretenberg/asset";
 
 export class CompoundBridgeData implements BridgeDataFieldGetters {
   readonly expScale = 10n ** 18n;

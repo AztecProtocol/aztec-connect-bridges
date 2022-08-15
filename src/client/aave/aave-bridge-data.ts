@@ -1,23 +1,16 @@
-import {
-  AssetValue,
-  AuxDataConfig,
-  AztecAsset,
-  SolidityType,
-  AztecAssetType,
-  BridgeDataFieldGetters,
-} from "../bridge-data";
+import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
 
+import { EthAddress } from "@aztec/barretenberg/address";
+import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import {
   IAaveLendingBridge,
   IAaveLendingBridge__factory,
-  IERC20,
   IERC20__factory,
   ILendingPool,
   ILendingPool__factory,
 } from "../../../typechain-types";
-import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { createWeb3Provider } from "../aztec/provider";
-import { EthAddress } from "@aztec/barretenberg/address";
+import { AssetValue } from "@aztec/barretenberg/asset";
 
 export class AaveBridgeData implements BridgeDataFieldGetters {
   public scalingFactor: bigint = 1n * 10n ** 18n;

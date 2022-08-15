@@ -1,9 +1,5 @@
 import { EthAddress } from "@aztec/barretenberg/address";
-
-export interface AssetValue {
-  assetId: number; // ID used in `RollupProcessor.getSupportedAsset(assetId)`
-  value: bigint;
-}
+import { AssetValue } from "@aztec/barretenberg/asset";
 
 export interface UnderlyingAsset {
   address: EthAddress;

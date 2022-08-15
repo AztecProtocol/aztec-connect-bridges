@@ -1,16 +1,10 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
-import { IERC20__factory, IERC4626__factory } from "../../../typechain-types";
+import { IERC4626__factory } from "../../../typechain-types";
 import { createWeb3Provider } from "../aztec/provider";
-import {
-  AssetValue,
-  AuxDataConfig,
-  AztecAsset,
-  AztecAssetType,
-  BridgeDataFieldGetters,
-  SolidityType,
-} from "../bridge-data";
+import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
+import { AssetValue } from "@aztec/barretenberg/asset";
 
 export class ERC4626BridgeData implements BridgeDataFieldGetters {
   readonly WETH = EthAddress.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
