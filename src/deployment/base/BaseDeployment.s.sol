@@ -3,7 +3,6 @@
 pragma solidity >=0.8.4;
 
 import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
-
 import {Test} from "forge-std/Test.sol";
 
 abstract contract BaseDeployment is Test {
