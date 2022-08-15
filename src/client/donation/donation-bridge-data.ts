@@ -60,15 +60,8 @@ export class DonationBridgeData implements BridgeDataFieldGetters {
     }
   }
 
-  async getAPR(
-    inputAssetA: AztecAsset,
-    inputAssetB: AztecAsset,
-    outputAssetA: AztecAsset,
-    outputAssetB: AztecAsset,
-    auxData: bigint,
-    inputValue: bigint,
-  ): Promise<number[]> {
-    return [0];
+  async getAPR(inputAssetA: AztecAsset, outputAssetA: AztecAsset): Promise<number> {
+    return 0;
   }
 
   async getMarketSize(
