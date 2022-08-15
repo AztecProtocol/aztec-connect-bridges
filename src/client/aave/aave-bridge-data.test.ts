@@ -131,8 +131,7 @@ describe("aave lending bridge data", () => {
     expect(output[0]).toBeGreaterThan(depositAmount);
   });
 
-  it("should return the expected yield when entering", async () => {
-    const depositAmount = 10n ** 18n;
+  it("should return the expected APR when entering", async () => {
     const zkAsset = {
       id: 3n,
       assetType: AztecAssetType.ERC20,
@@ -168,13 +167,12 @@ describe("aave lending bridge data", () => {
 
     aaveBridgeData = createAaveBridgeData(lendingPoolContract as any, aaveLendingBridgeContract as any);
 
-    const output = await aaveBridgeData.getAPR(ethAsset, emptyAsset, zkAsset, emptyAsset, 0n, depositAmount);
+    const APR = await aaveBridgeData.getAPR(ethAsset, zkAsset);
 
-    expect(output[0]).toBe(3);
+    expect(APR).toBe(3);
   });
 
-  it("should return the expected yield when exiting", async () => {
-    const depositAmount = 10n ** 18n;
+  it("should return 0 expected APR when exiting", async () => {
     const zkAsset = {
       id: 3n,
       assetType: AztecAssetType.ERC20,
@@ -209,9 +207,9 @@ describe("aave lending bridge data", () => {
 
     aaveBridgeData = createAaveBridgeData(lendingPoolContract as any, aaveLendingBridgeContract as any);
 
-    const output = await aaveBridgeData.getAPR(zkAsset, emptyAsset, ethAsset, emptyAsset, 0n, depositAmount);
+    const APR = await aaveBridgeData.getAPR(zkAsset, ethAsset);
 
-    expect(output[0]).toBe(0);
+    expect(APR).toBe(0);
   });
 
   it.skip("should return the market size", async () => {

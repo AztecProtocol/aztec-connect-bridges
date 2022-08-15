@@ -68,7 +68,7 @@ const decodeEvent = async (event: AsyncDefiBridgeProcessedEvent): Promise<EventB
   return newEventBlock;
 };
 
-export class ElementBridgeData implements BridgeDataFieldGetters {
+export class ElementBridgeData {
   public scalingFactor = BigInt(1n * 10n ** 18n);
   private interactionBlockNumbers: Array<EventBlock> = [];
 
