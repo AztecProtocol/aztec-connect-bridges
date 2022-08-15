@@ -8,7 +8,7 @@ import {
   IComptroller__factory,
   IERC20__factory,
   IRollupProcessor,
-  IRollupProcessor__factory,
+  IRollupProcessor__factory
 } from "../../../typechain-types";
 import { createWeb3Provider } from "../aztec/provider";
 import {
@@ -17,7 +17,7 @@ import {
   AztecAsset,
   AztecAssetType,
   BridgeDataFieldGetters,
-  SolidityType,
+  SolidityType
 } from "../bridge-data";
 
 export class CompoundBridgeData implements BridgeDataFieldGetters {
@@ -98,17 +98,17 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
 
   async getAPR(inputAssetA: AztecAsset, outputAssetA: AztecAsset): Promise<number> {
     // Not taking into account how the deposited funds will change the yield
-    // Minting
     // The approximate number of blocks per year that is assumed by the interest rate model
+
     const blocksPerYear = 2102400;
     const cToken = ICERC20__factory.connect(outputAssetA.erc20Address.toString(), this.ethersProvider);
-    const supplyRatePerBlock = await cToken.supplyRatePerBlock();
 
-    if (supplyRatePerBlock === undefined) {
+    try {
+      const supplyRatePerBlock = await cToken.supplyRatePerBlock();
+      return supplyRatePerBlock.mul(blocksPerYear).toNumber() / 10 ** 16;
+    } catch {
       return 0;
     }
-
-    return supplyRatePerBlock.mul(blocksPerYear).toNumber() / 10 ** 16;
   }
 
   async getMarketSize(

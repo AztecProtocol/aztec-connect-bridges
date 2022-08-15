@@ -201,7 +201,9 @@ describe("compound lending bridge data", () => {
     // Setup mocks
     cerc20Contract = {
       ...cerc20Contract,
-      supplyRatePerBlock: jest.fn().mockResolvedValue(undefined),
+      supplyRatePerBlock: jest.fn().mockImplementation(() => {
+        throw new Error();
+      }),
     };
     ICERC20__factory.connect = () => cerc20Contract as any;
     const compoundBridgeData = CompoundBridgeData.create({} as any);
