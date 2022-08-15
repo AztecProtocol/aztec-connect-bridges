@@ -8,7 +8,7 @@ import {
   IComptroller__factory,
   IERC20__factory,
   IRollupProcessor,
-  IRollupProcessor__factory
+  IRollupProcessor__factory,
 } from "../../../typechain-types";
 import { createWeb3Provider } from "../aztec/provider";
 import {
@@ -17,7 +17,7 @@ import {
   AztecAsset,
   AztecAssetType,
   BridgeDataFieldGetters,
-  SolidityType
+  SolidityType,
 } from "../bridge-data";
 
 export class CompoundBridgeData implements BridgeDataFieldGetters {
