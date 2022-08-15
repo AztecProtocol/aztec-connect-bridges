@@ -72,15 +72,15 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
     inputValue: bigint,
   ): Promise<bigint[]> {
-    if (auxData === 0n) {
+    if (auxData === 0) {
       // Minting
       const cToken = ICERC20__factory.connect(outputAssetA.erc20Address.toString(), this.ethersProvider);
       const exchangeRateStored = await cToken.exchangeRateStored();
       return [BigNumber.from(inputValue).mul(this.expScale).div(exchangeRateStored).toBigInt()];
-    } else if (auxData === 1n) {
+    } else if (auxData === 1) {
       // Redeeming
       const cToken = ICERC20__factory.connect(inputAssetA.erc20Address.toString(), this.ethersProvider);
       const exchangeRateStored = await cToken.exchangeRateStored();
@@ -106,15 +106,15 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
   ): Promise<AssetValue[]> {
     let cTokenAddress;
     let underlyingAsset;
-    if (auxData === 0n) {
+    if (auxData === 0) {
       // Minting
       cTokenAddress = outputAssetA.erc20Address;
       underlyingAsset = inputAssetA;
-    } else if (auxData === 1n) {
+    } else if (auxData === 1) {
       // Redeeming
       cTokenAddress = inputAssetA.erc20Address;
       underlyingAsset = outputAssetA;

@@ -100,7 +100,7 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
     inputValue: bigint,
   ): Promise<bigint[]> {
     const { entering, underlyingAsset } = await this.getUnderlyingAndEntering(inputAssetA, outputAssetA);
@@ -131,7 +131,7 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
   ): Promise<AssetValue[]> {
     const { underlyingAsset } = await this.getUnderlyingAndEntering(inputAssetA, outputAssetA);
     const reserveData = await this.lendingPoolContract.getReserveData(underlyingAsset.toString());

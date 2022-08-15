@@ -89,7 +89,7 @@ describe("aave lending bridge data", () => {
 
     aaveBridgeData = createAaveBridgeData(lendingPoolContract as any, aaveLendingBridgeContract as any);
 
-    const output = await aaveBridgeData.getExpectedOutput(ethAsset, emptyAsset, zkAsset, emptyAsset, 0n, depositAmount);
+    const output = await aaveBridgeData.getExpectedOutput(ethAsset, emptyAsset, zkAsset, emptyAsset, 0, depositAmount);
 
     expect(expectedOutput).toBe(output[0]);
     expect(output[0]).toBeLessThan(depositAmount);
@@ -119,7 +119,7 @@ describe("aave lending bridge data", () => {
 
     aaveBridgeData = createAaveBridgeData(lendingPoolContract as any, aaveLendingBridgeContract as any);
 
-    const output = await aaveBridgeData.getExpectedOutput(zkAsset, emptyAsset, ethAsset, emptyAsset, 0n, depositAmount);
+    const output = await aaveBridgeData.getExpectedOutput(zkAsset, emptyAsset, ethAsset, emptyAsset, 0, depositAmount);
 
     expect(expectedOutput).toBe(output[0]);
     expect(output[0]).toBeGreaterThan(depositAmount);

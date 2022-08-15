@@ -270,7 +270,7 @@ describe("element bridge data", () => {
 
   it("should return the correct yield of the tranche", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const expiry = BigInt(now + 86400 * 30);
+    const expiry = now + 86400 * 30;
     const trancheAddress = "0x90ca5cef5b29342b229fb8ae2db5d8f4f894d652";
     const poolId = "0x90ca5cef5b29342b229fb8ae2db5d8f4f894d6520002000000000000000000b5";
     const interest = BigInt(1e16);
@@ -321,7 +321,7 @@ describe("element bridge data", () => {
       BigInt(inputValue),
     );
     const YEAR = 60 * 60 * 24 * 365;
-    const timeToExpiration = expiry - BigInt(now);
+    const timeToExpiration = BigInt(expiry - now);
     const scaledOut = (BigInt(interest) * elementBridgeData.scalingFactor) / timeToExpiration;
     const yearlyOut = (scaledOut * BigInt(YEAR)) / elementBridgeData.scalingFactor;
     const scaledPercentage = (yearlyOut * elementBridgeData.scalingFactor) / inputValue;

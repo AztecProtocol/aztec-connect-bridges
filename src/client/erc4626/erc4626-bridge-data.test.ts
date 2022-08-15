@@ -1,6 +1,6 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { BigNumber } from "ethers";
-import { IERC20, IERC20__factory, IERC4626, IERC4626__factory } from "../../../typechain-types";
+import { IERC4626, IERC4626__factory } from "../../../typechain-types";
 import { AztecAsset, AztecAssetType } from "../bridge-data";
 import { ERC4626BridgeData } from "./erc4626-bridge-data";
 
@@ -85,7 +85,7 @@ describe("ERC4626 bridge data", () => {
 
     // Test the code using mocked controller
     const expectedOutput = (
-      await erc4626BridgeData.getExpectedOutput(mplAsset, emptyAsset, xmplAsset, emptyAsset, 0n, 10n ** 18n)
+      await erc4626BridgeData.getExpectedOutput(mplAsset, emptyAsset, xmplAsset, emptyAsset, 0, 10n ** 18n)
     )[0];
     expect(expectedOutput).toBe(111111n);
   });
@@ -102,7 +102,7 @@ describe("ERC4626 bridge data", () => {
 
     // Test the code using mocked controller
     const expectedOutput = (
-      await erc4626BridgeData.getExpectedOutput(xmplAsset, emptyAsset, mplAsset, emptyAsset, 1n, 10n ** 18n)
+      await erc4626BridgeData.getExpectedOutput(xmplAsset, emptyAsset, mplAsset, emptyAsset, 1, 10n ** 18n)
     )[0];
     expect(expectedOutput).toBe(111111n);
   });

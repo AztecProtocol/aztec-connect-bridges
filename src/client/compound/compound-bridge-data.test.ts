@@ -162,7 +162,7 @@ describe("compound lending bridge data", () => {
 
     // Test the code using mocked controller
     const expectedOutput = (
-      await compoundBridgeData.getExpectedOutput(ethAsset, emptyAsset, cethAsset, emptyAsset, 0n, 10n ** 18n)
+      await compoundBridgeData.getExpectedOutput(ethAsset, emptyAsset, cethAsset, emptyAsset, 0, 10n ** 18n)
     )[0];
     expect(expectedOutput).toBe(4983773038n);
   });
@@ -178,7 +178,7 @@ describe("compound lending bridge data", () => {
 
     // Test the code using mocked controller
     const expectedOutput = (
-      await compoundBridgeData.getExpectedOutput(cethAsset, emptyAsset, ethAsset, emptyAsset, 1n, 4983783707n)
+      await compoundBridgeData.getExpectedOutput(cethAsset, emptyAsset, ethAsset, emptyAsset, 1, 4983783707n)
     )[0];
     expect(expectedOutput).toBe(1000002140628525162n);
   });
@@ -207,9 +207,9 @@ describe("compound lending bridge data", () => {
     const compoundBridgeData = CompoundBridgeData.create({} as any);
 
     // Test the code using mocked controller
-    const marketSizeMint = (await compoundBridgeData.getMarketSize(daiAsset, emptyAsset, cdaiAsset, emptyAsset, 0n))[0];
+    const marketSizeMint = (await compoundBridgeData.getMarketSize(daiAsset, emptyAsset, cdaiAsset, emptyAsset, 0))[0];
     const marketSizeRedeem = (
-      await compoundBridgeData.getMarketSize(cdaiAsset, emptyAsset, daiAsset, emptyAsset, 1n)
+      await compoundBridgeData.getMarketSize(cdaiAsset, emptyAsset, daiAsset, emptyAsset, 1)
     )[0];
     expect(marketSizeMint.value).toBe(marketSizeRedeem.value);
     expect(marketSizeMint.value).toBe(368442895892448315882277748n);

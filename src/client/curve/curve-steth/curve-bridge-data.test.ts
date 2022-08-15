@@ -85,7 +85,7 @@ describe("curve steth bridge data", () => {
       emptyAsset,
       wstETHAsset,
       emptyAsset,
-      0n,
+      0,
       depositAmount,
     );
     expect(expectedOutput == output[0]).toBeTruthy();
@@ -119,7 +119,7 @@ describe("curve steth bridge data", () => {
       emptyAsset,
       wstETHAsset,
       emptyAsset,
-      0n,
+      0,
       depositAmount,
     );
     expect(expectedOutput == output[0]).toBeTruthy();
@@ -153,7 +153,7 @@ describe("curve steth bridge data", () => {
       emptyAsset,
       ethAsset,
       emptyAsset,
-      0n,
+      0,
       depositAmount,
     );
 

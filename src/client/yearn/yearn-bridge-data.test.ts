@@ -333,7 +333,7 @@ describe("Testing Yearn expectedOutput", () => {
       emptyAsset,
       yvDaiAsset,
       emptyAsset,
-      0n,
+      0,
       10n ** 18n,
     );
     expect(expectedOutputERC20[0]).toBe(989902989507028311n);
@@ -344,7 +344,7 @@ describe("Testing Yearn expectedOutput", () => {
       emptyAsset,
       yvEthAsset,
       emptyAsset,
-      0n,
+      0,
       10n ** 18n,
     );
     expect(expectedOutputETH[0]).toBe(989902989507028311n);
@@ -367,7 +367,7 @@ describe("Testing Yearn expectedOutput", () => {
       emptyAsset,
       daiAsset,
       emptyAsset,
-      1n,
+      1,
       10n ** 18n,
     );
     expect(expectedOutputERC20[0]).toBe(1110200000000000000n);
@@ -378,7 +378,7 @@ describe("Testing Yearn expectedOutput", () => {
       emptyAsset,
       ethAsset,
       emptyAsset,
-      1n,
+      1,
       10n ** 18n,
     );
     expect(expectedOutputETH[0]).toBe(1110200000000000000n);
@@ -398,13 +398,13 @@ describe("Testing Yearn expectedOutput", () => {
 
     expect.assertions(3);
     await expect(
-      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 0n, 10n ** 18n),
+      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 0, 10n ** 18n),
     ).rejects.toEqual(new Error("Token not found"));
     await expect(
-      yearnBridgeData.getExpectedOutput(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 1n, 10n ** 18n),
+      yearnBridgeData.getExpectedOutput(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 1, 10n ** 18n),
     ).rejects.toEqual(new Error("Token not found"));
     await expect(
-      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 3n, 10n ** 18n),
+      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 3, 10n ** 18n),
     ).rejects.toEqual("Invalid auxData");
   });
 });
@@ -451,7 +451,7 @@ describe("Testing Yearn getExpectedYield", () => {
       emptyAsset,
       emptyAsset,
       emptyAsset,
-      0n,
+      0,
       0n,
     );
     expect(expectedOutputDAI).not.toBeUndefined();
@@ -462,7 +462,7 @@ describe("Testing Yearn getExpectedYield", () => {
       emptyAsset,
       emptyAsset,
       emptyAsset,
-      0n,
+      0,
       0n,
     );
     expect(expectedOutputWETH).not.toBeUndefined();
@@ -473,7 +473,7 @@ describe("Testing Yearn getExpectedYield", () => {
       emptyAsset,
       emptyAsset,
       emptyAsset,
-      0n,
+      0,
       0n,
     );
     expect(expectedOutputETH).not.toBeUndefined();
@@ -481,10 +481,10 @@ describe("Testing Yearn getExpectedYield", () => {
     expect((expectedOutputWETH as [number, number])[0]).toBe((expectedOutputETH as [number, number])[0]);
 
     await expect(
-      yearnBridgeData.getExpectedOutput(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0n, 0n),
+      yearnBridgeData.getExpectedOutput(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0n),
     ).rejects.toEqual(new Error("Token not found"));
     await expect(
-      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, emptyAsset, emptyAsset, 0n, 0n),
+      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0n),
     ).rejects.toEqual(new Error("Token not found"));
   });
 });

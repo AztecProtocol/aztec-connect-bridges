@@ -72,7 +72,7 @@ export class LidoBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
     inputValue: bigint,
   ): Promise<bigint[]> {
     // ETH -> wstETH
@@ -107,7 +107,7 @@ export class LidoBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
   ): Promise<AssetValue[]> {
     const { postTotalPooledEther } = await this.lidoOracleContract.getLastCompletedReportDelta();
     return [

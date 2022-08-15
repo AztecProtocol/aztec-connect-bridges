@@ -264,7 +264,7 @@ export class ElementBridgeData {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
     inputValue: bigint,
   ): Promise<bigint[]> {
     // bridge is async the third parameter represents this
@@ -276,7 +276,7 @@ export class ElementBridgeData {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
     inputValue: bigint,
   ): Promise<number[]> {
     const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(
@@ -313,7 +313,7 @@ export class ElementBridgeData {
 
     const outputAssetAValue = deltas[1];
 
-    const timeToExpiration = auxData - BigInt(latestBlock.timestamp);
+    const timeToExpiration = BigInt(auxData - latestBlock.timestamp);
 
     const YEAR = 60n * 60n * 24n * 365n;
     const interest = -outputAssetAValue.toBigInt() - inputValue;
