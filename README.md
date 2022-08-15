@@ -39,6 +39,8 @@ To get started follow the steps bellow:
    src/bridges/example
    src/test/example
    src/client/example
+   src/specs/example
+   src/deployment/example
    ```
 
 4. Implement the bridges and tests.
@@ -49,18 +51,16 @@ To get started follow the steps bellow:
 
    `forge test --match-contract YourBridge -vvv`
 
-6. Gas-profile your contract:
-
-   `forge test --match-contract YourBridge --gas-report`
-
 All bridges need to be submitted via PRs to this repo.
 To receive a grant payment we expect the following work to be done:
 
 1. A solidity bridge that interfaces with the protocol you are bridging to (e.g AAVE),
 2. tests in Solidity that test the bridge with production values and the deployed protocol that is currently on mainnet (you should test a range of assets, edge cases and use [Forge's fuzzing abilities](https://book.getfoundry.sh/forge/fuzz-testing.html)),
-3. implementation of the Typescript `bridge-data.ts` class that tells a frontend developer how to use your bridge.
-4. an explanation of the flows your bridge supports should be included as `spec.md`,
-5. [NatSpec](https://docs.soliditylang.org/en/develop/natspec-format.html) documentation of all the functions in all the contracts which are to be deployed on mainnet.
+3. tests cover the full contract, there are no untested functions or lines. 
+4. implementation of the Typescript `bridge-data.ts` class that tells a frontend developer how to use your bridge.
+5. an explanation of the flows your bridge supports should be included as `spec.md`,
+6. [NatSpec](https://docs.soliditylang.org/en/develop/natspec-format.html) documentation of all the functions in all the contracts which are to be deployed on mainnet.
+7. A deployment script to deploy the bridge with proper configuration
 
 Before submitting a PR for a review make sure that the following is true:
 
@@ -69,6 +69,8 @@ Before submitting a PR for a review make sure that the following is true:
 3. you fetched upstream changes to your fork on GitHub and your branch has been rebased against the head of the `master` branch (**_not merged_**, if you are not sure how to rebase check out [this article](https://blog.verslu.is/git/git-rebase/)),
 4. the diff contains only changes related to the PR description,
 5. NatSpec documentation has already been written.
+6. A spec was written
+7. A deployment script was written
 
 ## Deployed Bridge Info
 
@@ -164,16 +166,8 @@ This repo supports TypeChain so all Typescript bindings will be auto generated a
 
 ### bridge-data.ts
 
-This is a Typescript class designed to help a developer on the frontend use your bridge. There are 4 variants of the class:
-
-```
-BridgeData
-AsyncBridgeData
-YieldBridgeData
-AsyncYieldBridgeData
-```
-
-You should pick the class that describes the functionality of your bridge and implement the functions to fetch data from your bridge / L1.
+This is a Typescript class designed to help a developer on the frontend use your bridge. 
+You should implement the functions to fetch data from your bridge / L1.
 
 ## Aztec Connect Background
 
