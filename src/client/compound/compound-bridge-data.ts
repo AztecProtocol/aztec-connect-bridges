@@ -34,7 +34,7 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
   static create(provider: EthereumProvider) {
     const ethersProvider = createWeb3Provider(provider);
     return new CompoundBridgeData(
-      createWeb3Provider(provider),
+      ethersProvider,
       IComptroller__factory.connect("0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B", ethersProvider),
       IRollupProcessor__factory.connect("0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455", ethersProvider),
     );
