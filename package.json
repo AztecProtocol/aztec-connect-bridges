@@ -23,7 +23,7 @@
     "test:contracts:block": "forge test --fork-block-number",
     "cast": "cast",
     "test:contracts": "forge test --no-match-contract 'Element|AceOfZk|StabilityPoolBridge' --no-match-test 'testRedistribution' && yarn test:pinned",
-    "build": "yarn clean && yarn compile:typechain && yarn compile:client-dest",
+    "build": "yarn clean && yarn compile:client-dest",
     "formatting": "yarn prettier --write .",
     "formatting:check": "prettier --check .",
     "lint": "yarn lint:contracts && yarn lint:clients",
