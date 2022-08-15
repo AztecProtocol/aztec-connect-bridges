@@ -144,7 +144,7 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     return [
       {
         assetId: underlyingAsset.id,
-        amount: marketSize.toBigInt(),
+        value: marketSize.toBigInt(),
       },
     ];
   }

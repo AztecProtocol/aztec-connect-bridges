@@ -199,7 +199,7 @@ describe("element bridge data", () => {
     const fullTime = expiration1 - startDate;
     const out = defiEvent.totalInputValue + (delta * timeElapsed) / fullTime;
 
-    expect(daiValue.amount).toStrictEqual(out / userShareDivisor);
+    expect(daiValue.value).toStrictEqual(out / userShareDivisor);
     expect(Number(daiValue.assetId)).toStrictEqual(bridgeCallData1.inputAssetIdA);
   });
 
@@ -226,7 +226,7 @@ describe("element bridge data", () => {
       const timeElapsed = BigInt(now) - startDate;
       const fullTime = BigInt(bridgeCallData.auxData) - startDate;
       const out = defiEvent.totalInputValue + (delta * timeElapsed) / fullTime;
-      expect(daiValue.amount).toStrictEqual(out / userShareDivisor);
+      expect(daiValue.value).toStrictEqual(out / userShareDivisor);
       expect(Number(daiValue.assetId)).toStrictEqual(bridgeCallData.inputAssetIdA);
     };
     await testInteraction(56);
@@ -380,7 +380,7 @@ describe("element bridge data", () => {
       expiry,
     );
     expect(marketSize[0].assetId).toBe(BigInt(tokenAddress));
-    expect(marketSize[0].amount).toBe(BigInt(tokenBalance));
+    expect(marketSize[0].value).toBe(BigInt(tokenBalance));
     expect(marketSize.length).toBe(1);
   });
 });

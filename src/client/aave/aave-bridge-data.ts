@@ -153,7 +153,7 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
     return [
       {
         assetId: inputAssetA.id,
-        amount: (await token.totalSupply()).toBigInt(),
+        value: (await token.totalSupply()).toBigInt(),
       },
     ];
   }

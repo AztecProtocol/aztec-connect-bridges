@@ -11,7 +11,7 @@ export class ExampleBridgeData implements BridgeDataFieldGetters {
     return [
       {
         assetId: 1n,
-        amount: 1000n,
+        value: 1000n,
       },
     ];
   }
@@ -52,6 +52,6 @@ export class ExampleBridgeData implements BridgeDataFieldGetters {
     outputAssetB: AztecAsset,
     auxData: bigint,
   ): Promise<AssetValue[]> {
-    return [{ assetId: 0n, amount: 100n }];
+    return [{ assetId: 0n, value: 100n }];
   }
 }

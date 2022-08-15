@@ -205,7 +205,7 @@ export class ElementBridgeData {
     return [
       {
         assetId: BigInt(BridgeCallData.fromBigInt(defiEvent.encodedBridgeCallData).inputAssetIdA),
-        amount: userPresentValue,
+        value: userPresentValue,
       },
     ];
   }
@@ -343,7 +343,7 @@ export class ElementBridgeData {
     return tokenBalances[0].map((address, index) => {
       return {
         assetId: BigInt(address), // todo fetch via the sdk @Leila
-        amount: tokenBalances[1][index].toBigInt(),
+        value: tokenBalances[1][index].toBigInt(),
       };
     });
   }

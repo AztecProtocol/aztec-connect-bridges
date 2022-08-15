@@ -74,7 +74,7 @@ export class DonationBridgeData implements BridgeDataFieldGetters {
     return [
       {
         assetId: inputAssetA.id,
-        amount: 0n,
+        value: 0n,
       },
     ];
   }

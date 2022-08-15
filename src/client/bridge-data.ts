@@ -2,7 +2,7 @@ import { EthAddress } from "@aztec/barretenberg/address";
 
 export interface AssetValue {
   assetId: bigint; // ID used in `RollupProcessor.getSupportedAsset(assetId)`
-  amount: bigint;
+  value: bigint;
 }
 
 export interface UnderlyingAsset {

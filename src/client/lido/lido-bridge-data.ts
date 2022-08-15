@@ -116,7 +116,7 @@ export class LidoBridgeData implements BridgeDataFieldGetters {
     return [
       {
         assetId: inputAssetA.id,
-        amount: postTotalPooledEther.toBigInt(),
+        value: postTotalPooledEther.toBigInt(),
       },
     ];
   }

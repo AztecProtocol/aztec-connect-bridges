@@ -227,7 +227,7 @@ describe("compound lending bridge data", () => {
     const marketSizeRedeem = (
       await compoundBridgeData.getMarketSize(cdaiAsset, emptyAsset, daiAsset, emptyAsset, 1n)
     )[0];
-    expect(marketSizeMint.amount).toBe(marketSizeRedeem.amount);
-    expect(marketSizeMint.amount).toBe(368442895892448315882277748n);
+    expect(marketSizeMint.value).toBe(marketSizeRedeem.value);
+    expect(marketSizeMint.value).toBe(368442895892448315882277748n);
   });
 });
