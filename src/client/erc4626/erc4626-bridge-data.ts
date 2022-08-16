@@ -1,16 +1,9 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
-import { IERC20__factory, IERC4626__factory } from "../../../typechain-types";
+import { IERC4626__factory } from "../../../typechain-types";
 import { createWeb3Provider } from "../aztec/provider";
-import {
-  AssetValue,
-  AuxDataConfig,
-  AztecAsset,
-  AztecAssetType,
-  BridgeDataFieldGetters,
-  SolidityType,
-} from "../bridge-data";
+import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
 
 export class ERC4626BridgeData implements BridgeDataFieldGetters {
   readonly WETH = EthAddress.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
@@ -69,16 +62,16 @@ export class ERC4626BridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
     inputValue: bigint,
   ): Promise<bigint[]> {
-    if (auxData === 0n) {
+    if (auxData === 0) {
       // Issuing
       const shareAddress = outputAssetA.erc20Address;
       const vault = IERC4626__factory.connect(shareAddress.toString(), this.ethersProvider);
       const amountOut = await vault.previewDeposit(inputValue);
       return [amountOut.toBigInt()];
-    } else if (auxData === 1n) {
+    } else if (auxData === 1) {
       // Redeeming
       const shareAddress = inputAssetA.erc20Address;
       const vault = IERC4626__factory.connect(shareAddress.toString(), this.ethersProvider);

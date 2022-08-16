@@ -3,6 +3,7 @@ import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
 import { createWeb3Provider } from "../aztec/provider";
 import { BigNumber } from "ethers";
+
 import "isomorphic-fetch";
 
 import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
@@ -101,10 +102,10 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
     inputValue: bigint,
   ): Promise<bigint[]> {
-    if (auxData === 0n) {
+    if (auxData === 0) {
       let tokenAddress = inputAssetA.erc20Address.toString();
       if (inputAssetA.assetType == AztecAssetType.ETH) {
         // Deposit via zap
@@ -119,7 +120,7 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
       const expectedShares = BigNumber.from(inputValue).mul(BigNumber.from(10).pow(decimals)).div(pricePerShare);
       return [expectedShares.toBigInt(), 0n];
     }
-    if (auxData === 1n) {
+    if (auxData === 1) {
       let tokenAddress = outputAssetA.erc20Address.toString();
       if (outputAssetA.assetType == AztecAssetType.ETH) {
         // Withdraw via zap
@@ -142,7 +143,7 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
     inputValue: bigint,
   ): Promise<number[]> {
     type TminVaultStruct = {

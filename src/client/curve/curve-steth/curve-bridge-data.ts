@@ -1,5 +1,4 @@
 import {
-  AssetValue,
   UnderlyingAsset,
   AuxDataConfig,
   AztecAsset,
@@ -19,6 +18,7 @@ import {
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { createWeb3Provider } from "../../aztec/provider";
 import { EthAddress } from "@aztec/barretenberg/address";
+import { AssetValue } from "@aztec/barretenberg/asset";
 
 export class CurveStethBridgeData implements BridgeDataFieldGetters {
   public scalingFactor: bigint = 1n * 10n ** 18n;
@@ -53,7 +53,7 @@ export class CurveStethBridgeData implements BridgeDataFieldGetters {
   ];
 
   // Lido bridge contract is stateless
-  async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
+  async getInteractionPresentValue(interactionNonce: number): Promise<AssetValue[]> {
     return [];
   }
 
@@ -72,7 +72,7 @@ export class CurveStethBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
     inputValue: bigint,
   ): Promise<bigint[]> {
     // ETH -> wstETH
@@ -90,26 +90,16 @@ export class CurveStethBridgeData implements BridgeDataFieldGetters {
     }
     return [0n];
   }
-  async getAPR(
-    inputAssetA: AztecAsset,
-    inputAssetB: AztecAsset,
-    outputAssetA: AztecAsset,
-    outputAssetB: AztecAsset,
-    auxData: bigint,
-    inputValue: bigint,
-  ): Promise<number[]> {
+  async getAPR(yieldAsset: AztecAsset): Promise<number> {
     const YEAR = 60n * 60n * 24n * 365n;
-    if (outputAssetA.assetType === AztecAssetType.ETH) {
-      const { postTotalPooledEther, preTotalPooledEther, timeElapsed } =
-        await this.lidoOracleContract.getLastCompletedReportDelta();
+    const { postTotalPooledEther, preTotalPooledEther, timeElapsed } =
+      await this.lidoOracleContract.getLastCompletedReportDelta();
 
-      const scaledAPR =
-        ((postTotalPooledEther.toBigInt() - preTotalPooledEther.toBigInt()) * YEAR * this.scalingFactor) /
-        (preTotalPooledEther.toBigInt() * timeElapsed.toBigInt());
+    const scaledAPR =
+      ((postTotalPooledEther.toBigInt() - preTotalPooledEther.toBigInt()) * YEAR * this.scalingFactor) /
+      (preTotalPooledEther.toBigInt() * timeElapsed.toBigInt());
 
-      return [Number(scaledAPR / (this.scalingFactor / 10000n)) / 100];
-    }
-    return [0];
+    return Number(scaledAPR / (this.scalingFactor / 10000n)) / 100;
   }
 
   async getMarketSize(
@@ -117,13 +107,13 @@ export class CurveStethBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
   ): Promise<AssetValue[]> {
     const { postTotalPooledEther } = await this.lidoOracleContract.getLastCompletedReportDelta();
     return [
       {
         assetId: inputAssetA.id,
-        amount: postTotalPooledEther.toBigInt(),
+        value: postTotalPooledEther.toBigInt(),
       },
     ];
   }

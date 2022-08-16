@@ -1,17 +1,18 @@
-import { AssetValue, BridgeDataFieldGetters, AuxDataConfig, AztecAsset, SolidityType } from "../bridge-data";
+import { EthAddress } from "@aztec/barretenberg/address";
+import { AssetValue } from "@aztec/barretenberg/asset";
+import { EthereumProvider } from "@aztec/barretenberg/blockchain";
+import { BridgeCallData } from "@aztec/barretenberg/bridge_call_data";
 import {
   ElementBridge,
-  IVault,
-  IRollupProcessor,
   ElementBridge__factory,
-  IVault__factory,
+  IRollupProcessor,
   IRollupProcessor__factory,
+  IVault,
+  IVault__factory,
 } from "../../../typechain-types";
 import { AsyncDefiBridgeProcessedEvent } from "../../../typechain-types/IRollupProcessor";
-import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { createWeb3Provider } from "../aztec/provider";
-import { EthAddress } from "@aztec/barretenberg/address";
-import { BridgeCallData } from "@aztec/barretenberg/bridge_call_data";
+import { AuxDataConfig, AztecAsset, SolidityType } from "../bridge-data";
 
 export type BatchSwapStep = {
   poolId: string;
@@ -68,7 +69,7 @@ const decodeEvent = async (event: AsyncDefiBridgeProcessedEvent): Promise<EventB
   return newEventBlock;
 };
 
-export class ElementBridgeData implements BridgeDataFieldGetters {
+export class ElementBridgeData {
   public scalingFactor = BigInt(1n * 10n ** 18n);
   private interactionBlockNumbers: Array<EventBlock> = [];
 
@@ -204,8 +205,8 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
 
     return [
       {
-        assetId: BigInt(BridgeCallData.fromBigInt(defiEvent.encodedBridgeCallData).inputAssetIdA),
-        amount: userPresentValue,
+        assetId: BridgeCallData.fromBigInt(defiEvent.encodedBridgeCallData).inputAssetIdA,
+        value: userPresentValue,
       },
     ];
   }
@@ -263,7 +264,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
     inputValue: bigint,
   ): Promise<bigint[]> {
     // bridge is async the third parameter represents this
@@ -275,7 +276,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
     inputValue: bigint,
   ): Promise<number[]> {
     const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(
@@ -312,7 +313,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
 
     const outputAssetAValue = deltas[1];
 
-    const timeToExpiration = auxData - BigInt(latestBlock.timestamp);
+    const timeToExpiration = BigInt(auxData - latestBlock.timestamp);
 
     const YEAR = 60n * 60n * 24n * 365n;
     const interest = -outputAssetAValue.toBigInt() - inputValue;
@@ -322,30 +323,6 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     const percentage2sf = (percentageScaled * 10000n) / this.scalingFactor;
 
     return [Number(percentage2sf) / 100];
-  }
-
-  async getMarketSize(
-    inputAssetA: AztecAsset,
-    inputAssetB: AztecAsset,
-    outputAssetA: AztecAsset,
-    outputAssetB: AztecAsset,
-    auxData: bigint,
-  ): Promise<AssetValue[]> {
-    const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(
-      inputAssetA.erc20Address.toString(),
-      auxData,
-    );
-    const pool = await this.elementBridgeContract.pools(assetExpiryHash);
-    const poolId = pool.poolId;
-    const tokenBalances = await this.balancerContract.getPoolTokens(poolId);
-
-    // todo return the correct aztec assetIds
-    return tokenBalances[0].map((address, index) => {
-      return {
-        assetId: BigInt(address), // todo fetch via the sdk @Leila
-        amount: tokenBalances[1][index].toBigInt(),
-      };
-    });
   }
 
   async getExpiration(interactionNonce: bigint): Promise<bigint> {

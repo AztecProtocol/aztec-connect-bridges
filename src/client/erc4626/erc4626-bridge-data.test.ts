@@ -1,6 +1,6 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { BigNumber } from "ethers";
-import { IERC20, IERC20__factory, IERC4626, IERC4626__factory } from "../../../typechain-types";
+import { IERC4626, IERC4626__factory } from "../../../typechain-types";
 import { AztecAsset, AztecAssetType } from "../bridge-data";
 import { ERC4626BridgeData } from "./erc4626-bridge-data";
 
@@ -13,7 +13,6 @@ type Mockify<T> = {
 };
 
 describe("ERC4626 bridge data", () => {
-  let erc20Contract: Mockify<IERC20>;
   let erc4626Contract: Mockify<IERC4626>;
 
   let ethAsset: AztecAsset;
@@ -23,22 +22,22 @@ describe("ERC4626 bridge data", () => {
 
   beforeAll(() => {
     ethAsset = {
-      id: 0n,
+      id: 0,
       assetType: AztecAssetType.ETH,
       erc20Address: EthAddress.ZERO,
     };
     mplAsset = {
-      id: 10n, // Asset has not yet been registered on RollupProcessor so this id is random
+      id: 10, // Asset has not yet been registered on RollupProcessor so this id is random
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0x33349B282065b0284d756F0577FB39c158F935e6"),
     };
     xmplAsset = {
-      id: 1n,
+      id: 1,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0x4937A209D4cDbD3ecD48857277cfd4dA4D82914c"),
     };
     emptyAsset = {
-      id: 0n,
+      id: 0,
       assetType: AztecAssetType.NOT_USED,
       erc20Address: EthAddress.ZERO,
     };
@@ -86,7 +85,7 @@ describe("ERC4626 bridge data", () => {
 
     // Test the code using mocked controller
     const expectedOutput = (
-      await erc4626BridgeData.getExpectedOutput(mplAsset, emptyAsset, xmplAsset, emptyAsset, 0n, 10n ** 18n)
+      await erc4626BridgeData.getExpectedOutput(mplAsset, emptyAsset, xmplAsset, emptyAsset, 0, 10n ** 18n)
     )[0];
     expect(expectedOutput).toBe(111111n);
   });
@@ -103,7 +102,7 @@ describe("ERC4626 bridge data", () => {
 
     // Test the code using mocked controller
     const expectedOutput = (
-      await erc4626BridgeData.getExpectedOutput(xmplAsset, emptyAsset, mplAsset, emptyAsset, 1n, 10n ** 18n)
+      await erc4626BridgeData.getExpectedOutput(xmplAsset, emptyAsset, mplAsset, emptyAsset, 1, 10n ** 18n)
     )[0];
     expect(expectedOutput).toBe(111111n);
   });

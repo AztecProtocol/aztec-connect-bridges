@@ -42,17 +42,17 @@ describe("lido bridge data", () => {
 
   beforeAll(() => {
     ethAsset = {
-      id: 1n,
+      id: 1,
       assetType: AztecAssetType.ETH,
       erc20Address: EthAddress.ZERO,
     };
     wstETHAsset = {
-      id: 2n,
+      id: 2,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"),
     };
     emptyAsset = {
-      id: 0n,
+      id: 0,
       assetType: AztecAssetType.NOT_USED,
       erc20Address: EthAddress.ZERO,
     };
@@ -75,7 +75,7 @@ describe("lido bridge data", () => {
       emptyAsset,
       wstETHAsset,
       emptyAsset,
-      0n,
+      0,
       depositAmount,
     );
     expect(expectedOutput == output[0]).toBeTruthy();
@@ -98,7 +98,7 @@ describe("lido bridge data", () => {
       emptyAsset,
       wstETHAsset,
       emptyAsset,
-      0n,
+      0,
       depositAmount,
     );
     expect(expectedOutput == output[0]).toBeTruthy();
@@ -127,16 +127,15 @@ describe("lido bridge data", () => {
       emptyAsset,
       ethAsset,
       emptyAsset,
-      0n,
+      0,
       depositAmount,
     );
 
     expect(expectedOutput == output[0]).toBeTruthy();
   });
 
-  it("should correctly return the expectedYearlyOutput", async () => {
-    const depositAmount = BigInt(1 * 10e18);
-    const expectedOutput = 4.32;
+  it("should correctly return APR", async () => {
+    const expectedAPR = 4.32;
 
     wstethContract = {
       ...wstethContract,
@@ -165,7 +164,7 @@ describe("lido bridge data", () => {
 
     lidoBridgeData = createLidoBridgeData(wstethContract as any, curvePoolContract as any, lidoOracleContract as any);
 
-    const output = await lidoBridgeData.getAPR(wstETHAsset, emptyAsset, ethAsset, emptyAsset, 0n, depositAmount);
-    expect(expectedOutput).toBe(output[0]);
+    const apr = await lidoBridgeData.getAPR(wstETHAsset);
+    expect(apr).toBe(expectedAPR);
   });
 });

@@ -35,27 +35,27 @@ describe("compound lending bridge data", () => {
 
   beforeAll(() => {
     ethAsset = {
-      id: 0n,
+      id: 0,
       assetType: AztecAssetType.ETH,
       erc20Address: EthAddress.ZERO,
     };
     cethAsset = {
-      id: 10n, // Asset has not yet been registered on RollupProcessor so this id is random
+      id: 10, // Asset has not yet been registered on RollupProcessor so this id is random
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5"),
     };
     daiAsset = {
-      id: 1n,
+      id: 1,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
     };
     cdaiAsset = {
-      id: 11n, // Asset has not yet been registered on RollupProcessor so this id is random
+      id: 11, // Asset has not yet been registered on RollupProcessor so this id is random
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643"),
     };
     emptyAsset = {
-      id: 0n,
+      id: 0,
       assetType: AztecAssetType.NOT_USED,
       erc20Address: EthAddress.ZERO,
     };
@@ -162,7 +162,7 @@ describe("compound lending bridge data", () => {
 
     // Test the code using mocked controller
     const expectedOutput = (
-      await compoundBridgeData.getExpectedOutput(ethAsset, emptyAsset, cethAsset, emptyAsset, 0n, 10n ** 18n)
+      await compoundBridgeData.getExpectedOutput(ethAsset, emptyAsset, cethAsset, emptyAsset, 0, 10n ** 18n)
     )[0];
     expect(expectedOutput).toBe(4983773038n);
   });
@@ -178,12 +178,12 @@ describe("compound lending bridge data", () => {
 
     // Test the code using mocked controller
     const expectedOutput = (
-      await compoundBridgeData.getExpectedOutput(cethAsset, emptyAsset, ethAsset, emptyAsset, 1n, 4983783707n)
+      await compoundBridgeData.getExpectedOutput(cethAsset, emptyAsset, ethAsset, emptyAsset, 1, 4983783707n)
     )[0];
     expect(expectedOutput).toBe(1000002140628525162n);
   });
 
-  it("should correctly compute expected yield when minting", async () => {
+  it("should correctly compute expected APR", async () => {
     // Setup mocks
     cerc20Contract = {
       ...cerc20Contract,
@@ -193,22 +193,8 @@ describe("compound lending bridge data", () => {
     const compoundBridgeData = CompoundBridgeData.create({} as any);
 
     // Test the code using mocked controller
-    const expectedYield = (await compoundBridgeData.getAPR(ethAsset, emptyAsset, cethAsset, emptyAsset, 0n, 0n))[0];
-    expect(expectedYield).toBe(0.0710926465392);
-  });
-
-  it("should compute expected yield to be 0 when redeeming", async () => {
-    // Setup mocks
-    cerc20Contract = {
-      ...cerc20Contract,
-      supplyRatePerBlock: jest.fn().mockResolvedValue(BigNumber.from("338149955")),
-    };
-    ICERC20__factory.connect = () => cerc20Contract as any;
-    const compoundBridgeData = CompoundBridgeData.create({} as any);
-
-    // Test the code using mocked controller
-    const expectedYield = (await compoundBridgeData.getAPR(cethAsset, emptyAsset, ethAsset, emptyAsset, 1n, 0n))[0];
-    expect(expectedYield).toBe(0);
+    const APR = await compoundBridgeData.getAPR(cethAsset);
+    expect(APR).toBe(0.0710926465392);
   });
 
   it("should correctly compute market size", async () => {
@@ -221,11 +207,11 @@ describe("compound lending bridge data", () => {
     const compoundBridgeData = CompoundBridgeData.create({} as any);
 
     // Test the code using mocked controller
-    const marketSizeMint = (await compoundBridgeData.getMarketSize(daiAsset, emptyAsset, cdaiAsset, emptyAsset, 0n))[0];
+    const marketSizeMint = (await compoundBridgeData.getMarketSize(daiAsset, emptyAsset, cdaiAsset, emptyAsset, 0))[0];
     const marketSizeRedeem = (
-      await compoundBridgeData.getMarketSize(cdaiAsset, emptyAsset, daiAsset, emptyAsset, 1n)
+      await compoundBridgeData.getMarketSize(cdaiAsset, emptyAsset, daiAsset, emptyAsset, 1)
     )[0];
-    expect(marketSizeMint.amount).toBe(marketSizeRedeem.amount);
-    expect(marketSizeMint.amount).toBe(368442895892448315882277748n);
+    expect(marketSizeMint.value).toBe(marketSizeRedeem.value);
+    expect(marketSizeMint.value).toBe(368442895892448315882277748n);
   });
 });

@@ -32,37 +32,37 @@ describe("Testing Yearn auxData", () => {
 
   beforeAll(() => {
     ethAsset = {
-      id: 0n,
+      id: 0,
       assetType: AztecAssetType.ETH,
       erc20Address: EthAddress.ZERO,
     };
     daiAsset = {
-      id: 1n,
+      id: 1,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
     };
     yvDaiAsset = {
-      id: 2n,
+      id: 2,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xdA816459F1AB5631232FE5e97a05BBBb94970c95"),
     };
     yvEthAsset = {
-      id: 3n,
+      id: 3,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xa258c4606ca8206d8aa700ce2143d7db854d168c"),
     };
     wethAsset = {
-      id: 4n,
+      id: 4,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"),
     };
     yvUSDCAsset = {
-      id: 5n,
+      id: 5,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE"),
     };
     emptyAsset = {
-      id: 100n,
+      id: 100,
       assetType: AztecAssetType.NOT_USED,
       erc20Address: EthAddress.ZERO,
     };
@@ -88,14 +88,14 @@ describe("Testing Yearn auxData", () => {
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn((id: bigint) => {
-        if (id === 1n) {
+      getSupportedAsset: jest.fn((id: number) => {
+        if (id === 1) {
           return daiAsset.erc20Address.toString();
-        } else if (id === 2n) {
+        } else if (id === 2) {
           return yvDaiAsset.erc20Address.toString();
-        } else if (id === 3n) {
+        } else if (id === 3) {
           return yvEthAsset.erc20Address.toString();
-        } else if (id === 4n) {
+        } else if (id === 4) {
           return wethAsset.erc20Address.toString();
         }
       }),
@@ -129,14 +129,14 @@ describe("Testing Yearn auxData", () => {
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn((id: bigint) => {
-        if (id === 1n) {
+      getSupportedAsset: jest.fn((id: number) => {
+        if (id === 1) {
           return daiAsset.erc20Address.toString();
-        } else if (id === 2n) {
+        } else if (id === 2) {
           return yvDaiAsset.erc20Address.toString();
-        } else if (id === 3n) {
+        } else if (id === 3) {
           return yvEthAsset.erc20Address.toString();
-        } else if (id === 4n) {
+        } else if (id === 4) {
           return wethAsset.erc20Address.toString();
         }
       }),
@@ -234,16 +234,16 @@ describe("Testing Yearn auxData", () => {
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn((id: bigint) => {
-        if (id === 1n) {
+      getSupportedAsset: jest.fn((id: number) => {
+        if (id === 1) {
           return daiAsset.erc20Address.toString();
-        } else if (id === 2n) {
+        } else if (id === 2) {
           return yvDaiAsset.erc20Address.toString();
-        } else if (id === 3n) {
+        } else if (id === 3) {
           return yvEthAsset.erc20Address.toString();
-        } else if (id === 4n) {
+        } else if (id === 4) {
           return wethAsset.erc20Address.toString();
-        } else if (id === 5n) {
+        } else if (id === 5) {
           return yvUSDCAsset.erc20Address.toString();
         }
       }),
@@ -291,27 +291,27 @@ describe("Testing Yearn expectedOutput", () => {
 
   beforeAll(() => {
     ethAsset = {
-      id: 0n,
+      id: 0,
       assetType: AztecAssetType.ETH,
       erc20Address: EthAddress.ZERO,
     };
     daiAsset = {
-      id: 1n,
+      id: 1,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
     };
     yvDaiAsset = {
-      id: 2n,
+      id: 2,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xdA816459F1AB5631232FE5e97a05BBBb94970c95"),
     };
     yvEthAsset = {
-      id: 3n,
+      id: 3,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xa258c4606ca8206d8aa700ce2143d7db854d168c"),
     };
     emptyAsset = {
-      id: 100n,
+      id: 100,
       assetType: AztecAssetType.NOT_USED,
       erc20Address: EthAddress.ZERO,
     };
@@ -333,7 +333,7 @@ describe("Testing Yearn expectedOutput", () => {
       emptyAsset,
       yvDaiAsset,
       emptyAsset,
-      0n,
+      0,
       10n ** 18n,
     );
     expect(expectedOutputERC20[0]).toBe(989902989507028311n);
@@ -344,7 +344,7 @@ describe("Testing Yearn expectedOutput", () => {
       emptyAsset,
       yvEthAsset,
       emptyAsset,
-      0n,
+      0,
       10n ** 18n,
     );
     expect(expectedOutputETH[0]).toBe(989902989507028311n);
@@ -367,7 +367,7 @@ describe("Testing Yearn expectedOutput", () => {
       emptyAsset,
       daiAsset,
       emptyAsset,
-      1n,
+      1,
       10n ** 18n,
     );
     expect(expectedOutputERC20[0]).toBe(1110200000000000000n);
@@ -378,7 +378,7 @@ describe("Testing Yearn expectedOutput", () => {
       emptyAsset,
       ethAsset,
       emptyAsset,
-      1n,
+      1,
       10n ** 18n,
     );
     expect(expectedOutputETH[0]).toBe(1110200000000000000n);
@@ -398,13 +398,13 @@ describe("Testing Yearn expectedOutput", () => {
 
     expect.assertions(3);
     await expect(
-      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 0n, 10n ** 18n),
+      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 0, 10n ** 18n),
     ).rejects.toEqual(new Error("Token not found"));
     await expect(
-      yearnBridgeData.getExpectedOutput(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 1n, 10n ** 18n),
+      yearnBridgeData.getExpectedOutput(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 1, 10n ** 18n),
     ).rejects.toEqual(new Error("Token not found"));
     await expect(
-      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 3n, 10n ** 18n),
+      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 3, 10n ** 18n),
     ).rejects.toEqual("Invalid auxData");
   });
 });
@@ -418,27 +418,27 @@ describe("Testing Yearn getExpectedYield", () => {
 
   beforeAll(() => {
     ethAsset = {
-      id: 0n,
+      id: 0,
       assetType: AztecAssetType.ETH,
       erc20Address: EthAddress.ZERO,
     };
     daiAsset = {
-      id: 1n,
+      id: 1,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
     };
     yvDaiAsset = {
-      id: 2n,
+      id: 2,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xdA816459F1AB5631232FE5e97a05BBBb94970c95"),
     };
     wethAsset = {
-      id: 4n,
+      id: 4,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"),
     };
     emptyAsset = {
-      id: 100n,
+      id: 100,
       assetType: AztecAssetType.NOT_USED,
       erc20Address: EthAddress.ZERO,
     };
@@ -451,7 +451,7 @@ describe("Testing Yearn getExpectedYield", () => {
       emptyAsset,
       emptyAsset,
       emptyAsset,
-      0n,
+      0,
       0n,
     );
     expect(expectedOutputDAI).not.toBeUndefined();
@@ -462,7 +462,7 @@ describe("Testing Yearn getExpectedYield", () => {
       emptyAsset,
       emptyAsset,
       emptyAsset,
-      0n,
+      0,
       0n,
     );
     expect(expectedOutputWETH).not.toBeUndefined();
@@ -473,7 +473,7 @@ describe("Testing Yearn getExpectedYield", () => {
       emptyAsset,
       emptyAsset,
       emptyAsset,
-      0n,
+      0,
       0n,
     );
     expect(expectedOutputETH).not.toBeUndefined();
@@ -481,10 +481,10 @@ describe("Testing Yearn getExpectedYield", () => {
     expect((expectedOutputWETH as [number, number])[0]).toBe((expectedOutputETH as [number, number])[0]);
 
     await expect(
-      yearnBridgeData.getExpectedOutput(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0n, 0n),
+      yearnBridgeData.getExpectedOutput(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0n),
     ).rejects.toEqual(new Error("Token not found"));
     await expect(
-      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, emptyAsset, emptyAsset, 0n, 0n),
+      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0n),
     ).rejects.toEqual(new Error("Token not found"));
   });
 });

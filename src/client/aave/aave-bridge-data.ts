@@ -1,23 +1,16 @@
-import {
-  AssetValue,
-  AuxDataConfig,
-  AztecAsset,
-  SolidityType,
-  AztecAssetType,
-  BridgeDataFieldGetters,
-} from "../bridge-data";
+import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
 
+import { EthAddress } from "@aztec/barretenberg/address";
+import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import {
   IAaveLendingBridge,
   IAaveLendingBridge__factory,
-  IERC20,
   IERC20__factory,
   ILendingPool,
   ILendingPool__factory,
 } from "../../../typechain-types";
-import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { createWeb3Provider } from "../aztec/provider";
-import { EthAddress } from "@aztec/barretenberg/address";
+import { AssetValue } from "@aztec/barretenberg/asset";
 
 export class AaveBridgeData implements BridgeDataFieldGetters {
   public scalingFactor: bigint = 1n * 10n ** 18n;
@@ -45,7 +38,7 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
   ];
 
   // Unused
-  async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
+  async getInteractionPresentValue(interactionNonce: number): Promise<AssetValue[]> {
     return [];
   }
 
@@ -107,7 +100,7 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
     inputValue: bigint,
   ): Promise<bigint[]> {
     const { entering, underlyingAsset } = await this.getUnderlyingAndEntering(inputAssetA, outputAssetA);
@@ -126,26 +119,11 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
     }
   }
 
-  async getAPR(
-    inputAssetA: AztecAsset,
-    inputAssetB: AztecAsset,
-    outputAssetA: AztecAsset,
-    outputAssetB: AztecAsset,
-    auxData: bigint,
-    inputValue: bigint,
-  ): Promise<number[]> {
-    const YEAR = 60n * 60n * 24n * 365n;
-
-    const { entering, underlyingAsset } = await this.getUnderlyingAndEntering(inputAssetA, outputAssetA);
-
-    if (!entering) {
-      return [0];
-    }
-
+  async getAPR(yieldAsset: AztecAsset): Promise<number> {
     // Not taking into account how the deposited funds will change the yield
-    const reserveData = await this.lendingPoolContract.getReserveData(underlyingAsset.toString());
+    const reserveData = await this.lendingPoolContract.getReserveData(yieldAsset.toString());
     const rate = reserveData.currentLiquidityRate.toBigInt();
-    return [Number(rate / 10n ** 25n)];
+    return Number(rate / 10n ** 25n);
   }
 
   async getMarketSize(
@@ -153,7 +131,7 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
   ): Promise<AssetValue[]> {
     const { underlyingAsset } = await this.getUnderlyingAndEntering(inputAssetA, outputAssetA);
     const reserveData = await this.lendingPoolContract.getReserveData(underlyingAsset.toString());
@@ -162,7 +140,7 @@ export class AaveBridgeData implements BridgeDataFieldGetters {
     return [
       {
         assetId: inputAssetA.id,
-        amount: (await token.totalSupply()).toBigInt(),
+        value: (await token.totalSupply()).toBigInt(),
       },
     ];
   }
