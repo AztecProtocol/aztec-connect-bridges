@@ -407,78 +407,9 @@ describe("Testing Yearn expectedOutput", () => {
       yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 3, 10n ** 18n),
     ).rejects.toEqual("Invalid auxData");
   });
-});
 
-describe("Testing Yearn getExpectedYield", () => {
-  let ethAsset: AztecAsset;
-  let wethAsset: AztecAsset;
-  let daiAsset: AztecAsset;
-  let yvDaiAsset: AztecAsset;
-  let emptyAsset: AztecAsset;
-
-  beforeAll(() => {
-    ethAsset = {
-      id: 0,
-      assetType: AztecAssetType.ETH,
-      erc20Address: EthAddress.ZERO,
-    };
-    daiAsset = {
-      id: 1,
-      assetType: AztecAssetType.ERC20,
-      erc20Address: EthAddress.fromString("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-    };
-    yvDaiAsset = {
-      id: 2,
-      assetType: AztecAssetType.ERC20,
-      erc20Address: EthAddress.fromString("0xdA816459F1AB5631232FE5e97a05BBBb94970c95"),
-    };
-    wethAsset = {
-      id: 4,
-      assetType: AztecAssetType.ERC20,
-      erc20Address: EthAddress.fromString("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"),
-    };
-    emptyAsset = {
-      id: 100,
-      assetType: AztecAssetType.NOT_USED,
-      erc20Address: EthAddress.ZERO,
-    };
-  });
-
-  it("should correctly get getExpectedYield", async () => {
+  it("should throw with incorrect tokens on the input", async () => {
     const yearnBridgeData = YearnBridgeData.create({} as any);
-    const expectedOutputDAI = await yearnBridgeData.getExpectedYield?.(
-      daiAsset,
-      emptyAsset,
-      emptyAsset,
-      emptyAsset,
-      0,
-      0n,
-    );
-    expect(expectedOutputDAI).not.toBeUndefined();
-    expect((expectedOutputDAI as [number, number])[0]).toBeGreaterThan(0n);
-
-    const expectedOutputWETH = await yearnBridgeData.getExpectedYield?.(
-      wethAsset,
-      emptyAsset,
-      emptyAsset,
-      emptyAsset,
-      0,
-      0n,
-    );
-    expect(expectedOutputWETH).not.toBeUndefined();
-    expect((expectedOutputWETH as [number, number])[0]).toBeGreaterThan(0n);
-
-    const expectedOutputETH = await yearnBridgeData.getExpectedYield?.(
-      ethAsset,
-      emptyAsset,
-      emptyAsset,
-      emptyAsset,
-      0,
-      0n,
-    );
-    expect(expectedOutputETH).not.toBeUndefined();
-    expect((expectedOutputETH as [number, number])[0]).toBeGreaterThan(0n);
-    expect((expectedOutputWETH as [number, number])[0]).toBe((expectedOutputETH as [number, number])[0]);
 
     await expect(
       yearnBridgeData.getExpectedOutput(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0n),
@@ -486,5 +417,34 @@ describe("Testing Yearn getExpectedYield", () => {
     await expect(
       yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0n),
     ).rejects.toEqual(new Error("Token not found"));
+  });
+});
+
+describe("Testing Yearn getAPR", () => {
+  let yvDaiAsset: AztecAsset;
+  let yvWethAsset: AztecAsset;
+
+  beforeAll(() => {
+    yvDaiAsset = {
+      id: 2,
+      assetType: AztecAssetType.ERC20,
+      erc20Address: EthAddress.fromString("0xdA816459F1AB5631232FE5e97a05BBBb94970c95"),
+    };
+    yvWethAsset = {
+      id: 3,
+      assetType: AztecAssetType.ERC20,
+      erc20Address: EthAddress.fromString("0xa258c4606ca8206d8aa700ce2143d7db854d168c"),
+    };
+  });
+
+  it("should correctly compute APR", async () => {
+    const yearnBridgeData = YearnBridgeData.create({} as any);
+    const expectedAPRDai = await yearnBridgeData.getAPR(yvDaiAsset);
+    expect(expectedAPRDai).not.toBeUndefined();
+    expect(expectedAPRDai).toBeGreaterThan(0);
+
+    const expectedAPRWeth = await yearnBridgeData.getAPR(yvWethAsset);
+    expect(expectedAPRWeth).not.toBeUndefined();
+    expect(expectedAPRWeth).toBeGreaterThan(0);
   });
 });
