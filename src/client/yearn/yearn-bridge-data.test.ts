@@ -448,3 +448,43 @@ describe("Testing Yearn getAPR", () => {
     expect(expectedAPRWeth).toBeGreaterThan(0);
   });
 });
+
+describe("Testing Yearn getMarketSize", () => {
+  let vaultContract: Mockify<IYearnVault>;
+
+  let daiAsset: AztecAsset;
+  let yvDaiAsset: AztecAsset;
+  let emptyAsset: AztecAsset;
+
+  beforeAll(() => {
+    daiAsset = {
+      id: 1,
+      assetType: AztecAssetType.ERC20,
+      erc20Address: EthAddress.fromString("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+    };
+    yvDaiAsset = {
+      id: 2,
+      assetType: AztecAssetType.ERC20,
+      erc20Address: EthAddress.fromString("0xdA816459F1AB5631232FE5e97a05BBBb94970c95"),
+    };
+    emptyAsset = {
+      id: 100,
+      assetType: AztecAssetType.NOT_USED,
+      erc20Address: EthAddress.ZERO,
+    };
+  });
+
+  it("should correctly compute total assets", async () => {
+    // Setup mocks
+    vaultContract = {
+      ...vaultContract,
+      totalAssets: jest.fn().mockResolvedValue(BigNumber.from("97513214188808613008055674")),
+    };
+    IYearnVault__factory.connect = () => vaultContract as any;
+
+    const yearnBridgeData = YearnBridgeData.create({} as any);
+    const expectedMarketSize = (await yearnBridgeData.getMarketSize(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 0))[0]
+      .value;
+    expect(expectedMarketSize).toBe(97513214188808613008055674n);
+  });
+});

@@ -14,6 +14,7 @@ import {
   IRollupProcessor,
   IRollupProcessor__factory,
 } from "../../../typechain-types";
+import { AssetValue } from "@aztec/barretenberg/asset";
 
 export class YearnBridgeData implements BridgeDataFieldGetters {
   allYvETH?: EthAddress[];
@@ -157,6 +158,18 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
       return grossAPR * 100;
     }
     return 0;
+  }
+
+  async getMarketSize(
+    underlying: AztecAsset,
+    inputAssetB: AztecAsset,
+    yvToken: AztecAsset,
+    outputAssetB: AztecAsset,
+    auxData: number,
+  ): Promise<AssetValue[]> {
+    const yvTokenContract = IYearnVault__factory.connect(yvToken.erc20Address.toString(), this.ethersProvider);
+    const totalAssets = await yvTokenContract.totalAssets();
+    return [{ assetId: underlying.id, value: totalAssets.toBigInt() }];
   }
 
   private async isSupportedAsset(asset: AztecAsset): Promise<boolean> {
