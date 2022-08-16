@@ -192,7 +192,7 @@ describe("element bridge data", () => {
     const totalInput = defiEvents.find(x => x.nonce === 56)!.totalInputValue;
     const userShareDivisor = 2n;
     const defiEvent = getDefiEvent(56)!;
-    const [daiValue] = await elementBridgeData.getInteractionPresentValue(56n, totalInput / userShareDivisor);
+    const [daiValue] = await elementBridgeData.getInteractionPresentValue(56, totalInput / userShareDivisor);
     const delta = outputValue - defiEvent.totalInputValue;
     const timeElapsed = BigInt(now) - startDate;
     const fullTime = expiration1 - startDate;
@@ -217,10 +217,7 @@ describe("element bridge data", () => {
       const totalInput = defiEvents.find(x => x.nonce === nonce)!.totalInputValue;
       const userShareDivisor = 2n;
 
-      const [daiValue] = await elementBridgeData.getInteractionPresentValue(
-        BigInt(nonce),
-        totalInput / userShareDivisor,
-      );
+      const [daiValue] = await elementBridgeData.getInteractionPresentValue(nonce, totalInput / userShareDivisor);
       const delta = interactions[nonce].quantityPT.toBigInt() - defiEvent.totalInputValue;
       const timeElapsed = BigInt(now) - startDate;
       const fullTime = BigInt(bridgeCallData.auxData) - startDate;
@@ -240,7 +237,7 @@ describe("element bridge data", () => {
 
   it("requesting the present value of an unknown interaction should return empty values", async () => {
     const elementBridgeData = createElementBridgeData();
-    const values = await elementBridgeData.getInteractionPresentValue(57n, 0n);
+    const values = await elementBridgeData.getInteractionPresentValue(57, 0n);
     expect(values).toStrictEqual([]);
   });
 
@@ -263,7 +260,7 @@ describe("element bridge data", () => {
     } as any;
 
     const elementBridgeData = createElementBridgeData(elementBridge as any);
-    const expiration = await elementBridgeData.getExpiration(1n);
+    const expiration = await elementBridgeData.getExpiration(1);
 
     expect(expiration).toBe(BigInt(endDate));
   });
@@ -296,26 +293,11 @@ describe("element bridge data", () => {
       balancerContract as any,
       rollupContract as any,
     );
-    const output = await elementBridgeData.getAPR(
+    const termAPR = await elementBridgeData.getTermAPR(
       {
         assetType: AztecAssetType.ERC20,
         erc20Address: testAddress,
         id: 1,
-      },
-      {
-        assetType: AztecAssetType.NOT_USED,
-        erc20Address: EthAddress.ZERO,
-        id: 0,
-      },
-      {
-        assetType: AztecAssetType.ERC20,
-        erc20Address: testAddress,
-        id: 1,
-      },
-      {
-        assetType: AztecAssetType.NOT_USED,
-        erc20Address: EthAddress.ZERO,
-        id: 0,
       },
       expiry,
       BigInt(inputValue),
@@ -326,8 +308,8 @@ describe("element bridge data", () => {
     const yearlyOut = (scaledOut * BigInt(YEAR)) / elementBridgeData.scalingFactor;
     const scaledPercentage = (yearlyOut * elementBridgeData.scalingFactor) / inputValue;
     const percentage2sf = scaledPercentage / (elementBridgeData.scalingFactor / 10000n);
-    const percent = Number(percentage2sf) / 100;
+    const expectedTermAPR = Number(percentage2sf) / 100;
 
-    expect(output[0]).toBe(percent);
+    expect(termAPR).toBe(expectedTermAPR);
   });
 });
