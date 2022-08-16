@@ -30,10 +30,7 @@ contract ExampleDeployment is BaseDeployment {
 
     function deployAndList() public {
         address bridge = deploy();
-
-        listBridge(bridge, 250000);
-
-        uint256 addressId = bridgesLength();
+        uint256 addressId = listBridge(bridge, 250000);
         emit log_named_uint("Example bridge address id", addressId);
     }
 }

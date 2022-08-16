@@ -47,6 +47,7 @@ abstract contract BaseDeployment is Test {
      */
     function configure() public {
         (ROLLUP_PROCESSOR, TO_IMPERSONATE) = getRollupProcessorAndLister();
+        emit log_named_address("Rollup at", ROLLUP_PROCESSOR);
     }
 
     /**
@@ -107,14 +108,16 @@ abstract contract BaseDeployment is Test {
      * @dev If MODE == Mode.SIMULATE it impersonates the lister, otherwise broadcasts
      * @param _bridge The address of the bridge
      * @param _gasLimit The gasLimit to list the bridge with
+     * @return The bridgeAddressId for the bridge
      */
-    function listBridge(address _bridge, uint256 _gasLimit) public {
+    function listBridge(address _bridge, uint256 _gasLimit) public returns (uint256) {
         if (MODE == Mode.SIMULATE) {
             vm.prank(TO_IMPERSONATE);
         } else {
             vm.broadcast();
         }
         IRollupProcessor(ROLLUP_PROCESSOR).setSupportedBridge(_bridge, _gasLimit);
+        return bridgesLength();
     }
 
     /**
@@ -123,10 +126,13 @@ abstract contract BaseDeployment is Test {
      * @dev If MODE == Mode.SIMULATE it impersonates the lister, otherwise broadcasts
      * @param _asset The address of the bridge
      * @param _gasLimit The gasLimit to list the bridge with
+     * @return The assetId
      */
-    function listAsset(address _asset, uint256 _gasLimit) public {
-        if (_isSupportedAsset(_asset)) {
-            emit log_named_address("Asset already listed", _asset);
+    function listAsset(address _asset, uint256 _gasLimit) public returns (uint256) {
+        (bool supported, uint256 id) = _isSupportedAsset(_asset);
+        if (supported) {
+            emit log_named_uint("Asset already listed with id", id);
+            return id;
         } else {
             if (MODE == Mode.SIMULATE) {
                 vm.prank(TO_IMPERSONATE);
@@ -135,6 +141,8 @@ abstract contract BaseDeployment is Test {
             }
             IRollupProcessor(ROLLUP_PROCESSOR).setSupportedAsset(_asset, _gasLimit);
             emit log_named_address("LISTED", _asset);
+            emit log_named_uint("With id", assetLength());
+            return assetLength();
         }
     }
 
@@ -146,20 +154,24 @@ abstract contract BaseDeployment is Test {
         return IRollupProcessor(ROLLUP_PROCESSOR).getSupportedBridgesLength();
     }
 
+    function assetLength() public view returns (uint256) {
+        return IRollupProcessor(ROLLUP_PROCESSOR).getSupportedAssetsLength();
+    }
+
     /**
      * @notice Fetch whether an `_asset` is supported or not on the rollup
      */
-    function _isSupportedAsset(address _asset) private view returns (bool) {
+    function _isSupportedAsset(address _asset) private view returns (bool, uint256) {
         if (_asset == address(0)) {
-            return true;
+            return (true, 0);
         }
         uint256 length = IRollupProcessor(ROLLUP_PROCESSOR).getSupportedAssetsLength();
         for (uint256 i = 1; i <= length; i++) {
             address fetched = IRollupProcessor(ROLLUP_PROCESSOR).getSupportedAsset(i);
             if (fetched == _asset) {
-                return true;
+                return (true, i);
             }
         }
-        return false;
+        return (false, 0);
     }
 }

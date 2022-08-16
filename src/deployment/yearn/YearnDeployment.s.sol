@@ -1,0 +1,45 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec.
+pragma solidity >=0.8.4;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {BaseDeployment} from "../base/BaseDeployment.s.sol";
+import {YearnBridge} from "../../bridges/yearn/YearnBridge.sol";
+import {IYearnRegistry} from "../../interfaces/yearn/IYearnRegistry.sol";
+
+contract YearnDeployment is BaseDeployment {
+    address public constant WETH = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    address public constant DAI = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+
+    IYearnRegistry public constant YEARN_REGISTRY = IYearnRegistry(0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804);
+
+    function setUp() public virtual {
+        NETWORK = Network.DEVNET;
+        MODE = Mode.BROADCAST;
+        configure();
+    }
+
+    function deploy() public returns (address) {
+        emit log("Deploying yearn bridge");
+
+        vm.broadcast();
+        YearnBridge bridge = new YearnBridge(ROLLUP_PROCESSOR);
+
+        emit log_named_address("Yearn bridge deployed to", address(bridge));
+
+        return address(bridge);
+    }
+
+    function deployAndList() public {
+        address bridge = deploy();
+
+        uint256 addressId = listBridge(bridge, 500000);
+        emit log_named_uint("Yearn bridge address id", addressId);
+
+        listAsset(YEARN_REGISTRY.latestVault(DAI), 100000);
+        listAsset(YEARN_REGISTRY.latestVault(WETH), 100000);
+
+        YearnBridge(payable(bridge)).preApprove(YEARN_REGISTRY.latestVault(DAI));
+        YearnBridge(payable(bridge)).preApprove(YEARN_REGISTRY.latestVault(WETH));
+    }
+}

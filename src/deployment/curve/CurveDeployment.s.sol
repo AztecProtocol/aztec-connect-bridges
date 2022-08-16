@@ -62,9 +62,7 @@ contract CurveDeployment is BaseDeployment {
     function deployAndList() public {
         (address bridge, address wstEth) = deployAndFund();
 
-        listBridge(bridge, 250000);
-
-        uint256 addressId = bridgesLength();
+        uint256 addressId = listBridge(bridge, 250000);
         emit log_named_uint("Curve bridge address id", addressId);
 
         listAsset(wstEth, 100000);
