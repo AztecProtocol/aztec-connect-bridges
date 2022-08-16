@@ -43,8 +43,8 @@ export interface AuxDataConfig {
 export interface BridgeDataFieldGetters {
   /**
    * @dev This function should be implemented for stateful bridges
-   * @param inputValue User's input value
    * @param interactionNonce A globally unique identifier of a given DeFi interaction
+   * @param inputValue User's input value
    * @return The value of the user's share of a given interaction
    */
   getInteractionPresentValue?(interactionNonce: number, inputValue: bigint): Promise<AssetValue[]>;
@@ -110,16 +110,17 @@ export interface BridgeDataFieldGetters {
    */
   getAPR?(yieldAsset: AztecAsset): Promise<number>;
 
-  /** 
-  * @dev This function should be implemented for all bridges dealing with L1 liquidity
-  * @param inputAssetA A struct detailing the first input asset
-  * @param inputAssetB A struct detailing the second input asset
-  * @param outputAssetA A struct detailing the first output asset
-  * @param outputAssetB A struct detailing the second output asset
-  * @param auxData Arbitrary data to be passed into the bridge contract (slippage / nftID etc)
-  * @return L1 liquidity this bridge call will be interacting with (e.g. the liquidity of the underlying yield pool
-          or AMM)
-  */
+  /**
+   * @notice This function computes market size
+   * @dev Should be implemented for all bridges dealing with L1 liquidity
+   * @param inputAssetA A struct detailing the first input asset
+   * @param inputAssetB A struct detailing the second input asset
+   * @param outputAssetA A struct detailing the first output asset
+   * @param outputAssetB A struct detailing the second output asset
+   * @param auxData Arbitrary data to be passed into the bridge contract (slippage / nftID etc)
+   * @return L1 liquidity this bridge call will be interacting with (e.g. the liquidity of the underlying yield pool
+   *       or AMM, amount of ETH staked in Lido etc.)
+   */
   getMarketSize?(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
