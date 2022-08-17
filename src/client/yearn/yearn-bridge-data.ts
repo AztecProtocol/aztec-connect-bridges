@@ -14,6 +14,7 @@ import {
   IRollupProcessor,
   IRollupProcessor__factory,
 } from "../../../typechain-types";
+import { AssetValue } from "@aztec/barretenberg/asset";
 
 export class YearnBridgeData implements BridgeDataFieldGetters {
   allYvETH?: EthAddress[];
@@ -138,36 +139,37 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     throw "Invalid auxData";
   }
 
-  async getExpectedYield?(
-    inputAssetA: AztecAsset,
-    inputAssetB: AztecAsset,
-    outputAssetA: AztecAsset,
-    outputAssetB: AztecAsset,
-    auxData: number,
-    inputValue: bigint,
-  ): Promise<number[]> {
+  // @param yieldAsset in this case yieldAsset are yv tokens (e.g. yvDai, yvEth, etc.)
+  async getAPR(yieldAsset: AztecAsset): Promise<number> {
     type TminVaultStruct = {
       address: string;
       apy: {
         gross_apr: number;
       };
     };
-    let tokenAddress = inputAssetA.erc20Address.toString();
-    if (inputAssetA.assetType === AztecAssetType.ETH) {
-      tokenAddress = this.wETH;
-    }
-    const yvTokenAddress = await this.yRegistry.latestVault(tokenAddress);
     const allVaults = (await (
       await fetch("https://api.yearn.finance/v1/chains/1/vaults/all")
     ).json()) as TminVaultStruct[];
-    const currentVault = allVaults.find(
-      (vault: TminVaultStruct) => vault.address.toLowerCase() == yvTokenAddress.toLowerCase(),
+    const currentVault = allVaults.find((vault: TminVaultStruct) =>
+      EthAddress.fromString(vault.address).equals(yieldAsset.erc20Address),
     );
     if (currentVault) {
       const grossAPR = currentVault.apy.gross_apr;
-      return [grossAPR * 100, 0];
+      return grossAPR * 100;
     }
-    return [0, 0];
+    return 0;
+  }
+
+  async getMarketSize(
+    underlying: AztecAsset,
+    inputAssetB: AztecAsset,
+    yvToken: AztecAsset,
+    outputAssetB: AztecAsset,
+    auxData: number,
+  ): Promise<AssetValue[]> {
+    const yvTokenContract = IYearnVault__factory.connect(yvToken.erc20Address.toString(), this.ethersProvider);
+    const totalAssets = await yvTokenContract.totalAssets();
+    return [{ assetId: underlying.id, value: totalAssets.toBigInt() }];
   }
 
   private async isSupportedAsset(asset: AztecAsset): Promise<boolean> {

@@ -17,4 +17,6 @@ interface IYearnVault {
     function availableDepositLimit() external view returns (uint256);
 
     function pricePerShare() external view returns (uint256);
+
+    function totalAssets() external view returns (uint256);
 }
