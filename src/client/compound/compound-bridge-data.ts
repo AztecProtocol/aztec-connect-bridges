@@ -48,7 +48,7 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-  ): Promise<bigint[]> {
+  ): Promise<number[]> {
     const allMarkets = await this.getAllMarkets();
 
     if (!(await this.isSupportedAsset(inputAssetA))) {
@@ -59,9 +59,9 @@ export class CompoundBridgeData implements BridgeDataFieldGetters {
     }
 
     if (allMarkets.some(addr => addr.equals(inputAssetA.erc20Address))) {
-      return [1n];
+      return [1];
     } else if (allMarkets.some(addr => addr.equals(outputAssetA.erc20Address))) {
-      return [0n];
+      return [0];
     } else {
       throw "Invalid input and/or output asset";
     }

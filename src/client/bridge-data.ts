@@ -62,7 +62,7 @@ export interface BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-  ): Promise<bigint[]>;
+  ): Promise<number[]>;
 
   /**
    * @dev This public variable defines the structure of the auxData

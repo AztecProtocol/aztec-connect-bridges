@@ -242,10 +242,10 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-  ): Promise<bigint[]> {
+  ): Promise<number[]> {
     const assetExpiries = await this.elementBridgeContract.getAssetExpiries(inputAssetA.erc20Address.toString());
     if (assetExpiries && assetExpiries.length) {
-      return assetExpiries.map(a => a.toBigInt());
+      return assetExpiries.map(a => a.toNumber());
     }
     return [];
   }

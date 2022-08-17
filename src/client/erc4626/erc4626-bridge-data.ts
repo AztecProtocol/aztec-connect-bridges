@@ -29,13 +29,13 @@ export class ERC4626BridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-  ): Promise<bigint[]> {
+  ): Promise<number[]> {
     // First check whether outputAssetA is a share by calling asset() on it
     let vault = IERC4626__factory.connect(outputAssetA.erc20Address.toString(), this.ethersProvider);
     try {
       const vaultAsset = EthAddress.fromString(await vault.asset());
       if (vaultAsset.equals(inputAssetA.erc20Address)) {
-        return [0n];
+        return [0];
       } else {
         throw "Address of vault's asset isn't equal to inputAssetA.erc20address";
       }
@@ -48,7 +48,7 @@ export class ERC4626BridgeData implements BridgeDataFieldGetters {
     try {
       const vaultAsset = EthAddress.fromString(await vault.asset());
       if (vaultAsset.equals(outputAssetA.erc20Address)) {
-        return [1n];
+        return [1];
       } else {
         throw "Address of vault's asset isn't equal to outputAssetA.erc20address";
       }
