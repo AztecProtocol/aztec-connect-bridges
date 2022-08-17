@@ -104,9 +104,9 @@ describe("Testing Yearn auxData", () => {
 
     const yearnBridgeData = YearnBridgeData.create({} as any);
     const auxDataDepositERC20 = await yearnBridgeData.getAuxData(daiAsset, emptyAsset, yvDaiAsset, emptyAsset);
-    expect(auxDataDepositERC20[0]).toBe(0n);
+    expect(auxDataDepositERC20[0]).toBe(0);
     const auxDataDepositETH = await yearnBridgeData.getAuxData(ethAsset, emptyAsset, yvEthAsset, emptyAsset);
-    expect(auxDataDepositETH[0]).toBe(0n);
+    expect(auxDataDepositETH[0]).toBe(0);
   });
 
   it("should correctly fetch auxData for withdrawal", async () => {
@@ -145,9 +145,9 @@ describe("Testing Yearn auxData", () => {
 
     const yearnBridgeData = YearnBridgeData.create({} as any);
     const auxDataDepositERC20 = await yearnBridgeData.getAuxData(yvDaiAsset, emptyAsset, daiAsset, emptyAsset);
-    expect(auxDataDepositERC20[0]).toBe(1n);
+    expect(auxDataDepositERC20[0]).toBe(1);
     const auxDataDepositETH = await yearnBridgeData.getAuxData(yvEthAsset, emptyAsset, ethAsset, emptyAsset);
-    expect(auxDataDepositETH[0]).toBe(1n);
+    expect(auxDataDepositETH[0]).toBe(1);
   });
 
   it("should throw when getting auxData for unsupported inputAssetA", async () => {

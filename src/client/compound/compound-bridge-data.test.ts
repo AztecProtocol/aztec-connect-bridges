@@ -80,7 +80,7 @@ describe("compound lending bridge data", () => {
 
     // Test the code using mocked controller
     const auxDataRedeem = await compoundBridgeData.getAuxData(ethAsset, emptyAsset, cethAsset, emptyAsset);
-    expect(auxDataRedeem[0]).toBe(0n);
+    expect(auxDataRedeem[0]).toBe(0);
   });
 
   it("should correctly fetch auxData when redeeming", async () => {
@@ -102,7 +102,7 @@ describe("compound lending bridge data", () => {
 
     // Test the code using mocked controller
     const auxDataRedeem = await compoundBridgeData.getAuxData(cethAsset, emptyAsset, ethAsset, emptyAsset);
-    expect(auxDataRedeem[0]).toBe(1n);
+    expect(auxDataRedeem[0]).toBe(1);
   });
 
   it("should throw when getting auxData for unsupported inputAssetA", async () => {

@@ -55,7 +55,7 @@ describe("ERC4626 bridge data", () => {
 
     // Test the code using mocked controller
     const auxDataIssue = await erc4626BridgeData.getAuxData(mplAsset, emptyAsset, xmplAsset, emptyAsset);
-    expect(auxDataIssue[0]).toBe(0n);
+    expect(auxDataIssue[0]).toBe(0);
   });
 
   it("should correctly fetch auxData when redeeming shares", async () => {
@@ -70,7 +70,7 @@ describe("ERC4626 bridge data", () => {
 
     // Test the code using mocked controller
     const auxDataRedeem = await erc4626BridgeData.getAuxData(xmplAsset, emptyAsset, mplAsset, emptyAsset);
-    expect(auxDataRedeem[0]).toBe(1n);
+    expect(auxDataRedeem[0]).toBe(1);
   });
 
   it("should correctly compute expected output when issuing shares", async () => {

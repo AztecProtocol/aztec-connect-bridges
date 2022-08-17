@@ -63,8 +63,8 @@ export class CurveStethBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-  ): Promise<bigint[]> {
-    return [0n];
+  ): Promise<number[]> {
+    return [0];
   }
 
   async getExpectedOutput(
