@@ -144,4 +144,7 @@ export interface BridgeDataFieldGetters {
    * @return The underlying asset (address, name, symbol, decimals, amount)
    */
   getUnderlyingAmount?(asset: AztecAsset, amount: bigint): Promise<UnderlyingAsset>;
+
+  // Used only in Element, TODO: remove once clients get refactored to not share 1 class
+  getTermAPR?(underlying: AztecAsset, auxData: number, inputValue: bigint): Promise<number>;
 }
