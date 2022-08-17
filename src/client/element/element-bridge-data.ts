@@ -12,7 +12,7 @@ import {
 } from "../../../typechain-types";
 import { AsyncDefiBridgeProcessedEvent } from "../../../typechain-types/IRollupProcessor";
 import { createWeb3Provider } from "../aztec/provider";
-import { AuxDataConfig, AztecAsset, SolidityType } from "../bridge-data";
+import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
 
 export type BatchSwapStep = {
   poolId: string;
@@ -43,7 +43,7 @@ export type ChainProperties = {
 };
 
 interface EventBlock {
-  nonce: bigint;
+  nonce: number;
   blockNumber: number;
   encodedBridgeCallData: bigint;
   totalInputValue: bigint;
@@ -60,7 +60,7 @@ const decodeEvent = async (event: AsyncDefiBridgeProcessedEvent): Promise<EventB
   } = event;
   const block = await event.getBlock();
   const newEventBlock = {
-    nonce: nonce.toBigInt(),
+    nonce: nonce.toNumber(),
     blockNumber: block.number,
     encodedBridgeCallData: encodedBridgeCallData.toBigInt(),
     totalInputValue: totalInputValue.toBigInt(),
@@ -69,7 +69,7 @@ const decodeEvent = async (event: AsyncDefiBridgeProcessedEvent): Promise<EventB
   return newEventBlock;
 };
 
-export class ElementBridgeData {
+export class ElementBridgeData implements BridgeDataFieldGetters {
   public scalingFactor = BigInt(1n * 10n ** 18n);
   private interactionBlockNumbers: Array<EventBlock> = [];
 
@@ -123,7 +123,7 @@ export class ElementBridgeData {
     return this.elementBridgeContract.provider.getBlock("latest");
   }
 
-  private async findDefiEventForNonce(interactionNonce: bigint) {
+  private async findDefiEventForNonce(interactionNonce: number) {
     // start off with the earliest possible block being the block in which the tranche was first deployed
     let earliestBlockNumber = Number(
       await this.elementBridgeContract.getTrancheDeploymentBlockNumber(interactionNonce),
@@ -179,7 +179,7 @@ export class ElementBridgeData {
   // @dev which define how much a given interaction is worth in terms of Aztec asset ids.
   // @param bigint interactionNonce the interaction nonce to return the value for
 
-  async getInteractionPresentValue(interactionNonce: bigint, inputValue: bigint): Promise<AssetValue[]> {
+  async getInteractionPresentValue(interactionNonce: number, inputValue: bigint): Promise<AssetValue[]> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
     if (interaction === undefined) {
       return [];
@@ -211,7 +211,7 @@ export class ElementBridgeData {
     ];
   }
 
-  async getInteractionAPR(interactionNonce: bigint): Promise<number[]> {
+  async getInteractionAPR(interactionNonce: number): Promise<number[]> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
     if (interaction === undefined) {
       return [];
@@ -271,16 +271,9 @@ export class ElementBridgeData {
     return [BigInt(0), BigInt(0), BigInt(1)];
   }
 
-  async getAPR(
-    inputAssetA: AztecAsset,
-    inputAssetB: AztecAsset,
-    outputAssetA: AztecAsset,
-    outputAssetB: AztecAsset,
-    auxData: number,
-    inputValue: bigint,
-  ): Promise<number[]> {
+  async getTermAPR(underlying: AztecAsset, auxData: number, inputValue: bigint): Promise<number> {
     const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(
-      inputAssetA.erc20Address.toString(),
+      underlying.erc20Address.toString(),
       auxData,
     );
     const pool = await this.elementBridgeContract.pools(assetExpiryHash);
@@ -305,7 +298,7 @@ export class ElementBridgeData {
     const deltas = await this.balancerContract.queryBatchSwap(
       SwapType.SwapExactIn,
       [step],
-      [inputAssetA.erc20Address.toString(), trancheAddress],
+      [underlying.erc20Address.toString(), trancheAddress],
       funds,
     );
 
@@ -322,15 +315,15 @@ export class ElementBridgeData {
     const percentageScaled = divide(yearlyOutput, inputValue, this.scalingFactor);
     const percentage2sf = (percentageScaled * 10000n) / this.scalingFactor;
 
-    return [Number(percentage2sf) / 100];
+    return Number(percentage2sf) / 100;
   }
 
-  async getExpiration(interactionNonce: bigint): Promise<bigint> {
+  async getExpiration(interactionNonce: number): Promise<bigint> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
     return BigInt(interaction.expiry.toString());
   }
 
-  async hasFinalised(interactionNonce: bigint): Promise<boolean> {
+  async hasFinalised(interactionNonce: number): Promise<boolean> {
     const interaction = await this.elementBridgeContract.interactions(interactionNonce);
     return interaction.finalised;
   }
