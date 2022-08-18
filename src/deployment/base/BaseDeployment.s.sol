@@ -70,7 +70,7 @@ abstract contract BaseDeployment is Test {
         if (envMode) {
             emit log_named_string("broadcasting", vm.envString(NETWORK_KEY));
         } else {
-            emit log_named_string("simulating",  vm.envString(NETWORK_KEY));
+            emit log_named_string("simulating", vm.envString(NETWORK_KEY));
         }
 
         (ROLLUP_PROCESSOR, TO_IMPERSONATE) = getRollupProcessorAndLister();
