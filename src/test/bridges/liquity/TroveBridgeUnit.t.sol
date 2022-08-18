@@ -77,7 +77,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
 
         // Drop price and liquidate the trove
-        setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
+        _setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
         TROVE_MANAGER.liquidate(address(bridge));
         Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(bridge)));
         assertTrue(troveStatus == Status.closedByLiquidation, "Invalid trove status");
@@ -107,7 +107,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
 
         uint256 targetPrice = (currentPrice * targetCollateralRatio) / totalCollateralRatio;
-        setLiquityPrice(targetPrice);
+        _setLiquityPrice(targetPrice);
         assertTrue(TROVE_MANAGER.checkRecoveryMode(targetPrice), "Liquity not in recovery mode");
 
         uint256 icr = TROVE_MANAGER.getCurrentICR(address(bridge), targetPrice);
@@ -321,13 +321,13 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
 
         uint256 priceBeforeDrop = TROVE_MANAGER.priceFeed().fetchPrice();
 
-        setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
+        _setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
         TROVE_MANAGER.liquidateTroves(10);
 
         _borrowAfterRedistribution();
 
         // Rise the price back so that the system is not in recovery mode - allows me to drop trove's CR for a bit
-        setLiquityPrice(priceBeforeDrop);
+        _setLiquityPrice(priceBeforeDrop);
 
         // Drop Trove's CR to MCR by impersonating the bridge and directly withdrawing collateral
         (uint256 debt, uint256 coll, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
@@ -466,7 +466,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
 
         uint256 priceBeforeDrop = TROVE_MANAGER.priceFeed().fetchPrice();
 
-        setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
+        _setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
         TROVE_MANAGER.liquidateTroves(10);
 
         (uint256 debtAfter, uint256 collAfter, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
@@ -477,7 +477,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         _borrowAfterRedistribution();
 
         // Rise the price back so that the system is not in recovery mode - allows me to drop trove's CR for a bit
-        setLiquityPrice(priceBeforeDrop);
+        _setLiquityPrice(priceBeforeDrop);
     }
 
     function _repay(

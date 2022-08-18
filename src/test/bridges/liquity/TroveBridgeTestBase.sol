@@ -50,7 +50,7 @@ contract TroveBridgeTestBase is TestUtil {
     fallback() external payable {}
 
     function _baseSetUp() internal {
-        setUpTokens();
+        _setUpTokensAndLabels();
 
         vm.label(address(bridge.USDC()), "USDC");
         vm.label(address(BORROWER_OPERATIONS), "BORROWER_OPERATIONS");
