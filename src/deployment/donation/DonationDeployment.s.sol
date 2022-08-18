@@ -7,12 +7,6 @@ import {BaseDeployment} from "../base/BaseDeployment.s.sol";
 import {DonationBridge} from "../../bridges/donation/DonationBridge.sol";
 
 contract DonationDeployment is BaseDeployment {
-    function setUp() public virtual {
-        NETWORK = Network.DEVNET;
-        MODE = Mode.BROADCAST;
-        configure();
-    }
-
     function deploy() public returns (address) {
         emit log("Deploying Donation bridge");
 

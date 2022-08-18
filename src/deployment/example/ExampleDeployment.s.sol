@@ -8,12 +8,6 @@ import {Subsidy} from "../../aztec/Subsidy.sol";
 import {ISubsidy} from "../../aztec/interfaces/ISubsidy.sol";
 
 contract ExampleDeployment is BaseDeployment {
-    function setUp() public virtual {
-        NETWORK = Network.DEVNET;
-        MODE = Mode.BROADCAST;
-        configure();
-    }
-
     function deploy() public returns (address) {
         emit log("Deploying example bridge");
 

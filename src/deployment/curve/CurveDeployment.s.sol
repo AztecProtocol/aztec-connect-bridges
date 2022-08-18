@@ -8,12 +8,6 @@ import {ILido} from "../../interfaces/lido/ILido.sol";
 import {IWstETH} from "../../interfaces/lido/IWstETH.sol";
 
 contract CurveDeployment is BaseDeployment {
-    function setUp() public virtual {
-        NETWORK = Network.DEVNET;
-        MODE = Mode.BROADCAST;
-        configure();
-    }
-
     function fundWithDust(address _bridge) public {
         CurveStEthBridge bridge = CurveStEthBridge(payable(_bridge));
 

@@ -7,12 +7,6 @@ import {BaseDeployment} from "../base/BaseDeployment.s.sol";
 import {ERC4626Bridge} from "../../bridges/erc4626/ERC4626Bridge.sol";
 
 contract ERC4626Deployment is BaseDeployment {
-    function setUp() public virtual {
-        NETWORK = Network.DEVNET;
-        MODE = Mode.BROADCAST;
-        configure();
-    }
-
     function deploy() public returns (address) {
         emit log("Deploying ERC4626 bridge");
 

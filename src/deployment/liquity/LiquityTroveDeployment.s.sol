@@ -8,12 +8,6 @@ import {TroveBridge} from "../../bridges/liquity/TroveBridge.sol";
 contract LiquityTroveDeployment is BaseDeployment {
     uint256 internal constant INITIAL_CR = 30; // TODO: update
 
-    function setUp() public virtual {
-        NETWORK = Network.DEVNET;
-        MODE = Mode.BROADCAST;
-        configure();
-    }
-
     function deploy() public returns (address) {
         emit log("Deploying example bridge");
 

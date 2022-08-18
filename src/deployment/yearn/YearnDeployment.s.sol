@@ -13,12 +13,6 @@ contract YearnDeployment is BaseDeployment {
 
     IYearnRegistry public constant YEARN_REGISTRY = IYearnRegistry(0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804);
 
-    function setUp() public virtual {
-        NETWORK = Network.DEVNET;
-        MODE = Mode.BROADCAST;
-        configure();
-    }
-
     function deploy() public returns (address) {
         emit log("Deploying yearn bridge");
 

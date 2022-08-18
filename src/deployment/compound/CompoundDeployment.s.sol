@@ -10,12 +10,6 @@ contract CompoundDeployment is BaseDeployment {
     address internal constant cETH = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
     address internal constant cDAI = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643;
 
-    function setUp() public virtual {
-        NETWORK = Network.DEVNET;
-        MODE = Mode.BROADCAST;
-        configure();
-    }
-
     function deploy() public returns (address) {
         emit log("Deploying Compound bridge");
 

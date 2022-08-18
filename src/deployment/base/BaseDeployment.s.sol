@@ -34,18 +34,45 @@ abstract contract BaseDeployment is Test {
 
     /* solhint-disable var-name-mixedcase */
 
-    Network internal NETWORK;
-    Mode internal MODE;
+    Network private NETWORK;
+    Mode private MODE;
     address internal ROLLUP_PROCESSOR;
     address internal TO_IMPERSONATE;
 
     /* solhint-enable var-name-mixedcase */
 
+    function setUp() public {
+        configure();
+    }
+
     /**
      * @notice Configures the storage variables based on NETWORK and MODE values.
      * @dev require --ffi to fetch mainnet
      */
-    function configure() public {
+    function configure() internal {
+        // Read from the .env
+        string memory NETWORK_KEY = "network";
+        string memory MODE_KEY = "broadcast";
+
+        bool envMode = vm.envBool(MODE_KEY);
+        MODE = envMode ? Mode.BROADCAST : Mode.SIMULATE;
+
+        bytes32 envNetwork = keccak256(abi.encodePacked(vm.envString(NETWORK_KEY)));
+
+        if (envNetwork == keccak256(abi.encodePacked("mainnet"))) {
+            NETWORK = Network.MAINNET;
+        } else if (envNetwork == keccak256(abi.encodePacked("devnet"))) {
+            NETWORK = Network.DEVNET;
+        } else if (envNetwork == keccak256(abi.encodePacked("testnet"))) {
+            NETWORK = Network.TESTNET;
+        }
+
+        if (envMode) {
+            emit log_named_string("broadcasting", vm.envString(NETWORK_KEY));
+        } else {
+            emit log_named_string("simulating",  vm.envString(NETWORK_KEY));
+        }
+
         (ROLLUP_PROCESSOR, TO_IMPERSONATE) = getRollupProcessorAndLister();
         emit log_named_address("Rollup at", ROLLUP_PROCESSOR);
     }
