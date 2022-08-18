@@ -42,22 +42,14 @@ abstract contract BaseDeployment is Test {
     /* solhint-enable var-name-mixedcase */
 
     function setUp() public {
-        configure();
-    }
-
-    /**
-     * @notice Configures the storage variables based on NETWORK and MODE values.
-     * @dev require --ffi to fetch mainnet
-     */
-    function configure() internal {
         // Read from the .env
-        string memory NETWORK_KEY = "network";
-        string memory MODE_KEY = "broadcast";
+        string memory networkKey = "network";
+        string memory modeKey = "broadcast";
 
-        bool envMode = vm.envBool(MODE_KEY);
+        bool envMode = vm.envBool(modeKey);
         MODE = envMode ? Mode.BROADCAST : Mode.SIMULATE;
 
-        bytes32 envNetwork = keccak256(abi.encodePacked(vm.envString(NETWORK_KEY)));
+        bytes32 envNetwork = keccak256(abi.encodePacked(vm.envString(networkKey)));
 
         if (envNetwork == keccak256(abi.encodePacked("mainnet"))) {
             NETWORK = Network.MAINNET;
@@ -68,9 +60,9 @@ abstract contract BaseDeployment is Test {
         }
 
         if (envMode) {
-            emit log_named_string("broadcasting", vm.envString(NETWORK_KEY));
+            emit log_named_string("broadcasting", vm.envString(networkKey));
         } else {
-            emit log_named_string("simulating", vm.envString(NETWORK_KEY));
+            emit log_named_string("simulating", vm.envString(networkKey));
         }
 
         (ROLLUP_PROCESSOR, TO_IMPERSONATE) = getRollupProcessorAndLister();
