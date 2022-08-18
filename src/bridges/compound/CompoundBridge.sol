@@ -25,7 +25,7 @@ contract CompoundBridge is BridgeBase {
 
     error MarketNotListed();
 
-    IComptroller public immutable COMPTROLLER = IComptroller(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
+    IComptroller public constant COMPTROLLER = IComptroller(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
     // solhint-disable-next-line
     address public constant cETH = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
 
