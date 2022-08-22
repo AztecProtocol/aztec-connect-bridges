@@ -78,22 +78,18 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
       }
     }
 
-    // standard deposit
-    const matchDepositSituation =
-      (allVaultsForTokens[inputAssetA.erc20Address.toString()] || [])?.findIndex(
-        token => token.toString() === outputAssetA.erc20Address.toString(),
-      ) > -1;
-    if (matchDepositSituation) {
-      return [0];
-    }
+    const hasInputAsset = allVaultsForTokens[inputAssetA.erc20Address.toString()] || [];
+    const hasOutputAsset = allVaultsForTokens[outputAssetA.erc20Address.toString()] || [];
 
+    // standard deposit
+    const matchDepositSituation = hasInputAsset && hasInputAsset.findIndex(token => token.toString() === outputAssetA.erc20Address.toString()) > -1;
+    if (matchDepositSituation) {
+        return [0];
+    }
     // standard withdraw
-    const matchWithdrawSituation =
-      (allVaultsForTokens[outputAssetA.erc20Address.toString()] || [])?.findIndex(
-        token => token.toString() === inputAssetA.erc20Address.toString(),
-      ) > -1;
+    const matchWithdrawSituation = hasOutputAsset && hasOutputAsset.findIndex(token => token.toString() === inputAssetA.erc20Address.toString()) > -1;
     if (matchWithdrawSituation) {
-      return [1];
+        return [1];
     }
     throw "Invalid input and/or output asset";
   }
