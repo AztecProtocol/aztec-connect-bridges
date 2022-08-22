@@ -72,7 +72,7 @@ contract BiDCATestUnit is Test {
         // Preparation
         assetA = IERC20(address(0x6B175474E89094C44Da98b954EedeAC495271d0F));
         assetB = IERC20(address(WETH));
-        bridge = new UniswapDCABridge(address(this), 1 days);
+        bridge = new UniswapDCABridge(address(this), 1 days, 0);
         aztecAssetA = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: address(assetA),

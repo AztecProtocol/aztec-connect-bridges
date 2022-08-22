@@ -48,9 +48,11 @@ contract UniswapDCABridge is BiDCABridge {
 
     IChainlinkOracle public constant ORACLE = IChainlinkOracle(0x773616E4d11A78F511299002da57A0a94577F1f4);
 
-    constructor(address _rollupProcessor, uint256 _tickSize)
-        BiDCABridge(_rollupProcessor, DAI, address(WETH), _tickSize)
-    {
+    constructor(
+        address _rollupProcessor,
+        uint256 _tickSize,
+        uint256 _fee
+    ) BiDCABridge(_rollupProcessor, DAI, address(WETH), _tickSize, _fee) {
         IERC20(DAI).safeApprove(address(UNI_ROUTER), type(uint256).max);
         IERC20(address(WETH)).safeApprove(address(UNI_ROUTER), type(uint256).max);
     }
