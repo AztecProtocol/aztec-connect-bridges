@@ -82,12 +82,15 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     const hasOutputAsset = allVaultsForTokens[outputAssetA.erc20Address.toString()] || [];
 
     // standard deposit
-    const matchDepositSituation = hasInputAsset && hasInputAsset.findIndex(token => token.toString() === outputAssetA.erc20Address.toString()) > -1;
+    const matchDepositSituation =
+      hasInputAsset && hasInputAsset.findIndex(token => token.toString() === outputAssetA.erc20Address.toString()) > -1;
     if (matchDepositSituation) {
       return [0];
     }
     // standard withdraw
-    const matchWithdrawSituation = hasOutputAsset && hasOutputAsset.findIndex(token => token.toString() === inputAssetA.erc20Address.toString()) > -1;
+    const matchWithdrawSituation =
+      hasOutputAsset &&
+      hasOutputAsset.findIndex(token => token.toString() === inputAssetA.erc20Address.toString()) > -1;
     if (matchWithdrawSituation) {
       return [1];
     }
