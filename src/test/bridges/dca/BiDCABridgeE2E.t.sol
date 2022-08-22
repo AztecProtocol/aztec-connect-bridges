@@ -56,6 +56,8 @@ contract BiDCATestE2E is BridgeTestBase {
     IWETH internal constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     address internal constant ORACLE = 0x773616E4d11A78F511299002da57A0a94577F1f4;
 
+    address private constant ORIGIN = address(0xf00ba3);
+
     UniswapDCABridge internal bridge;
     IERC20 internal assetA;
     IERC20 internal assetB;
@@ -73,7 +75,7 @@ contract BiDCATestE2E is BridgeTestBase {
         assetA = IERC20(address(0x6B175474E89094C44Da98b954EedeAC495271d0F));
         assetB = IERC20(address(WETH));
 
-        bridge = new UniswapDCABridge(address(ROLLUP_PROCESSOR), 1 days);
+        bridge = new UniswapDCABridge(address(ROLLUP_PROCESSOR), 1 days, 10);
 
         vm.deal(address(bridge), 0);
 
@@ -190,9 +192,23 @@ contract BiDCATestE2E is BridgeTestBase {
             uint256 outputValueB = (_aFirst ? assetA : assetB).balanceOf(address(ROLLUP_PROCESSOR));
             bool interactionComplete;
             {
+                uint256 originA = (_aFirst ? assetB : assetA).balanceOf(ORIGIN);
+                uint256 originB = (_aFirst ? assetA : assetB).balanceOf(ORIGIN);
+
+                vm.prank(address(this), ORIGIN);
                 interactionComplete = ROLLUP_PROCESSOR.processAsyncDefiInteraction(0);
                 outputValueA = (_aFirst ? assetB : assetA).balanceOf(address(ROLLUP_PROCESSOR)) - outputValueA;
                 outputValueB = (_aFirst ? assetA : assetB).balanceOf(address(ROLLUP_PROCESSOR)) - outputValueB;
+
+                uint256 incentiveA = ((_aFirst ? assetB : assetA).balanceOf(ORIGIN) - originA);
+                uint256 incentiveB = ((_aFirst ? assetA : assetB).balanceOf(ORIGIN) - originB);
+
+                if (interactionComplete) {
+                    assertGt(incentiveA, 0, "No incentives received");
+                }
+
+                outputValueA += (_aFirst ? assetB : assetA).balanceOf(ORIGIN);
+                outputValueB += (_aFirst ? assetA : assetB).balanceOf(ORIGIN);
             }
 
             if (bridge.getDCA(0).end <= (block.timestamp / bridge.TICK_SIZE())) {
@@ -223,9 +239,22 @@ contract BiDCATestE2E is BridgeTestBase {
             uint256 outputValueB = (_aFirst ? assetB : assetA).balanceOf(address(ROLLUP_PROCESSOR));
             bool interactionComplete;
             {
+                uint256 originA = (_aFirst ? assetA : assetB).balanceOf(ORIGIN);
+                uint256 originB = (_aFirst ? assetB : assetA).balanceOf(ORIGIN);
+
+                vm.prank(address(this), ORIGIN);
                 interactionComplete = ROLLUP_PROCESSOR.processAsyncDefiInteraction(32);
                 outputValueA = (_aFirst ? assetA : assetB).balanceOf(address(ROLLUP_PROCESSOR)) - outputValueA;
                 outputValueB = (_aFirst ? assetB : assetA).balanceOf(address(ROLLUP_PROCESSOR)) - outputValueB;
+
+                uint256 incentiveA = ((_aFirst ? assetA : assetB).balanceOf(ORIGIN) - originA);
+                uint256 incentiveB = ((_aFirst ? assetB : assetA).balanceOf(ORIGIN) - originB);
+                if (interactionComplete) {
+                    assertGt(incentiveA, 0, "No incentives received");
+                }
+
+                outputValueA += incentiveA;
+                outputValueB += incentiveB;
             }
 
             if (bridge.getDCA(32).end <= (block.timestamp / bridge.TICK_SIZE())) {

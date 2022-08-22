@@ -26,6 +26,8 @@ import {SafeCastLib} from "./SafeCastLib.sol";
  * The amount that can be bought by the external party, depends on the ticks and how much can be matched internally.
  * As part of the balancing act, each tick will match the A and B holdings it has to sell, using the oracle price
  * (or infer price from prior price and current price). The excess from this internal matching is then sold off (of as much as possible).
+ * The rebalancing is expected to be done by arbitrageurs when prices deviate sufficiently between the oracle and dexes.
+ * The finalise function is incentivised by giving part of the traded value to the `tx.origin` (msg.sender always rollup processor).
  * Extensions to this bridge can be made such that the external party can be Uniswap or another dex.
  * An extension should also define the oracle to be used for the price.
  * @dev Built for assets with 18 decimals precision
@@ -37,6 +39,7 @@ abstract contract BiDCABridge is BridgeBase {
     using SafeCastLib for uint256;
     using SafeCastLib for uint128;
 
+    error FeeTooLarge();
     error PositionAlreadyExists();
 
     /**
@@ -123,6 +126,7 @@ abstract contract BiDCABridge is BridgeBase {
 
     // The timespan that a tick covers
     uint256 public immutable TICK_SIZE;
+    uint256 public immutable FEE;
 
     // The earliest tick where we had available A or B respectively.
     uint32 public earliestTickWithAvailableA;
@@ -145,7 +149,8 @@ abstract contract BiDCABridge is BridgeBase {
         address _rollupProcessor,
         address _assetA,
         address _assetB,
-        uint256 _tickSize
+        uint256 _tickSize,
+        uint256 _fee
     ) BridgeBase(_rollupProcessor) {
         ASSET_A = IERC20(_assetA);
         ASSET_B = IERC20(_assetB);
@@ -153,6 +158,11 @@ abstract contract BiDCABridge is BridgeBase {
 
         IERC20(_assetA).safeApprove(_rollupProcessor, type(uint256).max);
         IERC20(_assetB).safeApprove(_rollupProcessor, type(uint256).max);
+
+        if (_fee > 10000) {
+            revert FeeTooLarge();
+        }
+        FEE = _fee;
     }
 
     receive() external payable {}
@@ -302,12 +312,22 @@ abstract contract BiDCABridge is BridgeBase {
                 revert ErrorLib.InvalidOutputA();
             }
 
-            outputValueA = accumulated;
+            uint256 incentive;
+            if (FEE > 0) {
+                incentive = (accumulated * FEE) / 10000;
+            }
+
+            outputValueA = accumulated - incentive;
             delete dcas[_interactionNonce];
 
             if (toEth) {
-                WETH.withdraw(accumulated);
+                WETH.withdraw(outputValueA);
                 IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
+            }
+
+            if (incentive > 0) {
+                // Cannot use the `msg.sender` as that would simply be the rollup.
+                IERC20(outputAssetAddress).safeTransfer(tx.origin, incentive);
             }
         }
     }
