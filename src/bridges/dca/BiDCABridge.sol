@@ -16,8 +16,18 @@ import {SafeCastLib} from "./SafeCastLib.sol";
 
 /**
  * @notice Initial abstract implementation of "Dollar" Cost Averaging.
- * Supports bidirectional "selling", e.g., A -> B and B -> A in same bridge
- * Will match internal orders first, before allowing external parties to trade.
+ * The bridge implements a bidirectional dollar cost averaging protocol,
+ * allowing users to go either direction between two tokens A and B.
+ * The "order" is executed over a period of time, instead of all at once.
+ * For Eth and Dai, this allows the user to sell Dai to buy Eth over X days, and vice versa.
+ * The timeperiod is divided into ticks, with each tick keeping track of the funds that should be traded in that tick.
+ * As well as the price, and how much have been received in return.
+ * To "balance" the scheme, an external party can buy assets at the orace-price (no slippage).
+ * The amount that can be bought by the external party, depends on the ticks and how much can be matched internally.
+ * As part of the balancing act, each tick will match the A and B holdings it has to sell, using the oracle price
+ * (or infer price from prior price and current price). The excess from this internal matching is then sold off (of as much as possible).
+ * Extensions to this bridge can be made such that the external party can be Uniswap or another dex.
+ * An extension should also define the oracle to be used for the price.
  * @dev Built for assets with 18 decimals precision
  * @dev A contract that inherits must handle the case for forcing a swap through a DEX.
  * @author Lasse Herskind (LHerskind on GitHub).
