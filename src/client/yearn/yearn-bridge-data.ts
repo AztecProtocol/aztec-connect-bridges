@@ -84,12 +84,12 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     // standard deposit
     const matchDepositSituation = hasInputAsset && hasInputAsset.findIndex(token => token.toString() === outputAssetA.erc20Address.toString()) > -1;
     if (matchDepositSituation) {
-        return [0];
+      return [0];
     }
     // standard withdraw
     const matchWithdrawSituation = hasOutputAsset && hasOutputAsset.findIndex(token => token.toString() === inputAssetA.erc20Address.toString()) > -1;
     if (matchWithdrawSituation) {
-        return [1];
+      return [1];
     }
     throw "Invalid input and/or output asset";
   }
