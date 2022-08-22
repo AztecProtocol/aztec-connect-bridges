@@ -23,7 +23,16 @@ interface IChainlinkOracle {
 }
 
 /**
- * @notice DCA bridge that uses chainlink as oracle and can force rebalances through uniswap
+ * @notice Initial implementation of the BiDCA bridge using Uniswap as the DEX and Chainlink as oracle.
+ * The bridge is using DAI and WETH for A and B with a Chainlink oracle to get prices.
+ * The bridge allows users to force a rebalance through Uniswap pools.
+ * The forced rebalance will:
+ * 1. rebalance internally in the ticks, as the BiDCABridge,
+ * 2. rebalance cross-ticks, e.g., excess from the individual ticks are matched,
+ * 3. swap any remaining excess using Uniswap, and rebalance with the returned assets
+ * @dev The `MAX_AGE` of a price feed, means that a abandoned price-feed will brick the bridge.
+ * @dev The slippage + path is immutable, so low liquidity in Uniswap might block the `rebalanceAndfillUniswap` flow.
+ * @author Lasse Herskind (LHerskind on GitHub).
  */
 contract UniswapDCABridge is BiDCABridge {
     using SafeERC20 for IERC20;
