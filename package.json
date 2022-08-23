@@ -1,6 +1,6 @@
 {
   "name": "@aztec/bridge-clients",
-  "version": "0.1.53",
+  "version": "0.1.54",
   "description": "This repo contains the solidity files and typescript helper class for all of the Aztec Connect Bridge Contracts",
   "repository": "git@github.com:AztecProtocol/aztec-connect-bridges.git",
   "license": "Apache-2.0",
