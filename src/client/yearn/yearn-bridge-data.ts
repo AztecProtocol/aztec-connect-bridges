@@ -27,12 +27,12 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     private rollupProcessor: IRollupProcessor,
   ) {}
 
-  static create(provider: EthereumProvider) {
+  static create(provider: EthereumProvider, rollupProcessor: EthAddress) {
     const ethersProvider = createWeb3Provider(provider);
     return new YearnBridgeData(
       ethersProvider,
       IYearnRegistry__factory.connect("0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804", ethersProvider),
-      IRollupProcessor__factory.connect("0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455", ethersProvider),
+      IRollupProcessor__factory.connect(rollupProcessor.toString(), ethersProvider),
     );
   }
 
