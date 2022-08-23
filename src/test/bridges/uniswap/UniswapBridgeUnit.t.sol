@@ -164,7 +164,6 @@ contract UniswapBridgeUnitTest is Test {
         //           3000
         // PATH1 LQTY -> ETH   100% of input 1010101 00 000 00 000 10
         // MIN PRICE: significand 0, exponent 0
-        // 000000000000000000000 00000 | 1010101 00 000 00 000 10 | 0000000 00 000 00 000 11
         // 000000000000000000000 00000 | 1100100 00 000 00 000 10 | 0000000 00 000 00 000 11
         uint64 encodedPath = 0x3200100003;
 
