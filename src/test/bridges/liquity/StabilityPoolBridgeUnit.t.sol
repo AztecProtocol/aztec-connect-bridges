@@ -26,6 +26,9 @@ contract StabilityPoolBridgeUnitTest is TestUtil {
         deal(tokens["LUSD"].addr, address(bridge), 1);
         deal(tokens["LQTY"].addr, address(bridge), 1);
         deal(tokens["WETH"].addr, address(bridge), 1);
+
+        // Reset ETH balance to 0 to make accounting easier
+        deal(address(bridge), 0);
     }
 
     function testInitialERC20Params() public {
@@ -40,10 +43,14 @@ contract StabilityPoolBridgeUnitTest is TestUtil {
         bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
-    function testFullDepositWithdrawalFlow() public {
-        // I will deposit and withdraw 1 million LUSD
-        uint256 inputValue = 1e24;
-        _deposit(inputValue);
+    function testFullDepositWithdrawalFlow(
+        uint96 _depositAmount,
+        uint96 _withdrawalAmount,
+        uint64 _ethRewards,
+        uint72 _lqtyRewards
+    ) public {
+        uint256 depositAmount = bound(_depositAmount, 10, type(uint256).max);
+        uint256 spbReceived = _deposit(depositAmount);
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
             2,
@@ -57,104 +64,34 @@ contract StabilityPoolBridgeUnitTest is TestUtil {
         );
 
         // Transfer StabilityPoolBridge accounting token (SPB) back to the bridge
-        IERC20(inputAssetA.erc20Address).transfer(address(bridge), inputValue);
+        IERC20(inputAssetA.erc20Address).transfer(address(bridge), spbReceived);
+
+        // Mint rewards to the bridge
+        deal(address(bridge), _ethRewards);
+        deal(tokens["LQTY"].addr, address(bridge), _lqtyRewards);
 
         // Withdraw LUSD from StabilityPool through the bridge
+        uint256 withdrawalAmount = bound(_withdrawalAmount, 10, spbReceived);
+
         (uint256 outputValueA, , ) = bridge.convert(
             inputAssetA,
             emptyAsset,
             outputAssetA,
             emptyAsset,
-            inputValue,
+            withdrawalAmount,
             1,
             0,
             address(0)
         );
 
-        // Check the total supply of SPB token is 0
-        assertEq(bridge.totalSupply(), 0);
+        // Check the total supply of SPB token is spbReceived - withdrawalAmount
+        assertEq(bridge.totalSupply(), spbReceived - withdrawalAmount);
 
         // Transfer the funds back from the bridge to the rollup processor
-        IERC20(outputAssetA.erc20Address).transferFrom(address(bridge), rollupProcessor, outputValueA);
-
-        // Check the LUSD balance of rollupProcessor is greater or equal to the initial LUSD deposit
-        assertGe(outputValueA, inputValue);
-    }
-
-    function testMultipleDepositsWithdrawals() public {
-        uint256 i = 0;
-        uint256 numIters = 2;
-        uint256 depositAmount = 203;
-        uint256[] memory spbBalances = new uint256[](numIters);
-
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
-            1,
-            tokens["LUSD"].addr,
-            AztecTypes.AztecAssetType.ERC20
+        assertTrue(
+            IERC20(outputAssetA.erc20Address).transferFrom(address(bridge), rollupProcessor, outputValueA),
+            "Transfer failed"
         );
-        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(
-            2,
-            address(bridge),
-            AztecTypes.AztecAssetType.ERC20
-        );
-
-        while (i < numIters) {
-            depositAmount = _rand(depositAmount);
-            // 1. Mint deposit amount of LUSD directly to the bridge (to avoid transfer)
-            deal(inputAssetA.erc20Address, address(bridge), depositAmount);
-            // 2. Mint rewards to the bridge
-            deal(tokens["LQTY"].addr, address(bridge), 1e20);
-            deal(tokens["WETH"].addr, address(bridge), 1e18);
-
-            // 3. Deposit LUSD to StabilityPool through the bridge
-            (uint256 outputValueA, , ) = bridge.convert(
-                inputAssetA,
-                emptyAsset,
-                outputAssetA,
-                emptyAsset,
-                depositAmount,
-                i,
-                0,
-                address(0)
-            );
-
-            // 4. Transfer SPB back to RollupProcessor
-            IERC20(outputAssetA.erc20Address).transferFrom(address(bridge), rollupProcessor, outputValueA);
-
-            spbBalances[i] = outputValueA;
-            i++;
-        }
-
-        // 5. Swap input/output assets to execute withdraw flow in the next convert call
-        (inputAssetA, outputAssetA) = (outputAssetA, inputAssetA);
-
-        i = 0;
-        while (i < numIters) {
-            uint256 inputValue = spbBalances[i];
-
-            // 6. Transfer SPB back to the bridge
-            IERC20(inputAssetA.erc20Address).transfer(address(bridge), inputValue);
-
-            // 7. Withdraw LUSD from StabilityPool through the bridge
-            (uint256 outputValueA, , ) = bridge.convert(
-                inputAssetA,
-                emptyAsset,
-                outputAssetA,
-                emptyAsset,
-                inputValue,
-                numIters + i,
-                0,
-                address(0)
-            );
-
-            // 8. Transfer LUSD back to RollupProcessor
-            IERC20(outputAssetA.erc20Address).transferFrom(address(bridge), rollupProcessor, outputValueA);
-
-            i++;
-        }
-
-        // 5. Check the total supply of SPB token is 0
-        assertEq(bridge.totalSupply(), 0);
     }
 
     function testUrgentModeOffSwap1() public {
@@ -235,7 +172,7 @@ contract StabilityPoolBridgeUnitTest is TestUtil {
         );
     }
 
-    function _deposit(uint256 _depositAmount) private {
+    function _deposit(uint256 _depositAmount) private returns (uint256) {
         // 1. Mint the deposit amount of LUSD to the bridge
         deal(tokens["LUSD"].addr, address(bridge), _depositAmount);
 
@@ -264,5 +201,7 @@ contract StabilityPoolBridgeUnitTest is TestUtil {
         // 6. Check the LUSD balance of the StabilityPoolBridge in the StabilityPool contract is greater than or equal
         // to the amount of LUSD deposited
         assertGe(bridge.STABILITY_POOL().getCompoundedLUSDDeposit(address(bridge)), _depositAmount);
+
+        return outputValueA;
     }
 }

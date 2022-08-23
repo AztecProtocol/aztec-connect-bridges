@@ -45,6 +45,9 @@ contract StabilityPoolBridgeE2ETest is BridgeTestBase {
 
         // Fetch the id of the stability pool bridge
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
+
+        // Reset ETH balance to 0 to make accounting easier
+        deal(address(bridge), 0);
     }
 
     // @dev In order to avoid overflows we set _depositAmount to be uint96 instead of uint256.
