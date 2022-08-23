@@ -102,7 +102,7 @@ describe("Testing Yearn auxData", () => {
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any);
+    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
     const auxDataDepositERC20 = await yearnBridgeData.getAuxData(daiAsset, emptyAsset, yvDaiAsset, emptyAsset);
     expect(auxDataDepositERC20[0]).toBe(0);
     const auxDataDepositETH = await yearnBridgeData.getAuxData(ethAsset, emptyAsset, yvEthAsset, emptyAsset);
@@ -143,7 +143,7 @@ describe("Testing Yearn auxData", () => {
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any);
+    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
     const auxDataDepositERC20 = await yearnBridgeData.getAuxData(yvDaiAsset, emptyAsset, daiAsset, emptyAsset);
     expect(auxDataDepositERC20[0]).toBe(1);
     const auxDataDepositETH = await yearnBridgeData.getAuxData(yvEthAsset, emptyAsset, ethAsset, emptyAsset);
@@ -174,7 +174,7 @@ describe("Testing Yearn auxData", () => {
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any);
+    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
 
     expect.assertions(1);
     await expect(yearnBridgeData.getAuxData(yvDaiAsset, emptyAsset, ethAsset, emptyAsset)).rejects.toEqual(
@@ -206,7 +206,7 @@ describe("Testing Yearn auxData", () => {
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any);
+    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
 
     expect.assertions(1);
     await expect(yearnBridgeData.getAuxData(ethAsset, emptyAsset, yvEthAsset, emptyAsset)).rejects.toEqual(
@@ -250,7 +250,7 @@ describe("Testing Yearn auxData", () => {
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any);
+    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
 
     expect.assertions(8);
     await expect(yearnBridgeData.getAuxData(ethAsset, emptyAsset, yvDaiAsset, emptyAsset)).rejects.toEqual(
@@ -326,7 +326,7 @@ describe("Testing Yearn expectedOutput", () => {
     };
     IYearnVault__factory.connect = () => vaultContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any);
+    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
 
     const expectedOutputERC20 = await yearnBridgeData.getExpectedOutput(
       daiAsset,
@@ -360,7 +360,7 @@ describe("Testing Yearn expectedOutput", () => {
     };
     IYearnVault__factory.connect = () => vaultContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any);
+    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
 
     const expectedOutputERC20 = await yearnBridgeData.getExpectedOutput(
       yvDaiAsset,
@@ -394,7 +394,7 @@ describe("Testing Yearn expectedOutput", () => {
     };
     IYearnVault__factory.connect = () => vaultContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any);
+    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
 
     expect.assertions(3);
     await expect(
@@ -409,7 +409,7 @@ describe("Testing Yearn expectedOutput", () => {
   });
 
   it("should throw with incorrect tokens on the input", async () => {
-    const yearnBridgeData = YearnBridgeData.create({} as any);
+    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
 
     await expect(
       yearnBridgeData.getExpectedOutput(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0n),
@@ -438,7 +438,7 @@ describe("Testing Yearn getAPR", () => {
   });
 
   it("should correctly compute APR", async () => {
-    const yearnBridgeData = YearnBridgeData.create({} as any);
+    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
     const expectedAPRDai = await yearnBridgeData.getAPR(yvDaiAsset);
     expect(expectedAPRDai).not.toBeUndefined();
     expect(expectedAPRDai).toBeGreaterThan(0);
@@ -482,7 +482,7 @@ describe("Testing Yearn getMarketSize", () => {
     };
     IYearnVault__factory.connect = () => vaultContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any);
+    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
     const expectedMarketSize = (await yearnBridgeData.getMarketSize(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 0))[0]
       .value;
     expect(expectedMarketSize).toBe(97513214188808613008055674n);
