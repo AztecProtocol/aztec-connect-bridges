@@ -162,12 +162,10 @@ contract UniswapBridgeUnitTest is Test {
         uint256 swapAmount = 1e22; // 10k LQTY
 
         //           3000
-        // PATH1 LQTY  -> ETH   85% of input 1010101 00 000 00 000 10
-        //           10000
-        // PATH2 LQTY  -> ETH   15% of input 0001111 00 000 00 000 11
+        // PATH1 LQTY -> ETH   100% of input 1010101 00 000 00 000 10
         // MIN PRICE: significand 0, exponent 0
-        // 000000000000000000000 00000 | 1010101 00 000 00 000 10 | 0001111 00 000 00 000 11
-        uint64 encodedPath = 0x2A8010F003;
+        // 000000000000000000000 00000 | 1100100 00 000 00 000 10 | 0000000 00 000 00 000 11
+        uint64 encodedPath = 0x3200100003;
 
         address[] memory tokensIn = new address[](1);
         tokensIn[0] = LQTY;
