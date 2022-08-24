@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 //pragma solidity >=0.4.0 <0.8.0;
 
-pragma solidity >=0.6.10 <=0.8.10;
+pragma solidity >=0.6.10;
 
 ///note: @dev of Aztec Connect Uniswap V3 Bridge for LP. This library has been modified to conform to version 0.8.x of solidity.
 ///the first change is on line 74, which was originally a unary negation of an unsigned integer like thus:
