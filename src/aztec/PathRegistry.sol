@@ -26,8 +26,8 @@ contract PathRegistry is IPathRegistry {
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     struct Path {
-        uint248 amount; // Amount at which the path starts being valid
-        uint8 next; // Index of the next path
+        uint232 amount; // Amount at which the path starts being valid
+        uint24 next; // Index of the next path
         address ethPool; // Eth pool to fetch based on which to convert the gas cost to tokenOut
         SubPath[] subPaths;
     }
@@ -58,12 +58,12 @@ contract PathRegistry is IPathRegistry {
     // @inheritdoc IPathRegistry
     function registerPath(
         SubPath[] calldata _subPaths,
-        uint248 _amount,
+        uint232 _amount,
         uint24 _feeTier
     ) external override {
         (address tokenIn, address tokenOut) = _getTokenInOut(_subPaths[0].path);
         uint256 curPathIndex = firstPathIndices[tokenIn][tokenOut];
-        Path memory newPath = Path(_amount, uint8(0), _getEthPool(tokenOut, _feeTier), _subPaths);
+        Path memory newPath = Path(_amount, uint24(0), _getEthPool(tokenOut, _feeTier), _subPaths);
         Path memory curPath = allPaths[curPathIndex];
 
         if (curPathIndex == 0) {
@@ -88,7 +88,7 @@ contract PathRegistry is IPathRegistry {
                 // newPath is worse at curPath.amount - insert the path at the first position
                 allPaths.push(newPath);
                 uint256 pathIndex = allPaths.length - 1;
-                allPaths[pathIndex].next = curPathIndex;
+                allPaths[pathIndex].next = uint24(curPathIndex);
                 firstPathIndices[tokenIn][tokenOut] = pathIndex;
             }
         } else {
@@ -118,7 +118,7 @@ contract PathRegistry is IPathRegistry {
                 // Insert new path between prevPath and nextPath
                 allPaths.push(newPath);
                 uint256 newPathIndex = allPaths.length - 1;
-                allPaths[curPathIndex].next = newPathIndex;
+                allPaths[curPathIndex].next = uint24(newPathIndex);
                 allPaths[newPathIndex].next = curPath.next;
             }
         }
@@ -276,7 +276,7 @@ contract PathRegistry is IPathRegistry {
      * @return tokenIn Addresses of the first token in the path (input token)
      * @return tokenOut Addresses of the last token in the path (output token)
      */
-    function _getTokenInOut(bytes _path) private pure returns (address tokenIn, address tokenOut) {
+    function _getTokenInOut(bytes calldata _path) private pure returns (address tokenIn, address tokenOut) {
         tokenIn = _path.toAddress(0);
         tokenOut = _path.toAddress(_path.length - 20);
     }

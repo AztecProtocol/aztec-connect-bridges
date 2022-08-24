@@ -32,7 +32,7 @@ interface IPathRegistry {
      */
     function registerPath(
         SubPath[] calldata _subPaths,
-        uint248 _amount,
+        uint232 _amount,
         uint24 _feeTier
     ) external;
 

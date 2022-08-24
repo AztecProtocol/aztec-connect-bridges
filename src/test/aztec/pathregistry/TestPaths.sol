@@ -13,79 +13,70 @@ contract TestPaths {
 
     address private constant RANDOM_ADDRESS = 0xd2f4F51e80E2e857E32Dd8e7e2fcB30e498F71F0;
 
-    function getPath1(uint256 amount) internal pure returns (IPathRegistry.Path memory path) {
+    function getPath1() internal pure returns (IPathRegistry.SubPath[] memory subPaths) {
         // Optimal ETH -> LUSD path for amounts in <0, 40> ETH range
-        path.amount = amount;
-        path.subPaths = new IPathRegistry.SubPath[](1);
+        subPaths = new IPathRegistry.SubPath[](1);
 
-        path.subPaths[0] = IPathRegistry.SubPath({
+        subPaths[0] = IPathRegistry.SubPath({
             percent: 100,
             path: abi.encodePacked(WETH, uint24(500), USDC, uint24(500), LUSD)
         });
     }
 
-    function getPath2(uint256 amount) internal pure returns (IPathRegistry.Path memory path) {
+    function getPath2() internal pure returns (IPathRegistry.SubPath[] memory subPaths) {
         // Optimal ETH -> LUSD path for amounts in <40, 320> ETH range
-        path.amount = amount;
-        path.subPaths = new IPathRegistry.SubPath[](1);
+        subPaths = new IPathRegistry.SubPath[](1);
 
-        path.subPaths[0] = IPathRegistry.SubPath({
+        subPaths[0] = IPathRegistry.SubPath({
             percent: 100,
             path: abi.encodePacked(WETH, uint24(500), USDC, uint24(500), FRAX, uint24(500), LUSD)
         });
     }
 
-    function getPath3(uint256 amount) internal pure returns (IPathRegistry.Path memory path) {
+    function getPath3() internal pure returns (IPathRegistry.SubPath[] memory subPaths) {
         // Optimal ETH -> LUSD path for amounts in <320, 900> ETH range
-        path.amount = amount;
-        path.subPaths = new IPathRegistry.SubPath[](2);
+        subPaths = new IPathRegistry.SubPath[](2);
 
-        path.subPaths[0] = IPathRegistry.SubPath({
+        subPaths[0] = IPathRegistry.SubPath({
             percent: 65,
             path: abi.encodePacked(WETH, uint24(500), USDC, uint24(500), FRAX, uint24(500), LUSD)
         });
 
-        path.subPaths[1] = IPathRegistry.SubPath({
+        subPaths[1] = IPathRegistry.SubPath({
             percent: 35,
             path: abi.encodePacked(WETH, uint24(3000), USDC, uint24(100), DAI, uint24(500), LUSD)
         });
     }
 
-    function getPath4(uint256 amount) internal pure returns (IPathRegistry.Path memory path) {
+    function getPath4() internal pure returns (IPathRegistry.SubPath[] memory subPaths) {
         // Optimal ETH -> LUSD path for amounts in <900, 2000> ETH range
-        path.amount = amount;
-        path.subPaths = new IPathRegistry.SubPath[](3);
+        subPaths = new IPathRegistry.SubPath[](3);
 
-        path.subPaths[0] = IPathRegistry.SubPath({
+        subPaths[0] = IPathRegistry.SubPath({
             percent: 55,
             path: abi.encodePacked(WETH, uint24(500), USDC, uint24(100), DAI, uint24(500), LUSD)
         });
 
-        path.subPaths[1] = IPathRegistry.SubPath({
+        subPaths[1] = IPathRegistry.SubPath({
             percent: 25,
             path: abi.encodePacked(WETH, uint24(3000), USDC, uint24(500), FRAX, uint24(500), LUSD)
         });
 
-        path.subPaths[2] = IPathRegistry.SubPath({percent: 20, path: abi.encodePacked(WETH, uint24(3000), LUSD)});
+        subPaths[2] = IPathRegistry.SubPath({percent: 20, path: abi.encodePacked(WETH, uint24(3000), LUSD)});
     }
 
-    function getBrokenPathUniV3(uint256 amount) internal pure returns (IPathRegistry.Path memory path) {
-        path.amount = amount;
-        path.subPaths = new IPathRegistry.SubPath[](1);
+    function getBrokenPathUniV3() internal pure returns (IPathRegistry.SubPath[] memory subPaths) {
+        subPaths = new IPathRegistry.SubPath[](1);
 
-        path.subPaths[0] = IPathRegistry.SubPath({
+        subPaths[0] = IPathRegistry.SubPath({
             percent: 100,
             path: abi.encodePacked(WETH, uint24(500), RANDOM_ADDRESS, uint24(500), LUSD)
         });
     }
 
-    function getPathNoEthPool(uint256 amount) internal pure returns (IPathRegistry.Path memory path) {
-        path.amount = amount;
-        path.subPaths = new IPathRegistry.SubPath[](1);
+    function getPathNoEthPool() internal pure returns (IPathRegistry.SubPath[] memory subPaths) {
+        subPaths = new IPathRegistry.SubPath[](1);
 
-        path.subPaths[0] = IPathRegistry.SubPath({
-            percent: 100,
-            path: abi.encodePacked(WETH, uint24(500), RANDOM_ADDRESS)
-        });
+        subPaths[0] = IPathRegistry.SubPath({percent: 100, path: abi.encodePacked(WETH, uint24(500), RANDOM_ADDRESS)});
     }
 }
