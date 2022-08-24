@@ -29,10 +29,26 @@ contract YearnBridge is BridgeBase {
     error InvalidVault();
 
     /**
-     * @notice Set address of rollup processor
+     * @notice Sets address of rollup processor and Subsidy-related info
      * @param _rollupProcessor Address of rollup processor
      */
-    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
+    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {
+        uint256[] memory criteria = new uint256[](2);
+        uint32[] memory gasUsage = new uint32[](2);
+        uint32[] memory minGasPerMinute = new uint32[](2);
+
+        criteria[0] = 0;
+        criteria[1] = 1;
+
+        // TODO: Is 200k ok?
+        gasUsage[0] = 200000;
+        gasUsage[1] = 200000;
+
+        minGasPerMinute[0] = 140;
+        minGasPerMinute[1] = 140;
+
+        SUBSIDY.setGasUsageAndMinGasPerMinute(criteria, gasUsage, minGasPerMinute);
+    }
 
     receive() external payable {}
 
@@ -81,7 +97,8 @@ contract YearnBridge is BridgeBase {
      * @param _outputAssetA - Yearn Vault ERC20 token to receive on deposit or ERC20 token to receive on withdraw
      * @param _inputValue - Amount to deposit or withdraw
      * @param _interactionNonce - Unique identifier for this DeFi interaction
-     * @param _auxData - Special value to indicate a deposit (0) or a withdraw (1)
+     * @param _auxData - Special value to indicate a deposit (0) or a withdraw (1) (used as Subsidy criteria)
+     * @param _rollupBeneficiary - Address which receives subsidy if the call is eligible for it
      * @return outputValueA - the amount of output asset to return
      */
     function convert(
@@ -92,7 +109,7 @@ contract YearnBridge is BridgeBase {
         uint256 _inputValue,
         uint256 _interactionNonce,
         uint64 _auxData,
-        address
+        address _rollupBeneficiary
     )
         external
         payable
@@ -125,7 +142,29 @@ contract YearnBridge is BridgeBase {
         } else {
             revert ErrorLib.InvalidAuxData();
         }
+
+        // Pay out subsidy to _rollupBeneficiary
+        SUBSIDY.claimSubsidy(_auxData, _rollupBeneficiary);
+
         return (outputValueA, 0, false);
+    }
+
+    /**
+     * @notice Computes the criteria that is passed when claiming subsidy.
+     * @param _auxData Special value to indicate a deposit (0) or a withdraw (1)
+     * @return The criteria
+     */
+    function computeCriteria(
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        uint64 _auxData
+    ) public pure override(BridgeBase) returns (uint256) {
+        if (_auxData > 1) {
+            revert ErrorLib.InvalidAuxData();
+        }
+        return _auxData;
     }
 
     /**
