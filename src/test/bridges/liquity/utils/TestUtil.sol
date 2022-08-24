@@ -56,9 +56,4 @@ contract TestUtil is Test {
         vm.etch(address(LIQUITY_PRICE_FEED), address(mockFeed).code);
         assertEq(LIQUITY_PRICE_FEED.fetchPrice(), _price);
     }
-
-    function _rand(uint256 _seed) internal pure returns (uint256) {
-        // I want a number between 1 WAD and 10 million WAD
-        return uint256(keccak256(abi.encodePacked(_seed))) % 10**25;
-    }
 }

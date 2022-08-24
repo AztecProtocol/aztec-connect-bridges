@@ -81,10 +81,9 @@ contract StakingBridgeUnitTest is TestUtil {
         assertGe(outputValueA, inputValue);
     }
 
-    function testMultipleDepositsWithdrawals() public {
+    function testMultipleDepositsWithdrawals(uint256 _depositAmount1, uint256 _depositAmount2) public {
         uint256 i = 0;
         uint256 numIters = 2;
-        uint256 depositAmount = 203;
         uint256[] memory sbBalances = new uint256[](numIters);
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
@@ -98,8 +97,11 @@ contract StakingBridgeUnitTest is TestUtil {
             AztecTypes.AztecAssetType.ERC20
         );
 
+        uint256 depositAmount1 = bound(_depositAmount1, 1e18, 1e25);
+        uint256 depositAmount2 = bound(_depositAmount2, 1e18, 1e25);
+
         while (i < numIters) {
-            depositAmount = _rand(depositAmount);
+            uint256 depositAmount = i == 0 ? depositAmount1 : depositAmount2;
             // 1. Mint deposit amount of LQTY directly to the bridge (to avoid transfer)
             deal(inputAssetA.erc20Address, address(bridge), depositAmount);
             // 2. Mint rewards to the bridge
