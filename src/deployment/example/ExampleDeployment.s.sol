@@ -4,18 +4,13 @@ pragma solidity >=0.8.4;
 
 import {BaseDeployment} from "../base/BaseDeployment.s.sol";
 import {ExampleBridgeContract} from "../../bridges/example/ExampleBridge.sol";
-import {Subsidy} from "../../aztec/Subsidy.sol";
-import {ISubsidy} from "../../aztec/interfaces/ISubsidy.sol";
 
 contract ExampleDeployment is BaseDeployment {
     function deploy() public returns (address) {
         emit log("Deploying example bridge");
 
         vm.broadcast();
-        Subsidy sub = new Subsidy();
-
-        vm.broadcast();
-        ExampleBridgeContract bridge = new ExampleBridgeContract(ROLLUP_PROCESSOR, sub);
+        ExampleBridgeContract bridge = new ExampleBridgeContract(ROLLUP_PROCESSOR);
 
         emit log_named_address("Example bridge deployed to", address(bridge));
 
