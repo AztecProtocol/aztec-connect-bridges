@@ -102,6 +102,6 @@ contract ExampleE2ETest is BridgeTestBase {
         // Check that the balance of the rollup is same as before interaction (bridge just sends funds back)
         assertEq(_depositAmount, IERC20(USDC).balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
 
-        assertGt(SUBSIDY.claimableAmount(BENEFICIARY), 1, "Claimable was not updated");
+        assertGt(SUBSIDY.claimableAmount(BENEFICIARY), 0, "Claimable was not updated");
     }
 }

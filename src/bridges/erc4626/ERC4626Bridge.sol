@@ -98,10 +98,14 @@ contract ERC4626Bridge is BridgeBase {
             bool
         )
     {
+        address inputToken = _inputAssetA.erc20Address;
+        address outputToken = _outputAssetA.erc20Address;
+
         if (_auxData == 0) {
             // Issuing new shares - input can be ETH
             if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 WETH.deposit{value: _totalInputValue}();
+                inputToken = address(WETH);
             }
             // If input asset is not the vault asset (or ETH if vault asset is WETH) the following will revert when
             // trying to pull the funds from the bridge
@@ -115,6 +119,7 @@ contract ERC4626Bridge is BridgeBase {
             if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 IWETH(WETH).withdraw(outputValueA);
                 IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
+                outputToken = address(WETH);
             }
         } else {
             revert ErrorLib.InvalidAuxData();
