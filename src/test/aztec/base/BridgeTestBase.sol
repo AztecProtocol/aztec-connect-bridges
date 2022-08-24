@@ -123,6 +123,7 @@ abstract contract BridgeTestBase is Test {
     constructor() {
         vm.label(address(ROLLUP_PROCESSOR), "Rollup");
         vm.label(address(IMPLEMENTATION), "Implementation");
+        vm.label(address(SUBSIDY), "Subsidy");
         vm.label(ROLLUP_PROVIDER, "Rollup Provider");
         vm.label(MULTI_SIG, "Multisig");
         vm.label(ROLLUP_PROCESSOR.verifier(), "Verifier");

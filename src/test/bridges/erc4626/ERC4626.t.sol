@@ -173,7 +173,11 @@ contract ERC4626Test is BridgeTestBase {
         assertFalse(isAsync, "Bridge is not synchronous");
     }
 
-    function testFullFlowWithYield(
+    function testFullFlowWithYieldAndSubsidyFixed() public {
+        testFullFlowWithYieldAndSubsidy(1e18, 1e18, 1e18);
+    }
+
+    function testFullFlowWithYieldAndSubsidy(
         uint96 _assetAmount,
         uint96 _shareAmount,
         uint96 _yield
@@ -181,10 +185,30 @@ contract ERC4626Test is BridgeTestBase {
         uint256 assetAmount = bound(_assetAmount, 10, type(uint256).max);
         IERC20 weth = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
+        address beneficiary = address(11);
+        setRollupBeneficiary(beneficiary);
+
         bridge.listVault(wethVault);
 
-        AztecTypes.AztecAsset memory shareAsset = getRealAztecAsset(wethVault);
         AztecTypes.AztecAsset memory ethAsset = getRealAztecAsset(address(0));
+        AztecTypes.AztecAsset memory shareAsset = getRealAztecAsset(wethVault);
+
+        {
+            // Subsidize deposit
+            // When asset is ETH address of WETH is used when computing criteria
+            AztecTypes.AztecAsset memory wethAsset = AztecTypes.AztecAsset({
+                id: 1000, // Irrelevant - is ignored when computing criteria
+                erc20Address: address(weth),
+                assetType: AztecTypes.AztecAssetType.ERC20
+            });
+            uint256 criteria = bridge.computeCriteria(wethAsset, emptyAsset, shareAsset, emptyAsset, 0);
+            uint32 gasPerMinute = 200;
+            SUBSIDY.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
+            SUBSIDY.registerBeneficiary(beneficiary);
+        }
+
+        // Warp time in order to accumulate claimable subsidy
+        vm.warp(block.timestamp + 1 days);
 
         // Mint ETH to RollupProcessor
         deal(address(ROLLUP_PROCESSOR), assetAmount);
@@ -218,5 +242,7 @@ contract ERC4626Test is BridgeTestBase {
             "Incorrect RollupProcessor share balance after redeem"
         );
         assertEq(outputValueA, expectedAssetAmountReturned, "Received amount of asset differs from the expected one");
+
+        assertGt(SUBSIDY.claimableAmount(beneficiary), 0, "Claimable was not updated");
     }
 }
