@@ -3,6 +3,7 @@
 pragma solidity >=0.8.4;
 
 import {IDefiBridge} from "../../aztec/interfaces/IDefiBridge.sol";
+import {ISubsidy} from "../../aztec/interfaces/ISubsidy.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "./ErrorLib.sol";
 
@@ -15,6 +16,7 @@ import {ErrorLib} from "./ErrorLib.sol";
 abstract contract BridgeBase is IDefiBridge {
     error MissingImplementation();
 
+    ISubsidy public constant SUBSIDY = ISubsidy(0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA);
     address public immutable ROLLUP_PROCESSOR;
 
     constructor(address _rollupProcessor) {
