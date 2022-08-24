@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity >=0.6.10 <=0.8.10;
+pragma solidity >=0.6.10;
 
 /// @title Pool state that is not stored
 /// @notice Contains view functions to provide information about the pool that is computed rather than stored on the

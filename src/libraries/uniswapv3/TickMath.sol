@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //pragma solidity >=0.5.0 <0.8.0;
 
-pragma solidity >=0.6.10 <=0.8.10;
+pragma solidity >=0.6.10;
 
 ///note: @dev of Aztec Connect Uniswap V3 Bridge for LP. This library has been modified to conform to version 0.8.x of solidity.
 ///the change is in line 34, which was originally an explicit type conversion from int24 to uint256 like thus:
