@@ -37,7 +37,7 @@ contract YearnDeployment is BaseDeployment {
         YearnBridge(payable(bridge)).preApprove(latestWethVault);
     }
 
-    function deployAndList() public {
+    function deployAndList() public returns (address) {
         address bridge = deploy();
 
         approveAssets(bridge);
@@ -47,5 +47,7 @@ contract YearnDeployment is BaseDeployment {
 
         listAsset(YEARN_REGISTRY.latestVault(DAI), 100000);
         listAsset(YEARN_REGISTRY.latestVault(WETH), 100000);
+
+        return bridge;
     }
 }
