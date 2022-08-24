@@ -126,10 +126,7 @@ contract ERC4626Bridge is BridgeBase {
         }
 
         // Pay out subsidy to _rollupBeneficiary
-        SUBSIDY.claimSubsidy(
-            _computeCriteria(_inputAssetA.erc20Address, _outputAssetA.erc20Address),
-            _rollupBeneficiary
-        );
+        SUBSIDY.claimSubsidy(_computeCriteria(inputToken, outputToken), _rollupBeneficiary);
     }
 
     /**
