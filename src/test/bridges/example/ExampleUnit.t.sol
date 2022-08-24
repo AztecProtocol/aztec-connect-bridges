@@ -30,8 +30,9 @@ contract ExampleUnitTest is BridgeTestBase {
         // Deploy a new example bridge
         bridge = new ExampleBridgeContract(rollupProcessor);
 
-        // Set ETH balance to 0 for clarity (somebody sent ETH to that address on mainnet)
+        // Set ETH balance of bridge and BENEFICIARY to 0 for clarity (somebody sent ETH to that address on mainnet)
         vm.deal(address(bridge), 0);
+        vm.deal(BENEFICIARY, 0);
 
         // Use the label cheatcode to mark the address with "Example Bridge" in the traces
         vm.label(address(bridge), "Example Bridge");
@@ -118,6 +119,7 @@ contract ExampleUnitTest is BridgeTestBase {
 
         assertEq(daiBalanceAfter - daiBalanceBefore, _depositAmount, "Balances must match");
 
+        SUBSIDY.withdraw(BENEFICIARY);
         assertGt(BENEFICIARY.balance, 0, "Subsidy was not claimed");
     }
 }
