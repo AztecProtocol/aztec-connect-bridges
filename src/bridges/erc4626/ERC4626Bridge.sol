@@ -61,7 +61,7 @@ contract ERC4626Bridge is BridgeBase {
         minGasPerMinute[0] = 140;
         minGasPerMinute[1] = 140;
 
-        // We set gas usage in the Subsidy contract
+        // We set gas usage and minGasPerMinute in the Subsidy contract
         SUBSIDY.setGasUsageAndMinGasPerMinute(criteria, gasUsage, minGasPerMinute);
     }
 
