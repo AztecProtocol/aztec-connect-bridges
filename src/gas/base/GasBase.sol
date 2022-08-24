@@ -18,53 +18,53 @@ contract GasBase {
 
     fallback() external {}
 
-    function getSupportedBridgesLength() external view returns (uint256) {
-        return 0;
-    }
-
-    function getSupportedAssetsLength() external view returns (uint256) {
-        return 0;
-    }
-
-    function receiveEthFromBridge(uint256 interactionNonce) external payable {
-        ethPayments[interactionNonce] += msg.value;
+    function receiveEthFromBridge(uint256 _interactionNonce) external payable {
+        ethPayments[_interactionNonce] += msg.value;
     }
 
     function convert(
-        address bridgeAddress,
-        AztecTypes.AztecAsset memory inputAssetA,
-        AztecTypes.AztecAsset memory inputAssetB,
-        AztecTypes.AztecAsset memory outputAssetA,
-        AztecTypes.AztecAsset memory outputAssetB,
-        uint256 totalInputValue,
-        uint256 interactionNonce,
-        uint256 auxInputData,
-        address rollupBeneficiary,
-        uint256 gasLimit
+        address _bridgeAddress,
+        AztecTypes.AztecAsset memory _inputAssetA,
+        AztecTypes.AztecAsset memory _inputAssetB,
+        AztecTypes.AztecAsset memory _outputAssetA,
+        AztecTypes.AztecAsset memory _outputAssetB,
+        uint256 _totalInputValue,
+        uint256 _interactionNonce,
+        uint256 _auxInputData,
+        address _rollupBeneficiary,
+        uint256 _gasLimit
     ) external {
         uint256 paymentSlot;
         assembly {
             paymentSlot := ethPayments.slot
         }
 
-        (bool success, ) = address(defiProxy).delegatecall{gas: gasLimit}(
+        (bool success, ) = address(defiProxy).delegatecall{gas: _gasLimit}(
             abi.encodeWithSelector(
                 DEFI_BRIDGE_PROXY_CONVERT_SELECTOR,
-                bridgeAddress,
-                inputAssetA,
-                inputAssetB,
-                outputAssetA,
-                outputAssetB,
-                totalInputValue,
-                interactionNonce,
-                auxInputData,
+                _bridgeAddress,
+                _inputAssetA,
+                _inputAssetB,
+                _outputAssetA,
+                _outputAssetB,
+                _totalInputValue,
+                _interactionNonce,
+                _auxInputData,
                 paymentSlot,
-                rollupBeneficiary
+                _rollupBeneficiary
             )
         );
 
         if (!success) {
             revert("Failure, should only fail with OOM");
         }
+    }
+
+    function getSupportedBridgesLength() external view returns (uint256) {
+        return 0;
+    }
+
+    function getSupportedAssetsLength() external view returns (uint256) {
+        return 0;
     }
 }
