@@ -3,8 +3,6 @@
 [![CircleCI](https://circleci.com/gh/AztecProtocol/aztec-connect-bridges/tree/master.svg?style=shield)](https://circleci.com/gh/AztecProtocol/aztec-connect-bridges/tree/master)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](./CODE_OF_CONDUCT.md)
 
-## How to contribute
-
 This repo has been built with Foundry.
 Given the interconnected nature of Aztec Connect Bridges with existing mainnet protocols, we decided Foundry / Forge offered the best support for testing.
 This repo should make debugging, mainnet-forking, impersonation and gas profiling simple.
@@ -19,7 +17,7 @@ Users of your bridge will get the full benefits of ironclad privacy and 10-30x g
 > Note: Currently adding a new bridge or asset to Aztec Connect is permissioned and requires our approval.
 > Once Aztec Connect leaves beta this won't be the case anymore and developing a bridge will become completely permissionless.
 
-To get started follow the steps bellow:
+To get started follow the steps below:
 
 1. Fork this repository on GitHub, clone your fork and create a new branch:
 
@@ -39,6 +37,8 @@ To get started follow the steps bellow:
    src/bridges/example
    src/test/example
    src/client/example
+   src/specs/example
+   src/deployment/example
    ```
 
 4. Implement the bridges and tests.
@@ -49,18 +49,19 @@ To get started follow the steps bellow:
 
    `forge test --match-contract YourBridge -vvv`
 
-6. Gas-profile your contract:
-
-   `forge test --match-contract YourBridge --gas-report`
+6. Write a deployment script.
+   Make a script that inherits from the `BaseDeployment.s.sol` file. The base provides helper functions for listing assets/bridges and a getter for the rollup address. Use the env variables `broadcast = false|true` and `network=mainnet|devnet|testnet` to specify how to run it, with `broadcast = true`, the `listBridge` and `listAsset` helpers will be broadcast, otherwise they are similuated as if they came from the controller. See the example scripts from other bridges, for inspiration on how to do it.
 
 All bridges need to be submitted via PRs to this repo.
 To receive a grant payment we expect the following work to be done:
 
 1. A solidity bridge that interfaces with the protocol you are bridging to (e.g AAVE),
 2. tests in Solidity that test the bridge with production values and the deployed protocol that is currently on mainnet (you should test a range of assets, edge cases and use [Forge's fuzzing abilities](https://book.getfoundry.sh/forge/fuzz-testing.html)),
-3. implementation of the Typescript `bridge-data.ts` class that tells a frontend developer how to use your bridge.
-4. an explanation of the flows your bridge supports should be included as `spec.md`,
-5. [NatSpec](https://docs.soliditylang.org/en/develop/natspec-format.html) documentation of all the functions in all the contracts which are to be deployed on mainnet.
+3. tests cover the full contract, there are no untested functions or lines.
+4. implementation of the Typescript `bridge-data.ts` class that tells a frontend developer how to use your bridge.
+5. an explanation of the flows your bridge supports should be included as `spec.md`,
+6. [NatSpec](https://docs.soliditylang.org/en/develop/natspec-format.html) documentation of all the functions in all the contracts which are to be deployed on mainnet.
+7. A deployment script to deploy the bridge with proper configuration
 
 Before submitting a PR for a review make sure that the following is true:
 
@@ -69,15 +70,10 @@ Before submitting a PR for a review make sure that the following is true:
 3. you fetched upstream changes to your fork on GitHub and your branch has been rebased against the head of the `master` branch (**_not merged_**, if you are not sure how to rebase check out [this article](https://blog.verslu.is/git/git-rebase/)),
 4. the diff contains only changes related to the PR description,
 5. NatSpec documentation has already been written.
+6. A spec was written
+7. A deployment script was written
 
-## Deployed Bridge Info
-
-| Bridge (link to contract)                                                                   | Id (aka `addressId` in the SDK) | InputAssetA (AssetId)                                                                             | InputAssetB (AssetId) | OutputAssetA (AssetId)                                     | OutputAssetB (AssetId) | auxData                                       | async | Description                                                                                                   |
-| ------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------- | --------------------- | ---------------------------------------------------------- | ---------------------- | --------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------- |
-| [Element](https://etherscan.io/address/0xaeD181779A8AAbD8Ce996949853FEA442C2CDB47)          | 1                               | DAI (1)                                                                                           | Not used              | DAI (1)                                                    | Not used               | The tranche expiry value for the interaction. | Yes   | Smart contract responsible for depositing, managing and redeeming Defi interactions with the Element protocol |
-| [LidoBridge](https://etherscan.io/address/0x381abF150B53cc699f0dBBBEF3C5c0D1fA4B3Efd)       | 2                               | ETH (0) or wstETH (2)                                                                             | Not used              | wstETH (2) or ETH (0)                                      | Not used               | Not used                                      | No    | Deposit Eth and get wstETH from Lido, or deposit wstETH and get ETH from a Curve swap.                        |
-| [AceOfZkBridge](https://etherscan.io/address/0x0eb7F9464060289fE4FDDFDe2258f518c6347a70)    | 4                               | [Ace of ZK NFT](https://opensea.io/assets/ethereum/0xe56b526e532804054411a470c49715c531cfd485/16) | Not used              | Not used                                                   | Not used               |                                               | No    | A bridge to send the Ace of ZK to the rollup processor contract.                                              |
-| [CurveStEthBridge](https://etherscan.io/address/0x0031130c56162e00A7e9C01eE4147b11cbac8776) | 5                               | ETH (0) or wstETH (2)                                                                             | Not used              | wsthETH (2) or ETH (0) - will be opposite of `inputAssetA` | Not used               | Not used                                      | No    | A DeFiBridge for trading between Eth and wstEth using curve and the stEth wrapper.                            |
+## SDK
 
 You can find more information about setting up connections to bridge contracts with the SDK on the [Ethereum Interactions](https://docs.aztec.network/sdk/usage/ethereum-interaction) page of the docs.
 
@@ -164,16 +160,8 @@ This repo supports TypeChain so all Typescript bindings will be auto generated a
 
 ### bridge-data.ts
 
-This is a Typescript class designed to help a developer on the frontend use your bridge. There are 4 variants of the class:
-
-```
-BridgeData
-AsyncBridgeData
-YieldBridgeData
-AsyncYieldBridgeData
-```
-
-You should pick the class that describes the functionality of your bridge and implement the functions to fetch data from your bridge / L1.
+This is a Typescript class designed to help a developer on the frontend use your bridge.
+You should implement the functions to fetch data from your bridge / L1.
 
 ## Aztec Connect Background
 
