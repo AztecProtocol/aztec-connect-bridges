@@ -30,7 +30,8 @@ contract ERC4626Bridge is BridgeBase {
     receive() external payable {}
 
     /**
-     * @notice Sets all the approvals necessary for issuance and redemption of `_vault` shares
+     * @notice Sets all the approvals necessary for issuance and redemption of `_vault` shares and registers
+     *         derived criteria in the Subsidy contract
      * @param _vault An address of erc4626 vault
      */
     function listVault(address _vault) external {
@@ -43,6 +44,25 @@ contract ERC4626Bridge is BridgeBase {
         asset.safeApprove(address(ROLLUP_PROCESSOR), type(uint256).max);
 
         IERC20(_vault).approve(ROLLUP_PROCESSOR, type(uint256).max);
+
+        // Registering the vault for subsidy
+        uint256[] memory criteria = new uint256[](2);
+        uint32[] memory gasUsage = new uint32[](2);
+        uint32[] memory minGasPerMinute = new uint32[](2);
+
+        // Having 2 different criteria for deposit and withdrawal flow
+        criteria[0] = _computeCriteria(address(asset), _vault);
+        criteria[1] = _computeCriteria(_vault, address(asset));
+
+        gasUsage[0] = 200000;
+        gasUsage[1] = 200000;
+
+        // This is approximately 200k / (24 * 60) --> targeting 1 full subsidized call per day
+        minGasPerMinute[0] = 140;
+        minGasPerMinute[1] = 140;
+
+        // We set gas usage in the Subsidy contract
+        SUBSIDY.setGasUsageAndMinGasPerMinute(criteria, gasUsage, minGasPerMinute);
     }
 
     /**
@@ -52,20 +72,21 @@ contract ERC4626Bridge is BridgeBase {
      * @param _totalInputValue The amount of assets to deposit or shares to redeem
      * @param _interactionNonce A globally unique identifier of this call
      * @param _auxData Number indicating which flow to execute (0 is deposit flow, 1 is redeem flow)
+     * @param _rollupBeneficiary - Address which receives subsidy if the call is eligible for it
      * @return outputValueA The amount of shares (deposit) or assets (redeem) returned
      * @dev Not checking validity of input/output assets because if they were invalid, approvals could not get set
      *      in the `listVault(...)` method.
      * @dev In case input or output asset is ETH, the bridge wraps/unwraps it.
      */
     function convert(
-        AztecTypes.AztecAsset memory _inputAssetA,
-        AztecTypes.AztecAsset memory,
-        AztecTypes.AztecAsset memory _outputAssetA,
-        AztecTypes.AztecAsset memory,
+        AztecTypes.AztecAsset calldata _inputAssetA,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata _outputAssetA,
+        AztecTypes.AztecAsset calldata,
         uint256 _totalInputValue,
         uint256 _interactionNonce,
         uint64 _auxData,
-        address
+        address _rollupBeneficiary
     )
         external
         payable
@@ -98,5 +119,31 @@ contract ERC4626Bridge is BridgeBase {
         } else {
             revert ErrorLib.InvalidAuxData();
         }
+
+        // Pay out subsidy to _rollupBeneficiary
+        SUBSIDY.claimSubsidy(
+            _computeCriteria(_inputAssetA.erc20Address, _outputAssetA.erc20Address),
+            _rollupBeneficiary
+        );
+    }
+
+    /**
+     * @notice Computes the criteria that is passed when claiming subsidy.
+     * @param _inputAssetA The input asset
+     * @param _outputAssetA The output asset
+     * @return The criteria
+     */
+    function computeCriteria(
+        AztecTypes.AztecAsset calldata _inputAssetA,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata _outputAssetA,
+        AztecTypes.AztecAsset calldata,
+        uint64
+    ) public pure override(BridgeBase) returns (uint256) {
+        return _computeCriteria(_inputAssetA.erc20Address, _outputAssetA.erc20Address);
+    }
+
+    function _computeCriteria(address _inputToken, address _outputToken) private pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(_inputToken, _outputToken)));
     }
 }
