@@ -6,7 +6,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
-import {ISubsidy} from "../../aztec/interfaces/ISubsidy.sol";
 
 /**
  * @title An example bridge contract.
@@ -16,15 +15,11 @@ import {ISubsidy} from "../../aztec/interfaces/ISubsidy.sol";
  *      sent to it.
  */
 contract ExampleBridgeContract is BridgeBase {
-    ISubsidy public immutable SUBSIDY;
-
     /**
      * @notice Set address of rollup processor
      * @param _rollupProcessor Address of rollup processor
      */
-    constructor(address _rollupProcessor, ISubsidy _subsidy) BridgeBase(_rollupProcessor) {
-        SUBSIDY = _subsidy;
-
+    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {
         address dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
         address usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 

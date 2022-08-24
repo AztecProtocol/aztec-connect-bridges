@@ -9,7 +9,6 @@ import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ExampleBridgeContract} from "../../../bridges/example/ExampleBridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
-import {ISubsidy, Subsidy} from "../../../aztec/Subsidy.sol";
 
 /**
  * @notice The purpose of this test is to test the bridge in an environment that is as close to the final deployment
@@ -19,18 +18,14 @@ contract ExampleE2ETest is BridgeTestBase {
     address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address private constant BENEFICIARY = address(11);
 
-    ISubsidy private subsidy;
     // The reference to the example bridge
     ExampleBridgeContract internal bridge;
     // To store the id of the example bridge after being added
     uint256 private id;
 
     function setUp() public {
-        // Deploy the Subsidy contract in order to be able to test subsidy
-        subsidy = new Subsidy();
-
         // Deploy a new example bridge
-        bridge = new ExampleBridgeContract(address(ROLLUP_PROCESSOR), subsidy);
+        bridge = new ExampleBridgeContract(address(ROLLUP_PROCESSOR));
 
         // Use the label cheatcode to mark the address with "Example Bridge" in the traces
         vm.label(address(bridge), "Example Bridge");
@@ -58,9 +53,9 @@ contract ExampleE2ETest is BridgeTestBase {
         AztecTypes.AztecAsset memory usdcAsset = getRealAztecAsset(USDC);
         uint256 criteria = bridge.computeCriteria(usdcAsset, emptyAsset, usdcAsset, emptyAsset, 0);
         uint32 gasPerMinute = 200;
-        subsidy.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
+        SUBSIDY.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
 
-        subsidy.registerBeneficiary(BENEFICIARY);
+        SUBSIDY.registerBeneficiary(BENEFICIARY);
 
         // Set the rollupBeneficiary on BridgeTestBase so that it gets included in the proofData
         setRollupBeneficiary(BENEFICIARY);
@@ -107,6 +102,6 @@ contract ExampleE2ETest is BridgeTestBase {
         // Check that the balance of the rollup is same as before interaction (bridge just sends funds back)
         assertEq(_depositAmount, IERC20(USDC).balanceOf(address(ROLLUP_PROCESSOR)), "Balances must match");
 
-        assertGt(subsidy.claimableAmount(BENEFICIARY), 1, "Claimable was not updated");
+        assertGt(SUBSIDY.claimableAmount(BENEFICIARY), 1, "Claimable was not updated");
     }
 }
