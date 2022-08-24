@@ -29,6 +29,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
     IERC20 public constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     uint256 public constant SAFE_MAX = 79228162514264337593543950334;
+    address private constant BENEFICIARY = address(11);
 
     YearnBridge internal bridge;
     uint256 internal id;
@@ -45,6 +46,13 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 5000000);
 
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
+
+        // Set subsidy
+        uint256 criteria = 0; // Subsidizing only deposit
+        uint32 gasPerMinute = 200;
+        SUBSIDY.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
+        SUBSIDY.registerBeneficiary(BENEFICIARY);
+        setRollupBeneficiary(BENEFICIARY);
     }
 
     function testERC20DepositAndWithdrawal(uint256 _depositAmount, uint256 _withdrawAmount) public {
@@ -109,6 +117,9 @@ contract YearnBridgeE2ETest is BridgeTestBase {
 
         deal(underlyingToken, address(ROLLUP_PROCESSOR), _depositAmount);
 
+        // Warp time for the subsidy to accrue
+        vm.warp(block.timestamp + 1 days);
+
         AztecTypes.AztecAsset memory depositInputAssetA = getRealAztecAsset(underlyingToken);
         AztecTypes.AztecAsset memory depositOutputAssetA = getRealAztecAsset(address(_vault));
 
@@ -135,10 +146,13 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, _depositAmount, 0, true, "");
         sendDefiRollup(bridgeCallData, _depositAmount);
 
+        uint256 claimableSubsidyAfterDeposit = SUBSIDY.claimableAmount(BENEFICIARY);
+        assertGt(SUBSIDY.claimableAmount(BENEFICIARY), 0, "Claimable was not updated");
+
         uint256 inputAssetAMid = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 outputAssetAMid = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
         assertEq(inputAssetAMid, inputAssetABefore - _depositAmount, "Balance missmatch after deposit");
-        assertGt(outputAssetAMid, outputAssetABefore, "no change in output asset balance after deposit");
+        assertGt(outputAssetAMid, outputAssetABefore, "No change in output asset balance after deposit");
 
         _withdrawAmount = outputAssetAMid;
         bridgeCallData = encodeBridgeCallData(id, depositOutputAssetA, emptyAsset, depositInputAssetA, emptyAsset, 1);
@@ -161,7 +175,13 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         assertEq(
             outputAssetAAfter,
             outputAssetAMid - _withdrawAmount,
-            "no change in output asset balance after withdraw"
+            "No change in output asset balance after withdraw"
+        );
+
+        assertEq(
+            SUBSIDY.claimableAmount(BENEFICIARY),
+            claimableSubsidyAfterDeposit,
+            "Claimable subsidy unexpectadly changed after withdrawal"
         );
     }
 
