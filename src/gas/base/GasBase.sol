@@ -30,12 +30,6 @@ contract GasBase {
         ethPayments[interactionNonce] += msg.value;
     }
 
-    struct Temps {
-        uint256 paymentSlot;
-        uint256 gasUsed;
-        bool success;
-    }
-
     function convert(
         address bridgeAddress,
         AztecTypes.AztecAsset memory inputAssetA,
@@ -44,21 +38,16 @@ contract GasBase {
         AztecTypes.AztecAsset memory outputAssetB,
         uint256 totalInputValue,
         uint256 interactionNonce,
-        uint256 auxInputData, // (auxData)
+        uint256 auxInputData,
         address rollupBeneficiary,
         uint256 gasLimit
-    ) external returns (uint256) {
-        Temps memory temps;
-        {
-            uint256 paymentSlot;
-            assembly {
-                mstore(temps, ethPayments.slot)
-                //paymentSlot := ethPayments.slot
-            }
+    ) external {
+        uint256 paymentSlot;
+        assembly {
+            paymentSlot := ethPayments.slot
         }
 
-        temps.gasUsed = gasleft();
-        (temps.success, ) = address(defiProxy).delegatecall{gas: gasLimit}(
+        (bool success, ) = address(defiProxy).delegatecall{gas: gasLimit}(
             abi.encodeWithSelector(
                 DEFI_BRIDGE_PROXY_CONVERT_SELECTOR,
                 bridgeAddress,
@@ -69,16 +58,13 @@ contract GasBase {
                 totalInputValue,
                 interactionNonce,
                 auxInputData,
-                temps.paymentSlot,
+                paymentSlot,
                 rollupBeneficiary
             )
         );
-        temps.gasUsed -= gasleft();
 
-        if (!temps.success) {
+        if (!success) {
             revert("Failure, should only fail with OOM");
         }
-
-        return temps.gasUsed;
     }
 }

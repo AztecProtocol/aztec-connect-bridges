@@ -22,6 +22,7 @@ contract YearnMeasure is YearnDeployment {
         address defiProxy = IRead(ROLLUP_PROCESSOR).defiBridgeProxy();
         vm.label(defiProxy, "DefiProxy");
 
+        vm.broadcast();
         gasBase = new GasBase(defiProxy);
 
         address temp = ROLLUP_PROCESSOR;
@@ -41,37 +42,31 @@ contract YearnMeasure is YearnDeployment {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-        vm.deal(address(gasBase), 2 ether);
+        vm.broadcast();
+        address(gasBase).call{value: 2 ether}("");
         emit log_named_uint("Balance of ", address(gasBase).balance);
 
         // Deposit
         {
-            vm.warp(block.timestamp + 1000);
-
             vm.broadcast();
-            uint256 gas = gasBase.convert(bridge, eth, empty, vyAsset, empty, 1 ether, 0, 0, address(this), 200000);
-
-            emit log_named_uint("Gas      ", gas);
+            gasBase.convert(bridge, eth, empty, vyAsset, empty, 1 ether, 0, 0, address(this), 250000);
         }
 
         // Withdraw
         {
-            vm.warp(block.timestamp + 1000);
-
             emit log_named_uint("bal", IERC20(vyAsset.erc20Address).balanceOf(address(gasBase)));
 
             vm.broadcast();
-            uint256 gas = gasBase.convert(bridge, vyAsset, empty, eth, empty, 0.1 ether, 1, 1, address(this), 200000);
+            gasBase.convert(bridge, vyAsset, empty, eth, empty, 0.1 ether, 1, 1, address(this), 250000);
             emit log_named_uint("bal", IERC20(vyAsset.erc20Address).balanceOf(address(gasBase)));
-
-            emit log_named_uint("Gas      ", gas);
         }
     }
 
-    function measureDai() public {
+    function measureWeth() public {
         address defiProxy = IRead(ROLLUP_PROCESSOR).defiBridgeProxy();
         vm.label(defiProxy, "DefiProxy");
 
+        vm.broadcast();
         gasBase = new GasBase(defiProxy);
 
         address temp = ROLLUP_PROCESSOR;
@@ -80,41 +75,38 @@ contract YearnMeasure is YearnDeployment {
         ROLLUP_PROCESSOR = temp;
 
         AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory dai = AztecTypes.AztecAsset({
+        AztecTypes.AztecAsset memory wethAsset = AztecTypes.AztecAsset({
             id: 0,
-            erc20Address: address(DAI),
+            erc20Address: address(WETH),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
         AztecTypes.AztecAsset memory vyAsset = AztecTypes.AztecAsset({
             id: 1,
-            erc20Address: YEARN_REGISTRY.latestVault(DAI),
+            erc20Address: YEARN_REGISTRY.latestVault(WETH),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-        deal(DAI, address(gasBase), 2 ether);
-        emit log_named_uint("Balance of ", IERC20(DAI).balanceOf(address(gasBase)));
+        vm.broadcast();
+        WETH.call{value: 2 ether}("");
+
+        vm.broadcast();
+        IERC20(WETH).transfer(address(gasBase), 2 ether);
+
+        emit log_named_uint("Balance of ", IERC20(WETH).balanceOf(address(gasBase)));
 
         // Deposit
         {
-            vm.warp(block.timestamp + 1000);
-
             vm.broadcast();
-            uint256 gas = gasBase.convert(bridge, dai, empty, vyAsset, empty, 1 ether, 0, 0, address(this), 200000);
-
-            emit log_named_uint("Gas      ", gas);
+            gasBase.convert(bridge, wethAsset, empty, vyAsset, empty, 1 ether, 0, 0, address(this), 250000);
         }
 
         // Withdraw
         {
-            vm.warp(block.timestamp + 1000);
-
             emit log_named_uint("bal", IERC20(vyAsset.erc20Address).balanceOf(address(gasBase)));
 
             vm.broadcast();
-            uint256 gas = gasBase.convert(bridge, vyAsset, empty, dai, empty, 0.1 ether, 1, 1, address(this), 200000);
+            gasBase.convert(bridge, vyAsset, empty, wethAsset, empty, 0.1 ether, 1, 1, address(this), 250000);
             emit log_named_uint("bal", IERC20(vyAsset.erc20Address).balanceOf(address(gasBase)));
-
-            emit log_named_uint("Gas      ", gas);
         }
     }
 }

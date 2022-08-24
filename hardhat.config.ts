@@ -9,7 +9,8 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, __, runSuper
   // Do not generate types for files in the src/test folder unless they are in interface subfolder.
   // (Types of all the interfaces are needed in end to end tests.)
   return paths.filter(
-    (p: any) => (!p.includes("src/test/") && !p.includes("src/deployment") && !p.includes("src/gas")) || p.includes("interface"),
+    (p: any) =>
+      (!p.includes("src/test/") && !p.includes("src/deployment") && !p.includes("src/gas")) || p.includes("interface"),
   );
 });
 
