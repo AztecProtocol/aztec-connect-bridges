@@ -21,7 +21,7 @@ contract YearnBridge is BridgeBase {
     using SafeERC20 for IERC20;
 
     IYearnRegistry public constant YEARN_REGISTRY = IYearnRegistry(0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804);
-    address public constant WETH = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     error InvalidOutputANotLatest();
     error InvalidWETHAmount();
@@ -37,7 +37,7 @@ contract YearnBridge is BridgeBase {
     receive() external payable {}
 
     /**
-     * @notice Set all the necessary approvals for all the latests vaults for the tokens supported by Yearn
+     * @notice Set all the necessary approvals for all the latest vaults for the tokens supported by Yearn
      */
     function preApproveAll() external {
         uint256 numTokens = YEARN_REGISTRY.numTokens();
@@ -109,7 +109,7 @@ contract YearnBridge is BridgeBase {
                 revert ErrorLib.InvalidOutputA();
             }
             if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
-                _zapETH(msg.value, _outputAssetA);
+                IWETH(WETH).deposit{value: _inputValue}();
             }
             outputValueA = IYearnVault(_outputAssetA.erc20Address).deposit(_inputValue);
         } else if (_auxData == 1) {
@@ -117,59 +117,15 @@ contract YearnBridge is BridgeBase {
                 revert ErrorLib.InvalidInputA();
             }
 
+            outputValueA = IYearnVault(_inputAssetA.erc20Address).withdraw(_inputValue);
             if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
-                outputValueA = _unzapETH(_inputValue, _interactionNonce, _inputAssetA);
-            } else if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
-                outputValueA = IYearnVault(_inputAssetA.erc20Address).withdraw(_inputValue);
-            } else {
-                revert ErrorLib.InvalidOutputA();
+                IWETH(WETH).withdraw(outputValueA);
+                IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
             }
         } else {
             revert ErrorLib.InvalidAuxData();
         }
         return (outputValueA, 0, false);
-    }
-
-    /**
-     * @notice zap _inputValue ETH to wETH.
-     * @param _inputValue - Amount of underlying to deposit
-     * @param _outputAssetA - Vault we want to deposit to
-     */
-    function _zapETH(uint256 _inputValue, AztecTypes.AztecAsset memory _outputAssetA) private {
-        IYearnVault yVault = IYearnVault(_outputAssetA.erc20Address);
-        address underlyingToken = yVault.token();
-        if (underlyingToken != WETH) {
-            revert ErrorLib.InvalidOutputA();
-        }
-        IWETH(WETH).deposit{value: _inputValue}();
-    }
-
-    /**
-     * @notice Withdraw _inputValue from a yvETH vault, unwrap the wETH received to ETH and reclaim them.
-     * @param _inputValue - Amount of shares to withdraw
-     * @param _interactionNonce - Aztec nonce of the interaction
-     */
-    function _unzapETH(
-        uint256 _inputValue,
-        uint256 _interactionNonce,
-        AztecTypes.AztecAsset memory _inputAssetA
-    ) private returns (uint256 outputValue) {
-        IYearnVault yVault = IYearnVault(_inputAssetA.erc20Address);
-        if (yVault.token() != WETH) {
-            revert ErrorLib.InvalidInputA();
-        }
-
-        uint256 wethAmount = yVault.withdraw(_inputValue);
-        if (wethAmount == 0) {
-            revert InvalidWETHAmount();
-        }
-
-        uint256 outputValueBefore = address(this).balance;
-        IWETH(WETH).withdraw(wethAmount);
-        outputValue = address(this).balance;
-        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValue - outputValueBefore}(
-            _interactionNonce
-        );
     }
 
     /**
