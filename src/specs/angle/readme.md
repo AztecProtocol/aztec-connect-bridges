@@ -20,6 +20,12 @@ There are 2 flows:
 
 Input tokens currently accepted by Angle are: DAI, USDC, wETH and FRAX.
 
+sanTokens being yield bearing tokens, the amount to be redeemed ultimately could be either higher or lower than what was deposited. 2 cases:
+
+- interests were positive and accrued in the protocol -> being redistributed to SLP -> withdraw more ERC20 than deposited
+- losses happened in the protocol -> SLPs are impacted -> withdraw less than what was deposited
+  In no case will withdrawals revert. You will always be able to withdraw some of the underlying ERC20.
+
 ## What functions are available in [/src/client](./client)?
 
 Main functions are `getAuxData` and `getExpectedOutput`.
@@ -29,6 +35,9 @@ Main functions are `getAuxData` and `getExpectedOutput`.
 ## Is this contract upgradable? If so, what are the restrictions on upgradability?
 
 No, bridge is immutable.
+Some of the contracts in the Angle Protocol are upgradable. Controlled by a 4 out of 6 multisig.
+You can find more information here: https://developers.angle.money/governance-and-cross-module-contracts/common-modules#smart-contracts-upgradeability
+and here: https://docs.angle.money/governance/angle-dao#governance-multi-sig-signers
 
 ## Does this bridge maintain state? If so, what is stored and why?
 
