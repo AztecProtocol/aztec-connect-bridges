@@ -12,14 +12,22 @@ import {LiquityTroveDeployment} from "./liquity/LiquityTroveDeployment.s.sol";
 import {UniswapDeployment} from "./uniswap/UniswapDeployment.s.sol";
 import {YearnDeployment} from "./yearn/YearnDeployment.s.sol";
 
+/**
+ * A helper script that allow easy deployment of multiple bridges
+ * `deployAndListAll()` should contain all bridges with deployment scripts
+ * `deployAndListPartial()` should contain the bridges that  should be deployed to devnet
+ * The two helpers will probably overlap, but it is not required.
+ */
 contract AggregateDeployment is Script {
+    function deployAndListPartial() public {}
+
     function deployAndListAll() public {
-        (new CompoundDeployment()).deployAndList();
         (new CurveDeployment()).deployAndList();
-        (new DonationDeployment()).deployAndList();
+        (new YearnDeployment()).deployAndList();
         (new ERC4626Deployment()).deployAndList();
+        (new CompoundDeployment()).deployAndList();
+        (new DonationDeployment()).deployAndList();
         (new LiquityTroveDeployment()).deployAndList();
         (new UniswapDeployment()).deployAndList();
-        (new YearnDeployment()).deployAndList();
     }
 }
