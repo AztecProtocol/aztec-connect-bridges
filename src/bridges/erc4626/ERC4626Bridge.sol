@@ -125,7 +125,7 @@ contract ERC4626Bridge is BridgeBase {
             revert ErrorLib.InvalidAuxData();
         }
 
-        // Pay out subsidy to _rollupBeneficiary
+        // Accumulate subsidy to _rollupBeneficiary
         SUBSIDY.claimSubsidy(_computeCriteria(inputToken, outputToken), _rollupBeneficiary);
     }
 
