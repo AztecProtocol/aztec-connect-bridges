@@ -6,8 +6,8 @@ import {BaseDeployment} from "../base/BaseDeployment.s.sol";
 import {UniswapBridge} from "../../bridges/uniswap/UniswapBridge.sol";
 
 contract UniswapDeployment is BaseDeployment {
-    address public constant WETH = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    address public constant DAI = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 
     function deploy() public returns (address) {
         emit log("Deploying uniswap bridge");
