@@ -21,7 +21,7 @@ contract YearnBridge is BridgeBase {
     using SafeERC20 for IERC20;
 
     IYearnRegistry public constant YEARN_REGISTRY = IYearnRegistry(0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804);
-    address public constant WETH = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     error InvalidOutputANotLatest();
     error InvalidWETHAmount();
@@ -29,15 +29,30 @@ contract YearnBridge is BridgeBase {
     error InvalidVault();
 
     /**
-     * @notice Set address of rollup processor
+     * @notice Sets address of rollup processor and Subsidy-related info
      * @param _rollupProcessor Address of rollup processor
      */
-    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
+    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {
+        uint256[] memory criteria = new uint256[](2);
+        uint32[] memory gasUsage = new uint32[](2);
+        uint32[] memory minGasPerMinute = new uint32[](2);
+
+        criteria[0] = 0;
+        criteria[1] = 1;
+
+        gasUsage[0] = 200000;
+        gasUsage[1] = 200000;
+
+        minGasPerMinute[0] = 140;
+        minGasPerMinute[1] = 140;
+
+        SUBSIDY.setGasUsageAndMinGasPerMinute(criteria, gasUsage, minGasPerMinute);
+    }
 
     receive() external payable {}
 
     /**
-     * @notice Set all the necessary approvals for all the latests vaults for the tokens supported by Yearn
+     * @notice Set all the necessary approvals for all the latest vaults for the tokens supported by Yearn
      */
     function preApproveAll() external {
         uint256 numTokens = YEARN_REGISTRY.numTokens();
@@ -81,7 +96,8 @@ contract YearnBridge is BridgeBase {
      * @param _outputAssetA - Yearn Vault ERC20 token to receive on deposit or ERC20 token to receive on withdraw
      * @param _inputValue - Amount to deposit or withdraw
      * @param _interactionNonce - Unique identifier for this DeFi interaction
-     * @param _auxData - Special value to indicate a deposit (0) or a withdraw (1)
+     * @param _auxData - Special value to indicate a deposit (0) or a withdraw (1) (used as Subsidy criteria)
+     * @param _rollupBeneficiary - Address which receives subsidy if the call is eligible for it
      * @return outputValueA - the amount of output asset to return
      */
     function convert(
@@ -92,7 +108,7 @@ contract YearnBridge is BridgeBase {
         uint256 _inputValue,
         uint256 _interactionNonce,
         uint64 _auxData,
-        address
+        address _rollupBeneficiary
     )
         external
         payable
@@ -127,6 +143,10 @@ contract YearnBridge is BridgeBase {
         } else {
             revert ErrorLib.InvalidAuxData();
         }
+
+        // Accumulate subsidy to _rollupBeneficiary
+        SUBSIDY.claimSubsidy(_auxData, _rollupBeneficiary);
+
         return (outputValueA, 0, false);
     }
 
@@ -170,6 +190,24 @@ contract YearnBridge is BridgeBase {
         IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValue - outputValueBefore}(
             _interactionNonce
         );
+    }
+
+    /**
+     * @notice Computes the criteria that is passed when claiming subsidy.
+     * @param _auxData Special value to indicate a deposit (0) or a withdraw (1)
+     * @return The criteria
+     */
+    function computeCriteria(
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        uint64 _auxData
+    ) public pure override(BridgeBase) returns (uint256) {
+        if (_auxData > 1) {
+            revert ErrorLib.InvalidAuxData();
+        }
+        return _auxData;
     }
 
     /**

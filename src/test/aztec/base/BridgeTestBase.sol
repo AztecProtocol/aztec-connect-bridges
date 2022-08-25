@@ -5,6 +5,7 @@ pragma solidity >=0.8.4;
 import {Test, Vm} from "forge-std/Test.sol";
 import {AztecTypes} from "./../../../aztec/libraries/AztecTypes.sol";
 import {IRollupProcessor} from "./../../../aztec/interfaces/IRollupProcessor.sol";
+import {ISubsidy} from "../../../aztec/interfaces/ISubsidy.sol";
 
 /**
  * @notice Helper contract that allow us to test bridges against the live rollup by sending mock rollups with defi interactions
@@ -104,6 +105,8 @@ abstract contract BridgeTestBase is Test {
     IRollupProcessor internal constant ROLLUP_PROCESSOR = IRollupProcessor(0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455);
     IRollupProcessor internal constant IMPLEMENTATION = IRollupProcessor(0x3f972e325CecD99a6be267fd36ceB46DCa7C3F28);
 
+    ISubsidy internal constant SUBSIDY = ISubsidy(0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA);
+
     address internal constant ROLLUP_PROVIDER = payable(0xA173BDdF4953C1E8be2cA0695CFc07502Ff3B1e7);
     address internal constant MULTI_SIG = 0xE298a76986336686CC3566469e3520d23D1a8aaD;
 
@@ -120,6 +123,7 @@ abstract contract BridgeTestBase is Test {
     constructor() {
         vm.label(address(ROLLUP_PROCESSOR), "Rollup");
         vm.label(address(IMPLEMENTATION), "Implementation");
+        vm.label(address(SUBSIDY), "Subsidy");
         vm.label(ROLLUP_PROVIDER, "Rollup Provider");
         vm.label(MULTI_SIG, "Multisig");
         vm.label(ROLLUP_PROCESSOR.verifier(), "Verifier");
