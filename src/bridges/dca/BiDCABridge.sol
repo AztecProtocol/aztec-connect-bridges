@@ -42,6 +42,7 @@ abstract contract BiDCABridge is BridgeBase {
 
     error FeeTooLarge();
     error PositionAlreadyExists();
+    error NoDeposits();
 
     /**
      * @notice A struct used in-memory to get around stack-to-deep errors
@@ -586,7 +587,6 @@ abstract contract BiDCABridge is BridgeBase {
             } else {
                 int256 slope = (int256(_vars.currentPrice) - int256(_vars.lastUsedPrice)) /
                     int256(block.timestamp - _vars.lastUsedPriceTime);
-                // Could we ever enter a case where DT is in the past?
                 // lastUsedPriceTime will always be an earlier tick than this.
                 uint256 dt = _tickId * TICK_SIZE + TICK_SIZE / 2 - _vars.lastUsedPriceTime;
                 int256 _price = int256(_vars.lastUsedPrice) + slope * int256(dt);
@@ -701,7 +701,7 @@ abstract contract BiDCABridge is BridgeBase {
     function _earliestUsedTick(uint256 _earliestTickA, uint256 _earliestTickB) internal pure returns (uint256) {
         uint256 start;
         if (_earliestTickA == 0 && _earliestTickB == 0) {
-            revert("No deposits");
+            revert NoDeposits();
         } else if (_earliestTickA * _earliestTickB == 0) {
             // one are zero (the both case is handled explicitly above)
             start = _earliestTickA > _earliestTickB ? _earliestTickA : _earliestTickB;
