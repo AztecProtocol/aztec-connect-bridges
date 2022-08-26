@@ -30,7 +30,7 @@ interface IChainlinkOracle {
  * 1. rebalance internally in the ticks, as the BiDCABridge,
  * 2. rebalance cross-ticks, e.g., excess from the individual ticks are matched,
  * 3. swap any remaining excess using Uniswap, and rebalance with the returned assets
- * @dev The `MAX_AGE` of a price feed, means that a abandoned price-feed will brick the bridge.
+ * @dev The `MAX_AGE` of a price feed, means that an abandoned price-feed will brick the bridge.
  * @dev The slippage + path is immutable, so low liquidity in Uniswap might block the `rebalanceAndfillUniswap` flow.
  * @author Lasse Herskind (LHerskind on GitHub).
  */

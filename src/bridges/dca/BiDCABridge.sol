@@ -25,7 +25,8 @@ import {SafeCastLib} from "./SafeCastLib.sol";
  * To "balance" the scheme, an external party can buy assets at the orace-price (no slippage).
  * The amount that can be bought by the external party, depends on the ticks and how much can be matched internally.
  * As part of the balancing act, each tick will match the A and B holdings it has to sell, using the oracle price
- * (or infer price from prior price and current price). The excess from this internal matching is then sold off (of as much as possible).
+ * (or infer price from prior price and current price). 
+ * The excess from this internal matching is then sold off to the caller at oracle price, to match his offer.
  * The rebalancing is expected to be done by arbitrageurs when prices deviate sufficiently between the oracle and dexes.
  * The finalise function is incentivised by giving part of the traded value to the `tx.origin` (msg.sender always rollup processor).
  * Extensions to this bridge can be made such that the external party can be Uniswap or another dex.
