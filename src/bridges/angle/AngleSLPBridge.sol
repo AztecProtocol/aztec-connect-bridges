@@ -7,6 +7,8 @@ import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {IStableMaster} from "../../interfaces/angle/IStableMaster.sol";
+import {IWETH} from "../../interfaces/IWETH.sol";
+import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 
 /**
  * @title Angle Protocol bridge contract.
@@ -29,6 +31,11 @@ contract AngleSLPBridge is BridgeBase {
     address public constant SANWETH = 0x30c955906735e48D73080fD20CB488518A6333C8;
     address public constant SANFRAX = 0xb3B209Bb213A5Da5B947C56f2C770b3E1015f1FE;
 
+    address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    IWETH public constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    address public constant FRAX = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
+
     // The amount of dust to leave in the contract
     // Optimization based on EIP-1087
     uint256 internal constant DUST = 1;
@@ -44,6 +51,8 @@ contract AngleSLPBridge is BridgeBase {
         _preApprove(POOLMANAGER_FRAX);
     }
 
+    receive() external payable {}
+
     /**
      * @notice Deposit tokens into Angle Protocol as an SLP and receive sanTokens (yield bearing)
      * @param _inputAssetA - ERC20/ETH (deposit), or sanToken (withdraw)
@@ -58,7 +67,7 @@ contract AngleSLPBridge is BridgeBase {
         AztecTypes.AztecAsset memory _outputAssetA,
         AztecTypes.AztecAsset memory,
         uint256 _totalInputValue,
-        uint256,
+        uint256 _interactionNonce,
         uint64 _auxData,
         address
     )
@@ -72,27 +81,50 @@ contract AngleSLPBridge is BridgeBase {
             bool
         )
     {
-        if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidInputA();
-        if (_outputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidOutputA();
+        address inputAssetA;
+        address outputAssetA;
+
+        if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
+            inputAssetA = _inputAssetA.erc20Address;
+        } else if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+            WETH.deposit{value: _totalInputValue}();
+            inputAssetA = address(WETH);
+        } else {
+            revert ErrorLib.InvalidInputA();
+        }
+
+        if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
+            outputAssetA = _outputAssetA.erc20Address;
+        } else if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+            outputAssetA = address(WETH);
+        } else {
+            revert ErrorLib.InvalidOutputA();
+        }
+
         if (_totalInputValue < 10) revert ErrorLib.InvalidInputAmount();
 
         if (_auxData == 0) {
-            (address poolManager, address sanToken) = getPoolManagerAndSanToken(_inputAssetA.erc20Address);
+            (address poolManager, address sanToken) = getPoolManagerAndSanToken(inputAssetA);
             if (poolManager == address(0) || sanToken == address(0)) revert ErrorLib.InvalidInputA();
-            if (sanToken != _outputAssetA.erc20Address) revert ErrorLib.InvalidOutputA();
+            if (sanToken != outputAssetA) revert ErrorLib.InvalidOutputA();
 
             STABLE_MASTER.deposit(_totalInputValue, address(this), poolManager);
         } else if (_auxData == 1) {
-            (address poolManager, address sanToken) = getPoolManagerAndSanToken(_outputAssetA.erc20Address);
+            (address poolManager, address sanToken) = getPoolManagerAndSanToken(outputAssetA);
             if (poolManager == address(0) || sanToken == address(0)) revert ErrorLib.InvalidOutputA();
-            if (sanToken != _inputAssetA.erc20Address) revert ErrorLib.InvalidInputA();
+            if (sanToken != inputAssetA) revert ErrorLib.InvalidInputA();
 
             STABLE_MASTER.withdraw(_totalInputValue, address(this), address(this), poolManager);
         } else {
             revert ErrorLib.InvalidAuxData();
         }
 
-        outputValueA = IERC20(_outputAssetA.erc20Address).balanceOf(address(this)) - DUST;
+        outputValueA = IERC20(outputAssetA).balanceOf(address(this)) - DUST;
+
+        if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+            WETH.withdraw(outputValueA);
+            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
+        }
     }
 
     /**
@@ -106,16 +138,16 @@ contract AngleSLPBridge is BridgeBase {
         pure
         returns (address poolManager, address sanToken)
     {
-        if (_collateral == 0x6B175474E89094C44Da98b954EedeAC495271d0F) {
+        if (_collateral == DAI) {
             poolManager = POOLMANAGER_DAI;
             sanToken = SANDAI;
-        } else if (_collateral == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48) {
+        } else if (_collateral == USDC) {
             poolManager = POOLMANAGER_USDC;
             sanToken = SANUSDC;
-        } else if (_collateral == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) {
+        } else if (_collateral == address(WETH)) {
             poolManager = POOLMANAGER_WETH;
             sanToken = SANWETH;
-        } else if (_collateral == 0x853d955aCEf822Db058eb8505911ED77F175b99e) {
+        } else if (_collateral == FRAX) {
             poolManager = POOLMANAGER_FRAX;
             sanToken = SANFRAX;
         }
@@ -143,11 +175,6 @@ contract AngleSLPBridge is BridgeBase {
         if (allowance != type(uint256).max) {
             IERC20(sanToken).safeApprove(ROLLUP_PROCESSOR, 0);
             IERC20(sanToken).safeApprove(ROLLUP_PROCESSOR, type(uint256).max);
-        }
-        allowance = IERC20(sanToken).allowance(address(this), address(STABLE_MASTER));
-        if (allowance != type(uint256).max) {
-            IERC20(sanToken).safeApprove(address(STABLE_MASTER), 0);
-            IERC20(sanToken).safeApprove(address(STABLE_MASTER), type(uint256).max);
         }
     }
 }
