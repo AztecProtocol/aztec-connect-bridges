@@ -15,6 +15,10 @@ contract TestUtil is Test {
         IERC20 erc;
     }
 
+    address internal constant LQTY_ETH_POOL = 0xD1D5A4c0eA98971894772Dcd6D2f1dc71083C44E; // 3000 bps fee tier
+    address internal constant USDC_ETH_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640; // 500 bps fee tier
+    address internal constant LUSD_USDC_POOL = 0x4e0924d3a751bE199C426d52fb1f2337fa96f736; // 500 bps fee tier
+
     IPriceFeed internal constant LIQUITY_PRICE_FEED = IPriceFeed(0x4c517D4e2C851CA76d7eC94B805269Df0f2201De);
 
     mapping(bytes32 => Token) internal tokens;
@@ -25,7 +29,7 @@ contract TestUtil is Test {
     //      rollup processor would.
     function receiveEthFromBridge(uint256 _interactionNonce) external payable {}
 
-    function setUpTokens() public {
+    function _setUpTokensAndLabels() internal {
         tokens["LUSD"].addr = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
         tokens["LUSD"].erc = IERC20(tokens["LUSD"].addr);
         vm.label(tokens["LUSD"].addr, "LUSD");
@@ -41,16 +45,15 @@ contract TestUtil is Test {
         tokens["USDC"].addr = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
         tokens["USDC"].erc = IERC20(tokens["USDC"].addr);
         vm.label(tokens["USDC"].addr, "USDC");
+
+        vm.label(LQTY_ETH_POOL, "LQTY_ETH_POOL");
+        vm.label(USDC_ETH_POOL, "USDC_ETH_POOL");
+        vm.label(LUSD_USDC_POOL, "LUSD_USDC_POOL");
     }
 
-    function setLiquityPrice(uint256 _price) public {
+    function _setLiquityPrice(uint256 _price) internal {
         IPriceFeed mockFeed = new MockPriceFeed(_price);
         vm.etch(address(LIQUITY_PRICE_FEED), address(mockFeed).code);
         assertEq(LIQUITY_PRICE_FEED.fetchPrice(), _price);
-    }
-
-    function rand(uint256 _seed) public pure returns (uint256) {
-        // I want a number between 1 WAD and 10 million WAD
-        return uint256(keccak256(abi.encodePacked(_seed))) % 10**25;
     }
 }

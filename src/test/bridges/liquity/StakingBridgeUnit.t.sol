@@ -9,16 +9,12 @@ import {TestUtil} from "./utils/TestUtil.sol";
 import {StakingBridge} from "../../../bridges/liquity/StakingBridge.sol";
 
 contract StakingBridgeUnitTest is TestUtil {
-    address public constant LUSD_USDC_POOL = 0x4e0924d3a751bE199C426d52fb1f2337fa96f736; // 500 bps fee tier
-    address public constant USDC_ETH_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640; // 500 bps fee tier
-    address public constant LQTY_ETH_POOL = 0xD1D5A4c0eA98971894772Dcd6D2f1dc71083C44E; // 3000 bps fee tier
-
     AztecTypes.AztecAsset internal emptyAsset;
     StakingBridge private bridge;
 
     function setUp() public {
+        _setUpTokensAndLabels();
         rollupProcessor = address(this);
-        setUpTokens();
 
         bridge = new StakingBridge(rollupProcessor);
         bridge.setApprovals();
@@ -85,10 +81,9 @@ contract StakingBridgeUnitTest is TestUtil {
         assertGe(outputValueA, inputValue);
     }
 
-    function testMultipleDepositsWithdrawals() public {
+    function testMultipleDepositsWithdrawals(uint256[2] memory _depositAmounts) public {
         uint256 i = 0;
         uint256 numIters = 2;
-        uint256 depositAmount = 203;
         uint256[] memory sbBalances = new uint256[](numIters);
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
@@ -103,7 +98,7 @@ contract StakingBridgeUnitTest is TestUtil {
         );
 
         while (i < numIters) {
-            depositAmount = rand(depositAmount);
+            uint256 depositAmount = bound(_depositAmounts[i], 1e18, 1e25);
             // 1. Mint deposit amount of LQTY directly to the bridge (to avoid transfer)
             deal(inputAssetA.erc20Address, address(bridge), depositAmount);
             // 2. Mint rewards to the bridge
