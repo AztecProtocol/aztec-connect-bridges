@@ -51,7 +51,7 @@ When using the chainlink oracle, this is centralization issue as chainlink could
 A position needs to be finalised before it can be exited.
 For a position to be ready to be finalised, all its available funds must have been sold for the opposite asset.
 When finalised, the accumulated funds will be returned to the bridge and the user may claim them on L2.
-To incentivise searchers on L1 to finalise the transactions, a fee of 10 basis points of the swapped assets are paid to the initiator of the transaction (`tx.origin` instead of `msg.sender` as the rollup will always be the `msg.sender` and we cannot pass any address along).
+To incentivise searchers on L1 to finalise the transactions, a fraction of the swapped assets are paid to the initiator of the transaction (`tx.origin` instead of `msg.sender` as the rollup will always be the `msg.sender` and we cannot pass any address along).
 
 ## Please list any edge cases that may restrict the usefulness of the bridge or that the bridge explicitly prevents.
 
