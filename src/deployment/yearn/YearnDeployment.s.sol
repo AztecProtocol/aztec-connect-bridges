@@ -42,7 +42,7 @@ contract YearnDeployment is BaseDeployment {
 
         approveAssets(bridge);
 
-        uint256 addressId = listBridge(bridge, 500000);
+        uint256 addressId = listBridge(bridge, 200000);
         emit log_named_uint("Yearn bridge address id", addressId);
 
         listAsset(YEARN_REGISTRY.latestVault(DAI), 100000);
