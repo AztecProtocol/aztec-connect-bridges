@@ -6,21 +6,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {IWETH} from "../../interfaces/IWETH.sol";
+import {IChainlinkOracle} from "../../interfaces/chainlink/IChainlinkOracle.sol";
 import {ISwapRouter} from "../../interfaces/uniswapv3/ISwapRouter.sol";
 import {BiDCABridge} from "./BiDCABridge.sol";
-
-interface IChainlinkOracle {
-    function latestRoundData()
-        external
-        view
-        returns (
-            uint80,
-            int256,
-            uint256,
-            uint256,
-            uint80
-        );
-}
 
 /**
  * @notice Initial implementation of the BiDCA bridge using Uniswap as the DEX and Chainlink as oracle.
