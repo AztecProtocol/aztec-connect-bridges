@@ -133,19 +133,23 @@ contract BiDCATestUnit is Test {
     }
 
     function testUniswapForceFillAB() public {
-        testFuzzUniswapForceFill(1000e18, 6, 1e18, 6, false, 1, 8);
+        testFuzzUniswapForceFill(1000e18, 6, 1e18, 6, true, 1, 8);
+    }
+
+    function testUniswapForceFillABMore() public {
+        testFuzzUniswapForceFill(5000e18, 6, 1e18, 6, true, 1, 8);
     }
 
     function testUniswapForceFillBA() public {
-        testFuzzUniswapForceFill(1e18, 6, 1000e18, 6, true, 1, 8);
+        testFuzzUniswapForceFill(1e18, 6, 1000e18, 6, false, 1, 8);
     }
 
     function testUniswapForceFillABEth() public {
-        testFuzzUniswapForceFillEth(1e18, 1000e18, false);
+        testFuzzUniswapForceFillEth(1e18, 1000e18, true);
     }
 
     function testUniswapForceFillBEEth() public {
-        testFuzzUniswapForceFillEth(1000e18, 1e18, true);
+        testFuzzUniswapForceFillEth(1000e18, 1e18, false);
     }
 
     /**
