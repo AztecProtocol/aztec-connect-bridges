@@ -622,7 +622,6 @@ contract BiDCATestUnit is Test {
 
         {
             // Check the accumulated value of DCA(0)
-            uint256 userBought = (depositUser1 / 7) * 2;
             (uint256 accumulated, bool ready) = bridge.getAccumulated(0);
             assertEq(
                 accumulated,
