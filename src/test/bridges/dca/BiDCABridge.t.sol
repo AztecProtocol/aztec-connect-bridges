@@ -92,7 +92,6 @@ contract BiDCATestUnit is Test {
         movePrice(0, 1e18);
     }
 
-
     function testNoDeposits() public {
         vm.expectRevert(BiDCABridge.NoDeposits.selector);
         bridge.getAvailable();
