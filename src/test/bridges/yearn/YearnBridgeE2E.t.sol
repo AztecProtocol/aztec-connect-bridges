@@ -59,25 +59,23 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         setRollupBeneficiary(BENEFICIARY);
     }
 
-    function testERC20DepositAndWithdrawal(uint256 _depositAmount, uint256 _withdrawAmount) public {
+    function testERC20DepositAndWithdrawal(uint256 _depositAmount) public {
         IYearnRegistry _registry = bridge.YEARN_REGISTRY();
         address vault = _registry.latestVault(address(DAI));
         uint256 availableDepositLimit = IYearnVault(vault).availableDepositLimit();
         if (availableDepositLimit > 0) {
             _depositAmount = bound(_depositAmount, 1e17, availableDepositLimit);
-            _withdrawAmount = bound(_withdrawAmount, 1e17, _depositAmount);
-            _depositAndWithdrawERC20(vault, _depositAmount, _withdrawAmount, false);
+            _depositAndWithdrawERC20(vault, _depositAmount, false);
         }
     }
 
-    function testERC20DepositAndWithdrawalFundsInStrategy(uint256 _depositAmount, uint256 _withdrawAmount) public {
+    function testERC20DepositAndWithdrawalFundsInStrategy(uint256 _depositAmount) public {
         IYearnRegistry _registry = bridge.YEARN_REGISTRY();
         address vault = _registry.latestVault(address(DAI));
         uint256 availableDepositLimit = IYearnVault(vault).availableDepositLimit();
         if (availableDepositLimit > 0) {
             _depositAmount = bound(_depositAmount, 1e17, availableDepositLimit);
-            _withdrawAmount = bound(_withdrawAmount, 1e17, _depositAmount);
-            _depositAndWithdrawERC20(vault, _depositAmount, _withdrawAmount, true);
+            _depositAndWithdrawERC20(vault, _depositAmount, true);
         }
     }
 
@@ -99,7 +97,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
             if (availableDepositLimit > 0) {
                 uint256 _depositAmount = bound(1e6, 1e2, availableDepositLimit);
                 emit log_named_address("Testing for: ", address(vault));
-                _depositAndWithdrawERC20(vault, _depositAmount, _depositAmount, false);
+                _depositAndWithdrawERC20(vault, _depositAmount, false);
             }
             unchecked {
                 ++i;
@@ -124,7 +122,6 @@ contract YearnBridgeE2ETest is BridgeTestBase {
     function _depositAndWithdrawERC20(
         address _vault,
         uint256 _depositAmount,
-        uint256 _withdrawAmount,
         bool _reduceVault
     ) internal {
         address underlyingToken = IYearnVault(_vault).token();
@@ -184,10 +181,10 @@ contract YearnBridgeE2ETest is BridgeTestBase {
 
         // Move some funds to strategies to have underlying balance be less than the required.
         if (_reduceVault) {
-            deal(underlyingToken, address(_vault), _depositAmount - 1e16);
+            deal(underlyingToken, address(_vault), _depositAmount / 2);
         }
 
-        _withdrawAmount = outputAssetAMid;
+        uint256 _withdrawAmount = outputAssetAMid;
         bridgeCallData = encodeBridgeCallData(
             withdrawBridgeId,
             depositOutputAssetA,
