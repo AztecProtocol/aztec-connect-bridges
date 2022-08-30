@@ -61,7 +61,8 @@ To receive a grant payment we expect the following work to be done:
 4. implementation of the Typescript `bridge-data.ts` class that tells a frontend developer how to use your bridge.
 5. an explanation of the flows your bridge supports should be included as `spec.md`,
 6. [NatSpec](https://docs.soliditylang.org/en/develop/natspec-format.html) documentation of all the functions in all the contracts which are to be deployed on mainnet,
-7. a deployment script to deploy the bridge with proper configuration.
+7. a deployment script to deploy the bridge with proper configuration,
+8. Subsidy contract has been integrated (see the [Subsidy integration section](#subsidy-integration) for details).
 
 Before submitting a PR for a review make sure that the following is true:
 
@@ -71,7 +72,8 @@ Before submitting a PR for a review make sure that the following is true:
 4. the diff contains only changes related to the PR description,
 5. NatSpec documentation has already been written,
 6. a spec was written,
-7. a deployment script was written.
+7. a deployment script was written,
+8. Subsidy has been integrated.
 
 ## SDK
 
@@ -222,5 +224,37 @@ Virtual assets can be used to construct complex flows, such as entering or exiti
 7. Repaying a loan 2 - 1 real input (e.g. USDC), 1 virtual input (representing the position), 2 real outputs ( 1st output collateral, 2nd output reward token, e.g. AAVE)
 8. Partial loan repaying - 1 real input (e.g. Dai), 1 virtual input (representing the vault/position), 1 real output (collateral, e.g. ETH), 1 virtual output (representing the vault/position)
 9. Claiming fees from Uniswap position and redepositing them - 1 virtual input (represents LP position NFT), 1 virtual output (representing the modified LP position)
+
+## Subsidy integration
+
+There are 2 calls the bridge has to do for the subsidy to work.
+The first one is calling `setGasUsageAndMinGasPerMinute(...)` from constructor or any other function which is called before `convert(...)` method.
+This method has 3 parameters:
+
+1. `_criteria` is a value defining a specific bridge call.
+   This value is expected to be computed differently in different bridges and should identify a specific bridge flow (e.g. it can be a hash of the input and output token addresses or just the `_auxData` or whatever makes sense).
+2. `_gasUsage` is an estimated gas consumption of the bridge call for a given `_criteria`.
+   This is used as an upper limit for subsidy.
+   If this is set correctly, at maximum less than 100% of the call should be covered since the subsidy computation is only based on base fee and is not taking tips into consideration.
+3. `_minGasPerMinute` is the minimum amount of gas per minute that subsidizer has to subsidize.
+   In general, we recommend this value to be computed in such a way that the subsidy funder has to fund at least 1 call a day (in such a case compute the value as `_gasUsage / (24 * 60)`).
+   This value is set from the bridge in order to avoid a griefing attack (malicious subsidy funder setting a subsidy with very low `minGasPerMinute` value and effectively blocking everyone else from subsidizing the given bridge and criteria).
+
+There are 2 versions of this method.
+In the first one the parameters are single values.
+In the second one the parameters are arrays of values.
+
+The second required call is calling the `claimSubsidy(...)` function from within the `convert(...)` method.
+This method has 2 parameters:
+
+1. `_criteria` same as above,
+2. `_rollupBeneficiary` is the address of the beneficiary.
+   This value is passed to the `convert(...)` function.
+
+For more info on how the Subsidy works see the documentation in the [Subsidy.sol](./src/aztec/Subsidy.sol) file.
+
+See the [example bridge](./src/bridges/example/ExampleBridge.sol) for an example subsidy integration.
+
+## Contact
 
 Please reach out on Discord with any questions. You can join our Discord [here](https://discord.gg/ctGpCgkBFt).
