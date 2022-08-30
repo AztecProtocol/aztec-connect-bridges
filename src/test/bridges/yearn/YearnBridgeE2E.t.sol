@@ -127,7 +127,6 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         address underlyingToken = IYearnVault(_vault).token();
 
         if (underlyingToken == 0xc5bDdf9843308380375a611c18B50Fb9341f502A) {
-            emit log("SHIT");
             vm.prank(MULTI_SIG);
             ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 2000000);
             depositBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();

@@ -49,7 +49,8 @@ abstract contract BaseDeployment is Test {
         bool envMode = vm.envBool(modeKey);
         MODE = envMode ? Mode.BROADCAST : Mode.SIMULATE;
 
-        bytes32 envNetwork = keccak256(abi.encodePacked(vm.envString(networkKey)));
+        string memory nw = vm.envString(networkKey);
+        bytes32 envNetwork = keccak256(abi.encodePacked(nw));
 
         if (envNetwork == keccak256(abi.encodePacked("mainnet"))) {
             NETWORK = Network.MAINNET;
@@ -60,9 +61,9 @@ abstract contract BaseDeployment is Test {
         }
 
         if (envMode) {
-            emit log_named_string("broadcasting", vm.envString(networkKey));
+            emit log_named_string("broadcasting", nw);
         } else {
-            emit log_named_string("simulating", vm.envString(networkKey));
+            emit log_named_string("simulating", nw);
         }
 
         (ROLLUP_PROCESSOR, TO_IMPERSONATE) = getRollupProcessorAndLister();
