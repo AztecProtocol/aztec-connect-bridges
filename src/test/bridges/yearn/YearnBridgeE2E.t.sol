@@ -32,7 +32,8 @@ contract YearnBridgeE2ETest is BridgeTestBase {
     address private constant BENEFICIARY = address(11);
 
     YearnBridge internal bridge;
-    uint256 internal id;
+    uint256 internal depositBridgeId;
+    uint256 internal withdrawBridgeId;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
 
@@ -43,9 +44,12 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         vm.deal(address(bridge), 0);
 
         vm.prank(MULTI_SIG);
-        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 5000000);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 200000);
+        depositBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
-        id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
+        vm.prank(MULTI_SIG);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 1000000);
+        withdrawBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
         // Set subsidy
         uint256 criteria = 0; // Subsidizing only deposit
@@ -55,14 +59,23 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         setRollupBeneficiary(BENEFICIARY);
     }
 
-    function testERC20DepositAndWithdrawal(uint256 _depositAmount, uint256 _withdrawAmount) public {
+    function testERC20DepositAndWithdrawal(uint256 _depositAmount) public {
         IYearnRegistry _registry = bridge.YEARN_REGISTRY();
         address vault = _registry.latestVault(address(DAI));
         uint256 availableDepositLimit = IYearnVault(vault).availableDepositLimit();
         if (availableDepositLimit > 0) {
-            _depositAmount = bound(_depositAmount, 1e17, availableDepositLimit);
-            _withdrawAmount = bound(_withdrawAmount, 1e17, _depositAmount);
-            _depositAndWithdrawERC20(vault, _depositAmount, _withdrawAmount);
+            uint256 depositAmount = bound(_depositAmount, 1e17, availableDepositLimit);
+            _depositAndWithdrawERC20(vault, depositAmount, false);
+        }
+    }
+
+    function testERC20DepositAndWithdrawalFundsInStrategy(uint80 _depositAmount) public {
+        IYearnRegistry _registry = bridge.YEARN_REGISTRY();
+        address vault = _registry.latestVault(address(DAI));
+        uint256 availableDepositLimit = IYearnVault(vault).availableDepositLimit();
+        if (availableDepositLimit > 0) {
+            uint256 depositAmount = bound(_depositAmount, 1e17, availableDepositLimit);
+            _depositAndWithdrawERC20(vault, depositAmount, true);
         }
     }
 
@@ -82,9 +95,9 @@ contract YearnBridgeE2ETest is BridgeTestBase {
             address vault = _registry.latestVault(token);
             uint256 availableDepositLimit = IYearnVault(vault).availableDepositLimit();
             if (availableDepositLimit > 0) {
-                uint256 _depositAmount = bound(1e6, 1e2, availableDepositLimit);
+                uint256 depositAmount = bound(1e6, 1e2, availableDepositLimit);
                 emit log_named_address("Testing for: ", address(vault));
-                _depositAndWithdrawERC20(vault, _depositAmount, _depositAmount);
+                _depositAndWithdrawERC20(vault, depositAmount, false);
             }
             unchecked {
                 ++i;
@@ -96,8 +109,8 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         IYearnRegistry _registry = bridge.YEARN_REGISTRY();
         address vault = _registry.latestVault(address(WETH));
         uint256 availableDepositLimit = IYearnVault(vault).availableDepositLimit();
-        _depositAmount = bound(_depositAmount, 1e17, availableDepositLimit);
-        _depositAndWithdrawETH(vault, _depositAmount, _withdrawAmount);
+        uint256 depositAmount = bound(_depositAmount, 1e17, availableDepositLimit);
+        _depositAndWithdrawETH(vault, depositAmount, _withdrawAmount);
     }
 
     function testFinalise() public {
@@ -109,9 +122,20 @@ contract YearnBridgeE2ETest is BridgeTestBase {
     function _depositAndWithdrawERC20(
         address _vault,
         uint256 _depositAmount,
-        uint256 _withdrawAmount
+        bool _reduceVault
     ) internal {
         address underlyingToken = IYearnVault(_vault).token();
+
+        if (underlyingToken == 0xc5bDdf9843308380375a611c18B50Fb9341f502A) {
+            vm.prank(MULTI_SIG);
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 2000000);
+            depositBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
+
+            vm.prank(MULTI_SIG);
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 5000000);
+            withdrawBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
+        }
+
         _addSupportedIfNotAdded(underlyingToken);
         _addSupportedIfNotAdded(_vault);
 
@@ -127,7 +151,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         uint256 outputAssetABefore = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
         // Computes the encoded data for the specific bridge interaction
         uint256 bridgeCallData = encodeBridgeCallData(
-            id,
+            depositBridgeId,
             depositInputAssetA,
             emptyAsset,
             depositOutputAssetA,
@@ -154,27 +178,39 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         assertEq(inputAssetAMid, inputAssetABefore - _depositAmount, "Balance missmatch after deposit");
         assertGt(outputAssetAMid, outputAssetABefore, "No change in output asset balance after deposit");
 
-        _withdrawAmount = outputAssetAMid;
-        bridgeCallData = encodeBridgeCallData(id, depositOutputAssetA, emptyAsset, depositInputAssetA, emptyAsset, 1);
+        // Move some funds to strategies to have underlying balance be less than the required. Requiring the vault to unwind a position to repay withdraw
+        if (_reduceVault) {
+            deal(underlyingToken, address(_vault), _depositAmount / 2);
+        }
+
+        uint256 withdrawAmount = outputAssetAMid;
+        bridgeCallData = encodeBridgeCallData(
+            withdrawBridgeId,
+            depositOutputAssetA,
+            emptyAsset,
+            depositInputAssetA,
+            emptyAsset,
+            1
+        );
 
         vm.expectEmit(true, true, false, false); //Log 1 -> transfer _withdrawAmount from Rollup to bridge
-        emit Transfer(address(ROLLUP_PROCESSOR), address(bridge), _withdrawAmount);
+        emit Transfer(address(ROLLUP_PROCESSOR), address(bridge), withdrawAmount);
         vm.expectEmit(true, true, false, false); //Log 2 -> transfer _withdrawAmount from bridge to 0 (burn yvTokens)
-        emit Transfer(address(bridge), address(0), _withdrawAmount);
+        emit Transfer(address(bridge), address(0), withdrawAmount);
         vm.expectEmit(true, true, false, false); //Log 3 -> transfer _withdrawAmount from vault to bridge
-        emit Transfer(address(_vault), address(bridge), _withdrawAmount);
+        emit Transfer(address(_vault), address(bridge), withdrawAmount);
         vm.expectEmit(true, true, false, false); //Log 4 -> transfer _withdrawAmount from bridge to Rollup
-        emit Transfer(address(bridge), address(ROLLUP_PROCESSOR), _withdrawAmount);
+        emit Transfer(address(bridge), address(ROLLUP_PROCESSOR), withdrawAmount);
         vm.expectEmit(true, true, false, false); //Log 5 -> Validate DefiBridge
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _withdrawAmount, _withdrawAmount, 1, true, "");
-        sendDefiRollup(bridgeCallData, _withdrawAmount);
+        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), withdrawAmount, withdrawAmount, 1, true, "");
+        sendDefiRollup(bridgeCallData, withdrawAmount);
         uint256 inputAssetAAfter = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 outputAssetAAfter = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
 
         assertGt(inputAssetAAfter, inputAssetAMid, "Balance missmatch after withdrawal");
         assertEq(
             outputAssetAAfter,
-            outputAssetAMid - _withdrawAmount,
+            outputAssetAMid - withdrawAmount,
             "No change in output asset balance after withdraw"
         );
 
@@ -200,7 +236,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         uint256 outputAssetABefore = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
 
         uint256 bridgeCallData = encodeBridgeCallData(
-            id,
+            depositBridgeId,
             depositInputAssetA,
             emptyAsset,
             depositOutputAssetA,
@@ -214,7 +250,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         assertGt(outputAssetAMid, outputAssetABefore, "deposit eth - output asset balance too low");
 
         uint256 outBridgeId = encodeBridgeCallData(
-            id,
+            withdrawBridgeId,
             depositOutputAssetA,
             emptyAsset,
             depositInputAssetA,
