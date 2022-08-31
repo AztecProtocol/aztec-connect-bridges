@@ -48,7 +48,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         depositBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
         vm.prank(MULTI_SIG);
-        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 800000);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 1000000);
         withdrawBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
         // Set subsidy
@@ -69,13 +69,13 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         }
     }
 
-    function testERC20DepositAndWithdrawalFundsInStrategy(uint256 _depositAmount) public {
+    function testERC20DepositAndWithdrawalFundsInStrategy(uint80 _depositAmount) public {
         IYearnRegistry _registry = bridge.YEARN_REGISTRY();
         address vault = _registry.latestVault(address(DAI));
         uint256 availableDepositLimit = IYearnVault(vault).availableDepositLimit();
         if (availableDepositLimit > 0) {
-            _depositAmount = bound(_depositAmount, 1e17, availableDepositLimit);
-            _depositAndWithdrawERC20(vault, _depositAmount, true);
+            uint256 depositAmount = bound(_depositAmount, 1e17, availableDepositLimit);
+            _depositAndWithdrawERC20(vault, depositAmount, true);
         }
     }
 
