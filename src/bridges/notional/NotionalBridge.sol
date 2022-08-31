@@ -90,7 +90,7 @@ contract NotionalBridgeContract is BridgeBase {
     }
 
     /**
-     * @notice Helper functon to compute the fcash amount
+     * @notice Helper function to compute the fcash amount
      * @dev If the token is a ctoken, then we need to convert the amount to its underlying in 8 decimals
      * @dev If the token is an underlying token, then we simply scale it to 8 decimals
      * @param _token is the address of input asset token
