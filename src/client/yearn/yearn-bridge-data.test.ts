@@ -1,15 +1,17 @@
-import { YearnBridgeData } from "./yearn-bridge-data";
-import {
-  IYearnRegistry,
-  IYearnRegistry__factory,
-  IYearnVault__factory,
-  IRollupProcessor,
-  IRollupProcessor__factory,
-  IYearnVault,
-} from "../../../typechain-types";
-import { AztecAsset, AztecAssetType } from "../bridge-data";
 import { EthAddress } from "@aztec/barretenberg/address";
 import { BigNumber } from "ethers";
+import {
+  IERC20Metadata,
+  IERC20Metadata__factory,
+  IRollupProcessor,
+  IRollupProcessor__factory,
+  IYearnRegistry,
+  IYearnRegistry__factory,
+  IYearnVault,
+  IYearnVault__factory,
+} from "../../../typechain-types";
+import { AztecAsset, AztecAssetType } from "../bridge-data";
+import { YearnBridgeData } from "./yearn-bridge-data";
 
 jest.mock("../aztec/provider", () => ({
   createWeb3Provider: jest.fn(),
@@ -486,5 +488,49 @@ describe("Testing Yearn getMarketSize", () => {
     const expectedMarketSize = (await yearnBridgeData.getMarketSize(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 0))[0]
       .value;
     expect(expectedMarketSize).toBe(97513214188808613008055674n);
+  });
+});
+
+describe("Testing Yearn getUnderlyingAmount", () => {
+  let vaultContract: Mockify<IYearnVault>;
+  let erc2MetadataContract: Mockify<IERC20Metadata>;
+
+  let yvDaiAsset: AztecAsset;
+
+  beforeAll(() => {
+    yvDaiAsset = {
+      id: 2,
+      assetType: AztecAssetType.ERC20,
+      erc20Address: EthAddress.fromString("0xdA816459F1AB5631232FE5e97a05BBBb94970c95"),
+    };
+  });
+
+  it("should correctly return underlying asset", async () => {
+    // Setup mocks
+    vaultContract = {
+      ...vaultContract,
+      token: jest.fn().mockResolvedValue("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+      pricePerShare: jest.fn(() => BigNumber.from("1110200000000000000")),
+      decimals: jest.fn(() => 18),
+    };
+    IYearnVault__factory.connect = () => vaultContract as any;
+
+    erc2MetadataContract = {
+      ...erc2MetadataContract,
+      name: jest.fn().mockResolvedValue("Dai Stablecoin"),
+      symbol: jest.fn().mockResolvedValue("DAI"),
+      decimals: jest.fn().mockResolvedValue(18),
+    };
+    IERC20Metadata__factory.connect = () => erc2MetadataContract as any;
+
+    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const underlyingAsset = await yearnBridgeData.getUnderlyingAmount(yvDaiAsset, 10n ** 18n);
+    console.log(underlyingAsset);
+
+    expect(underlyingAsset.address.toString()).toBe("0x6B175474E89094C44Da98b954EedeAC495271d0F");
+    expect(underlyingAsset.name).toBe("Dai Stablecoin");
+    expect(underlyingAsset.symbol).toBe("DAI");
+    expect(underlyingAsset.decimals).toBe(18);
+    expect(underlyingAsset.amount).toBe(1110200000000000000n);
   });
 });

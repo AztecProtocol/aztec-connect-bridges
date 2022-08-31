@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec.
-pragma solidity >=0.6.10 <=0.8.10;
-pragma experimental ABIEncoderV2;
+pragma solidity >=0.8.4;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IVault, IAsset, PoolSpecialization} from "../../interfaces/element/IVault.sol";

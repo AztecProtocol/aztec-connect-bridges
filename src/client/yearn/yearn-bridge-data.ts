@@ -1,20 +1,28 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
-import { createWeb3Provider } from "../aztec/provider";
 import { BigNumber } from "ethers";
+import { createWeb3Provider } from "../aztec/provider";
 
 import "isomorphic-fetch";
 
-import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
+import { AssetValue } from "@aztec/barretenberg/asset";
 import {
+  IERC20Metadata__factory,
+  IRollupProcessor,
+  IRollupProcessor__factory,
   IYearnRegistry,
   IYearnRegistry__factory,
   IYearnVault__factory,
-  IRollupProcessor,
-  IRollupProcessor__factory,
 } from "../../../typechain-types";
-import { AssetValue } from "@aztec/barretenberg/asset";
+import {
+  AuxDataConfig,
+  AztecAsset,
+  AztecAssetType,
+  BridgeDataFieldGetters,
+  SolidityType,
+  UnderlyingAsset,
+} from "../bridge-data";
 
 export class YearnBridgeData implements BridgeDataFieldGetters {
   allYvETH?: EthAddress[];
@@ -169,6 +177,32 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     const yvTokenContract = IYearnVault__factory.connect(yvToken.erc20Address.toString(), this.ethersProvider);
     const totalAssets = await yvTokenContract.totalAssets();
     return [{ assetId: underlying.id, value: totalAssets.toBigInt() }];
+  }
+
+  async getUnderlyingAmount(vaultAsset: AztecAsset, amount: bigint): Promise<UnderlyingAsset> {
+    const emptyAsset: AztecAsset = {
+      id: 0,
+      assetType: AztecAssetType.NOT_USED,
+      erc20Address: EthAddress.ZERO,
+    };
+    const vaultContract = IYearnVault__factory.connect(vaultAsset.erc20Address.toString(), this.ethersProvider);
+    const underlyingAsset: AztecAsset = {
+      id: 0,
+      assetType: AztecAssetType.ERC20,
+      erc20Address: EthAddress.fromString(await vaultContract.token()),
+    };
+    const tokenContract = IERC20Metadata__factory.connect(underlyingAsset.erc20Address.toString(), this.ethersProvider);
+    const namePromise = tokenContract.name();
+    const symbolPromise = tokenContract.symbol();
+    const decimalsPromise = tokenContract.decimals();
+    const amountPromise = this.getExpectedOutput(vaultAsset, emptyAsset, underlyingAsset, emptyAsset, 1, amount);
+    return {
+      address: underlyingAsset.erc20Address,
+      name: await namePromise,
+      symbol: await symbolPromise,
+      decimals: await decimalsPromise,
+      amount: (await amountPromise)[0],
+    };
   }
 
   private async isSupportedAsset(asset: AztecAsset): Promise<boolean> {

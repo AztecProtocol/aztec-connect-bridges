@@ -9,7 +9,6 @@ import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ExampleBridgeContract} from "../../../bridges/example/ExampleBridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
-import {ISubsidy, Subsidy} from "../../../aztec/Subsidy.sol";
 
 // @notice The purpose of this test is to directly test convert functionality of the bridge.
 contract ExampleUnitTest is BridgeTestBase {
@@ -17,7 +16,6 @@ contract ExampleUnitTest is BridgeTestBase {
     address private constant BENEFICIARY = address(11);
 
     address private rollupProcessor;
-    ISubsidy private subsidy;
     // The reference to the example bridge
     ExampleBridgeContract private bridge;
 
@@ -29,14 +27,12 @@ contract ExampleUnitTest is BridgeTestBase {
         // In unit tests we set address of rollupProcessor to the address of this test contract
         rollupProcessor = address(this);
 
-        // Deploy the Subsidy contract in order to be able to test subsidy
-        subsidy = new Subsidy();
-
         // Deploy a new example bridge
-        bridge = new ExampleBridgeContract(rollupProcessor, subsidy);
+        bridge = new ExampleBridgeContract(rollupProcessor);
 
-        // Set ETH balance to 0 for clarity (somebody sent ETH to that address on mainnet)
+        // Set ETH balance of bridge and BENEFICIARY to 0 for clarity (somebody sent ETH to that address on mainnet)
         vm.deal(address(bridge), 0);
+        vm.deal(BENEFICIARY, 0);
 
         // Use the label cheatcode to mark the address with "Example Bridge" in the traces
         vm.label(address(bridge), "Example Bridge");
@@ -45,9 +41,9 @@ contract ExampleUnitTest is BridgeTestBase {
         AztecTypes.AztecAsset memory daiAsset = getRealAztecAsset(DAI);
         uint256 criteria = bridge.computeCriteria(daiAsset, emptyAsset, daiAsset, emptyAsset, 0);
         uint32 gasPerMinute = 200;
-        subsidy.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
+        SUBSIDY.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
 
-        subsidy.registerBeneficiary(BENEFICIARY);
+        SUBSIDY.registerBeneficiary(BENEFICIARY);
     }
 
     function testInvalidCaller(address _callerAddress) public {
@@ -123,6 +119,7 @@ contract ExampleUnitTest is BridgeTestBase {
 
         assertEq(daiBalanceAfter - daiBalanceBefore, _depositAmount, "Balances must match");
 
+        SUBSIDY.withdraw(BENEFICIARY);
         assertGt(BENEFICIARY.balance, 0, "Subsidy was not claimed");
     }
 }
