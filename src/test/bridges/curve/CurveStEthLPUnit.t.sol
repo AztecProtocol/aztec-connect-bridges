@@ -69,11 +69,13 @@ contract CurveLpTest is BridgeTestBase {
         emit log_named_uint("Balance", LP_TOKEN.balanceOf(address(bridge)));
 
         uint256 lpAmount = LP_TOKEN.balanceOf(address(bridge));
-
+       emit log_named_uint("Balance", address(ROLLUP_PROCESSOR).balance);
+ 
         vm.prank(address(ROLLUP_PROCESSOR));
         bridge.convert(lpAsset, emptyAsset, ethAsset, wstETHAsset, lpAmount / 2, 0, 0, address(this));
         emit log_named_uint("Balance", LP_TOKEN.balanceOf(address(bridge)));
         emit log_named_uint("Balance", WRAPPED_STETH.balanceOf(address(bridge)));
         emit log_named_uint("Balance", address(bridge).balance);
+        emit log_named_uint("Balance", address(ROLLUP_PROCESSOR).balance);
     }
 }
