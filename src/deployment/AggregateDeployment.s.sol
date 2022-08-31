@@ -24,7 +24,7 @@ contract AggregateDeployment is Test {
             cDeploy.setUp();
             cDeploy.deployAndList();
         }
-        
+
         emit log("--- Yearn ---");
         {
             YearnDeployment yDeploy = new YearnDeployment();
