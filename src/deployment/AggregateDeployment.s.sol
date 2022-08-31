@@ -14,7 +14,6 @@ import {YearnDeployment} from "./yearn/YearnDeployment.s.sol";
 
 /**
  * A helper script that allow easy deployment of multiple bridges
- * `deployAndListAll()` should contain all bridges with deployment scripts
  */
 contract AggregateDeployment is Test {
     function deployAndListAll() public {
