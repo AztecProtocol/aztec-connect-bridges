@@ -10,6 +10,7 @@ import {ICurvePool} from "../../../interfaces/curve/ICurvePool.sol";
 import {ILido} from "../../../interfaces/lido/ILido.sol";
 import {IWstETH} from "../../../interfaces/lido/IWstETH.sol";
 import {IDefiBridge} from "../../../aztec/interfaces/IDefiBridge.sol";
+import {ISubsidy} from "../../../aztec/interfaces/ISubsidy.sol";
 
 import {CurveStEthBridge} from "../../../bridges/curve/CurveStEthBridge.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
@@ -23,6 +24,8 @@ contract CurveLpTest is BridgeTestBase {
     ILido public constant LIDO = ILido(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH public constant WRAPPED_STETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
     ICurvePool public constant CURVE_POOL = ICurvePool(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022);
+
+    address public constant BENEFICAIRY = address(0xbeef);
 
     AztecTypes.AztecAsset private ethAsset;
     AztecTypes.AztecAsset private wstETHAsset;
@@ -55,6 +58,14 @@ contract CurveLpTest is BridgeTestBase {
         deal(address(WRAPPED_STETH), address(bridge), 1);
         LIDO.submit{value: 10}(address(0));
         LIDO.transfer(address(bridge), 10);
+
+        SUBSIDY.registerBeneficiary(BENEFICAIRY);
+        SUBSIDY.subsidize{value: 1 ether}(b, 0, 180);
+        vm.warp(block.timestamp + 180 minutes);
+
+        ISubsidy.Subsidy memory sub = SUBSIDY.getSubsidy(b, 0);
+        emit log_named_uint("avail", sub.available);
+        emit log_named_uint("next ", SUBSIDY.getAccumulatedSubsidyAmount(b, 0));
     }
 
     function testInvalidCaller(address _caller) public {
@@ -94,11 +105,15 @@ contract CurveLpTest is BridgeTestBase {
     }
 
     function testDepositEth(uint72 _depositAmount) public {
+        uint256 claimableBefore = SUBSIDY.claimableAmount(BENEFICAIRY);
         testDeposit(true, _depositAmount);
+        assertGt(SUBSIDY.claimableAmount(BENEFICAIRY), claimableBefore, "No subsidy accumulated");
     }
 
     function testDepositWstETH(uint72 _depositAmount) public {
+        uint256 claimableBefore = SUBSIDY.claimableAmount(BENEFICAIRY);
         testDeposit(false, _depositAmount);
+        assertGt(SUBSIDY.claimableAmount(BENEFICAIRY), claimableBefore, "No subsidy accumulated");
     }
 
     function testDeposit(bool _isEth, uint72 _depositAmount) public {
@@ -139,16 +154,7 @@ contract CurveLpTest is BridgeTestBase {
         uint64 minReceived = 2**32 - 1; // Want to receive ~4K tokens for every input token
         vm.prank(address(ROLLUP_PROCESSOR));
         vm.expectRevert("Slippage screwed you");
-        bridge.convert{value: 1 ether}(
-            ethAsset,
-            emptyAsset,
-            lpAsset,
-            emptyAsset,
-            1 ether,
-            0,
-            minReceived,
-            address(this)
-        );
+        bridge.convert{value: 1 ether}(ethAsset, emptyAsset, lpAsset, emptyAsset, 1 ether, 0, minReceived, BENEFICAIRY);
     }
 
     function testReceiveTooLittleLpFromWstEth() public {
@@ -156,7 +162,7 @@ contract CurveLpTest is BridgeTestBase {
         deal(address(WRAPPED_STETH), address(bridge), 1 ether);
         vm.prank(address(ROLLUP_PROCESSOR));
         vm.expectRevert("Slippage screwed you");
-        bridge.convert(wstETHAsset, emptyAsset, lpAsset, emptyAsset, 1 ether, 0, minReceived, address(this));
+        bridge.convert(wstETHAsset, emptyAsset, lpAsset, emptyAsset, 1 ether, 0, minReceived, BENEFICAIRY);
     }
 
     function testReceiveTooLittleEthFromLp() public {
@@ -168,7 +174,7 @@ contract CurveLpTest is BridgeTestBase {
         deal(address(LP_TOKEN), address(bridge), 1 ether);
         vm.prank(address(ROLLUP_PROCESSOR));
         vm.expectRevert("Withdrawal resulted in fewer coins than expected");
-        bridge.convert(lpAsset, emptyAsset, ethAsset, wstETHAsset, 1 ether, 0, minReceived, address(this));
+        bridge.convert(lpAsset, emptyAsset, ethAsset, wstETHAsset, 1 ether, 0, minReceived, BENEFICAIRY);
     }
 
     function testReceiveTooLittleWstEthFromLp() public {
@@ -180,7 +186,7 @@ contract CurveLpTest is BridgeTestBase {
         deal(address(LP_TOKEN), address(bridge), 1 ether);
         vm.prank(address(ROLLUP_PROCESSOR));
         vm.expectRevert("Withdrawal resulted in fewer coins than expected");
-        bridge.convert(lpAsset, emptyAsset, ethAsset, wstETHAsset, 1 ether, 0, minReceived, address(this));
+        bridge.convert(lpAsset, emptyAsset, ethAsset, wstETHAsset, 1 ether, 0, minReceived, BENEFICAIRY);
     }
 
     function _deposit(
@@ -209,7 +215,7 @@ contract CurveLpTest is BridgeTestBase {
             _depositAmount,
             _interactionNonce,
             0,
-            address(this)
+            BENEFICAIRY
         );
 
         LP_TOKEN.transferFrom(address(bridge), address(ROLLUP_PROCESSOR), outputValueA);
@@ -244,7 +250,7 @@ contract CurveLpTest is BridgeTestBase {
             _inputAmount,
             _interactionNonce,
             0,
-            address(this)
+            BENEFICAIRY
         );
 
         WRAPPED_STETH.transferFrom(address(bridge), address(ROLLUP_PROCESSOR), outputValueB);
