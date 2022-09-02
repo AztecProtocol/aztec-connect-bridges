@@ -7,6 +7,7 @@ import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {IStableMaster} from "../../interfaces/angle/IStableMaster.sol";
+import {IPoolManager, IStrategy} from "../../interfaces/angle/IPoolManager.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
 import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 
@@ -114,7 +115,7 @@ contract AngleSLPBridge is BridgeBase {
             if (poolManager == address(0) || sanToken == address(0)) revert ErrorLib.InvalidOutputA();
             if (sanToken != inputAssetA) revert ErrorLib.InvalidInputA();
 
-            STABLE_MASTER.withdraw(_totalInputValue, address(this), address(this), poolManager);
+            withdraw(poolManager, _totalInputValue, outputAssetA);
         } else {
             revert ErrorLib.InvalidAuxData();
         }
@@ -125,6 +126,43 @@ contract AngleSLPBridge is BridgeBase {
             WETH.withdraw(outputValueA);
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
         }
+    }
+
+    /**
+     * @notice Withdraw underlying ERC20 from Angle Protocol
+     * @param poolManager Address of the poolManager
+     * @param amount Amount of sanToken to withdraw
+     * @param outputAssetA Address of the underlying ERC20
+     */
+    function withdraw(
+        address poolManager,
+        uint256 amount,
+        address outputAssetA
+    ) internal {
+        // we check if we need to harvest or not
+        (, , , , , uint256 sanRate, , , ) = STABLE_MASTER.collateralMap(poolManager);
+        uint256 estimatedOutputValue = (amount * sanRate) / 1e18;
+        uint256 currentBalance = IERC20(outputAssetA).balanceOf(address(poolManager));
+
+        // if there is enough liquidity -> no need to harvest
+        if (estimatedOutputValue < currentBalance) {
+            STABLE_MASTER.withdraw(amount, address(this), address(this), poolManager);
+        } else {
+            // we withdraw what we can (98% of the current balance), then harvest, then withdraw the rest
+            uint256 toWithdraw = (((currentBalance * 1e18) / sanRate) * 98) / 100;
+            STABLE_MASTER.withdraw(toWithdraw, address(this), address(this), poolManager);
+            harvest(poolManager);
+            STABLE_MASTER.withdraw(amount - toWithdraw, address(this), address(this), poolManager);
+        }
+    }
+
+    /**
+     * @notice Harvest the main strategy to free funds and make them available to withdraw
+     * @param poolManager Address of the PoolManager
+     */
+    function harvest(address poolManager) internal {
+        IStrategy strategy = IStrategy(IPoolManager(poolManager).strategyList(0));
+        strategy.harvest();
     }
 
     /**

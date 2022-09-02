@@ -126,7 +126,7 @@ contract AngleSLPUnitTest is BridgeTestBase {
         vm.stopPrank();
     }
 
-    function testEthDepositsWithdraws() public {
+    function testEthDeposits() public {
         uint256 amount = 1 ether;
         deal(wethAsset.erc20Address, address(bridge), amount);
         vm.deal(address(bridge), amount);
@@ -136,9 +136,18 @@ contract AngleSLPUnitTest is BridgeTestBase {
         bridge.convert(wethAsset, emptyAsset, sanWethAsset, emptyAsset, 10000, 0, 0, address(0));
         bridge.convert(ethAsset, emptyAsset, sanWethAsset, emptyAsset, 10000, 0, 0, address(0));
 
+        vm.stopPrank();
+    }
+
+    function testEthWithdraws() public {
+        uint256 amount = 1 ether;
+
         deal(wethAsset.erc20Address, address(bridge), 0);
         vm.deal(address(bridge), 0);
         deal(sanWethAsset.erc20Address, address(bridge), amount);
+
+        vm.startPrank(address(ROLLUP_PROCESSOR));
+
         bridge.convert(sanWethAsset, emptyAsset, wethAsset, emptyAsset, 1000, 0, 1, address(0));
         bridge.convert(sanWethAsset, emptyAsset, ethAsset, emptyAsset, 1000, 0, 1, address(0));
 
@@ -193,7 +202,7 @@ contract AngleSLPUnitTest is BridgeTestBase {
         assertEq(outputValueA, (amount * 1e18) / sanRate);
     }
 
-    function testMultipleDeposits(uint96 _amount) public {
+    function testFuzzDeposit(uint96 _amount) public {
         vm.assume(_amount > 10);
 
         uint256 balance = IERC20(daiAsset.erc20Address).balanceOf(address(bridge));
@@ -215,24 +224,55 @@ contract AngleSLPUnitTest is BridgeTestBase {
         assertEq(IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
         (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_DAI());
         assertEq(outputValueA, (uint256(_amount) * 1e18) / sanRate);
-
-        uint256 input2 = 3 * uint256(_amount);
-        balance = IERC20(daiAsset.erc20Address).balanceOf(address(bridge));
-
-        deal(daiAsset.erc20Address, address(bridge), input2 + balance);
-        deal(sanDaiAsset.erc20Address, address(bridge), DUST); // reset sanDAI balance
-
-        vm.prank(address(ROLLUP_PROCESSOR));
-        (outputValueA, , ) = bridge.convert(daiAsset, emptyAsset, sanDaiAsset, emptyAsset, input2, 0, 0, address(0));
-        assertEq(IERC20(daiAsset.erc20Address).balanceOf(address(bridge)), DUST);
-        assertEq(IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
-        (, , , , , sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_DAI());
-        assertEq(outputValueA, (input2 * 1e18) / sanRate);
     }
 
     function testValidWithdraw(uint96 _amount) public {
         // the protocol might not have so many sanDAI available, so we limit what can be withdrawn
-        uint256 amount = uint256(bound(_amount, 10, 50000 ether));
+        uint256 currentBalance = IERC20(daiAsset.erc20Address).balanceOf(bridge.POOLMANAGER_DAI());
+        uint256 amount = uint256(bound(_amount, 10, currentBalance + 5000 ether));
+
+        uint256 balance = IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge));
+        deal(sanDaiAsset.erc20Address, address(bridge), amount + balance);
+
+        vm.prank(address(ROLLUP_PROCESSOR));
+        (uint256 outputValueA, , ) = bridge.convert(
+            sanDaiAsset,
+            emptyAsset,
+            daiAsset,
+            emptyAsset,
+            amount,
+            0,
+            1,
+            address(0)
+        );
+        assertEq(IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge)), DUST);
+        assertEq(IERC20(daiAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
+        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_DAI());
+        assertApproxEqAbs(outputValueA, (amount * sanRate) / 1e18, 2); // due to the harvest there might be a really small difference
+    }
+
+    function testFailWithdrawNoLiquidityAvailable() public {
+        uint256 amount = 5000000 ether;
+
+        uint256 balance = IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge));
+        deal(sanDaiAsset.erc20Address, address(bridge), amount + balance);
+
+        vm.prank(address(ROLLUP_PROCESSOR));
+        (uint256 outputValueA, , ) = bridge.convert(
+            sanDaiAsset,
+            emptyAsset,
+            daiAsset,
+            emptyAsset,
+            amount,
+            0,
+            1,
+            address(0)
+        );
+    }
+
+    function testWithdrawWithHarvest() public {
+        uint256 currentBalance = IERC20(daiAsset.erc20Address).balanceOf(bridge.POOLMANAGER_DAI());
+        uint256 amount = currentBalance + 10000 ether;
 
         uint256 balance = IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge));
         deal(sanDaiAsset.erc20Address, address(bridge), amount + balance);
@@ -276,43 +316,6 @@ contract AngleSLPUnitTest is BridgeTestBase {
         assertEq(address(bridge).balance, 0);
         (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_WETH());
         assertEq(outputValueA, (amount * sanRate) / 1e18);
-    }
-
-    function testMultipleWithdraws(uint96 _amount) public {
-        // the protocol might not have so many sanDAI available, so we limit what can be withdrawn
-        uint256 amount = uint256(bound(_amount, 10, 50000 ether));
-
-        uint256 balance = IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge));
-        deal(sanDaiAsset.erc20Address, address(bridge), amount + balance);
-
-        vm.prank(address(ROLLUP_PROCESSOR));
-        (uint256 outputValueA, , ) = bridge.convert(
-            sanDaiAsset,
-            emptyAsset,
-            daiAsset,
-            emptyAsset,
-            amount,
-            0,
-            1,
-            address(0)
-        );
-        assertEq(IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge)), DUST);
-        assertEq(IERC20(daiAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
-        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_DAI());
-        assertEq(outputValueA, (amount * sanRate) / 1e18);
-
-        uint256 input2 = 5 * amount;
-
-        balance = IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge));
-        deal(sanDaiAsset.erc20Address, address(bridge), input2 + balance);
-        deal(daiAsset.erc20Address, address(bridge), DUST); // reset DAI balance
-
-        vm.prank(address(ROLLUP_PROCESSOR));
-        (outputValueA, , ) = bridge.convert(sanDaiAsset, emptyAsset, daiAsset, emptyAsset, input2, 0, 1, address(0));
-        assertEq(IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge)), DUST);
-        assertEq(IERC20(daiAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
-        (, , , , , sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_DAI());
-        assertEq(outputValueA, (input2 * sanRate) / 1e18);
     }
 
     function testDepositUSDC(uint96 _amount) public {
