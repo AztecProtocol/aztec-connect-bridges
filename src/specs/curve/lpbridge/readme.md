@@ -2,7 +2,7 @@
 
 ## What does the bridge do? Why build it?
 
-The bridge swaps add/remove liquidity to the curve `stEth` pool. Allowing users to earn trading fees on their assets and 
+The bridge swaps add/remove liquidity to the curve `stEth` pool. Allowing users to earn trading fees on their assets and
 
 ## What protocol(s) does the bridge interact with ?
 
