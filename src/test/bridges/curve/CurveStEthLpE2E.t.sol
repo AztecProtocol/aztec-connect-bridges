@@ -18,7 +18,7 @@ import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
 import {VyperDeployer} from "../../../../lib/vyper-deploy/VyperDeployer.sol";
 
-contract CurveLpUnitTest is BridgeTestBase {
+contract CurveLpE2ETest is BridgeTestBase {
     // solhint-disable-next-line
     IERC20 public constant LP_TOKEN = IERC20(0x06325440D014e39736583c165C2963BA99fAf14E);
     ILido public constant LIDO = ILido(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
@@ -61,47 +61,12 @@ contract CurveLpUnitTest is BridgeTestBase {
 
         SUBSIDY.registerBeneficiary(BENEFICAIRY);
         SUBSIDY.subsidize{value: 1 ether}(b, 0, 180);
+        setRollupBeneficiary(BENEFICAIRY);
         vm.warp(block.timestamp + 180 minutes);
 
         ISubsidy.Subsidy memory sub = SUBSIDY.getSubsidy(b, 0);
         emit log_named_uint("avail", sub.available);
         emit log_named_uint("next ", SUBSIDY.getAccumulatedSubsidyAmount(b, 0));
-    }
-
-    function testInvalidCaller(address _caller) public {
-        vm.assume(_caller != address(ROLLUP_PROCESSOR));
-        vm.expectRevert("Invalid caller");
-        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 10, 0, 0, address(this));
-    }
-
-    function testInvalidAssets() public {
-        vm.startPrank(address(ROLLUP_PROCESSOR));
-        vm.expectRevert("Invalid asset B");
-        bridge.convert(emptyAsset, ethAsset, emptyAsset, emptyAsset, 10, 0, 0, address(this));
-
-        vm.expectRevert("Invalid assets");
-        bridge.convert(ethAsset, emptyAsset, emptyAsset, emptyAsset, 10, 0, 0, address(this));
-
-        vm.expectRevert("Invalid assets");
-        bridge.convert(ethAsset, emptyAsset, ethAsset, emptyAsset, 10, 0, 0, address(this));
-
-        vm.expectRevert("Invalid assets");
-        bridge.convert(ethAsset, emptyAsset, wstETHAsset, emptyAsset, 10, 0, 0, address(this));
-
-        vm.expectRevert("Invalid assets");
-        bridge.convert(wstETHAsset, emptyAsset, ethAsset, emptyAsset, 10, 0, 0, address(this));
-
-        vm.expectRevert("Invalid assets");
-        bridge.convert(wstETHAsset, emptyAsset, wstETHAsset, emptyAsset, 10, 0, 0, address(this));
-
-        vm.expectRevert("Invalid assets");
-        bridge.convert(lpAsset, emptyAsset, ethAsset, emptyAsset, 10, 0, 0, address(this));
-
-        vm.expectRevert("Invalid assets");
-        bridge.convert(lpAsset, emptyAsset, wstETHAsset, emptyAsset, 10, 0, 0, address(this));
-
-        vm.expectRevert("Invalid assets");
-        bridge.convert(lpAsset, emptyAsset, wstETHAsset, ethAsset, 10, 0, 0, address(this));
     }
 
     function testDepositEth(uint72 _depositAmount) public {
@@ -128,11 +93,12 @@ contract CurveLpUnitTest is BridgeTestBase {
                 depositAmount + WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR))
             );
         }
-        _deposit(_isEth ? ethAsset : wstETHAsset, depositAmount, 0);
+        _deposit(_isEth ? ethAsset : wstETHAsset, depositAmount);
     }
 
     function testMultipleDeposits(bool[5] memory _isEths, uint72[5] memory _depositAmounts) public {
         for (uint256 i = 0; i < 5; i++) {
+            vm.warp(block.timestamp + 1 hours);
             testDeposit(_isEths[i], _depositAmounts[i]);
         }
     }
@@ -147,53 +113,10 @@ contract CurveLpUnitTest is BridgeTestBase {
         uint256 lpBalance = LP_TOKEN.balanceOf(address(ROLLUP_PROCESSOR));
         uint256 withdrawValue = bound(_withdrawAmount, 10, lpBalance);
 
-        _withdraw(withdrawValue, 1);
+        _withdraw(withdrawValue);
     }
 
-    function testReceiveTooLittleLpFromEth() public {
-        uint64 minReceived = 2**32 - 1; // Want to receive ~4K tokens for every input token
-        vm.prank(address(ROLLUP_PROCESSOR));
-        vm.expectRevert("Slippage screwed you");
-        bridge.convert{value: 1 ether}(ethAsset, emptyAsset, lpAsset, emptyAsset, 1 ether, 0, minReceived, BENEFICAIRY);
-    }
-
-    function testReceiveTooLittleLpFromWstEth() public {
-        uint64 minReceived = 2**32 - 1; // Want to receive ~4K tokens for every input token
-        deal(address(WRAPPED_STETH), address(bridge), 1 ether);
-        vm.prank(address(ROLLUP_PROCESSOR));
-        vm.expectRevert("Slippage screwed you");
-        bridge.convert(wstETHAsset, emptyAsset, lpAsset, emptyAsset, 1 ether, 0, minReceived, BENEFICAIRY);
-    }
-
-    function testReceiveTooLittleEthFromLp() public {
-        uint64 minEthReceived = 2**31 - 1;
-        uint64 minWstReceived = 0;
-
-        uint64 minReceived = minEthReceived + (minWstReceived << 32);
-
-        deal(address(LP_TOKEN), address(bridge), 1 ether);
-        vm.prank(address(ROLLUP_PROCESSOR));
-        vm.expectRevert("Withdrawal resulted in fewer coins than expected");
-        bridge.convert(lpAsset, emptyAsset, ethAsset, wstETHAsset, 1 ether, 0, minReceived, BENEFICAIRY);
-    }
-
-    function testReceiveTooLittleWstEthFromLp() public {
-        uint64 minEthReceived = 0;
-        uint64 minWstReceived = 2**31 - 1;
-
-        uint64 minReceived = minEthReceived + (minWstReceived << 32);
-
-        deal(address(LP_TOKEN), address(bridge), 1 ether);
-        vm.prank(address(ROLLUP_PROCESSOR));
-        vm.expectRevert("Withdrawal resulted in fewer coins than expected");
-        bridge.convert(lpAsset, emptyAsset, ethAsset, wstETHAsset, 1 ether, 0, minReceived, BENEFICAIRY);
-    }
-
-    function _deposit(
-        AztecTypes.AztecAsset memory _inputAsset,
-        uint256 _depositAmount,
-        uint256 _interactionNonce
-    ) internal {
+    function _deposit(AztecTypes.AztecAsset memory _inputAsset, uint256 _depositAmount) internal {
         bool isEth = _inputAsset.assetType == AztecTypes.AztecAssetType.ETH;
 
         uint256 rollupLpBalance = LP_TOKEN.balanceOf(address(ROLLUP_PROCESSOR));
@@ -201,26 +124,13 @@ contract CurveLpUnitTest is BridgeTestBase {
             ? address(ROLLUP_PROCESSOR).balance
             : WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
 
-        vm.startPrank(address(ROLLUP_PROCESSOR));
+        uint256 bridgeCallData = encodeBridgeCallData(bridgeAddressId, _inputAsset, emptyAsset, lpAsset, emptyAsset, 0);
 
-        if (_inputAsset.erc20Address == address(WRAPPED_STETH)) {
-            WRAPPED_STETH.transfer(address(bridge), _depositAmount);
-        }
+        uint256 claimableBefore = SUBSIDY.claimableAmount(BENEFICAIRY);
 
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert{value: isEth ? _depositAmount : 0}(
-            _inputAsset,
-            emptyAsset,
-            lpAsset,
-            emptyAsset,
-            _depositAmount,
-            _interactionNonce,
-            0,
-            BENEFICAIRY
-        );
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, _depositAmount);
 
-        LP_TOKEN.transferFrom(address(bridge), address(ROLLUP_PROCESSOR), outputValueA);
-
-        vm.stopPrank();
+        assertGt(SUBSIDY.claimableAmount(BENEFICAIRY), claimableBefore, "No subsidy accumulated");
 
         uint256 rollupLpBalanceAfter = LP_TOKEN.balanceOf(address(ROLLUP_PROCESSOR));
         uint256 rollupInputBalanceAfter = isEth
@@ -233,29 +143,13 @@ contract CurveLpUnitTest is BridgeTestBase {
         assertFalse(isAsync, "The bridge call is async");
     }
 
-    function _withdraw(uint256 _inputAmount, uint256 _interactionNonce) internal {
+    function _withdraw(uint256 _inputAmount) internal {
         uint256 rollupLpBalance = LP_TOKEN.balanceOf(address(ROLLUP_PROCESSOR));
         uint256 rollupEthBalance = address(ROLLUP_PROCESSOR).balance;
         uint256 rollupWstEThBalance = WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
 
-        vm.startPrank(address(ROLLUP_PROCESSOR));
-
-        LP_TOKEN.transfer(address(bridge), _inputAmount);
-
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
-            lpAsset,
-            emptyAsset,
-            ethAsset,
-            wstETHAsset,
-            _inputAmount,
-            _interactionNonce,
-            0,
-            BENEFICAIRY
-        );
-
-        WRAPPED_STETH.transferFrom(address(bridge), address(ROLLUP_PROCESSOR), outputValueB);
-
-        vm.stopPrank();
+        uint256 bridgeCallData = encodeBridgeCallData(bridgeAddressId, lpAsset, emptyAsset, ethAsset, wstETHAsset, 0);
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, _inputAmount);
 
         uint256 rollupLpBalanceAfter = LP_TOKEN.balanceOf(address(ROLLUP_PROCESSOR));
         uint256 rollupEthBalanceAfter = address(ROLLUP_PROCESSOR).balance;
