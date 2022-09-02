@@ -48,8 +48,8 @@ contract ElementTest is Test {
     bytes32 private constant BYTE_CODE_HASH = 0xf481a073666136ab1f5e93b296e84df58092065256d0db23b2d22b62c68e978d;
     address private constant TRANCHE_FACTORY_ADDRESS = 0x62F161BF3692E4015BefB05A03a94A40f520d1c0;
 
-    int64 private constant DAI_CONVERT_GAS = 237914;
-    int64 private constant USDC_FINALISE_GAS = 224810;
+    int64 private constant DAI_CONVERT_GAS = 237533;
+    int64 private constant USDC_FINALISE_GAS = 224636;
 
     uint256[] private timestamps = [
         1640995200, //Jan 01 2022
