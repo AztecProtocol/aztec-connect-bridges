@@ -12,7 +12,6 @@ import {IWstETH} from "../../../interfaces/lido/IWstETH.sol";
 import {IDefiBridge} from "../../../aztec/interfaces/IDefiBridge.sol";
 import {ISubsidy} from "../../../aztec/interfaces/ISubsidy.sol";
 
-import {CurveStEthBridge} from "../../../bridges/curve/CurveStEthBridge.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 

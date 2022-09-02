@@ -64,6 +64,16 @@ def __init__(_rollupProcessor: address):
 
 @external
 @view
+def get_lp_token() -> address:
+    return LP_TOKEN
+
+@external
+@view 
+def get_rollup_processor() -> address:
+    return ROLLUP_PROCESSOR
+
+@external
+@view
 def computeCriteria(
     _inputAssetA: AztecAsset,
     _inputAssetB: AztecAsset,

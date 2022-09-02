@@ -21,7 +21,7 @@ import {VyperDeployer} from "../../../../lib/vyper-deploy/VyperDeployer.sol";
 contract CurveLpE2ETest is BridgeTestBase {
     // solhint-disable-next-line
     IERC20 public constant LP_TOKEN = IERC20(0x06325440D014e39736583c165C2963BA99fAf14E);
-    ILido public constant LIDO = ILido(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
+    ILido public constant STETH = ILido(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstETH public constant WRAPPED_STETH = IWstETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
     ICurvePool public constant CURVE_POOL = ICurvePool(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022);
 
@@ -56,8 +56,8 @@ contract CurveLpE2ETest is BridgeTestBase {
         // Prefund to save gas
         deal(address(WRAPPED_STETH), address(ROLLUP_PROCESSOR), WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)) + 1);
         deal(address(WRAPPED_STETH), address(bridge), 1);
-        LIDO.submit{value: 10}(address(0));
-        LIDO.transfer(address(bridge), 10);
+        STETH.submit{value: 10}(address(0));
+        STETH.transfer(address(bridge), 10);
 
         SUBSIDY.registerBeneficiary(BENEFICAIRY);
         SUBSIDY.subsidize{value: 1 ether}(b, 0, 180);
