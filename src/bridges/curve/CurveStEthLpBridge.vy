@@ -37,7 +37,7 @@ CURVE_POOL: constant(address) = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022
 SUBSIDY: constant(address) = 0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA
 CURVE_ETH_INDEX: constant(int128) = 0
 CURVE_STETH_INDEX: constant(int128) = 1
-SLIPPAGE_PRECISION: constant(uint256) = 1000000
+PRICE_PRECISION: constant(uint256) = 1000000
 
 LP_TOKEN: immutable(address)
 ROLLUP_PROCESSOR: immutable(address)
@@ -73,7 +73,7 @@ def computeCriteria(
 ) -> uint256:
     """
     @notice Computes the criteria used for claiming subsidy
-    @ dev   Relies only on `_inputAssetA` for this bridge, deciding entering or exiting the lp position
+    @dev    Relies only on `_inputAssetA` for this bridge, deciding entering or exiting the lp position
     @param  _inputAssetA - The first Aztec Asset to input the call, will be (LPToken or eth or wsteth)
     @param  _inputAssetB - Always empty for this bridge
     @param  _outputAssetA - The first aztec asset to receive from the call, will be (LPToken or eth)
@@ -99,8 +99,10 @@ def __default__():
 def _deposit(_value: uint256, _isEthInput: bool, _auxData: uint64, _beneficiary: address) -> (uint256, uint256, bool):
     """
     @notice Perform a deposit (adding liquidity) to the curve pool
-    @param  _value The amount of token to deposit
-    @param  _isEthInput A flag describing whether Eth is used as input or not
+    @param  _value - The amount of token to deposit
+    @param  _isEthInput - A flag describing whether Eth is used as input or not
+    @param  _auxData - The amount of LP token per one eth or stEth (not wstEth) with precision 1e6
+    @param  _beneficiary - The address of the subsidy beneficiary
     @dev    When Eth is not the input, input must be WSTETH, which is unwrapped before adding liquidity
     @return outputValueA - The amount of LP-token to receive 
     @return outputValueB - Always zero for this bridge
@@ -108,17 +110,19 @@ def _deposit(_value: uint256, _isEthInput: bool, _auxData: uint64, _beneficiary:
     """
     outputValueA: uint256 = 0
     amounts: uint256[2] = [0, 0]
-    minOut: uint256 = (_value * convert(_auxData, uint256)) / SLIPPAGE_PRECISION
 
     if _isEthInput:
         amounts[CURVE_ETH_INDEX] = _value
+        minOut: uint256 = (amounts[CURVE_ETH_INDEX] * convert(_auxData, uint256)) / PRICE_PRECISION
+
         outputValueA = ICurvePool(CURVE_POOL).add_liquidity(amounts, minOut, value = _value)
     else:
         amounts[CURVE_STETH_INDEX] = IWstETh(WSTETH).unwrap(_value)
+        minOut: uint256 = (amounts[CURVE_STETH_INDEX] * convert(_auxData, uint256)) / PRICE_PRECISION
+
         outputValueA = ICurvePool(CURVE_POOL).add_liquidity(amounts, minOut)
     ISubsidy(SUBSIDY).claimSubsidy(0, _beneficiary)
     return (outputValueA, 0, False)
-
 
 
 @internal
@@ -128,13 +132,16 @@ def _withdraw(_value: uint256, _interactionNonce: uint256, _auxData: uint64, _be
     @dev    Will exit to eth and steth, and then wrap the steth before returning
     @param  _value - The amount of LP-token to withdraw
     @param  _interactionNonce - The unique identifier of the defi interaction
+    @param  _auxData - The amount of `eth` AND `stEth` per LPToken with precision 1e6. Encoded as two 32 
+            bit values. 
+    @param  _beneficiary - The address of the subsidy beneficiary
     @return outputValueA - The amount of eth to retrieve
     @return outputBalueB - The amount of wsteth to retrive
     @return isAsync - Always false for this bridge
     """
     minAmounts: uint256[2] = [0, 0]
-    minAmounts[CURVE_ETH_INDEX] = _value * (convert(_auxData, uint256) & (2**32 - 1)) / SLIPPAGE_PRECISION
-    minAmounts[CURVE_STETH_INDEX] = _value * (shift(convert(_auxData, uint256), -32) & (2**32 - 1)) / SLIPPAGE_PRECISION
+    minAmounts[CURVE_ETH_INDEX] = _value * (convert(_auxData, uint256) & (2**32 - 1)) / PRICE_PRECISION
+    minAmounts[CURVE_STETH_INDEX] = _value * (shift(convert(_auxData, uint256), -32) & (2**32 - 1)) / PRICE_PRECISION
 
     amounts: uint256[2] = ICurvePool(CURVE_POOL).remove_liquidity(_value, minAmounts)
     wstEth: uint256 = IWstETh(WSTETH).wrap(amounts[1])
