@@ -10,6 +10,8 @@ import {IWstETH} from "../../interfaces/lido/IWstETH.sol";
 import {Deployer} from "../../bridges/curve/Deployer.sol";
 import {ICurvePool} from "../../interfaces/curve/ICurvePool.sol";
 
+/* solhint-disable */
+
 interface ICurveStEthLpBridge {
     function CURVE_POOL() external view returns (address);
 
@@ -17,8 +19,10 @@ interface ICurveStEthLpBridge {
 }
 
 interface ICurveStEthPool {
-    function add_liquidity(uint256[2] memory _amounts, uint256 min_mint_amount) external payable returns (uint256);
+    function add_liquidity(uint256[2] memory _amounts, uint256 _min_mint_amount) external payable returns (uint256);
 }
+
+/* solhint-enable */
 
 contract CurveStethLpDeployment is BaseDeployment {
     ILido internal constant STETH = ILido(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);

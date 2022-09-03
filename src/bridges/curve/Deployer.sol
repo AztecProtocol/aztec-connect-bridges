@@ -7,6 +7,8 @@ contract Deployer {
         assembly {
             deployedAddress := create(0, add(_bytecode, 0x20), mload(_bytecode))
         }
-        require(deployedAddress != address(0), "VyperDeployer could not deploy contract");
+        if (deployedAddress == address(0)) {
+            revert("Contract not deployed");
+        }
     }
 }
