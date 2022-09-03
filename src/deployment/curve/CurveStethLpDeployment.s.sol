@@ -89,7 +89,7 @@ contract CurveStethLpDeployment is BaseDeployment {
         return bridge;
     }
 
-    function deployAndList() public returns (address) {
+    function deployAndList() public returns (address, address) {
         address bridge = deployAndFund();
         ICurveStEthLpBridge bridge_ = ICurveStEthLpBridge(bridge);
 
@@ -98,6 +98,6 @@ contract CurveStethLpDeployment is BaseDeployment {
 
         listAsset(bridge_.get_lp_token(), 100000);
 
-        return bridge;
+        return (bridge, bridge_.get_lp_token());
     }
 }

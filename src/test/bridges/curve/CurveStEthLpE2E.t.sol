@@ -16,7 +16,7 @@ import {CurveStEthBridge} from "../../../bridges/curve/CurveStEthBridge.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
-import {VyperDeployer} from "../../../../lib/vyper-deploy/VyperDeployer.sol";
+import {Deployer} from "../../../bridges/curve/Deployer.sol";
 
 contract CurveLpE2ETest is BridgeTestBase {
     // solhint-disable-next-line
@@ -35,11 +35,17 @@ contract CurveLpE2ETest is BridgeTestBase {
     uint256 private bridgeAddressId;
 
     function setUp() public {
-        VyperDeployer deployer = new VyperDeployer();
-        bytes memory args = abi.encode(address(ROLLUP_PROCESSOR));
-        address b = deployer.deployContract("curve/CurveStEthLpBridge", args);
+        Deployer deployer = new Deployer();
 
-        bridge = IDefiBridge(b);
+        string[] memory cmds = new string[](2);
+        cmds[0] = "vyper";
+        cmds[1] = "src/bridges/curve/CurveStEthLpBridge.vy";
+        bytes memory code = vm.ffi(cmds);
+
+        bytes memory bytecode = abi.encodePacked(code, abi.encode(address(ROLLUP_PROCESSOR)));
+        address bridgeAddress = deployer.deploy(bytecode);
+
+        bridge = IDefiBridge(bridgeAddress);
 
         vm.deal(address(bridge), 0);
         vm.prank(MULTI_SIG);
@@ -60,13 +66,13 @@ contract CurveLpE2ETest is BridgeTestBase {
         STETH.transfer(address(bridge), 10);
 
         SUBSIDY.registerBeneficiary(BENEFICAIRY);
-        SUBSIDY.subsidize{value: 1 ether}(b, 0, 180);
+        SUBSIDY.subsidize{value: 1 ether}(bridgeAddress, 0, 180);
         setRollupBeneficiary(BENEFICAIRY);
         vm.warp(block.timestamp + 180 minutes);
 
-        ISubsidy.Subsidy memory sub = SUBSIDY.getSubsidy(b, 0);
+        ISubsidy.Subsidy memory sub = SUBSIDY.getSubsidy(bridgeAddress, 0);
         emit log_named_uint("avail", sub.available);
-        emit log_named_uint("next ", SUBSIDY.getAccumulatedSubsidyAmount(b, 0));
+        emit log_named_uint("next ", SUBSIDY.getAccumulatedSubsidyAmount(bridgeAddress, 0));
     }
 
     function testDepositEth(uint72 _depositAmount) public {

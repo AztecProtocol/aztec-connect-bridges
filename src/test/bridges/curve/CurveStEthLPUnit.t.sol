@@ -15,7 +15,7 @@ import {ISubsidy} from "../../../aztec/interfaces/ISubsidy.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
-import {VyperDeployer} from "../../../../lib/vyper-deploy/VyperDeployer.sol";
+import {Deployer} from "../../../bridges/curve/Deployer.sol";
 
 contract CurveLpUnitTest is BridgeTestBase {
     // solhint-disable-next-line
@@ -34,11 +34,17 @@ contract CurveLpUnitTest is BridgeTestBase {
     uint256 private bridgeAddressId;
 
     function setUp() public {
-        VyperDeployer deployer = new VyperDeployer();
-        bytes memory args = abi.encode(address(ROLLUP_PROCESSOR));
-        address b = deployer.deployContract("curve/CurveStEthLpBridge", args);
+        Deployer deployer = new Deployer();
+        
+        string[] memory cmds = new string[](2);
+        cmds[0] = "vyper";
+        cmds[1] = "src/bridges/curve/CurveStEthLpBridge.vy";
+        bytes memory code = vm.ffi(cmds);
 
-        bridge = IDefiBridge(b);
+        bytes memory bytecode = abi.encodePacked(code, abi.encode(address(ROLLUP_PROCESSOR)));
+        address bridgeAddress = deployer.deploy(bytecode);
+
+        bridge = IDefiBridge(bridgeAddress);
 
         vm.deal(address(bridge), 0);
         vm.prank(MULTI_SIG);
@@ -59,12 +65,12 @@ contract CurveLpUnitTest is BridgeTestBase {
         LIDO.transfer(address(bridge), 10);
 
         SUBSIDY.registerBeneficiary(BENEFICAIRY);
-        SUBSIDY.subsidize{value: 1 ether}(b, 0, 180);
+        SUBSIDY.subsidize{value: 1 ether}(bridgeAddress, 0, 180);
         vm.warp(block.timestamp + 180 minutes);
 
-        ISubsidy.Subsidy memory sub = SUBSIDY.getSubsidy(b, 0);
+        ISubsidy.Subsidy memory sub = SUBSIDY.getSubsidy(bridgeAddress, 0);
         emit log_named_uint("avail", sub.available);
-        emit log_named_uint("next ", SUBSIDY.getAccumulatedSubsidyAmount(b, 0));
+        emit log_named_uint("next ", SUBSIDY.getAccumulatedSubsidyAmount(bridgeAddress, 0));
     }
 
     function testInvalidCaller(address _caller) public {
