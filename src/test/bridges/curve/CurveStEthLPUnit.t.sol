@@ -35,7 +35,7 @@ contract CurveLpUnitTest is BridgeTestBase {
 
     function setUp() public {
         Deployer deployer = new Deployer();
-        
+
         string[] memory cmds = new string[](2);
         cmds[0] = "vyper";
         cmds[1] = "src/bridges/curve/CurveStEthLpBridge.vy";
