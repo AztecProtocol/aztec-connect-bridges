@@ -36,38 +36,44 @@ contract CurveLpMeasure is CurveStethLpDeployment {
             erc20Address: address(0),
             assetType: AztecTypes.AztecAssetType.ETH
         });
+        AztecTypes.AztecAsset memory wstEth = AztecTypes.AztecAsset({
+            id: 0,
+            erc20Address: address(WSTETH),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
         AztecTypes.AztecAsset memory lpAsset = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: lpToken,
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
+        // Fund with WSTETH
+        vm.startBroadcast();
+        STETH.submit{value: 1 ether}(address(0));
+        STETH.approve(address(WSTETH), 1 ether);
+        WSTETH.wrap(1 ether);
+        WSTETH.transfer(address(gasBase), 0.6 ether);
+        vm.stopBroadcast();
+
         vm.broadcast();
         address(gasBase).call{value: 2 ether}("");
-        emit log_named_uint("Balance of ", address(gasBase).balance);
 
         // add liquidity eth
         {
             vm.broadcast();
             gasBase.convert(bridge, eth, empty, lpAsset, empty, 1 ether, 0, 0, address(this), 250000);
-            emit log_named_uint("bal", IERC20(lpAsset.erc20Address).balanceOf(address(gasBase)));
         }
 
-        // add liquidity eth
-        {
-            vm.broadcast();
-            gasBase.convert(bridge, eth, empty, lpAsset, empty, 1 ether, 0, 0, address(this), 250000);
-            emit log_named_uint("bal", IERC20(lpAsset.erc20Address).balanceOf(address(gasBase)));
-        }
-
-        /*
         // add liquidity wsteth
         {
-            emit log_named_uint("bal", IERC20(lpAsset.erc20Address).balanceOf(address(gasBase)));
-
             vm.broadcast();
-            gasBase.convert(bridge, lpAsset, empty, eth, empty, 0.1 ether, 1, 1, address(this), 250000);
-            emit log_named_uint("bal", IERC20(lpAsset.erc20Address).balanceOf(address(gasBase)));
-        }*/
+            gasBase.convert(bridge, wstEth, empty, lpAsset, empty, 0.5 ether, 0, 0, address(this), 250000);
+        }
+
+        // Remove liquidity
+        {
+            vm.broadcast();
+            gasBase.convert(bridge, lpAsset, empty, eth, wstEth, 0.5 ether, 0, 0, address(this), 250000);
+        }
     }
 }
