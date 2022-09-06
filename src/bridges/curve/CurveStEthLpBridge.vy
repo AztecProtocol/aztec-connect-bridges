@@ -46,9 +46,8 @@ ROLLUP_PROCESSOR: immutable(address)
 def __init__(_rollupProcessor: address):
     """
     @notice Store address of the rollup processor and lp-token and perform pre-approvals
-    @dev    Preapprovals can be used to save gas, and as as the bridge won't hold any funds
-            and there are no approvals to it there are no direct funds to steal if approved
-            party becomes malicious.
+    @dev    Because the bridge wont hold funds after an interaction, pre-approvals can be
+            used to save gas.
     """
     ROLLUP_PROCESSOR = _rollupProcessor
     LP_TOKEN = ICurvePool(CURVE_POOL).lp_token()
@@ -61,6 +60,60 @@ def __init__(_rollupProcessor: address):
 
     ISubsidy(SUBSIDY).setGasUsageAndMinGasPerMinute(0, 250000, 180)
     ISubsidy(SUBSIDY).setGasUsageAndMinGasPerMinute(1, 250000, 180)
+
+@payable
+@external
+def __default__():
+    """
+    @notice Default used to accept Eth from pool when exiting
+    """
+    pass
+
+@payable
+@external
+def convert_11192637865(
+    _inputAssetA: AztecAsset,
+    _inputAssetB: AztecAsset,
+    _outputAssetA: AztecAsset,
+    _outputAssetB: AztecAsset,
+    _totalInputValue: uint256,
+    _interactionNonce: uint256,
+    _auxData: uint64,
+    _rollupBeneficiary: address
+) -> (uint256, uint256, bool):
+    """
+    @notice Function called by the defi proxy, executes deposit or withdrawal depending on input 
+    @dev    Instead of `convert` named `convert_11192637865` to work around the `convert` keyword
+            while still having the same selector.
+    @param  _inputAssetA - The first Aztec Asset to input the call, will be LPToken or eth or wsteth
+    @param  _inputAssetB - Always empty for this bridge
+    @param  _outputAssetA - The first aztec asset to receive from the call, will be LPToken or eth
+    @param  _outputAssetB - The second aztec asset to receive from the call, will be none or wsteth
+    @param  _totalInputValue - The amount of token to deposit or withdraw
+    @param  _interactionNonce - The unique identifier for this defi interaction
+    @param  _auxData - Auxiliary data that can be used by the bridge
+    @param  _rollupBeneficiary - The address of the beneficiary of subsidies
+    @return outputValueA - The amount of outputAssetA that the rollup should pull
+    @return outputValueB - The amount of outputAssetB that the rollup should pull
+    @return isAsync - True if the bridge is async, false otherwise. Always false for this bridge
+    """
+    assert msg.sender == ROLLUP_PROCESSOR, "Invalid caller"
+
+    if _inputAssetB.assetType != 0:
+        raise "Invalid asset B"
+
+    # Eth or WSTETH in -> lp out
+    deposit: bool = (_inputAssetA.assetType == 1 or (_inputAssetA.assetType == 2 and _inputAssetA.erc20Address == WSTETH)) and _outputAssetA.assetType == 2 and _outputAssetA.erc20Address == LP_TOKEN
+
+    # lp in -> eth + WSTETH out
+    withdraw: bool = _inputAssetA.assetType == 2 and _inputAssetA.erc20Address == LP_TOKEN and _outputAssetA.assetType == 1 and _outputAssetB.assetType == 2 and _outputAssetB.erc20Address == WSTETH
+
+    if not((deposit or withdraw) and not(deposit and withdraw)):
+        raise "Invalid assets"
+
+    if deposit:
+        return self._deposit(_totalInputValue, _inputAssetA.assetType == 1, _auxData, _rollupBeneficiary)
+    return self._withdraw(_totalInputValue, _interactionNonce, _auxData, _rollupBeneficiary)
 
 @external
 @view
@@ -83,11 +136,11 @@ def computeCriteria(
 ) -> uint256:
     """
     @notice Computes the criteria used for claiming subsidy
-    @dev    Relies only on `_inputAssetA` for this bridge, deciding entering or exiting the lp position
-    @param  _inputAssetA - The first Aztec Asset to input the call, will be (LPToken or eth or wsteth)
+    @dev    Criteria is computed based only on the `_inputAssetA`
+    @param  _inputAssetA - The first Aztec Asset to input the call, will be (LPToken or eth or WSTETH)
     @param  _inputAssetB - Always empty for this bridge
     @param  _outputAssetA - The first aztec asset to receive from the call, will be (LPToken or eth)
-    @param  _outputAssetB - The second aztec asset to receive from the call, will be (none or wsteth)
+    @param  _outputAssetB - The second aztec asset to receive from the call, will be (none or WSTETH)
     @param  _auxData - The auxdata 
     @return The criteria, 1 if exiting, 0 otherwise
     """
@@ -95,23 +148,13 @@ def computeCriteria(
         return 1
     return 0
 
-
-@payable
-@external
-def __default__():
-    """
-    @notice Default used to accept Eth from pool when exiting
-    """
-    pass
-
-
 @internal
 def _deposit(_value: uint256, _isEthInput: bool, _auxData: uint64, _beneficiary: address) -> (uint256, uint256, bool):
     """
     @notice Perform a deposit (adding liquidity) to the curve pool
     @param  _value - The amount of token to deposit
     @param  _isEthInput - A flag describing whether Eth is used as input or not
-    @param  _auxData - The amount of LP token per one eth or stEth (not wstEth) with precision 1e6
+    @param  _auxData - The amount of LP token per one eth or stEth (not WSTETH) with precision 1e6
     @param  _beneficiary - The address of the subsidy beneficiary
     @dev    When Eth is not the input, input must be WSTETH, which is unwrapped before adding liquidity
     @return outputValueA - The amount of LP-token to receive 
@@ -138,7 +181,7 @@ def _deposit(_value: uint256, _isEthInput: bool, _auxData: uint64, _beneficiary:
 @internal
 def _withdraw(_value: uint256, _interactionNonce: uint256, _auxData: uint64, _beneficiary: address) -> (uint256, uint256, bool):
     """
-    @notice Performs a withdrawal from LP-token to (eth, wsteth)
+    @notice Performs a withdrawal from LP-token to (eth, WSTETH)
     @dev    Will exit to eth and steth, and then wrap the steth before returning
     @param  _value - The amount of LP-token to withdraw
     @param  _interactionNonce - The unique identifier of the defi interaction
@@ -146,7 +189,7 @@ def _withdraw(_value: uint256, _interactionNonce: uint256, _auxData: uint64, _be
             bit values. 
     @param  _beneficiary - The address of the subsidy beneficiary
     @return outputValueA - The amount of eth to retrieve
-    @return outputBalueB - The amount of wsteth to retrive
+    @return outputBalueB - The amount of WSTETH to retrive
     @return isAsync - Always false for this bridge
     """
     minAmounts: uint256[2] = [0, 0]
@@ -154,54 +197,7 @@ def _withdraw(_value: uint256, _interactionNonce: uint256, _auxData: uint64, _be
     minAmounts[CURVE_STETH_INDEX] = _value * (shift(convert(_auxData, uint256), -32) & (2**32 - 1)) / PRICE_PRECISION
 
     amounts: uint256[2] = ICurvePool(CURVE_POOL).remove_liquidity(_value, minAmounts)
-    wstEth: uint256 = IWstETh(WSTETH).wrap(amounts[1])
+    wstEthAmount: uint256 = IWstETh(WSTETH).wrap(amounts[1])
     IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge(_interactionNonce, value = amounts[0])
     ISubsidy(SUBSIDY).claimSubsidy(1, _beneficiary)
-    return (amounts[0], wstEth, False)
-
-
-@payable
-@external
-def convert_11192637865(
-    _inputAssetA: AztecAsset,
-    _inputAssetB: AztecAsset,
-    _outputAssetA: AztecAsset,
-    _outputAssetB: AztecAsset,
-    _totalInputValue: uint256,
-    _interactionNonce: uint256,
-    _auxData: uint64,
-    _rollupBeneficiary: address
-) -> (uint256, uint256, bool):
-    """
-    @notice Function called by the defi proxy, executes deposit or withdrawal depending on input 
-    @dev    Instead of `convert` named `convert_11192637865` to work around the `convert` keyword
-            while still having the same selector.
-    @param  _inputAssetA - The first Aztec Asset to input the call, will be (LPToken or eth or wsteth)
-    @param  _inputAssetB - Always empty for this bridge
-    @param  _outputAssetA - The first aztec asset to receive from the call, will be (LPToken or eth)
-    @param  _outputAssetB - The second aztec asset to receive from the call, will be (none or wsteth)
-    @param  _totalInputValue - The amount of token to deposit or withdraw
-    @param  _interactionNonce - The unique identifier for this defi interaction
-    @param  _auxData - Auxiliary data that can be used by the bridge
-    @param  _rollupBeneficiary - The address of the beneficiary of subsidies
-    @return OutputValueA - The amount of outputAssetA that the rollup should pull
-    @return OutputValueB - The amount of outputAssetB that the rollup should pull
-    @return isAsync - True if the bridge is async, false otherwise. Always false for this bridge
-    """
-    assert msg.sender == ROLLUP_PROCESSOR, "Invalid caller"
-
-    if _inputAssetB.assetType != 0:
-        raise "Invalid asset B"
-
-    # Eth or wsteth in -> lp out
-    deposit: bool = (_inputAssetA.assetType == 1 or (_inputAssetA.assetType == 2 and _inputAssetA.erc20Address == WSTETH)) and _outputAssetA.assetType == 2 and _outputAssetA.erc20Address == LP_TOKEN
-
-    # lp in -> eth + wsteth out
-    withdraw: bool = _inputAssetA.assetType == 2 and _inputAssetA.erc20Address == LP_TOKEN and _outputAssetA.assetType == 1 and _outputAssetB.assetType == 2 and _outputAssetB.erc20Address == WSTETH
-
-    if not((deposit or withdraw) and not(deposit and withdraw)):
-        raise "Invalid assets"
-
-    if deposit:
-        return self._deposit(_totalInputValue, _inputAssetA.assetType == 1, _auxData, _rollupBeneficiary)
-    return self._withdraw(_totalInputValue, _interactionNonce, _auxData, _rollupBeneficiary)
+    return (amounts[0], wstEthAmount, False)

@@ -2,7 +2,7 @@
 
 ## What does the bridge do? Why build it?
 
-The bridge swaps add/remove liquidity to the curve `stEth` pool. Allowing users to earn trading fees on their assets and
+The bridge add/remove liquidity to the curve `stEth` pool, allowing users to earn trading fees on their assets.
 
 ## What protocol(s) does the bridge interact with ?
 
@@ -26,7 +26,7 @@ The deposit can be done with either `eth` or `wstEth`. If done with `wstEth` the
 
 ### Withdrawal
 
-The withdrawal is done by using the LP token as the unput token, and will return BOTH `eth` and `wstEth` assets. The LP-token will be taken to curve, where the liquidity is removed (`eth` and `stEth` returned to bridge) and `stEth` is then wrapped to `wstEth` before it is pulled by the rollup.
+The withdrawal is done by using the LP token as the input token, and will return BOTH `eth` and `wstEth` assets. The LP-token will be taken to curve, where the liquidity is removed (`eth` and `stEth` returned to bridge) and `stEth` is then wrapped to `wstEth` before it is pulled by the rollup.
 
 **Edge cases**
 
@@ -38,7 +38,7 @@ The withdrawal is done by using the LP token as the unput token, and will return
 
 - _Note_: Because `stEth` is rebasing, we wrap/unwrap it to `wstEth` (wrapped staked ether). This is to ensure that values are as expected when exiting from or transferring within the Rollup.
 
-- The Bridge perform token pre-approvals in the constructor to allow the `ROLLUP_PROCESSOR`, `WRAPPED_STETH` and `CURVE_POOL` to pull tokens from it. This is to reduce gas-overhead when performing the actions. It is safe to do, as the bridge is not holding funds itself.
+- The bridge performs token pre-approvals in the constructor to allow the `ROLLUP_PROCESSOR`, `WSTETH` and `CURVE_POOL` to pull tokens from it. This reduces gas-overhead when performing the actions. It is safe to do, as the bridge is not holding funds before or after the interaction.
 
 ## Can tokens balances be impacted by external parties, if yes, how?
 
