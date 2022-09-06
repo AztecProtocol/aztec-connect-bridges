@@ -1,11 +1,11 @@
 # @version >=0.3.6
 
 """
-@title  A bridge for entering and exiting a Curve LP position for the eth/STETH pool
+@title  A bridge for entering and exiting a Curve LP position for the ETH/STETH pool
 @licence Apache-2.0
 @author Aztec team
-@notice You can use this bridge to enter or exit positions on the eth/STETH pool
-        Can be entered with either eth or STETH, but will always exit with both.
+@notice You can use this bridge to enter or exit positions on the ETH/STETH pool
+        Can be entered with either ETH or STETH, but will always exit with both.
 """
 
 from vyper.interfaces import ERC20
@@ -85,9 +85,9 @@ def convert_11192637865(
     @notice Function called by the defi proxy, executes deposit or withdrawal depending on input 
     @dev    Instead of `convert` named `convert_11192637865` to work around the `convert` keyword
             while still having the same selector.
-    @param  _inputAssetA - The first Aztec Asset to input the call, will be LPToken or eth or WSTETH
+    @param  _inputAssetA - The first Aztec Asset to input the call, will be LPToken or ETH or WSTETH
     @param  _inputAssetB - Always empty for this bridge
-    @param  _outputAssetA - The first aztec asset to receive from the call, will be LPToken or eth
+    @param  _outputAssetA - The first aztec asset to receive from the call, will be LPToken or ETH
     @param  _outputAssetB - The second aztec asset to receive from the call, will be none or WSTETH
     @param  _totalInputValue - The amount of token to deposit or withdraw
     @param  _interactionNonce - The unique identifier for this defi interaction
@@ -105,7 +105,7 @@ def convert_11192637865(
     # Eth or WSTETH in -> LPToken out
     deposit: bool = (_inputAssetA.assetType == 1 or (_inputAssetA.assetType == 2 and _inputAssetA.erc20Address == WSTETH)) and _outputAssetA.assetType == 2 and _outputAssetA.erc20Address == LP_TOKEN
 
-    # LPToken in -> eth + WSTETH out
+    # LPToken in -> ETH + WSTETH out
     withdraw: bool = _inputAssetA.assetType == 2 and _inputAssetA.erc20Address == LP_TOKEN and _outputAssetA.assetType == 1 and _outputAssetB.assetType == 2 and _outputAssetB.erc20Address == WSTETH
 
     if not((deposit or withdraw) and not(deposit and withdraw)):
@@ -137,10 +137,10 @@ def computeCriteria(
     """
     @notice Computes the criteria used for claiming subsidy
     @dev    Criteria is computed based only on the `_inputAssetA`
-    @param  _inputAssetA - The first Aztec Asset to input the call, will be (LPToken or eth or WSTETH)
+    @param  _inputAssetA - The first Aztec Asset to input the call, will be LPToken or ETH or WSTETH
     @param  _inputAssetB - Always empty for this bridge
-    @param  _outputAssetA - The first aztec asset to receive from the call, will be (LPToken or eth)
-    @param  _outputAssetB - The second aztec asset to receive from the call, will be (none or WSTETH)
+    @param  _outputAssetA - The first aztec asset to receive from the call, will be LPToken or ETH
+    @param  _outputAssetB - The second aztec asset to receive from the call, will be none or WSTETH
     @param  _auxData - The auxdata 
     @return The criteria, 1 if exiting, 0 otherwise
     """
@@ -153,8 +153,8 @@ def _deposit(_value: uint256, _isEthInput: bool, _auxData: uint64, _beneficiary:
     """
     @notice Perform a deposit (adding liquidity) to the curve pool
     @param  _value - The amount of token to deposit
-    @param  _isEthInput - A flag describing whether Eth is used as input or not
-    @param  _auxData - The amount of LP token per one eth or STETH (not WSTETH) with precision 1e6
+    @param  _isEthInput - A flag describing whether ETH is used as input or not
+    @param  _auxData - The amount of LP token per one ETH or STETH (not WSTETH) with precision 1e6
     @param  _beneficiary - The address of the subsidy beneficiary
     @dev    When Eth is not the input, input must be WSTETH, which is unwrapped before adding liquidity
     @return outputValueA - The amount of LP-token to receive 
@@ -180,14 +180,14 @@ def _deposit(_value: uint256, _isEthInput: bool, _auxData: uint64, _beneficiary:
 @internal
 def _withdraw(_value: uint256, _interactionNonce: uint256, _auxData: uint64, _beneficiary: address) -> (uint256, uint256, bool):
     """
-    @notice Performs a withdrawal from LP-token to (eth, WSTETH)
-    @dev    Will exit to eth and STETH, and then wrap the STETH before returning
+    @notice Performs a withdrawal from LP-token to ETH and WSTETH
+    @dev    Will exit to ETH and STETH, and then wrap the STETH before returning
     @param  _value - The amount of LP-token to withdraw
     @param  _interactionNonce - The unique identifier of the defi interaction
-    @param  _auxData - The amount of `eth` AND `STETH` per LPToken with precision 1e6. Encoded as two 32 
+    @param  _auxData - The amount of `ETH` AND `STETH` per LPToken with precision 1e6. Encoded as two 32 
             bit values. 
     @param  _beneficiary - The address of the subsidy beneficiary
-    @return outputValueA - The amount of eth to retrieve
+    @return outputValueA - The amount of ETH to retrieve
     @return outputBalueB - The amount of WSTETH to retrive
     @return isAsync - Always false for this bridge
     """
