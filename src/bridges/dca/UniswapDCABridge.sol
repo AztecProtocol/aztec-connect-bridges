@@ -18,14 +18,12 @@ import {BiDCABridge} from "./BiDCABridge.sol";
  * 1. rebalance internally in the ticks, as the BiDCABridge,
  * 2. rebalance cross-ticks, e.g., excess from the individual ticks are matched,
  * 3. swap any remaining excess using Uniswap, and rebalance with the returned assets
- * @dev The `MAX_AGE` of a price feed, means that an abandoned price-feed will brick the bridge.
  * @dev The slippage + path is immutable, so low liquidity in Uniswap might block the `rebalanceAndfillUniswap` flow.
  * @author Lasse Herskind (LHerskind on GitHub).
  */
 contract UniswapDCABridge is BiDCABridge {
     using SafeERC20 for IERC20;
 
-    error StalePrice();
     error NegativePrice();
 
     address internal constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
@@ -34,7 +32,6 @@ contract UniswapDCABridge is BiDCABridge {
     uint160 internal constant SQRT_PRICE_LIMIT_X96 = 1461446703485210103287273052203988822378723970341;
     ISwapRouter public constant UNI_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
-    uint256 public constant MAX_AGE = 1 days; // Heartbeat of oracle is 24 hours.
     uint256 public constant SLIPPAGE = 100; // Basis points
 
     IChainlinkOracle public constant ORACLE = IChainlinkOracle(0x773616E4d11A78F511299002da57A0a94577F1f4);
@@ -111,11 +108,7 @@ contract UniswapDCABridge is BiDCABridge {
      * @return Price
      */
     function getPrice() public virtual override(BiDCABridge) returns (uint256) {
-        (, int256 answer, , uint256 updatedAt, ) = ORACLE.latestRoundData();
-        if (updatedAt + MAX_AGE < block.timestamp) {
-            revert StalePrice();
-        }
-
+        (, int256 answer, , , ) = ORACLE.latestRoundData();
         if (answer < 0) {
             revert NegativePrice();
         }
