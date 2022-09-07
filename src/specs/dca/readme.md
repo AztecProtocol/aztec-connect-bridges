@@ -43,7 +43,7 @@ It is also possible to have the contract trade directly on uniswap itself.
 This can be triggered by anyone, and will essentially perform 3 inner rebalance, first inside each tick, then across the ticks with itself, and finally using the excess on uniswap.
 To limit slippage, it computes a minimum amount received using the oracle price (we already use the value, so slippage protection comes cheaply).
 
-The flows reverts if the oracle price is stale (have not updated within the last 24 hours), or if the price goes negative.
+The flows reverts if the oracle price goes negative.
 When using the chainlink oracle, this is centralization issue as chainlink could kill the bridge through the oracle.
 
 ### Finalise (L1)

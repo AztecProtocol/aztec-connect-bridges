@@ -98,13 +98,7 @@ contract BiDCATestUnit is Test {
     }
 
     function testPriceFailure() public {
-        bytes memory returnValue = abi.encode(uint80(0), int256(0), uint256(0), block.timestamp - 2 days, uint80(0));
-        vm.mockCall(ORACLE, "", returnValue);
-
-        vm.expectRevert(UniswapDCABridge.StalePrice.selector);
-        bridge.getPrice();
-
-        returnValue = abi.encode(uint80(0), int256(-250), uint256(0), block.timestamp, uint80(0));
+        bytes memory returnValue = abi.encode(uint80(0), int256(-250), uint256(0), block.timestamp, uint80(0));
         vm.mockCall(ORACLE, "", returnValue);
 
         vm.expectRevert(UniswapDCABridge.NegativePrice.selector);
