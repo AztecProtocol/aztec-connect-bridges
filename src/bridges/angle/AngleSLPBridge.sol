@@ -151,18 +151,12 @@ contract AngleSLPBridge is BridgeBase {
             // we withdraw what we can (98% of the current balance), then harvest, then withdraw the rest
             uint256 toWithdraw = (((currentBalance * 1e18) / sanRate) * 98) / 100;
             STABLE_MASTER.withdraw(toWithdraw, address(this), address(this), poolManager);
-            harvest(poolManager);
+
+            // Harvest the main strategy to free funds and make them available to withdraw
+            IStrategy strategy = IStrategy(IPoolManager(poolManager).strategyList(0));
+            strategy.harvest();
             STABLE_MASTER.withdraw(amount - toWithdraw, address(this), address(this), poolManager);
         }
-    }
-
-    /**
-     * @notice Harvest the main strategy to free funds and make them available to withdraw
-     * @param poolManager Address of the PoolManager
-     */
-    function harvest(address poolManager) internal {
-        IStrategy strategy = IStrategy(IPoolManager(poolManager).strategyList(0));
-        strategy.harvest();
     }
 
     /**

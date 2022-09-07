@@ -291,7 +291,7 @@ contract AngleSLPUnitTest is BridgeTestBase {
         assertEq(IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(IERC20(daiAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
         (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_DAI());
-        assertEq(outputValueA, (amount * sanRate) / 1e18);
+        assertApproxEqAbs(outputValueA, (amount * sanRate) / 1e18, 2);
     }
 
     function testValidWithdrawETH() public {
