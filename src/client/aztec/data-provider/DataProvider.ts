@@ -1,7 +1,7 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { DataProvider__factory } from "../../../../typechain-types";
-import { DataProvider } from "../../../typechain-types";
+import { DataProvider } from "../../../../typechain-types";
 import { createWeb3Provider } from "../provider";
 
 export interface AssetData {
@@ -25,7 +25,7 @@ export class DataProviderWrapper {
   }
 
   async getBridgeByName(name: string): Promise<BridgeData> {
-    const bd = await this.dataProvider.getBridge(name);
+    const bd = await this.dataProvider["getBridge(string)"](name);
     return {
       bridgeAddress: EthAddress.fromString(bd.bridgeAddress),
       bridgeAddressId: bd.bridgeAddressId.toNumber(),
@@ -34,7 +34,7 @@ export class DataProviderWrapper {
   }
 
   async getBridgeById(bridgeAddressId: number): Promise<BridgeData> {
-    const bd = await this.dataProvider.getBridge(bridgeAddressId);
+    const bd = await this.dataProvider["getBridge(uint256)"](bridgeAddressId);
     return {
       bridgeAddress: EthAddress.fromString(bd.bridgeAddress),
       bridgeAddressId: bd.bridgeAddressId.toNumber(),
@@ -43,7 +43,7 @@ export class DataProviderWrapper {
   }
 
   async getAssetByName(name: string): Promise<AssetData> {
-    const ad = await this.dataProvider.getAsset(name);
+    const ad = await this.dataProvider["getAsset(string)"](name);
     return {
       assetAddress: EthAddress.fromString(ad.assetAddress),
       assetId: ad.assetId.toNumber(),
@@ -52,7 +52,7 @@ export class DataProviderWrapper {
   }
 
   async getAssetById(assetId: number): Promise<AssetData> {
-    const ad = await this.dataProvider.getAsset(assetId);
+    const ad = await this.dataProvider["getAsset(uint256)"](assetId);
     return {
       assetAddress: EthAddress.fromString(ad.assetAddress),
       assetId: ad.assetId.toNumber(),
