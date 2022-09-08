@@ -60,6 +60,36 @@ export class DataProviderWrapper {
     };
   }
 
+  async getAssets(): Promise<{ [key: string]: AssetData }> {
+    const assetDatas = await this.dataProvider.getAssets();
+    const dict: { [key: string]: AssetData } = {};
+    assetDatas.forEach(asset => {
+      if (asset.label != "") {
+        dict[asset.label] = {
+          assetAddress: EthAddress.fromString(asset.assetAddress),
+          assetId: asset.assetId.toNumber(),
+          label: asset.label,
+        };
+      }
+    });
+    return dict;
+  }
+
+  async getBridges(): Promise<{ [key: string]: BridgeData }> {
+    const bridgeDatas = await this.dataProvider.getBridges();
+    const dict: { [key: string]: BridgeData } = {};
+    bridgeDatas.forEach(bridge => {
+      if (bridge.label != "") {
+        dict[bridge.label] = {
+          bridgeAddress: EthAddress.fromString(bridge.bridgeAddress),
+          bridgeAddressId: bridge.bridgeAddressId.toNumber(),
+          label: bridge.label,
+        };
+      }
+    });
+    return dict;
+  }
+
   async getRollupProvider(): Promise<EthAddress> {
     return EthAddress.fromString(await this.dataProvider.ROLLUP_PROCESSOR());
   }
