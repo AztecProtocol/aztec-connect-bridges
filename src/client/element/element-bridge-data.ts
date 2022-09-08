@@ -13,6 +13,7 @@ import {
 import { AsyncDefiBridgeProcessedEvent } from "../../../typechain-types/IRollupProcessor";
 import { createWeb3Provider } from "../aztec/provider";
 import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
+import "isomorphic-fetch";
 
 export type BatchSwapStep = {
   poolId: string;
@@ -32,14 +33,6 @@ export type FundManagement = {
   recipient: string;
   fromInternalBalance: boolean;
   toInternalBalance: boolean;
-};
-
-// Some operations on this class require us to scan back over the blockchain
-// to find published events. This is done in batches of blocks. The batch size in this set of properties
-// determines how many blocks to request in each batch.
-// Users of this class can customise this to their provider requirements
-export type ChainProperties = {
-  eventBatchSize: number;
 };
 
 interface EventBlock {
@@ -77,7 +70,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     private elementBridgeContract: ElementBridge,
     private balancerContract: IVault,
     private rollupContract: IRollupProcessor,
-    private chainProperties: ChainProperties,
+    private falafelGraphQlEndpoint: string,
   ) {}
 
   static create(
@@ -85,13 +78,13 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     elementBridgeAddress: EthAddress,
     balancerAddress: EthAddress,
     rollupContractAddress: EthAddress,
-    chainProperties: ChainProperties = { eventBatchSize: 10000 },
+    falafelGraphQlEndpoint: string,
   ) {
     const ethersProvider = createWeb3Provider(provider);
     const elementBridgeContract = ElementBridge__factory.connect(elementBridgeAddress.toString(), ethersProvider);
     const rollupContract = IRollupProcessor__factory.connect(rollupContractAddress.toString(), ethersProvider);
     const vaultContract = IVault__factory.connect(balancerAddress.toString(), ethersProvider);
-    return new ElementBridgeData(elementBridgeContract, vaultContract, rollupContract, chainProperties);
+    return new ElementBridgeData(elementBridgeContract, vaultContract, rollupContract, falafelGraphQlEndpoint);
   }
 
   private async storeEventBlocks(events: AsyncDefiBridgeProcessedEvent[]) {
@@ -123,14 +116,32 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     return this.elementBridgeContract.provider.getBlock("latest");
   }
 
+  private async getBlockNumber(interactionNonce: number) {
+    const id = Math.floor(interactionNonce / 32);
+    const query = `query Block($id: Int!) {
+      block: rollup(id: $id) {
+        ethTxHash
+      }
+    }`;
+
+    const response = await fetch(this.falafelGraphQlEndpoint, {
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+      body: JSON.stringify({
+        query,
+        operationName: "Block",
+        variables: { id },
+      }),
+    });
+
+    const data = await response.json();
+    const txhash = `0x${data["data"]["block"]["ethTxHash"]}`;
+    const tx = await this.elementBridgeContract.provider.getTransactionReceipt(txhash);
+    return tx.blockNumber;
+  }
+
   private async findDefiEventForNonce(interactionNonce: number) {
     // start off with the earliest possible block being the block in which the tranche was first deployed
-    let earliestBlockNumber = Number(
-      await this.elementBridgeContract.getTrancheDeploymentBlockNumber(interactionNonce),
-    );
-    // start with the last block being the current block
-    const lastBlock = await this.getCurrentBlock();
-    let latestBlockNumber = lastBlock.number;
     // try and find previously stored events that encompass the nonce we are looking for
     // also if we find the exact nonce then just return the stored data
     for (let i = 0; i < this.interactionBlockNumbers.length; i++) {
@@ -138,40 +149,24 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
       if (storedBlock.nonce == interactionNonce) {
         return storedBlock;
       }
-      if (storedBlock.nonce < interactionNonce) {
-        earliestBlockNumber = storedBlock.blockNumber;
-      }
-      if (storedBlock.nonce > interactionNonce) {
-        // this is the first block beyond the one we are looking for, we can break here
-        latestBlockNumber = storedBlock.blockNumber;
-        break;
-      }
     }
 
-    let end = latestBlockNumber;
-    let start = end - (this.chainProperties.eventBatchSize - 1);
-    start = Math.max(start, earliestBlockNumber);
+    const start = await this.getBlockNumber(interactionNonce);
+    const end = start + 1;
 
-    while (end > earliestBlockNumber) {
-      const events = await this.rollupContract.queryFilter(
-        this.rollupContract.filters.AsyncDefiBridgeProcessed(undefined, interactionNonce),
-        start,
-        end,
-      );
-      // capture these event markers
-      await this.storeEventBlocks(events);
-      // there should just be one event, the one we are searching for. but to be sure we will process everything received
-      for (const event of events) {
-        const newEventBlock = await decodeEvent(event);
-        if (newEventBlock.nonce == interactionNonce) {
-          return newEventBlock;
-        }
+    const events = await this.rollupContract.queryFilter(
+      this.rollupContract.filters.AsyncDefiBridgeProcessed(undefined, interactionNonce),
+      start,
+      end,
+    );
+    // capture these event markers
+    await this.storeEventBlocks(events);
+    // there should just be one event, the one we are searching for. but to be sure we will process everything received
+    for (const event of events) {
+      const newEventBlock = await decodeEvent(event);
+      if (newEventBlock.nonce == interactionNonce) {
+        return newEventBlock;
       }
-
-      // if we didn't find an event then go round again but search further back in time
-      end = start - 1;
-      start = end - (this.chainProperties.eventBatchSize - 1);
-      start = Math.max(start, earliestBlockNumber);
     }
   }
 
