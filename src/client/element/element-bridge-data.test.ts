@@ -10,7 +10,7 @@ import {
   IVault__factory,
 } from "../../../typechain-types";
 import { AztecAssetType } from "../bridge-data";
-import { ChainProperties, ElementBridgeData } from "./element-bridge-data";
+import { ElementBridgeData } from "./element-bridge-data";
 
 jest.mock("../aztec/provider", () => ({
   createWeb3Provider: jest.fn(),
@@ -139,6 +139,11 @@ describe("element bridge data", () => {
     },
   } as any;
 
+  const prepareGetTransactionReceiptMockForNonce = (nonce: number) => {
+    const event = defiEvents.find(x => x.nonce === nonce);
+    (elementBridge.provider as any).getTransactionReceipt = async () => ({ blockNumber: event?.blockNumber });
+  };
+
   const rollupContract: Mockify<IRollupProcessor> = {
     queryFilter: jest.fn().mockImplementation((filter: any, from: number, to: number) => {
       const nonce = filter.interactionNonce;
@@ -172,12 +177,17 @@ describe("element bridge data", () => {
     element: ElementBridge = elementBridge as any,
     balancer: IVault = balancerContract as any,
     rollup: IRollupProcessor = rollupContract as any,
-    chainProperties: ChainProperties = { eventBatchSize: 10 },
   ) => {
     ElementBridge__factory.connect = () => element as any;
     IVault__factory.connect = () => balancer as any;
     IRollupProcessor__factory.connect = () => rollup as any;
-    return ElementBridgeData.create({} as any, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO, chainProperties); // can pass in dummy values here as the above factories do all of the work
+    return ElementBridgeData.create(
+      {} as any,
+      EthAddress.ZERO,
+      EthAddress.ZERO,
+      EthAddress.ZERO,
+      "https://api.aztec.network/aztec-connect-prod/falafel/graphql",
+    ); // can pass in dummy values here as the above factories do all of the work
   };
 
   it("should return the correct amount of interest", async () => {
@@ -192,6 +202,7 @@ describe("element bridge data", () => {
     const totalInput = defiEvents.find(x => x.nonce === 56)!.totalInputValue;
     const userShareDivisor = 2n;
     const defiEvent = getDefiEvent(56)!;
+    prepareGetTransactionReceiptMockForNonce(56);
     const [daiValue] = await elementBridgeData.getInteractionPresentValue(56, totalInput / userShareDivisor);
     const delta = outputValue - defiEvent.totalInputValue;
     const timeElapsed = BigInt(now) - startDate;
@@ -217,6 +228,9 @@ describe("element bridge data", () => {
       const totalInput = defiEvents.find(x => x.nonce === nonce)!.totalInputValue;
       const userShareDivisor = 2n;
 
+      // Update mock return
+      (elementBridge.provider as any).getTransactionReceipt = async () => ({ blockNumber: 59 });
+      prepareGetTransactionReceiptMockForNonce(nonce);
       const [daiValue] = await elementBridgeData.getInteractionPresentValue(nonce, totalInput / userShareDivisor);
       const delta = interactions[nonce].quantityPT.toBigInt() - defiEvent.totalInputValue;
       const timeElapsed = BigInt(now) - startDate;
@@ -237,6 +251,7 @@ describe("element bridge data", () => {
 
   it("requesting the present value of an unknown interaction should return empty values", async () => {
     const elementBridgeData = createElementBridgeData();
+    prepareGetTransactionReceiptMockForNonce(57);
     const values = await elementBridgeData.getInteractionPresentValue(57, 0n);
     expect(values).toStrictEqual([]);
   });
