@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec.
-pragma solidity >=0.8.12;
+pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BaseDeployment} from "../base/BaseDeployment.s.sol";
@@ -25,7 +25,7 @@ contract DataProviderDeployment is BaseDeployment {
         vm.broadcast();
         DataProvider(_provider).addBridge(_bridgeAddressId, _tag);
 
-        emit log_named_uint(string.concat("[Bridge] Listed ", _tag, " at"), _bridgeAddressId);
+        emit log_named_uint(string(abi.encodePacked("[Bridge] Listed ", _tag, " at")), _bridgeAddressId);
     }
 
     function listAsset(
@@ -35,7 +35,7 @@ contract DataProviderDeployment is BaseDeployment {
     ) public {
         vm.broadcast();
         DataProvider(_provider).addAsset(_assetId, _tag);
-        emit log_named_uint(string.concat("[Asset]  Listed ", _tag, " at"), _assetId);
+        emit log_named_uint(string(abi.encodePacked("[Asset]  Listed ", _tag, " at")), _assetId);
     }
 
     function deployAndListMany() public {}
