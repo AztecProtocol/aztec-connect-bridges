@@ -24,7 +24,6 @@ contract DataProviderDeployment is BaseDeployment {
     ) public {
         vm.broadcast();
         DataProvider(_provider).addBridge(_bridgeAddressId, _tag);
-
         emit log_named_uint(string(abi.encodePacked("[Bridge] Listed ", _tag, " at")), _bridgeAddressId);
     }
 

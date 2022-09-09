@@ -107,4 +107,8 @@ interface IRollupProcessor {
     function getSupportedAsset(uint256 _assetId) external view returns (address);
 
     function getEscapeHatchStatus() external view returns (bool, uint256);
+
+    function assetGasLimits(uint256 _bridgeAddressId) external view returns (uint256);
+
+    function bridgeGasLimits(uint256 _bridgeAddressId) external view returns (uint256);
 }
