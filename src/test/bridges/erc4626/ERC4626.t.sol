@@ -15,7 +15,10 @@ contract ERC4626Test is BridgeTestBase {
     address[] private shareAddresses = [
         0x4937A209D4cDbD3ecD48857277cfd4dA4D82914c, // xMPL
         0x815C23eCA83261b6Ec689b60Cc4a58b54BC24D8D, // vTHOR
-        0x5DcaAF1F0B32244131FEd00dE9c4598Ae526dAb2 // TTV - Tokemak vault
+        0x5DcaAF1F0B32244131FEd00dE9c4598Ae526dAb2, // TTV - Tokemak vault
+        0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0, // ERC4626-Wrapped Euler WETH (weWETH)
+        0x20706baA0F89e2dccF48eA549ea5A13B9b30462f, // ERC4626-Wrapped Euler oSQTH (weoSQTH)
+        0x60897720AA966452e8706e74296B018990aEc527 //  ERC4626-Wrapped Euler wstETH (wewstETH)
     ];
     AztecTypes.AztecAsset[] private shares;
     AztecTypes.AztecAsset[] private assets;
@@ -32,7 +35,7 @@ contract ERC4626Test is BridgeTestBase {
         vm.label(address(bridge), "ERC4626 Bridge");
 
         vm.prank(MULTI_SIG);
-        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 180000);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 250000);
 
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
@@ -96,7 +99,7 @@ contract ERC4626Test is BridgeTestBase {
     }
 
     function testFullFlow(uint96 _assetAmount, uint96 _shareAmount) public {
-        uint256 assetAmount = bound(_assetAmount, 10, type(uint256).max);
+        uint256 assetAmount = bound(_assetAmount, 100, type(uint256).max);
 
         for (uint256 i = 0; i < shares.length; ++i) {
             deal(assets[i].erc20Address, address(ROLLUP_PROCESSOR), assetAmount);
@@ -117,7 +120,7 @@ contract ERC4626Test is BridgeTestBase {
             );
 
             // Immediately redeem the shares
-            uint256 redeemAmount = bound(_shareAmount, 1, outputValueA);
+            uint256 redeemAmount = bound(_shareAmount, 10, outputValueA);
             uint256 expectedAssetAmountReturned = IERC4626(shares[i].erc20Address).previewRedeem(redeemAmount);
 
             bridgeCallData = encodeBridgeCallData(id, shares[i], emptyAsset, assets[i], emptyAsset, 1);
