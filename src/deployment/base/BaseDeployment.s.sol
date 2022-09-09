@@ -55,8 +55,10 @@ abstract contract BaseDeployment is Test {
             NETWORK = Network.MAINNET;
         } else if (envNetworkHash == keccak256(abi.encodePacked("devnet"))) {
             NETWORK = Network.DEVNET;
+            vm.createSelectFork("https://mainnet-fork.aztec.network:8545");
         } else if (envNetworkHash == keccak256(abi.encodePacked("testnet"))) {
             NETWORK = Network.TESTNET;
+            vm.createSelectFork("https://mainnet-fork.aztec.network:8545");
         }
 
         if (envMode) {
