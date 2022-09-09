@@ -68,11 +68,11 @@ contract AngleSLPE2ETest is BridgeTestBase {
         deal(usdcAsset.erc20Address, address(ROLLUP_PROCESSOR), 100000e6);
     }
 
-    function testValidDepositE2E(uint96 _amount) public {
-        _testValidDepositE2E(daiAsset, sanDaiAsset, _amount, bridge.POOLMANAGER_DAI());
+    function testValidDeposit(uint96 _amount) public {
+        _testValidDeposit(daiAsset, sanDaiAsset, _amount, bridge.POOLMANAGER_DAI());
     }
 
-    function testValidDepositE2E_ETH(uint96 _amount) public {
+    function testValidDepositETH(uint96 _amount) public {
         uint256 balanceRollupBeforeETH = address(ROLLUP_PROCESSOR).balance;
         uint256 amount = uint256(_amount);
         amount = bound(amount, 10, balanceRollupBeforeETH - 1);
@@ -95,13 +95,13 @@ contract AngleSLPE2ETest is BridgeTestBase {
         assertEq(balanceRollupAfterSanWETH, balanceRollupBeforeSanWETH + outputValueA);
     }
 
-    function testValidWithdrawE2E(uint96 _amount) public {
+    function testValidWithdraw(uint96 _amount) public {
         // the protocol might not have so many sanDAI available, so we limit what can be withdrawn
         uint256 amount = uint256(bound(_amount, 10, 100000 ether));
-        _testValidWithdrawE2E(sanDaiAsset, daiAsset, amount, bridge.POOLMANAGER_DAI());
+        _testValidWithdraw(sanDaiAsset, daiAsset, amount, bridge.POOLMANAGER_DAI());
     }
 
-    function testValidWithdrawE2E_ETH() public {
+    function testValidWithdrawETH() public {
         uint256 amount = 1000;
 
         deal(sanWethAsset.erc20Address, address(ROLLUP_PROCESSOR), amount);
@@ -123,20 +123,20 @@ contract AngleSLPE2ETest is BridgeTestBase {
     }
 
     function testDepositUSDC(uint96 _amount) public {
-        _testValidDepositE2E(usdcAsset, sanUsdcAsset, _amount, bridge.POOLMANAGER_USDC());
+        _testValidDeposit(usdcAsset, sanUsdcAsset, _amount, bridge.POOLMANAGER_USDC());
     }
 
     function testWithdrawUSDC(uint96 _amount) public {
         // the protocol might not have so many sanUSDC available, so we limit what can be withdrawn
         uint256 amount = uint256(bound(_amount, 10, 100000e6));
-        _testValidWithdrawE2E(sanUsdcAsset, usdcAsset, amount, bridge.POOLMANAGER_USDC());
+        _testValidWithdraw(sanUsdcAsset, usdcAsset, amount, bridge.POOLMANAGER_USDC());
     }
 
-    function _testValidDepositE2E(
+    function _testValidDeposit(
         AztecTypes.AztecAsset memory _inputAsset,
         AztecTypes.AztecAsset memory _outputAsset,
         uint96 _amount,
-        address poolManager
+        address _poolManager
     ) internal {
         uint256 balanceRollupBeforeInput = IERC20(_inputAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 amount = uint256(_amount);
@@ -147,7 +147,7 @@ contract AngleSLPE2ETest is BridgeTestBase {
         uint256 bridgeCallData = encodeBridgeCallData(id, _inputAsset, emptyAsset, _outputAsset, emptyAsset, 0);
         (uint256 outputValueA, , ) = sendDefiRollup(bridgeCallData, amount);
 
-        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(poolManager);
+        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(_poolManager);
 
         assertEq(outputValueA, (amount * 1e18) / sanRate);
         assertEq(IERC20(_inputAsset.erc20Address).balanceOf(address(bridge)), DUST);
@@ -160,23 +160,23 @@ contract AngleSLPE2ETest is BridgeTestBase {
         assertEq(balanceRollupAfterOutput, balanceRollupBeforeOutput + outputValueA);
     }
 
-    function _testValidWithdrawE2E(
+    function _testValidWithdraw(
         AztecTypes.AztecAsset memory _inputAsset,
         AztecTypes.AztecAsset memory _outputAsset,
-        uint256 amount,
-        address poolManager
+        uint256 _amount,
+        address _poolManager
     ) internal {
-        deal(_inputAsset.erc20Address, address(ROLLUP_PROCESSOR), amount);
+        deal(_inputAsset.erc20Address, address(ROLLUP_PROCESSOR), _amount);
 
         uint256 balanceRollupBeforeOutput = IERC20(_outputAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 balanceRollupBeforeInput = IERC20(_inputAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
 
         uint256 bridgeCallData = encodeBridgeCallData(id, _inputAsset, emptyAsset, _outputAsset, emptyAsset, 1);
-        (uint256 outputValueA, , ) = sendDefiRollup(bridgeCallData, amount);
+        (uint256 outputValueA, , ) = sendDefiRollup(bridgeCallData, _amount);
 
-        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(poolManager);
+        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(_poolManager);
 
-        assertEq(outputValueA, (amount * sanRate) / 1e18);
+        assertEq(outputValueA, (_amount * sanRate) / 1e18);
         assertEq(IERC20(_outputAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(IERC20(_inputAsset.erc20Address).balanceOf(address(bridge)), DUST);
 
@@ -184,6 +184,6 @@ contract AngleSLPE2ETest is BridgeTestBase {
         uint256 balanceRollupAfterIntput = IERC20(_inputAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
 
         assertEq(balanceRollupAfterOutput, balanceRollupBeforeOutput + outputValueA);
-        assertEq(balanceRollupAfterIntput, balanceRollupBeforeInput - amount);
+        assertEq(balanceRollupAfterIntput, balanceRollupBeforeInput - _amount);
     }
 }

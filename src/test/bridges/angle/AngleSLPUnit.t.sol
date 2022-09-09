@@ -258,16 +258,7 @@ contract AngleSLPUnitTest is BridgeTestBase {
         deal(sanDaiAsset.erc20Address, address(bridge), amount + balance);
 
         vm.prank(address(ROLLUP_PROCESSOR));
-        (uint256 outputValueA, , ) = bridge.convert(
-            sanDaiAsset,
-            emptyAsset,
-            daiAsset,
-            emptyAsset,
-            amount,
-            0,
-            1,
-            address(0)
-        );
+        bridge.convert(sanDaiAsset, emptyAsset, daiAsset, emptyAsset, amount, 0, 1, address(0));
     }
 
     function testWithdrawWithHarvest() public {

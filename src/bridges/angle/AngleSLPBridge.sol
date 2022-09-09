@@ -115,7 +115,7 @@ contract AngleSLPBridge is BridgeBase {
             if (poolManager == address(0) || sanToken == address(0)) revert ErrorLib.InvalidOutputA();
             if (sanToken != inputAssetA) revert ErrorLib.InvalidInputA();
 
-            withdraw(poolManager, _totalInputValue, outputAssetA);
+            _withdraw(poolManager, _totalInputValue, outputAssetA);
         } else {
             revert ErrorLib.InvalidAuxData();
         }
@@ -125,37 +125,6 @@ contract AngleSLPBridge is BridgeBase {
         if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
             WETH.withdraw(outputValueA);
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
-        }
-    }
-
-    /**
-     * @notice Withdraw underlying ERC20 from Angle Protocol
-     * @param poolManager Address of the poolManager
-     * @param amount Amount of sanToken to withdraw
-     * @param outputAssetA Address of the underlying ERC20
-     */
-    function withdraw(
-        address poolManager,
-        uint256 amount,
-        address outputAssetA
-    ) internal {
-        // we check if we need to harvest or not
-        (, , , , , uint256 sanRate, , , ) = STABLE_MASTER.collateralMap(poolManager);
-        uint256 estimatedOutputValue = (amount * sanRate) / 1e18;
-        uint256 currentBalance = IERC20(outputAssetA).balanceOf(address(poolManager));
-
-        // if there is enough liquidity -> no need to harvest
-        if (estimatedOutputValue < currentBalance) {
-            STABLE_MASTER.withdraw(amount, address(this), address(this), poolManager);
-        } else {
-            // we withdraw what we can (98% of the current balance), then harvest, then withdraw the rest
-            uint256 toWithdraw = (((currentBalance * 1e18) / sanRate) * 98) / 100;
-            STABLE_MASTER.withdraw(toWithdraw, address(this), address(this), poolManager);
-
-            // Harvest the main strategy to free funds and make them available to withdraw
-            IStrategy strategy = IStrategy(IPoolManager(poolManager).strategyList(0));
-            strategy.harvest();
-            STABLE_MASTER.withdraw(amount - toWithdraw, address(this), address(this), poolManager);
         }
     }
 
@@ -182,6 +151,37 @@ contract AngleSLPBridge is BridgeBase {
         } else if (_collateral == FRAX) {
             poolManager = POOLMANAGER_FRAX;
             sanToken = SANFRAX;
+        }
+    }
+
+    /**
+     * @notice Withdraw underlying ERC20 from Angle Protocol
+     * @param _poolManager Address of the poolManager
+     * @param _amount Amount of sanToken to withdraw
+     * @param _outputAssetA Address of the underlying ERC20
+     */
+    function _withdraw(
+        address _poolManager,
+        uint256 _amount,
+        address _outputAssetA
+    ) internal {
+        // we check if we need to harvest or not
+        (, , , , , uint256 sanRate, , , ) = STABLE_MASTER.collateralMap(_poolManager);
+        uint256 estimatedOutputValue = (_amount * sanRate) / 1e18;
+        uint256 currentBalance = IERC20(_outputAssetA).balanceOf(address(_poolManager));
+
+        // if there is enough liquidity -> no need to harvest
+        if (estimatedOutputValue < currentBalance) {
+            STABLE_MASTER.withdraw(_amount, address(this), address(this), _poolManager);
+        } else {
+            // we withdraw what we can (98% of the current balance), then harvest, then withdraw the rest
+            uint256 toWithdraw = (((currentBalance * 1e18) / sanRate) * 98) / 100;
+            STABLE_MASTER.withdraw(toWithdraw, address(this), address(this), _poolManager);
+
+            // Harvest the main strategy to free funds and make them available to withdraw
+            IStrategy strategy = IStrategy(IPoolManager(_poolManager).strategyList(0));
+            strategy.harvest();
+            STABLE_MASTER.withdraw(_amount - toWithdraw, address(this), address(this), _poolManager);
         }
     }
 
