@@ -93,24 +93,20 @@ abstract contract BaseDeployment is Test {
         }
     }
 
+    /**
+     * @notice Fetches the testnet rollup processor from the status endpoint
+     * @return The address of the rollup processor
+     */
     function getTestnetRollupProcessor() public returns (address) {
-        string[] memory inputs = new string[](3);
-        inputs[0] = "curl";
-        inputs[1] = "-s";
-        inputs[2] = "https://api.aztec.network/aztec-connect-testnet/falafel/status";
-        bytes memory res = vm.ffi(inputs);
-        string memory json = string(res);
-        return json.readAddress(".blockchainStatus.rollupContractAddress");
+        return _fetchFromStatus("https://api.aztec.network/aztec-connect-testnet/falafel/status");
     }
 
+    /**
+     * @notice Fetches the devnet rollup processor from the status endpoint
+     * @return The address of the rollup processor
+     */
     function getDevnetRollupProcessor() public returns (address) {
-        string[] memory inputs = new string[](3);
-        inputs[0] = "curl";
-        inputs[1] = "-s";
-        inputs[2] = "https://api.aztec.network/aztec-connect-dev/falafel/status";
-        bytes memory res = vm.ffi(inputs);
-        string memory json = string(res);
-        return json.readAddress(".blockchainStatus.rollupContractAddress");
+        return _fetchFromStatus("https://api.aztec.network/aztec-connect-dev/falafel/status");
     }
 
     /**
@@ -212,5 +208,15 @@ abstract contract BaseDeployment is Test {
             }
         }
         return (false, 0);
+    }
+
+    function _fetchFromStatus(string memory _url) private returns (address) {
+        string[] memory inputs = new string[](3);
+        inputs[0] = "curl";
+        inputs[1] = "-s";
+        inputs[2] = _url;
+        bytes memory res = vm.ffi(inputs);
+        string memory json = string(res);
+        return json.readAddress(".blockchainStatus.rollupContractAddress");
     }
 }
