@@ -4,8 +4,10 @@ pragma solidity >=0.8.4;
 
 import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {Test} from "forge-std/Test.sol";
+import {stdJson} from "forge-std/StdJson.sol";
 
 abstract contract BaseDeployment is Test {
+    using stdJson for string;
     /**
      * @notice Enum used as part of the configuration, defines what network and addresses to use.
      */
@@ -24,9 +26,6 @@ abstract contract BaseDeployment is Test {
         SIMULATE,
         BROADCAST
     }
-
-    address private constant DEVNET_ROLLUP = 0xE33d8C775eCf4a2F6857053068e2E36d1dAdE63F;
-    address private constant TESTNET_ROLLUP = 0x4598038EF8E9fE4284EA211521eD3067640F550F;
 
     address private constant MAINNET_MS = 0xE298a76986336686CC3566469e3520d23D1a8aaD;
     address private constant DEVNET_MS = 0x7095057A08879e09DC1c0a85520e3160A0F67C96;
@@ -56,8 +55,10 @@ abstract contract BaseDeployment is Test {
             NETWORK = Network.MAINNET;
         } else if (envNetworkHash == keccak256(abi.encodePacked("devnet"))) {
             NETWORK = Network.DEVNET;
+            vm.createSelectFork("https://mainnet-fork.aztec.network:8545");
         } else if (envNetworkHash == keccak256(abi.encodePacked("testnet"))) {
             NETWORK = Network.TESTNET;
+            vm.createSelectFork("https://mainnet-fork.aztec.network:8545");
         }
 
         if (envMode) {
@@ -86,12 +87,28 @@ abstract contract BaseDeployment is Test {
         if (chainId == 1 && NETWORK == Network.MAINNET) {
             return (getMainnetRollupProcessor(), MAINNET_MS);
         } else if (chainId == 0xa57ec && NETWORK == Network.TESTNET) {
-            return (TESTNET_ROLLUP, TESTNET_MS);
+            return (getTestnetRollupProcessor(), TESTNET_MS);
         } else if (chainId == 0xa57ec && NETWORK == Network.DEVNET) {
-            return (DEVNET_ROLLUP, DEVNET_MS);
+            return (getDevnetRollupProcessor(), DEVNET_MS);
         } else {
             revert("Invalid configuration");
         }
+    }
+
+    /**
+     * @notice Fetches the testnet rollup processor from the status endpoint
+     * @return The address of the rollup processor
+     */
+    function getTestnetRollupProcessor() public returns (address) {
+        return _fetchFromStatus("https://api.aztec.network/aztec-connect-testnet/falafel/status");
+    }
+
+    /**
+     * @notice Fetches the devnet rollup processor from the status endpoint
+     * @return The address of the rollup processor
+     */
+    function getDevnetRollupProcessor() public returns (address) {
+        return _fetchFromStatus("https://api.aztec.network/aztec-connect-dev/falafel/status");
     }
 
     /**
@@ -176,6 +193,16 @@ abstract contract BaseDeployment is Test {
 
     function assetLength() public view returns (uint256) {
         return IRollupProcessor(ROLLUP_PROCESSOR).getSupportedAssetsLength();
+    }
+
+    function _fetchFromStatus(string memory _url) private returns (address) {
+        string[] memory inputs = new string[](3);
+        inputs[0] = "curl";
+        inputs[1] = "-s";
+        inputs[2] = _url;
+        bytes memory res = vm.ffi(inputs);
+        string memory json = string(res);
+        return json.readAddress(".blockchainStatus.rollupContractAddress");
     }
 
     /**
