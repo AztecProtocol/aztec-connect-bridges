@@ -36,12 +36,12 @@ contract AngleSLPUnitTest is BridgeTestBase {
         vm.deal(address(bridge), 0);
 
         vm.startPrank(MULTI_SIG);
-        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 200000);
-        ROLLUP_PROCESSOR.setSupportedAsset(0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450, 100000); // sanDAI
-        ROLLUP_PROCESSOR.setSupportedAsset(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, 100000); // USDC
-        ROLLUP_PROCESSOR.setSupportedAsset(0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad, 100000); // sanUSDC
-        ROLLUP_PROCESSOR.setSupportedAsset(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2, 100000); // WETH
-        ROLLUP_PROCESSOR.setSupportedAsset(0x30c955906735e48D73080fD20CB488518A6333C8, 100000); // sanWETH
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 1500000);
+        ROLLUP_PROCESSOR.setSupportedAsset(0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450, 80000); // sanDAI
+        ROLLUP_PROCESSOR.setSupportedAsset(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, 80000); // USDC
+        ROLLUP_PROCESSOR.setSupportedAsset(0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad, 80000); // sanUSDC
+        ROLLUP_PROCESSOR.setSupportedAsset(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2, 80000); // WETH
+        ROLLUP_PROCESSOR.setSupportedAsset(0x30c955906735e48D73080fD20CB488518A6333C8, 80000); // sanWETH
         vm.stopPrank();
 
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
@@ -355,7 +355,7 @@ contract AngleSLPUnitTest is BridgeTestBase {
         assertEq(IERC20(sanUsdcAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(IERC20(usdcAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
         (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_USDC());
-        assertEq(outputValueA, (amount * sanRate) / 1e18);
+        assertApproxEqAbs(outputValueA, (amount * sanRate) / 1e18, 2);
     }
 
     function testGetPoolManagerAndSanToken() public {
