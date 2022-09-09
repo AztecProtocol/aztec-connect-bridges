@@ -193,6 +193,16 @@ abstract contract BaseDeployment is Test {
         return IRollupProcessor(ROLLUP_PROCESSOR).getSupportedAssetsLength();
     }
 
+    function _fetchFromStatus(string memory _url) private returns (address) {
+        string[] memory inputs = new string[](3);
+        inputs[0] = "curl";
+        inputs[1] = "-s";
+        inputs[2] = _url;
+        bytes memory res = vm.ffi(inputs);
+        string memory json = string(res);
+        return json.readAddress(".blockchainStatus.rollupContractAddress");
+    }
+
     /**
      * @notice Fetch whether an `_asset` is supported or not on the rollup
      */
@@ -208,15 +218,5 @@ abstract contract BaseDeployment is Test {
             }
         }
         return (false, 0);
-    }
-
-    function _fetchFromStatus(string memory _url) private returns (address) {
-        string[] memory inputs = new string[](3);
-        inputs[0] = "curl";
-        inputs[1] = "-s";
-        inputs[2] = _url;
-        bytes memory res = vm.ffi(inputs);
-        string memory json = string(res);
-        return json.readAddress(".blockchainStatus.rollupContractAddress");
     }
 }
