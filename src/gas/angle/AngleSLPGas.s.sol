@@ -3,7 +3,7 @@
 pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {AngleSLPBridge} from "../../bridges/angle/AngleSLPBridge.sol";
+import {AngleSLPBridge, IWETH} from "../../bridges/angle/AngleSLPBridge.sol";
 import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
 import {ISubsidy} from "../../aztec/interfaces/ISubsidy.sol";
 
@@ -16,30 +16,17 @@ interface IRead {
 
 contract AngleMeasure is AngleSLPDeployment {
     GasBase internal gasBase;
+    AngleSLPBridge internal bridge;
+
+    IWETH internal weth;
+
+    AztecTypes.AztecAsset internal emptyAsset;
+    AztecTypes.AztecAsset internal ethAsset;
+    AztecTypes.AztecAsset internal wethAsset;
+    AztecTypes.AztecAsset internal sanWethAsset;
 
     function measureETH() public {
-        address defiProxy = IRead(ROLLUP_PROCESSOR).defiBridgeProxy();
-        vm.label(defiProxy, "DefiProxy");
-
-        vm.broadcast();
-        gasBase = new GasBase(defiProxy);
-
-        address temp = ROLLUP_PROCESSOR;
-        ROLLUP_PROCESSOR = address(gasBase);
-        AngleSLPBridge bridge = AngleSLPBridge(payable(deployAndList()));
-        ROLLUP_PROCESSOR = temp;
-
-        AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory eth = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
-        AztecTypes.AztecAsset memory sanWethAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: bridge.SANWETH(),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        _setup();
 
         vm.broadcast();
         address(gasBase).call{value: 2 ether}("");
@@ -48,7 +35,18 @@ contract AngleMeasure is AngleSLPDeployment {
         // Deposit
         {
             vm.broadcast();
-            gasBase.convert(address(bridge), eth, empty, sanWethAsset, empty, 1 ether, 0, 0, address(this), 170000);
+            gasBase.convert(
+                address(bridge),
+                ethAsset,
+                emptyAsset,
+                sanWethAsset,
+                emptyAsset,
+                1 ether,
+                0,
+                0,
+                address(this),
+                170000
+            );
         }
 
         uint256 sanWethBalance = IERC20(sanWethAsset.erc20Address).balanceOf(address(gasBase));
@@ -61,9 +59,9 @@ contract AngleMeasure is AngleSLPDeployment {
             gasBase.convert(
                 address(bridge),
                 sanWethAsset,
-                empty,
-                eth,
-                empty,
+                emptyAsset,
+                ethAsset,
+                emptyAsset,
                 sanWethBalance / 2,
                 1,
                 1,
@@ -75,5 +73,84 @@ contract AngleMeasure is AngleSLPDeployment {
                 IERC20(sanWethAsset.erc20Address).balanceOf(address(gasBase))
             );
         }
+    }
+
+    function measureWETH() public {
+        _setup();
+
+        vm.broadcast();
+        weth.deposit{value: 2 ether}();
+        vm.broadcast();
+        weth.transfer(address(gasBase), 2 ether);
+        emit log_named_uint("WETH balance of gasBase", weth.balanceOf(address(gasBase)));
+
+        // Deposit
+        {
+            vm.broadcast();
+            gasBase.convert(
+                address(bridge),
+                wethAsset,
+                emptyAsset,
+                sanWethAsset,
+                emptyAsset,
+                1 ether,
+                0,
+                0,
+                address(this),
+                160000
+            );
+        }
+
+        uint256 sanWethBalance = IERC20(sanWethAsset.erc20Address).balanceOf(address(gasBase));
+
+        // Withdraw half the sanWeth
+        {
+            emit log_named_uint("sanWeth balance of gasBase", sanWethBalance);
+
+            vm.broadcast();
+            gasBase.convert(
+                address(bridge),
+                sanWethAsset,
+                emptyAsset,
+                wethAsset,
+                emptyAsset,
+                sanWethBalance / 2,
+                1,
+                1,
+                address(this),
+                170000
+            );
+            emit log_named_uint(
+                "sanWeth balance of gasBase",
+                IERC20(sanWethAsset.erc20Address).balanceOf(address(gasBase))
+            );
+        }
+    }
+
+    function _setup() private {
+        address defiProxy = IRead(ROLLUP_PROCESSOR).defiBridgeProxy();
+        vm.label(defiProxy, "DefiProxy");
+
+        vm.broadcast();
+        gasBase = new GasBase(defiProxy);
+
+        address temp = ROLLUP_PROCESSOR;
+        ROLLUP_PROCESSOR = address(gasBase);
+        bridge = AngleSLPBridge(payable(deployAndList()));
+        ROLLUP_PROCESSOR = temp;
+
+        weth = bridge.WETH();
+
+        ethAsset = AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
+        wethAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: address(weth),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        sanWethAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: bridge.SANWETH(),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
     }
 }
