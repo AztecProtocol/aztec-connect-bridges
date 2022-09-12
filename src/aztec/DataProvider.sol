@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
-
+import {AztecTypes} from "./libraries/AztecTypes.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IRollupProcessor} from "./interfaces/IRollupProcessor.sol";
+import {BridgeBase} from "../bridges/base/BridgeBase.sol";
+import {ISubsidy} from "./interfaces/ISubsidy.sol";
 
 /**
  * @notice Helper used for mapping assets and bridges to more meaningful naming
@@ -32,6 +34,19 @@ contract DataProvider is Ownable {
         mapping(bytes32 => uint256) tagToId;
     }
 
+    uint256 private constant INPUT_ASSET_ID_A_SHIFT = 32;
+    uint256 private constant INPUT_ASSET_ID_B_SHIFT = 62;
+    uint256 private constant OUTPUT_ASSET_ID_A_SHIFT = 92;
+    uint256 private constant OUTPUT_ASSET_ID_B_SHIFT = 122;
+    uint256 private constant BITCONFIG_SHIFT = 152;
+    uint256 private constant AUX_DATA_SHIFT = 184;
+    uint256 private constant VIRTUAL_ASSET_ID_FLAG_SHIFT = 29;
+    uint256 private constant VIRTUAL_ASSET_ID_FLAG = 0x20000000; // 2 ** 29
+    uint256 private constant MASK_THIRTY_TWO_BITS = 0xffffffff;
+    uint256 private constant MASK_THIRTY_BITS = 0x3fffffff;
+    uint256 private constant MASK_SIXTY_FOUR_BITS = 0xffffffffffffffff;
+
+    ISubsidy public constant SUBSIDY = ISubsidy(0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA);
     IRollupProcessor public immutable ROLLUP_PROCESSOR;
     Bridges internal bridges;
     Assets internal assets;
@@ -48,9 +63,6 @@ contract DataProvider is Ownable {
      */
     function addBridge(uint256 _bridgeAddressId, string memory _tag) public onlyOwner {
         address bridgeAddress = ROLLUP_PROCESSOR.getSupportedBridge(_bridgeAddressId);
-        if (bridgeAddress == address(0)) {
-            revert("Invalid bridge");
-        }
         bytes32 digest = keccak256(abi.encode(_tag));
         bridges.tagToId[digest] = _bridgeAddressId;
         bridges.data[_bridgeAddressId] = BridgeData({
@@ -133,5 +145,76 @@ contract DataProvider is Ownable {
             bridgeDatas[i - 1] = getBridge(i);
         }
         return bridgeDatas;
+    }
+
+    /**
+     * @notice Fetches the subsidy that can be claimed by the specific call, if it is the next performed.
+     * @param _bridgeCallData The bridge call data for a specific bridge interaction
+     * @return The amount of eth claimed at the current gas prices
+     */
+    function getAccumulatedSubsidyAmount(uint256 _bridgeCallData) public view returns (uint256) {
+        uint256 bridgeAddressId = _bridgeCallData & MASK_THIRTY_TWO_BITS;
+        address bridgeAddress = ROLLUP_PROCESSOR.getSupportedBridge(bridgeAddressId);
+
+        uint256 inputAId = (_bridgeCallData >> INPUT_ASSET_ID_A_SHIFT) & MASK_THIRTY_BITS;
+        uint256 inputBId = (_bridgeCallData >> INPUT_ASSET_ID_B_SHIFT) & MASK_THIRTY_BITS;
+        uint256 outputAId = (_bridgeCallData >> OUTPUT_ASSET_ID_A_SHIFT) & MASK_THIRTY_BITS;
+        uint256 outputBId = (_bridgeCallData >> OUTPUT_ASSET_ID_B_SHIFT) & MASK_THIRTY_BITS;
+        uint256 bitconfig = (_bridgeCallData >> BITCONFIG_SHIFT) & MASK_THIRTY_TWO_BITS;
+        uint256 auxData = (_bridgeCallData >> AUX_DATA_SHIFT) & MASK_SIXTY_FOUR_BITS;
+
+        AztecTypes.AztecAsset memory inputA = _aztecAsset(inputAId);
+        AztecTypes.AztecAsset memory inputB;
+        if (bitconfig & 1 == 1) {
+            inputB = _aztecAsset(inputBId);
+        }
+
+        AztecTypes.AztecAsset memory outputA = _aztecAsset(outputAId);
+        AztecTypes.AztecAsset memory outputB;
+
+        if (bitconfig & 2 == 2) {
+            outputB = _aztecAsset(outputBId);
+        }
+
+        (bool success, bytes memory returnData) = bridgeAddress.staticcall(
+            abi.encodeWithSelector(
+                BridgeBase.computeCriteria.selector,
+                inputA,
+                inputB,
+                outputA,
+                outputB,
+                uint64(auxData)
+            )
+        );
+
+        if (!success) {
+            return 0;
+        }
+
+        uint256 criteria = abi.decode(returnData, (uint256));
+
+        return SUBSIDY.getAccumulatedSubsidyAmount(bridgeAddress, criteria);
+    }
+
+    function _aztecAsset(uint256 _assetId) internal view returns (AztecTypes.AztecAsset memory) {
+        if (_assetId >= VIRTUAL_ASSET_ID_FLAG) {
+            return
+                AztecTypes.AztecAsset({
+                    id: _assetId - VIRTUAL_ASSET_ID_FLAG,
+                    erc20Address: address(0),
+                    assetType: AztecTypes.AztecAssetType.VIRTUAL
+                });
+        }
+
+        if (_assetId > 0) {
+            return
+                AztecTypes.AztecAsset({
+                    id: _assetId,
+                    erc20Address: ROLLUP_PROCESSOR.getSupportedAsset(_assetId),
+                    assetType: AztecTypes.AztecAssetType.ERC20
+                });
+        }
+
+        return AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
     }
 }
