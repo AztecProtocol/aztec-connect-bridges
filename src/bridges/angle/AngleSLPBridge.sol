@@ -50,6 +50,21 @@ contract AngleSLPBridge is BridgeBase {
         _preApprove(POOLMANAGER_USDC);
         _preApprove(POOLMANAGER_WETH);
         _preApprove(POOLMANAGER_FRAX);
+
+        uint256[] memory criterias = new uint256[](2);
+        uint32[] memory gasUsage = new uint32[](2);
+        uint32[] memory minGasPerMinute = new uint32[](2);
+
+        criterias[0] = 0;
+        criterias[1] = 1;
+
+        gasUsage[0] = 170000;
+        gasUsage[1] = 200000;
+
+        minGasPerMinute[0] = 140;
+        minGasPerMinute[1] = 140;
+
+        SUBSIDY.setGasUsageAndMinGasPerMinute(criterias, gasUsage, minGasPerMinute);
     }
 
     receive() external payable {}
@@ -70,7 +85,7 @@ contract AngleSLPBridge is BridgeBase {
         uint256 _totalInputValue,
         uint256 _interactionNonce,
         uint64 _auxData,
-        address
+        address _rollupBeneficiary
     )
         external
         payable
@@ -126,6 +141,21 @@ contract AngleSLPBridge is BridgeBase {
             WETH.withdraw(outputValueA);
             IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: outputValueA}(_interactionNonce);
         }
+
+        SUBSIDY.claimSubsidy(_auxData, _rollupBeneficiary);
+    }
+
+    function computeCriteria(
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        uint64 _auxData
+    ) public pure override(BridgeBase) returns (uint256) {
+        if (_auxData > 1) {
+            revert ErrorLib.InvalidAuxData();
+        }
+        return _auxData;
     }
 
     /**

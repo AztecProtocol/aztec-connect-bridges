@@ -29,6 +29,8 @@ contract AngleSLPE2ETest is BridgeTestBase {
 
     uint256 internal constant DUST = 1;
 
+    address private constant BENEFICIARY = address(uint160(uint256(keccak256(abi.encodePacked("_BENEFICIARY")))));
+
     function setUp() public {
         emit log_named_uint("block number", block.number);
         bridge = new AngleSLPBridge(address(ROLLUP_PROCESSOR));
@@ -66,16 +68,26 @@ contract AngleSLPE2ETest is BridgeTestBase {
 
         // since the rollup doesn't have USDC, we deal some to it
         deal(usdcAsset.erc20Address, address(ROLLUP_PROCESSOR), 100000e6);
+
+        // Subsidize
+        SUBSIDY.subsidize{value: 10 ether}(address(bridge), 0, 500);
+        SUBSIDY.subsidize{value: 10 ether}(address(bridge), 1, 500);
+        SUBSIDY.registerBeneficiary(BENEFICIARY);
+
+        setRollupBeneficiary(BENEFICIARY);
     }
 
     function testValidDeposit(uint96 _amount) public {
         _testValidDeposit(daiAsset, sanDaiAsset, _amount, bridge.POOLMANAGER_DAI());
+        assertGt(SUBSIDY.claimableAmount(BENEFICIARY), 0, "Claimable was not updated");
     }
 
     function testValidDepositETH(uint96 _amount) public {
         uint256 balanceRollupBeforeETH = address(ROLLUP_PROCESSOR).balance;
         uint256 amount = uint256(_amount);
         amount = bound(amount, 10, balanceRollupBeforeETH - 1);
+
+        vm.warp(block.timestamp + 1 days); // warp to increase subsidy
 
         uint256 balanceRollupBeforeSanWETH = IERC20(sanWethAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
 
@@ -93,12 +105,17 @@ contract AngleSLPE2ETest is BridgeTestBase {
 
         assertEq(balanceRollupAfterETH, balanceRollupBeforeETH - amount);
         assertEq(balanceRollupAfterSanWETH, balanceRollupBeforeSanWETH + outputValueA);
+
+        assertGt(SUBSIDY.claimableAmount(BENEFICIARY), 0, "Claimable was not updated");
     }
 
     function testValidWithdraw(uint96 _amount) public {
         // the protocol might not have so many sanDAI available, so we limit what can be withdrawn
         uint256 amount = uint256(bound(_amount, 10, 100000 ether));
+
+        vm.warp(block.timestamp + 1 days); // warp to increase subsidy
         _testValidWithdraw(sanDaiAsset, daiAsset, amount, bridge.POOLMANAGER_DAI());
+        assertGt(SUBSIDY.claimableAmount(BENEFICIARY), 0, "Claimable was not updated");
     }
 
     function testValidWithdrawETH() public {
@@ -124,12 +141,16 @@ contract AngleSLPE2ETest is BridgeTestBase {
 
     function testDepositUSDC(uint96 _amount) public {
         _testValidDeposit(usdcAsset, sanUsdcAsset, _amount, bridge.POOLMANAGER_USDC());
+        assertGt(SUBSIDY.claimableAmount(BENEFICIARY), 0, "Claimable was not updated");
     }
 
     function testWithdrawUSDC(uint96 _amount) public {
         // the protocol might not have so many sanUSDC available, so we limit what can be withdrawn
         uint256 amount = uint256(bound(_amount, 10, 100000e6));
+
+        vm.warp(block.timestamp + 1 days); // warp to increase subsidy
         _testValidWithdraw(sanUsdcAsset, usdcAsset, amount, bridge.POOLMANAGER_USDC());
+        assertGt(SUBSIDY.claimableAmount(BENEFICIARY), 0, "Claimable was not updated");
     }
 
     function _testValidDeposit(
@@ -141,6 +162,8 @@ contract AngleSLPE2ETest is BridgeTestBase {
         uint256 balanceRollupBeforeInput = IERC20(_inputAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 amount = uint256(_amount);
         amount = bound(amount, 10, balanceRollupBeforeInput - 1);
+
+        vm.warp(block.timestamp + 1 days); // warp to increase subsidy
 
         uint256 balanceRollupBeforeOutput = IERC20(_outputAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
 
