@@ -58,11 +58,14 @@ contract AngleSLPBridge is BridgeBase {
         criterias[0] = 0;
         criterias[1] = 1;
 
-        gasUsage[0] = 170000;
-        gasUsage[1] = 200000;
+        gasUsage[0] = 180000;
+        gasUsage[1] = 210000;
 
-        minGasPerMinute[0] = 140;
-        minGasPerMinute[1] = 140;
+        // Min gas per minute set in such a way that bridge call gets subsidized fully if not executed in 2 days
+        // 180k / (24 * 60) / 2 ~ 65
+        minGasPerMinute[0] = 65;
+        // 210k / (24 * 60) / 2 ~ 75
+        minGasPerMinute[1] = 75;
 
         SUBSIDY.setGasUsageAndMinGasPerMinute(criterias, gasUsage, minGasPerMinute);
     }

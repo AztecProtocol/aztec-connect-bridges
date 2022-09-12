@@ -15,6 +15,8 @@ interface IRead {
 }
 
 contract AngleMeasure is AngleSLPDeployment {
+    ISubsidy internal constant SUBSIDY = ISubsidy(0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA);
+
     GasBase internal gasBase;
     AngleSLPBridge internal bridge;
 
@@ -26,7 +28,7 @@ contract AngleMeasure is AngleSLPDeployment {
     AztecTypes.AztecAsset internal sanWethAsset;
 
     function measureETH() public {
-        _setup();
+        _setUp();
 
         vm.broadcast();
         address(gasBase).call{value: 2 ether}("");
@@ -45,7 +47,7 @@ contract AngleMeasure is AngleSLPDeployment {
                 0,
                 0,
                 address(this),
-                170000
+                180000
             );
         }
 
@@ -66,7 +68,7 @@ contract AngleMeasure is AngleSLPDeployment {
                 1,
                 1,
                 address(this),
-                200000
+                210000
             );
             emit log_named_uint(
                 "sanWeth balance of gasBase",
@@ -76,7 +78,7 @@ contract AngleMeasure is AngleSLPDeployment {
     }
 
     function measureWETH() public {
-        _setup();
+        _setUp();
 
         vm.broadcast();
         weth.deposit{value: 2 ether}();
@@ -97,7 +99,7 @@ contract AngleMeasure is AngleSLPDeployment {
                 0,
                 0,
                 address(this),
-                160000
+                170000
             );
         }
 
@@ -118,7 +120,7 @@ contract AngleMeasure is AngleSLPDeployment {
                 1,
                 1,
                 address(this),
-                170000
+                180000
             );
             emit log_named_uint(
                 "sanWeth balance of gasBase",
@@ -127,7 +129,7 @@ contract AngleMeasure is AngleSLPDeployment {
         }
     }
 
-    function _setup() private {
+    function _setUp() private {
         address defiProxy = IRead(ROLLUP_PROCESSOR).defiBridgeProxy();
         vm.label(defiProxy, "DefiProxy");
 
@@ -152,5 +154,11 @@ contract AngleMeasure is AngleSLPDeployment {
             erc20Address: bridge.SANWETH(),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
+
+        // Fund subsidy
+        vm.startBroadcast();
+        SUBSIDY.subsidize{value: 10 ether}(address(bridge), 0, 500);
+        SUBSIDY.subsidize{value: 10 ether}(address(bridge), 1, 500);
+        vm.stopBroadcast();
     }
 }
