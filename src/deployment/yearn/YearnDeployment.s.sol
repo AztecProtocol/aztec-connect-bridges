@@ -48,8 +48,8 @@ contract YearnDeployment is BaseDeployment {
         uint256 withdrawAddressId = listBridge(bridge, 800000);
         emit log_named_uint("Yearn withdraw bridge address id", withdrawAddressId);
 
-        listAsset(YEARN_REGISTRY.latestVault(DAI), 100000);
-        listAsset(YEARN_REGISTRY.latestVault(WETH), 100000);
+        listAsset(YEARN_REGISTRY.latestVault(DAI), 55000);
+        listAsset(YEARN_REGISTRY.latestVault(WETH), 55000);
 
         return bridge;
     }
