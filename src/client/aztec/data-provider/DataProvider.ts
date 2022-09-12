@@ -93,4 +93,8 @@ export class DataProviderWrapper {
   async getRollupProvider(): Promise<EthAddress> {
     return EthAddress.fromString(await this.dataProvider.ROLLUP_PROCESSOR());
   }
+
+  async getAccumulatedSubsidyAmount(bridgeCallData: bigint): Promise<bigint> {
+    return (await this.dataProvider.getAccumulatedSubsidyAmount(bridgeCallData)).toBigInt();
+  }
 }
