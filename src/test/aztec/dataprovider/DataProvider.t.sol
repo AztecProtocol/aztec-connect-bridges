@@ -11,6 +11,9 @@ contract DataProviderTest is BridgeTestBase {
 
     function setUp() public {
         provider = new DataProvider(address(ROLLUP_PROCESSOR));
+
+        // fund yearn bridge to ensure that there are funds.
+        SUBSIDY.topUp{value: 10 ether}(ROLLUP_PROCESSOR.getSupportedBridge(7), 0);
     }
 
     function testGetAssetsEmptyLabels() public {
