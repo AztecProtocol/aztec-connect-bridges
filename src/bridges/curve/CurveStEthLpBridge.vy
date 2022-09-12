@@ -98,9 +98,7 @@ def convert_11192637865(
     @return isAsync - True if the bridge is async, false otherwise. Always false for this bridge
     """
     assert msg.sender == ROLLUP_PROCESSOR, "Invalid caller"
-
-    if _inputAssetB.assetType != 0:
-        raise "Invalid asset B"
+    assert _inputAssetB.assetType == 0, "Invalid asset B"
 
     # Eth or WSTETH in -> LPToken out
     deposit: bool = (_inputAssetA.assetType == 1 or (_inputAssetA.assetType == 2 and _inputAssetA.erc20Address == WSTETH)) and _outputAssetA.assetType == 2 and _outputAssetA.erc20Address == LP_TOKEN
@@ -108,8 +106,7 @@ def convert_11192637865(
     # LPToken in -> ETH + WSTETH out
     withdraw: bool = _inputAssetA.assetType == 2 and _inputAssetA.erc20Address == LP_TOKEN and _outputAssetA.assetType == 1 and _outputAssetB.assetType == 2 and _outputAssetB.erc20Address == WSTETH
 
-    if not((deposit or withdraw) and not(deposit and withdraw)):
-        raise "Invalid assets"
+    assert deposit != withdraw, "Invalid assets"
 
     if deposit:
         return self._deposit(_totalInputValue, _inputAssetA.assetType == 1, _auxData, _rollupBeneficiary)
