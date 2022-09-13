@@ -169,6 +169,58 @@ contract BiDCATestUnit is Test {
         testFuzzUniswapForceFillEth(1000e18, 1e18, false);
     }
 
+    function testUniswapFillPartial(uint256 _deposit1) public {
+        uint256 deposit1 = bound(_deposit1, 0.1e18, 1e24);
+
+        // Deposit with asset A
+        bridge.convert(aztecAssetA, emptyAsset, aztecAssetB, emptyAsset, deposit1, 0, uint64(7), address(0));
+        deal(address(assetA), address(bridge), deposit1);
+
+        // Forward 8 days
+        vm.warp(block.timestamp + 8 days);
+
+        // Match only the first day with uniswap. Even though time have passed, to cap gas
+        movePrice(0, 1000 ether);
+        UniswapDCABridge.DCA memory dca = bridge.getDCA(0);
+        bridge.rebalanceAndFillUniswap(dca.start + 2);
+
+        (uint256 acc, bool ready) = bridge.getAccumulated(0);
+        (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = bridge.finalise(
+            aztecAssetA,
+            emptyAsset,
+            aztecAssetB,
+            emptyAsset,
+            0,
+            0
+        );
+
+        assertFalse(ready, "Ready to finalise 0");
+        assertEq(outputValueA, 0, "outputValueA not zero");
+        assertEq(outputValueB, 0, "Outputvalue B not zero");
+        assertFalse(interactionComplete, "Interaction passed");
+
+        // Check that only two first ticks are matched, and rest untouched
+        for (uint256 i = dca.start; i < dca.end; i++) {
+            // Check tick[i]
+            UniswapDCABridge.Tick memory tick = bridge.getTick(i);
+            assertEq(tick.availableA, i < dca.start + 2 ? 0 : deposit1 / 7, "Available A not matching");
+            assertEq(tick.availableB, 0, "Available B not matching");
+            assertEq(tick.priceOfAInB, 0, "Price not matching");
+        }
+
+        // Match 2 additional ticks
+        bridge.rebalanceAndFillUniswap(dca.start + 4);
+
+        // Check that only first first ticks are matched, and rest untouched
+        for (uint256 i = dca.start; i < dca.end; i++) {
+            // Check tick[i]
+            UniswapDCABridge.Tick memory tick = bridge.getTick(i);
+            assertEq(tick.availableA, i < dca.start + 4 ? 0 : deposit1 / 7, "Available A not matching");
+            assertEq(tick.availableB, 0, "Available B not matching");
+            assertEq(tick.priceOfAInB, 0, "Price not matching");
+        }
+    }
+
     /**
      * @notice Large fuzzing function that will fuzz
      * deposit of `_deposit1` asset (`_aFirst` ? A : B) for `_length1` time
@@ -318,10 +370,6 @@ contract BiDCATestUnit is Test {
             (uint256 availableA, uint256 availableB) = bridge.getAvailable();
             assertEq(availableA, 0, "Available A != 0");
             assertEq(availableB, 0, "Available B != 0");
-
-            // TODO: Figure out a good way to do this.
-            // assertLe(assetA.balanceOf(address(bridge)), deposit1 / 1e6, "too much left as 'dust'");
-            // assertLe(assetB.balanceOf(address(bridge)), deposit2 / 1e6, "too much left as 'dust'");
         }
     }
 
@@ -620,6 +668,113 @@ contract BiDCATestUnit is Test {
             assertEq(
                 accumulated,
                 bridge.denominateAssetBInA((depositUser1 / 7), price, true) * 2,
+                "Accumulated not matching"
+            );
+            assertFalse(ready, "Is ready");
+        }
+    }
+
+    function testFlow17DCA2daysMoreThanEnoughBuyAOnlyMatch1Tick() public {
+        uint256 price = bridge.getPrice();
+        bridge.pokeNextTicks(10);
+
+        uint256 startTick = block.timestamp / bridge.TICK_SIZE();
+
+        uint256 depositUser1 = 0.7e18;
+
+        bridge.convert(aztecAssetB, emptyAsset, aztecAssetA, emptyAsset, depositUser1, 0, 7, address(0));
+        vm.warp(block.timestamp + 1 days);
+        refreshTs();
+        bridge.convert(aztecAssetB, emptyAsset, aztecAssetA, emptyAsset, 1, 1, 7, address(0));
+        deal(address(assetB), address(bridge), 1000 ether);
+
+        {
+            (uint256 a, uint256 b) = bridge.getAvailable();
+            assertEq(a, 0, "available a");
+            assertEq(b, 0.1e18, "available b");
+        }
+
+        vm.warp(block.timestamp + 1 days);
+        {
+            // Check the available amount of funds
+            (uint256 a, uint256 b) = bridge.getAvailable();
+            assertEq(a, 0, "Available A not matching");
+            assertEq(b, (depositUser1 / 7) * 2, "Available B not matching");
+        }
+        {
+            // Check the accumulated value of DCA(0)
+            (uint256 accumulated, bool ready) = bridge.getAccumulated(0);
+            assertEq(accumulated, 0, "Accumulated not matching");
+            assertFalse(ready);
+        }
+
+        {
+            // Issue is down here with the pricing stuff.
+            for (uint256 i = 1; i < 3; i++) {
+                // Check tick[i]
+                UniswapDCABridge.Tick memory tick = bridge.getTick(startTick + i);
+                assertEq(tick.availableA, 0, "Available A not matching");
+                assertEq(tick.availableB, 0.1e18, "Available B not matching");
+                assertEq(tick.priceOfAInB, i == 1 ? bridge.getPrice() : 0, "Price not matching");
+            }
+        }
+
+        uint256 dealAmount = 10000e18;
+        deal(address(assetA), address(this), dealAmount);
+        assetA.approve(address(bridge), type(uint256).max);
+        refreshTs();
+        (int256 a, int256 b) = bridge.rebalanceAndFill(dealAmount, 0, startTick + 2);
+
+        {
+            // Check rabalance output values
+            uint256 userBought = (depositUser1 / 7);
+            uint256 _aSold = bridge.denominateAssetBInA((depositUser1 / 7), price, true);
+            assertEq(a, int256(_aSold), "User did not sell correct amount of eth");
+            assertEq(assetA.balanceOf(address(bridge)), uint256(a), "Asset B balance not matching");
+            assertEq(b, -(int256(userBought)), "User did not buy correct number of tokens tokens");
+            assertEq(assetB.balanceOf(address(this)), uint256(-b), "Asset A balance not matching");
+        }
+
+        {
+            uint256 userBought = (depositUser1 / 7);
+            // Check tick[i]
+            UniswapDCABridge.Tick memory tick = bridge.getTick(startTick + 1);
+            assertEq(tick.availableA, 0, "Available A not matching");
+            assertEq(tick.availableB, 0, "Available B not matching");
+            assertEq(tick.priceOfAInB, price, "Price not matching");
+            assertEq(tick.bToASubTick.sold, userBought, "BToA sold not matching");
+            assertEq(
+                tick.bToASubTick.bought,
+                bridge.denominateAssetBInA(userBought, price, true),
+                "BToA bought not matching"
+            );
+            assertEq(tick.aToBSubTick.sold, 0, "AToB sold not matching");
+            assertEq(tick.aToBSubTick.bought, 0, "BToA bought not matching");
+        }
+
+        emit log("HM");
+
+        {
+            for (uint256 i = 2; i < 3; i++) {
+                uint256 userBought = (depositUser1 / 7);
+                // Check tick[i]
+                UniswapDCABridge.Tick memory tick = bridge.getTick(startTick + i);
+                assertEq(tick.availableA, 0, "Available A not matching");
+                assertEq(tick.availableB, userBought, "Available B not matching");
+                assertEq(tick.priceOfAInB, price, "Price not matching");
+                assertEq(tick.bToASubTick.sold, 0, "BToA sold not matching");
+                assertEq(tick.bToASubTick.bought, 0, "BToA bought not matching");
+                assertEq(tick.aToBSubTick.sold, 0, "AToB sold not matching");
+                assertEq(tick.aToBSubTick.bought, 0, "BToA bought not matching");
+            }
+        }
+
+        {
+            // Check the accumulated value of DCA(0)
+            (uint256 accumulated, bool ready) = bridge.getAccumulated(0);
+            assertEq(
+                accumulated,
+                bridge.denominateAssetBInA((depositUser1 / 7), price, true),
                 "Accumulated not matching"
             );
             assertFalse(ready, "Is ready");
