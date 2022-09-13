@@ -45,6 +45,10 @@ contract UniswapDCABridge is BiDCABridge {
         IERC20(address(WETH)).safeApprove(address(UNI_ROUTER), type(uint256).max);
     }
 
+    function rebalanceAndFillUniswap() public returns (int256, int256) {
+        rebalanceAndFillUniswap(type(uint256).max);
+    }
+
     /**
      * @notice Rebalances within ticks, then across ticks, and finally, take the remaining funds to uniswap
      * where it is traded for the opposite, and used to rebalance completely
@@ -54,13 +58,13 @@ contract UniswapDCABridge is BiDCABridge {
      * @return aFlow The flow of token A
      * @return bFlow The flow of token B
      */
-    function rebalanceAndFillUniswap() external returns (int256, int256) {
+    function rebalanceAndFillUniswap(uint256 _upperTick) public returns (int256, int256) {
         uint256 oraclePrice = getPrice();
-        (int256 aFlow, int256 bFlow, uint256 a, uint256 b) = _rebalanceAndFill(0, 0, oraclePrice, true);
+        (int256 aFlow, int256 bFlow, uint256 a, uint256 b) = _rebalanceAndFill(0, 0, oraclePrice, _upperTick, true);
 
         // If we have available A and B, we can do internal rebalancing across ticks with these values.
         if (a > 0 && b > 0) {
-            (aFlow, bFlow, a, b) = _rebalanceAndFill(a, b, oraclePrice, true);
+            (aFlow, bFlow, a, b) = _rebalanceAndFill(a, b, oraclePrice, _upperTick, true);
         }
 
         if (a > 0) {
@@ -78,7 +82,7 @@ contract UniswapDCABridge is BiDCABridge {
             // Rounding DOWN ensures that B received / price >= A available
             uint256 price = (bOffer * 1e18) / a;
 
-            (aFlow, bFlow, , ) = _rebalanceAndFill(0, bOffer, price, true);
+            (aFlow, bFlow, , ) = _rebalanceAndFill(0, bOffer, price, _upperTick, true);
         }
 
         if (b > 0) {
@@ -96,7 +100,7 @@ contract UniswapDCABridge is BiDCABridge {
             // Rounding UP to ensure that A received * price >= B available
             uint256 price = (b * 1e18 + aOffer - 1) / aOffer;
 
-            (aFlow, bFlow, , ) = _rebalanceAndFill(aOffer, 0, price, true);
+            (aFlow, bFlow, , ) = _rebalanceAndFill(aOffer, 0, price, _upperTick, true);
         }
 
         return (aFlow, bFlow);

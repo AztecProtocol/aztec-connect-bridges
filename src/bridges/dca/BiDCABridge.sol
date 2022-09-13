@@ -121,6 +121,7 @@ abstract contract BiDCABridge is BridgeBase {
     }
 
     IWETH internal constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    uint256 public constant FEE_DIVISOR = 10000;
 
     // The assets that are DCAed between
     IERC20 public immutable ASSET_A;
@@ -161,7 +162,7 @@ abstract contract BiDCABridge is BridgeBase {
         IERC20(_assetA).safeApprove(_rollupProcessor, type(uint256).max);
         IERC20(_assetB).safeApprove(_rollupProcessor, type(uint256).max);
 
-        if (_fee > 10000) {
+        if (_fee > FEE_DIVISOR) {
             revert FeeTooLarge();
         }
         FEE = _fee;
@@ -174,8 +175,7 @@ abstract contract BiDCABridge is BridgeBase {
      * @param _numTicks The number of ticks to poke
      */
     function pokeNextTicks(uint256 _numTicks) external {
-        uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
-        pokeTicks(nextTick, _numTicks);
+        pokeTicks(_nextTick(block.timestamp), _numTicks);
     }
 
     /**
@@ -199,8 +199,26 @@ abstract contract BiDCABridge is BridgeBase {
      * @return flowA The flow of asset A from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
      * @return flowB The flow of asset B from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
      */
-    function rebalanceAndFill(uint256 _offerA, uint256 _offerB) external returns (int256, int256) {
-        (int256 flowA, int256 flowB, , ) = _rebalanceAndFill(_offerA, _offerB, getPrice(), false);
+    function rebalanceAndFill(uint256 _offerA, uint256 _offerB) public returns (int256, int256) {
+        return rebalanceAndFill(_offerA, _offerB, type(uint256).max);
+    }
+
+    /**
+     * @notice Rebalances ticks using internal values first, then with externally provided assets.
+     * Ticks are balanced internally using the price at the specific tick (either stored in tick, or interpolated).
+     * Leftover assets are sold using current price to fill as much of the offer as possible.
+     * @param _offerA The amount of asset A that is offered for sale to the bridge
+     * @param _offerB The amount of asset B that is offered for sale to the bridge
+     * @param _upperTick The upper limit for ticks (useful gas-capped rebalancing)
+     * @return flowA The flow of asset A from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
+     * @return flowB The flow of asset B from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
+     */
+    function rebalanceAndFill(
+        uint256 _offerA,
+        uint256 _offerB,
+        uint256 _upperTick
+    ) public returns (int256, int256) {
+        (int256 flowA, int256 flowB, , ) = _rebalanceAndFill(_offerA, _offerB, getPrice(), _upperTick, false);
         if (flowA > 0) {
             ASSET_A.safeTransferFrom(msg.sender, address(this), uint256(flowA));
         } else if (flowA < 0) {
@@ -316,7 +334,7 @@ abstract contract BiDCABridge is BridgeBase {
 
             uint256 incentive;
             if (FEE > 0) {
-                incentive = (accumulated * FEE) / 10000;
+                incentive = (accumulated * FEE) / FEE_DIVISOR;
             }
 
             outputValueA = accumulated - incentive;
@@ -432,6 +450,19 @@ abstract contract BiDCABridge is BridgeBase {
     }
 
     /**
+     * @notice Computes the next tick
+     * @dev    Note that the return value can be the current tick if we are exactly at the threshold
+     * @return The next tick
+     */
+    function _nextTick(uint256 _time) internal view returns (uint256) {
+        return ((_time + TICK_SIZE - 1) / TICK_SIZE);
+    }
+
+    function _min(uint256 _a, uint256 _b) internal pure returns (uint256) {
+        return _a > _b ? _b : _a;
+    }
+
+    /**
      * @notice Create a new DCA position starting at next tick and accumulates the available assets to the future ticks.
      * @param _nonce The interaction nonce
      * @param _amount The amount of assets deposited
@@ -444,7 +475,7 @@ abstract contract BiDCABridge is BridgeBase {
         uint256 _ticks,
         bool _aToB
     ) internal {
-        uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
+        uint256 nextTick = _nextTick(block.timestamp);
         if (_aToB && earliestTickWithAvailableA == 0) {
             earliestTickWithAvailableA = nextTick.toU32();
         }
@@ -479,6 +510,7 @@ abstract contract BiDCABridge is BridgeBase {
      * @param _offerB The amount of asset B that is offered for sale to the bridge
      * @param _currentPrice Current oracle price
      * @param _self A flag that is true if rebalancing with self, e.g., swapping available funds with dex and rebalancing, and false otherwise
+     * @param _upperTick A upper limit for the ticks, useful for gas-capped execution
      * @return flowA The flow of asset A from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
      * @return flowB The flow of asset B from the bridge POV, e.g., >0 = buying of tokens, <0 = selling tokens
      * @return availableA The amount of asset A that is available after the rebalancing
@@ -488,6 +520,7 @@ abstract contract BiDCABridge is BridgeBase {
         uint256 _offerA,
         uint256 _offerB,
         uint256 _currentPrice,
+        uint256 _upperTick,
         bool _self
     )
         internal
@@ -523,12 +556,12 @@ abstract contract BiDCABridge is BridgeBase {
         // Compute the amount of A that is offered to be bought at current price for B. Round down
         vars.offerBInA = denominateAssetBInA(_offerB, vars.currentPrice, false);
 
-        uint256 nextTick = ((block.timestamp + TICK_SIZE - 1) / TICK_SIZE);
+        uint256 nextTick = _nextTick(block.timestamp);
         // Update the latest tick, might be 1 second in the past.
         ticks[nextTick - 1].priceOfAInB = vars.currentPrice.toU128();
         ticks[nextTick - 1].priceTime = block.timestamp.toU32();
 
-        for (uint256 i = earliestTick; i < nextTick; i++) {
+        for (uint256 i = earliestTick; i < _min(nextTick, _upperTick); i++) {
             // Load a cache
             Tick memory tick = ticks[i];
 
