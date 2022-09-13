@@ -184,7 +184,7 @@ contract BiDCATestUnit is Test {
         UniswapDCABridge.DCA memory dca = bridge.getDCA(0);
         bridge.rebalanceAndFillUniswap(dca.start + 2);
 
-        (uint256 acc, bool ready) = bridge.getAccumulated(0);
+        (, bool ready) = bridge.getAccumulated(0);
         (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = bridge.finalise(
             aztecAssetA,
             emptyAsset,
