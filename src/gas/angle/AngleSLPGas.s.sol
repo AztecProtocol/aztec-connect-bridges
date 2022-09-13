@@ -16,6 +16,7 @@ interface IRead {
 
 contract AngleMeasure is AngleSLPDeployment {
     ISubsidy internal constant SUBSIDY = ISubsidy(0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA);
+    address private constant BENEFICIARY = address(uint160(uint256(keccak256(abi.encodePacked("_BENEFICIARY")))));
 
     GasBase internal gasBase;
     AngleSLPBridge internal bridge;
@@ -59,7 +60,11 @@ contract AngleMeasure is AngleSLPDeployment {
         vm.startBroadcast();
         SUBSIDY.subsidize{value: 10 ether}(address(bridge), 0, 500);
         SUBSIDY.subsidize{value: 10 ether}(address(bridge), 1, 500);
+        SUBSIDY.registerBeneficiary(BENEFICIARY);
         vm.stopBroadcast();
+
+        // Warp time to increase subsidy
+        vm.warp(block.timestamp + 1 days);
     }
 
     function measureETH() public {
@@ -79,14 +84,19 @@ contract AngleMeasure is AngleSLPDeployment {
                 1 ether,
                 0,
                 0,
-                address(this),
-                180000
+                BENEFICIARY,
+                200000
             );
         }
+
+        uint256 claimableSubsidyAfterDeposit = SUBSIDY.claimableAmount(BENEFICIARY);
+        assertGt(claimableSubsidyAfterDeposit, 0, "Subsidy was not claimed during deposit");
+        emit log_named_uint("Claimable subsidy after deposit", claimableSubsidyAfterDeposit);
 
         uint256 sanWethBalance = IERC20(sanWethAsset.erc20Address).balanceOf(address(gasBase));
 
         // Withdraw half the sanWeth
+        // No need to warp time here because withdrawal has different subsidy criteria
         {
             emit log_named_uint("sanWeth balance of gasBase", sanWethBalance);
 
@@ -100,7 +110,7 @@ contract AngleMeasure is AngleSLPDeployment {
                 sanWethBalance / 2,
                 1,
                 1,
-                address(this),
+                BENEFICIARY,
                 210000
             );
             emit log_named_uint(
@@ -108,6 +118,14 @@ contract AngleMeasure is AngleSLPDeployment {
                 IERC20(sanWethAsset.erc20Address).balanceOf(address(gasBase))
             );
         }
+
+        uint256 claimableSubsidyAfterWithdrawal = SUBSIDY.claimableAmount(BENEFICIARY);
+        assertGt(
+            claimableSubsidyAfterWithdrawal,
+            claimableSubsidyAfterDeposit,
+            "Subsidy was not claimed during withdrawal"
+        );
+        emit log_named_uint("Claimable subsidy after withdrawal", claimableSubsidyAfterWithdrawal);
     }
 
     function measureWETH() public {
@@ -129,14 +147,19 @@ contract AngleMeasure is AngleSLPDeployment {
                 1 ether,
                 0,
                 0,
-                address(this),
+                BENEFICIARY,
                 170000
             );
         }
 
+        uint256 claimableSubsidyAfterDeposit = SUBSIDY.claimableAmount(BENEFICIARY);
+        assertGt(claimableSubsidyAfterDeposit, 0, "Subsidy was not claimed during deposit");
+        emit log_named_uint("Claimable subsidy after deposit", claimableSubsidyAfterDeposit);
+
         uint256 sanWethBalance = IERC20(sanWethAsset.erc20Address).balanceOf(address(gasBase));
 
         // Withdraw half the sanWeth
+        // No need to warp time here because withdrawal has different subsidy criteria
         {
             emit log_named_uint("sanWeth balance of gasBase", sanWethBalance);
 
@@ -150,7 +173,7 @@ contract AngleMeasure is AngleSLPDeployment {
                 sanWethBalance / 2,
                 1,
                 1,
-                address(this),
+                BENEFICIARY,
                 180000
             );
             emit log_named_uint(
@@ -158,5 +181,13 @@ contract AngleMeasure is AngleSLPDeployment {
                 IERC20(sanWethAsset.erc20Address).balanceOf(address(gasBase))
             );
         }
+
+        uint256 claimableSubsidyAfterWithdrawal = SUBSIDY.claimableAmount(BENEFICIARY);
+        assertGt(
+            claimableSubsidyAfterWithdrawal,
+            claimableSubsidyAfterDeposit,
+            "Subsidy was not claimed during withdrawal"
+        );
+        emit log_named_uint("Claimable subsidy after withdrawal", claimableSubsidyAfterWithdrawal);
     }
 }
