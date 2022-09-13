@@ -24,9 +24,8 @@ contract AngleSLPDeployment is BaseDeployment {
         emit log_named_uint("Angle SLP withdraw bridge address id", addressId);
 
         // Listing just the san tokens whose underlying are currently listed
-        // TODO: change the following gas limits
-        listAsset(AngleSLPBridge(bridge).SANDAI(), 100000);
-        listAsset(AngleSLPBridge(bridge).SANWETH(), 100000);
+        listAsset(AngleSLPBridge(bridge).SANDAI(), 55000);
+        listAsset(AngleSLPBridge(bridge).SANWETH(), 55000);
 
         return bridge;
     }
