@@ -168,7 +168,7 @@ contract ERC4626Measure is ERC4626Deployment {
                 0,
                 0,
                 BENEFICIARY,
-                280000
+                260000
             );
         }
 
