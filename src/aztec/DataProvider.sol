@@ -86,6 +86,31 @@ contract DataProvider is Ownable {
     }
 
     /**
+     * @notice Adds multiple bridges with specific tags
+     * @dev Indicrectly Only callable by the owner
+     * @param _assetIds List of asset Ids
+     * @param _assetTags List of tags to be used for the asset ids
+     * @param _bridgeAddressIds The list of bridge address ids
+     * @param _bridgeTags List of tags to be used for the bridges
+     */
+    function addAssetsAndBridges(
+        uint256[] memory _assetIds,
+        string[] memory _assetTags,
+        uint256[] memory _bridgeAddressIds,
+        string[] memory _bridgeTags
+    ) public {
+        if (_assetIds.length != _assetTags.length || _bridgeAddressIds.length != _bridgeTags.length) {
+            revert("Invalid input lengths");
+        }
+        for (uint256 i = 0; i < _assetTags.length; i++) {
+            addAsset(_assetIds[i], _assetTags[i]);
+        }
+        for (uint256 i = 0; i < _bridgeTags.length; i++) {
+            addBridge(_bridgeAddressIds[i], _bridgeTags[i]);
+        }
+    }
+
+    /**
      * @notice Fetch the `BridgeData` related to a specific bridgeAddressId
      * @param _bridgeAddressId The bridge address id of the bridge to fetch
      * @return The BridgeData data structure for the given bridge

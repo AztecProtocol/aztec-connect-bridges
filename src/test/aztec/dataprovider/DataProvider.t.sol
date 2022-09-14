@@ -16,6 +16,62 @@ contract DataProviderTest is BridgeTestBase {
         SUBSIDY.topUp{value: 10 ether}(ROLLUP_PROCESSOR.getSupportedBridge(7), 0);
     }
 
+    function testAddMultipleAssetsAndBridgesWrongInput() public {
+        uint256[] memory assetIds = new uint256[](4);
+        uint256[] memory bridgeAddressIds = new uint256[](5);
+        string[] memory assetTags = new string[](4);
+        string[] memory bridgeTags = new string[](4);
+
+        vm.expectRevert("Invalid input lengths");
+        provider.addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
+
+        bridgeAddressIds = new uint256[](4);
+        assetTags = new string[](5);
+
+        vm.expectRevert("Invalid input lengths");
+        provider.addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
+    }
+
+    function testAddMultipleAssetsAndBridges() public {
+        uint256[] memory assetIds = new uint256[](4);
+        uint256[] memory bridgeAddressIds = new uint256[](4);
+        string[] memory assetTags = new string[](4);
+        string[] memory bridgeTags = new string[](4);
+
+        for (uint256 i = 0; i < 4; i++) {
+            assetIds[i] = i;
+            bridgeAddressIds[i] = i + 1;
+            assetTags[i] = string(abi.encodePacked("asset", i));
+            bridgeTags[i] = string(abi.encodePacked("bridge", i + 1));
+        }
+
+        vm.prank(address(1));
+        vm.expectRevert("Ownable: caller is not the owner");
+        provider.addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
+
+        provider.addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
+
+        DataProvider.AssetData[] memory assets = provider.getAssets();
+        for (uint256 i = 0; i < assets.length; i++) {
+            DataProvider.AssetData memory asset = assets[i];
+            assertEq(asset.assetId, i);
+            assertEq(asset.assetAddress, ROLLUP_PROCESSOR.getSupportedAsset(asset.assetId));
+            assertEq(asset.label, assetTags[i]);
+        }
+
+        DataProvider.BridgeData[] memory bridges = provider.getBridges();
+        for (uint256 i = 0; i < bridgeTags.length; i++) {
+            DataProvider.BridgeData memory bridge = bridges[i];
+            assertEq(bridge.bridgeAddressId, i + 1, "bridge address id invalid");
+            assertEq(
+                bridge.bridgeAddress,
+                ROLLUP_PROCESSOR.getSupportedBridge(bridge.bridgeAddressId),
+                "bridge address invalid"
+            );
+            assertEq(bridge.label, bridgeTags[i], "bridge label invalid");
+        }
+    }
+
     function testGetAssetsEmptyLabels() public {
         DataProvider.AssetData[] memory assets = provider.getAssets();
 
@@ -54,10 +110,6 @@ contract DataProviderTest is BridgeTestBase {
             assertEq(asset.label, labels[i]);
             assertEq(asset.assetId, i);
         }
-
-        DataProvider.AssetData[] memory assets = provider.getAssets();
-
-        for (uint256 i = 0; i < assets.length; i++) {}
     }
 
     function testGetBridgesEmptyLabels() public {

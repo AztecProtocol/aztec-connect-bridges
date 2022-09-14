@@ -19,24 +19,35 @@ contract DataProviderDeployment is BaseDeployment {
 
     function read() public {}
 
-    function deployAndListMany() public {}
-
-    function deployAndListDevNet() public {
+    function deployAndListMany() public {
         address provider = deploy();
 
-        _listAsset(provider, 1, "Dai");
-        _listAsset(provider, 2, "WSTETH");
-        _listAsset(provider, 3, "vyDai");
-        _listAsset(provider, 4, "vyWeth");
+        uint256[] memory assetIds = new uint256[](5);
+        string[] memory assetTags = new string[](5);
+        for (uint256 i = 0; i < 5; i++) {
+            assetIds[i] = i;
+        }
+        assetTags[0] = "eth";
+        assetTags[1] = "dai";
+        assetTags[2] = "wsteth";
+        assetTags[3] = "vydai";
+        assetTags[4] = "vyweth";
 
-        _listBridge(provider, 1, "Element Fixed Yield");
-        _listBridge(provider, 6, "Curve swap steth pool");
-        _listBridge(provider, 7, "Yearn Deposit");
-        _listBridge(provider, 8, "Yearn Withdraw");
-        _listBridge(provider, 9, "DCA DAI/ETH 7 Days");
+        uint256[] memory bridgeAddressIds = new uint256[](4);
+        string[] memory bridgeTags = new string[](4);
 
-        DataProvider.BridgeData memory bridge = DataProvider(provider).getBridge("Yearn Withdraw");
-        emit log_named_uint(bridge.label, bridge.bridgeAddressId);
+        bridgeAddressIds[0] = 1;
+        bridgeAddressIds[1] = 6;
+        bridgeAddressIds[2] = 7;
+        bridgeAddressIds[3] = 8;
+
+        bridgeTags[0] = "ElementBridge";
+        bridgeTags[1] = "CurveStEthBridge";
+        bridgeTags[2] = "YearnBridge_Deposit";
+        bridgeTags[3] = "YearnBridge_Withdraw";
+
+        vm.broadcast();
+        DataProvider(provider).addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
     }
 
     function _listBridge(
