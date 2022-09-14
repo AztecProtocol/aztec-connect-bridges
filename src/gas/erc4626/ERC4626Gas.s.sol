@@ -26,10 +26,7 @@ contract ERC4626Measure is ERC4626Deployment {
     AztecTypes.AztecAsset internal emptyAsset;
     AztecTypes.AztecAsset internal ethAsset;
     AztecTypes.AztecAsset internal wethAsset;
-    //    AztecTypes.AztecAsset internal wstethAsset;
     AztecTypes.AztecAsset internal wewethAsset; // ERC4626-Wrapped Euler WETH (weWETH)
-
-    //    AztecTypes.AztecAsset internal wewstethAsset; // ERC4626-Wrapped Euler wstETH (wewstETH)
 
     function setUp() public override(BaseDeployment) {
         super.setUp();
@@ -51,21 +48,11 @@ contract ERC4626Measure is ERC4626Deployment {
             erc20Address: address(WETH),
             assetType: AztecTypes.AztecAssetType.ERC20
         });
-        //        wstethAsset = AztecTypes.AztecAsset({
-        //            id: 2,
-        //            erc20Address: 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0,
-        //            assetType: AztecTypes.AztecAssetType.ERC20
-        //        });
         wewethAsset = AztecTypes.AztecAsset({
             id: 3,
             erc20Address: 0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0,
             assetType: AztecTypes.AztecAssetType.ERC20
         });
-        //        wewstethAsset = AztecTypes.AztecAsset({
-        //            id: 4,
-        //            erc20Address: 0x60897720AA966452e8706e74296B018990aEc527,
-        //            assetType: AztecTypes.AztecAssetType.ERC20
-        //        });
 
         // List vaults and fund subsidy
         vm.startBroadcast();
