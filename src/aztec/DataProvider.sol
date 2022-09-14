@@ -87,7 +87,7 @@ contract DataProvider is Ownable {
 
     /**
      * @notice Adds multiple bridges with specific tags
-     * @dev Indicrectly Only callable by the owner
+     * @dev Indirectly Only callable by the owner
      * @param _assetIds List of asset Ids
      * @param _assetTags List of tags to be used for the asset ids
      * @param _bridgeAddressIds The list of bridge address ids
