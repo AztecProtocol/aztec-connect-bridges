@@ -20,8 +20,8 @@ contract ERC4626Deployment is BaseDeployment {
 
     function depositToVaultAndSendDustToBridge() public {
         address bridge = 0x3578D6D5e1B4F07A48bb1c958CBfEc135bef7d98;
-        address asset = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
-        IERC4626 vault = IERC4626(0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0); // ERC4626-Wrapped Euler wstETH
+        IERC4626 vault = IERC4626(0x60897720AA966452e8706e74296B018990aEc527); // ERC4626-Wrapped Euler wstETH
+        address asset = vault.asset();
         vm.startBroadcast();
         IERC20(asset).approve(address(vault), type(uint256).max);
         vault.mint(1, bridge);
