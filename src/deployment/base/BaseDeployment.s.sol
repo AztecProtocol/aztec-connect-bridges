@@ -40,7 +40,7 @@ abstract contract BaseDeployment is Test {
 
     /* solhint-enable var-name-mixedcase */
 
-    function setUp() public {
+    function setUp() public virtual {
         // Read from the .env
         string memory networkKey = "network";
         string memory modeKey = "broadcast";

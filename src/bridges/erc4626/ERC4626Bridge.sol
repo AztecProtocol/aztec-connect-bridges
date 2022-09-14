@@ -57,9 +57,9 @@ contract ERC4626Bridge is BridgeBase {
         gasUsage[0] = 200000;
         gasUsage[1] = 200000;
 
-        // This is approximately 200k / (24 * 60) --> targeting 1 full subsidized call per day
-        minGasPerMinute[0] = 140;
-        minGasPerMinute[1] = 140;
+        // This is approximately 200k / (24 * 60) / 2 --> targeting 1 full subsidized call per 2 days
+        minGasPerMinute[0] = 70;
+        minGasPerMinute[1] = 70;
 
         // We set gas usage and minGasPerMinute in the Subsidy contract
         SUBSIDY.setGasUsageAndMinGasPerMinute(criteria, gasUsage, minGasPerMinute);
