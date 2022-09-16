@@ -19,7 +19,7 @@ contract DataProviderDeployment is BaseDeployment {
 
     function read() public {
         // Todo: Replace address of data provider
-        DataProvider provider = DataProvider(0);
+        DataProvider provider = DataProvider(address(0));
 
         DataProvider.AssetData[] memory assets = provider.getAssets();
         for (uint256 i = 0; i < assets.length; i++) {
