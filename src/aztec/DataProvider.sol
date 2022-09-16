@@ -148,12 +148,13 @@ contract DataProvider is Ownable {
 
     /**
      * @notice Fetch `AssetData` for all supported assets
+     * @dev +1 because the Eth base asset is added as well
      * @return A list of AssetData data structures, one for every asset
      */
     function getAssets() public view returns (AssetData[] memory) {
         uint256 assetCount = ROLLUP_PROCESSOR.getSupportedAssetsLength();
-        AssetData[] memory assetDatas = new AssetData[](assetCount);
-        for (uint256 i = 0; i < assetCount; i++) {
+        AssetData[] memory assetDatas = new AssetData[](assetCount + 1);
+        for (uint256 i = 0; i <= assetCount; i++) {
             assetDatas[i] = getAsset(i);
         }
         return assetDatas;

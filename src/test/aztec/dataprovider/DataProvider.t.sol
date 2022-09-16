@@ -52,11 +52,18 @@ contract DataProviderTest is BridgeTestBase {
         provider.addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
 
         DataProvider.AssetData[] memory assets = provider.getAssets();
+        assertEq(assets.length, ROLLUP_PROCESSOR.getSupportedAssetsLength() + 1);
         for (uint256 i = 0; i < assets.length; i++) {
             DataProvider.AssetData memory asset = assets[i];
-            assertEq(asset.assetId, i);
-            assertEq(asset.assetAddress, ROLLUP_PROCESSOR.getSupportedAsset(asset.assetId));
-            assertEq(asset.label, assetTags[i]);
+            if (i < assetIds.length) {
+                assertEq(asset.assetAddress, ROLLUP_PROCESSOR.getSupportedAsset(asset.assetId));
+                assertEq(asset.label, assetTags[i]);
+                assertEq(asset.assetId, i);
+            } else {
+                assertEq(asset.assetAddress, address(0));
+                assertEq(asset.label, "");
+                assertEq(asset.assetId, 0);
+            }
         }
 
         DataProvider.BridgeData[] memory bridges = provider.getBridges();
@@ -84,19 +91,26 @@ contract DataProviderTest is BridgeTestBase {
     }
 
     function testGetAssetsWithLabels() public {
-        string[4] memory labels = ["Eth", "Dai", "vyDai", "vyEth"];
+        string[4] memory labels = ["eth", "dai", "vydai", "vyeth"];
 
         for (uint256 i = 0; i < 4; i++) {
             provider.addAsset(i, labels[i]);
         }
 
         DataProvider.AssetData[] memory assets = provider.getAssets();
+        assertEq(assets.length, ROLLUP_PROCESSOR.getSupportedAssetsLength() + 1); // remember Eth base asset
 
         for (uint256 i = 0; i < assets.length; i++) {
             DataProvider.AssetData memory asset = assets[i];
-            assertEq(asset.assetAddress, ROLLUP_PROCESSOR.getSupportedAsset(i));
-            assertEq(asset.label, labels[i]);
-            assertEq(asset.assetId, i);
+            if (i < labels.length) {
+                assertEq(asset.assetAddress, ROLLUP_PROCESSOR.getSupportedAsset(i));
+                assertEq(asset.label, labels[i]);
+                assertEq(asset.assetId, i);
+            } else {
+                assertEq(asset.assetAddress, address(0));
+                assertEq(asset.label, "");
+                assertEq(asset.assetId, 0);
+            }
         }
     }
 

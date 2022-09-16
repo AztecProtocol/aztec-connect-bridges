@@ -17,7 +17,24 @@ contract DataProviderDeployment is BaseDeployment {
         return address(provider);
     }
 
-    function read() public {}
+    function read() public {
+        // Todo: Replace address of data provider
+        DataProvider provider = DataProvider(0);
+
+        DataProvider.AssetData[] memory assets = provider.getAssets();
+        for (uint256 i = 0; i < assets.length; i++) {
+            DataProvider.AssetData memory asset = assets[i];
+            emit log_named_uint(asset.label, asset.assetId);
+        }
+
+        DataProvider.BridgeData[] memory bridges = provider.getBridges();
+        for (uint256 i = 0; i < bridges.length; i++) {
+            DataProvider.BridgeData memory bridge = bridges[i];
+            if (bridge.bridgeAddressId != 0) {
+                emit log_named_uint(bridge.label, bridge.bridgeAddressId);
+            }
+        }
+    }
 
     function deployAndListMany() public {
         address provider = deploy();
@@ -33,18 +50,20 @@ contract DataProviderDeployment is BaseDeployment {
         assetTags[3] = "vydai";
         assetTags[4] = "vyweth";
 
-        uint256[] memory bridgeAddressIds = new uint256[](4);
-        string[] memory bridgeTags = new string[](4);
+        uint256[] memory bridgeAddressIds = new uint256[](5);
+        string[] memory bridgeTags = new string[](5);
 
         bridgeAddressIds[0] = 1;
         bridgeAddressIds[1] = 6;
         bridgeAddressIds[2] = 7;
         bridgeAddressIds[3] = 8;
+        bridgeAddressIds[4] = 9;
 
         bridgeTags[0] = "ElementBridge";
         bridgeTags[1] = "CurveStEthBridge";
         bridgeTags[2] = "YearnBridge_Deposit";
         bridgeTags[3] = "YearnBridge_Withdraw";
+        bridgeTags[4] = "ElementBridge2M";
 
         vm.broadcast();
         DataProvider(provider).addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
