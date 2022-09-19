@@ -272,7 +272,9 @@ abstract contract BridgeTestBase is Test {
      * @notice A function which iterates through logs, decodes relevant events and returns values which were originally
      *         returned from bridge's `convert(...)` function.
      * @dev You have to call `vm.recordLogs()` before calling this function
-     * @dev If no DefiBridgeProcessed event is found or more than 1 is found function reverts
+     * @dev If there are multiple DefiBridgeProcessed events, values of the last one are returned --> this occurs when
+     *      the bridge finalises interactions within it's convert functions. Returning values of the last ones works
+     *      because the last emitted DefiBridgeProcessed event corresponds to the `convert(...)` call.
      * @return outputValueA the amount of outputAssetA returned from the DeFi bridge interaction in this rollup
      * @return outputValueB the amount of outputAssetB returned from the DeFi bridge interaction in this rollup
      * @return isAsync a flag indicating whether the DeFi bridge interaction in this rollup was async
@@ -287,19 +289,14 @@ abstract contract BridgeTestBase is Test {
     {
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
-        uint256 numEventsFound;
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].topics[0] == BRIDGE_PROCESSED_EVENT_SIG) {
                 (, outputValueA, outputValueB) = abi.decode(logs[i].data, (uint256, uint256, uint256));
-                ++numEventsFound;
             } else if (logs[i].topics[0] == ASYNC_BRIDGE_PROCESSED_EVENT_SIG) {
                 // We don't return totalInputValue so there is no need to decode the event's data
-                isAsync = true;
-                ++numEventsFound;
+                return (0, 0, true);
             }
         }
-
-        if (numEventsFound != 1) revert("Incorrect number of events found");
     }
 
     /**
