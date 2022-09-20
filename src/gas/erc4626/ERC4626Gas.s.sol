@@ -18,6 +18,7 @@ interface IRead {
 contract ERC4626Measure is ERC4626Deployment {
     ISubsidy private constant SUBSIDY = ISubsidy(0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA);
     IWETH private constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    IERC20 private constant WSTETH = IERC20(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
     address private constant BENEFICIARY = address(uint160(uint256(keccak256(abi.encodePacked("_BENEFICIARY")))));
 
     GasBase internal gasBase;
@@ -27,6 +28,9 @@ contract ERC4626Measure is ERC4626Deployment {
     AztecTypes.AztecAsset internal ethAsset;
     AztecTypes.AztecAsset internal wethAsset;
     AztecTypes.AztecAsset internal wewethAsset; // ERC4626-Wrapped Euler WETH (weWETH)
+
+    AztecTypes.AztecAsset internal wstethAsset;
+    AztecTypes.AztecAsset internal wewstethAsset; // ERC4626-Wrapped Euler wstETH (wewstETH)
 
     function setUp() public override(BaseDeployment) {
         super.setUp();
@@ -54,24 +58,46 @@ contract ERC4626Measure is ERC4626Deployment {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
+        wstethAsset = AztecTypes.AztecAsset({
+            id: 4,
+            erc20Address: address(WSTETH),
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+        wewstethAsset = AztecTypes.AztecAsset({
+            id: 5,
+            erc20Address: 0x60897720AA966452e8706e74296B018990aEc527,
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+
         // List vaults and fund subsidy
         vm.startBroadcast();
         bridge.listVault(wewethAsset.erc20Address);
-        SUBSIDY.subsidize{value: 10 ether}(
+        bridge.listVault(wewstethAsset.erc20Address);
+        SUBSIDY.subsidize{value: 1e17}(
             address(bridge),
             bridge.computeCriteria(wethAsset, emptyAsset, wewethAsset, emptyAsset, 0),
             500
         );
-        SUBSIDY.subsidize{value: 10 ether}(
+        SUBSIDY.subsidize{value: 1e17}(
             address(bridge),
             bridge.computeCriteria(wewethAsset, emptyAsset, wethAsset, emptyAsset, 0),
+            500
+        );
+        SUBSIDY.subsidize{value: 1e17}(
+            address(bridge),
+            bridge.computeCriteria(wstethAsset, emptyAsset, wewstethAsset, emptyAsset, 0),
+            500
+        );
+        SUBSIDY.subsidize{value: 1e17}(
+            address(bridge),
+            bridge.computeCriteria(wewstethAsset, emptyAsset, wstethAsset, emptyAsset, 0),
             500
         );
         SUBSIDY.registerBeneficiary(BENEFICIARY);
         vm.stopBroadcast();
 
         // Warp time to increase subsidy
-        vm.warp(block.timestamp + 1 days);
+        vm.warp(block.timestamp + 10 days);
     }
 
     function measureETH() public {
@@ -118,7 +144,7 @@ contract ERC4626Measure is ERC4626Deployment {
                 1,
                 1,
                 BENEFICIARY,
-                240000
+                260000
             );
             emit log_named_uint(
                 "weweth balance of gasBase",
@@ -186,6 +212,69 @@ contract ERC4626Measure is ERC4626Deployment {
             emit log_named_uint(
                 "weweth balance of gasBase",
                 IERC20(wewethAsset.erc20Address).balanceOf(address(gasBase))
+            );
+        }
+
+        uint256 claimableSubsidyAfterWithdrawal = SUBSIDY.claimableAmount(BENEFICIARY);
+        assertGt(
+            claimableSubsidyAfterWithdrawal,
+            claimableSubsidyAfterDeposit,
+            "Subsidy was not claimed during withdrawal"
+        );
+        emit log_named_uint("Claimable subsidy after withdrawal", claimableSubsidyAfterWithdrawal);
+    }
+
+    // @dev expects to be called from an address which holds WSTETH
+    function measureWSTETH() public {
+        uint256 wstEthBalance = WSTETH.balanceOf(tx.origin);
+        vm.broadcast();
+        WSTETH.transfer(address(gasBase), wstEthBalance);
+        emit log_named_uint("WSTETH balance of gasBase", WSTETH.balanceOf(address(gasBase)));
+
+        // Deposit
+        {
+            vm.broadcast();
+            gasBase.convert(
+                address(bridge),
+                wstethAsset,
+                emptyAsset,
+                wewstethAsset,
+                emptyAsset,
+                wstEthBalance,
+                0,
+                0,
+                BENEFICIARY,
+                280000
+            );
+        }
+
+        uint256 claimableSubsidyAfterDeposit = SUBSIDY.claimableAmount(BENEFICIARY);
+        assertGt(claimableSubsidyAfterDeposit, 0, "Subsidy was not claimed during deposit");
+        emit log_named_uint("Claimable subsidy after deposit", claimableSubsidyAfterDeposit);
+
+        uint256 wewstethBalance = IERC20(wewstethAsset.erc20Address).balanceOf(address(gasBase));
+
+        // Withdraw half the weweth
+        // No need to warp time here because withdrawal has different subsidy criteria
+        {
+            emit log_named_uint("weweth balance of gasBase", wewstethBalance);
+
+            vm.broadcast();
+            gasBase.convert(
+                address(bridge),
+                wewstethAsset,
+                emptyAsset,
+                wstethAsset,
+                emptyAsset,
+                wewstethBalance / 2,
+                1,
+                1,
+                BENEFICIARY,
+                240000
+            );
+            emit log_named_uint(
+                "wewstethBalance balance of gasBase",
+                IERC20(wewstethAsset.erc20Address).balanceOf(address(gasBase))
             );
         }
 
