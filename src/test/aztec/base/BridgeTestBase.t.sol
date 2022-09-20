@@ -59,38 +59,6 @@ contract BridgeTestBaseTest is BridgeTestBase {
         assertTrue(isAsync, "Interaction unexpectedly async");
     }
 
-    function testGetDefiBridgeProcessedDataIncorrectNumEvents() public {
-        vm.recordLogs();
-        emit DefiBridgeProcessed(126, 12, 41, 9769836, 35345, true, "");
-        emit DefiBridgeProcessed(12354, 354, 623, 26634, 6342, true, "");
-        vm.expectRevert("Incorrect number of events found");
-        _getDefiBridgeProcessedData();
-    }
-
-    function testGetDefiBridgeProcessedDataIncorrectNumEventsAsync() public {
-        vm.recordLogs();
-        emit AsyncDefiBridgeProcessed(126, 12, 1e18);
-        emit AsyncDefiBridgeProcessed(126, 12, 1e18);
-        vm.expectRevert("Incorrect number of events found");
-        _getDefiBridgeProcessedData();
-    }
-
-    function testGetDefiBridgeProcessedDataIncorrectNumEventsNoEvent() public {
-        vm.recordLogs();
-        vm.expectRevert("Incorrect number of events found");
-        _getDefiBridgeProcessedData();
-    }
-
-    function testGetDefiBridgeProcessedDataIncorrectNumEventsSyncAndAsync() public {
-        vm.recordLogs();
-        emit DefiBridgeProcessed(126, 12, 41, 9769836, 35345, true, "");
-        emit AsyncDefiBridgeProcessed(126, 12, 1e18);
-        emit AsyncDefiBridgeProcessed(126, 12, 1e18);
-        emit DefiBridgeProcessed(12354, 354, 623, 26634, 6342, true, "");
-        vm.expectRevert("Incorrect number of events found");
-        _getDefiBridgeProcessedData();
-    }
-
     function testRollupBeneficiaryEncoding() public {
         address beneficiary = 0x508383c4cbD351dC2d4F632C65Ee9d2BC79612EC;
         this.setRollupBeneficiary(beneficiary);
