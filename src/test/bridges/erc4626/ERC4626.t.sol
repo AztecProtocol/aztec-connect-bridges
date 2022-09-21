@@ -18,7 +18,8 @@ contract ERC4626Test is BridgeTestBase {
         0x5DcaAF1F0B32244131FEd00dE9c4598Ae526dAb2, // TTV - Tokemak vault
         0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0, // ERC4626-Wrapped Euler WETH (weWETH)
         0x20706baA0F89e2dccF48eA549ea5A13B9b30462f, // ERC4626-Wrapped Euler oSQTH (weoSQTH)
-        0x60897720AA966452e8706e74296B018990aEc527 //  ERC4626-Wrapped Euler wstETH (wewstETH)
+        0x60897720AA966452e8706e74296B018990aEc527, //  ERC4626-Wrapped Euler wstETH (wewstETH)
+        0x4169Df1B7820702f566cc10938DA51F6F597d264 //  ERC4626-Wrapped Euler DAI (weDAI)
     ];
     AztecTypes.AztecAsset[] private shares;
     AztecTypes.AztecAsset[] private assets;
