@@ -34,14 +34,38 @@ contract AggregateDeployment is BaseDeployment {
             yDeploy.setUp();
             yDeploy.deployAndList();
         }
+
+        emit log("--- ERC4626 ---");
+        {
+            ERC4626Deployment deploy = new ERC4626Deployment();
+            deploy.setUp();
+            deploy.deployAndList();
+        }
+
+        emit log("--- Euler ---");
+        {
+            address erc4626EulerWETH = 0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0;
+            uint256 weWethAssetId = listAsset(erc4626EulerWETH, 55000);
+            emit log_named_uint("ERC4626 euler weth id", weWethAssetId);
+
+            address erc4626EulerWSTETH = 0x60897720AA966452e8706e74296B018990aEc527;
+            uint256 wewstEthAssetId = listAsset(erc4626EulerWSTETH, 55000);
+            emit log_named_uint("ERC4626 euler wstEth id", wewstEthAssetId);
+
+            address erc4626EulerDai = 0x4169Df1B7820702f566cc10938DA51F6F597d264;
+            uint256 wedaiAssetId = listAsset(erc4626EulerDai, 55000);
+            emit log_named_uint("ERC4626 euler dai id", wedaiAssetId);
+        }
+
+        readStats();
     }
 
     function readStats() public {
         IRollupProcessor rp = IRollupProcessor(ROLLUP_PROCESSOR);
 
         uint256 assetCount = assetLength();
-        emit log_named_uint("Assets added ", assetCount);
-        for (uint256 i = 0; i < assetCount; i++) {
+        emit log_named_uint("Assets", assetCount + 1);
+        for (uint256 i = 0; i <= assetCount; i++) {
             string memory symbol = i > 0 ? IERC20Metadata(rp.getSupportedAsset(i)).symbol() : "Eth";
             uint256 gas = i > 0 ? rp.assetGasLimits(i) : 30000;
             emit log_named_string(
@@ -51,7 +75,7 @@ contract AggregateDeployment is BaseDeployment {
         }
 
         uint256 bridgeCount = bridgesLength();
-        emit log_named_uint("Bridges added", bridgeCount);
+        emit log_named_uint("Bridges", bridgeCount);
         for (uint256 i = 1; i <= bridgeCount; i++) {
             address bridge = rp.getSupportedBridge(i);
             uint256 gas = rp.bridgeGasLimits(i);

@@ -17,4 +17,13 @@ contract ERC4626Deployment is BaseDeployment {
 
         return address(bridge);
     }
+
+    function deployAndList() public returns (address) {
+        address bridge = deploy();
+
+        uint256 depositAddressId = listBridge(bridge, 300000);
+        emit log_named_uint("ERC4626 bridge address id", depositAddressId);
+
+        return bridge;
+    }
 }
