@@ -15,6 +15,7 @@ import {ERC4626Deployment} from "./erc4626/ERC4626Deployment.s.sol";
 import {LiquityTroveDeployment} from "./liquity/LiquityTroveDeployment.s.sol";
 import {UniswapDeployment} from "./uniswap/UniswapDeployment.s.sol";
 import {YearnDeployment} from "./yearn/YearnDeployment.s.sol";
+import {DCADeployment} from "./dca/DCADeployment.s.sol";
 
 /**
  * A helper script that allow easy deployment of multiple bridges
@@ -55,6 +56,13 @@ contract AggregateDeployment is BaseDeployment {
             address erc4626EulerDai = 0x4169Df1B7820702f566cc10938DA51F6F597d264;
             uint256 wedaiAssetId = listAsset(erc4626EulerDai, 55000);
             emit log_named_uint("ERC4626 euler dai id", wedaiAssetId);
+        }
+
+        emit log("--- DCA ---");
+        {
+            DCADeployment deploy = new DCADeployment();
+            deploy.setUp();
+            deploy.deployAndList();
         }
 
         readStats();
