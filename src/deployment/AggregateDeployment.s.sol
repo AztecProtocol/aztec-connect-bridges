@@ -36,6 +36,12 @@ contract AggregateDeployment is BaseDeployment {
             yDeploy.deployAndList();
         }
 
+        emit log("--- Element 2M ---");
+        {
+            uint256 element2Id = listBridge(IRollupProcessor(ROLLUP_PROCESSOR).getSupportedBridge(1), 2000000);
+            emit log_named_uint("Element 2M bridge address id", element2Id);
+        }
+
         emit log("--- ERC4626 ---");
         {
             ERC4626Deployment deploy = new ERC4626Deployment();
