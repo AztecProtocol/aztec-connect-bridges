@@ -18,8 +18,12 @@ contract DataProviderDeployment is BaseDeployment {
     }
 
     function read() public {
-        // Todo: Replace address of data provider
-        DataProvider provider = DataProvider(address(0));
+        // TODO: Input data provider on network to read
+        readProvider(address(0));
+    }
+
+    function readProvider(address _provider) public {
+        DataProvider provider = DataProvider(_provider);
 
         DataProvider.AssetData[] memory assets = provider.getAssets();
         for (uint256 i = 0; i < assets.length; i++) {
@@ -39,9 +43,9 @@ contract DataProviderDeployment is BaseDeployment {
     function deployAndListMany() public {
         address provider = deploy();
 
-        uint256[] memory assetIds = new uint256[](5);
-        string[] memory assetTags = new string[](5);
-        for (uint256 i = 0; i < 5; i++) {
+        uint256[] memory assetIds = new uint256[](8);
+        string[] memory assetTags = new string[](8);
+        for (uint256 i = 0; i < assetIds.length; i++) {
             assetIds[i] = i;
         }
         assetTags[0] = "eth";
@@ -49,24 +53,33 @@ contract DataProviderDeployment is BaseDeployment {
         assetTags[2] = "wsteth";
         assetTags[3] = "vydai";
         assetTags[4] = "vyweth";
+        assetTags[5] = "weweth";
+        assetTags[6] = "wewsteth";
+        assetTags[7] = "wedai";
 
-        uint256[] memory bridgeAddressIds = new uint256[](5);
-        string[] memory bridgeTags = new string[](5);
+        uint256[] memory bridgeAddressIds = new uint256[](7);
+        string[] memory bridgeTags = new string[](7);
 
         bridgeAddressIds[0] = 1;
         bridgeAddressIds[1] = 6;
         bridgeAddressIds[2] = 7;
         bridgeAddressIds[3] = 8;
         bridgeAddressIds[4] = 9;
+        bridgeAddressIds[5] = 10;
+        bridgeAddressIds[6] = 11;
 
         bridgeTags[0] = "ElementBridge";
         bridgeTags[1] = "CurveStEthBridge";
         bridgeTags[2] = "YearnBridge_Deposit";
         bridgeTags[3] = "YearnBridge_Withdraw";
         bridgeTags[4] = "ElementBridge2M";
+        bridgeTags[5] = "ERC4626";
+        bridgeTags[6] = "DCA400K";
 
         vm.broadcast();
         DataProvider(provider).addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
+
+        readProvider(provider);
     }
 
     function _listBridge(
