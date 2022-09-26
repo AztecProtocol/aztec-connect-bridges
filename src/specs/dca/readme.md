@@ -73,15 +73,17 @@ The bridge maintains state of the individual DCA positions and the aggregated ti
 
 ## Any other relevant information
 
-To function optimally, the bridge relies on external parties coming in to arb it.
+To function optimally, the bridge relies on external parties coming in to arb it, to perform the actual swaps.
 
-## How to arbitrage the bridge?
+## How to "extract value" from the bridge?
 
-Since the bridge allows external parties to swap tokens at an oracle price there is an arbitrage opportunity in case the oracle price deviates enough from the DEX price.
-The bridge can be arbitraged by doing the following:
+There are two ways in which a searcher can "extract value" from this bridge:
+1. She can arb the difference between the current oracle price and the market price. 
+    - Say the oracle price is 1000 Dai/Eth, but on-chain DEXes will let you swap at 990 Dai/Eth (with little slippage for the example). Also, say that the bridge has an excess of 5000 Dai it want to buy Eth with. The searcher can then go to the DEX to swap 4950 Dai to 5 eth which she then sells to the bridge for 5000 dai, she has now profited 50 Dai - fees. To sell to the bridge, she uses `rebalanceAndFill()` with her Dai offer, and 0 Weth.
+2. The bridge pays a fee to `tx.origin` (see note earlier), when a DCA position is finalised. The searcher can watch for DCA positions that can be finalised and simply finalise them for profit. As positions can be finalised when they have been fully "swapped", a combination of `(rebalanceAndFill() || rebalanceAndFillUniswap()) && finalise()` can be executed to take a make a position finalizable and then instantly finalise it.
 
-1. Simulating a call to `rebalanceAndFill(uint256 _offerA, uint256 _offerB)` with large `_offerA` and `_offerB` values,
-2. checking how much of assets was taken and received,
-3. comparing it with the prices on DEXes and determining whether the trade makes sense given the current gas price.
+An example of 1 and 2 can be seen in [BiDCABridgeArber.t.sol](../../test/bridges/dca/BiDCABridgeArber.t.sol).
+
+To figure out if the swap can be made profitable, she might check the `getAvailable()` to get an upper limit on the swappable value, if only one of the returnValues are non-zero, you know it is all excess and swappable, otherwise, simulating `rebalanceAndFill()` off-chain should be an easy way to figure out it the trade is profitable or not.
 
 The bridge was deployed at [0x94679A39679ffE53B53b6a1187aa1c649A101321](https://etherscan.io/address/0x94679A39679ffE53B53b6a1187aa1c649A101321).

@@ -525,7 +525,6 @@ describe("Testing Yearn getUnderlyingAmount", () => {
 
     const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
     const underlyingAsset = await yearnBridgeData.getUnderlyingAmount(yvDaiAsset, 10n ** 18n);
-    console.log(underlyingAsset);
 
     expect(underlyingAsset.address.toString()).toBe("0x6B175474E89094C44Da98b954EedeAC495271d0F");
     expect(underlyingAsset.name).toBe("Dai Stablecoin");
