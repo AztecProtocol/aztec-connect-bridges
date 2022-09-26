@@ -78,9 +78,10 @@ To function optimally, the bridge relies on external parties coming in to arb it
 ## How to "extract value" from the bridge?
 
 There are two ways in which a searcher can "extract value" from this bridge:
-1. She can arb the difference between the current oracle price and the market price. 
-    - Say the oracle price is 1000 Dai/Eth, but on-chain DEXes will let you swap at 990 Dai/Eth (with little slippage for the example). Also, say that the bridge has an excess of 5000 Dai it want to buy Eth with. The searcher can then go to the DEX to swap 4950 Dai to 5 eth which she then sells to the bridge for 5000 dai, she has now profited 50 Dai - fees. To sell to the bridge, she uses `rebalanceAndFill()` with her Dai offer, and 0 Weth.
-2. The bridge pays a fee to `tx.origin` (see note earlier), when a DCA position is finalised. The searcher can watch for DCA positions that can be finalised and simply finalise them for profit. As positions can be finalised when they have been fully "swapped", a combination of `(rebalanceAndFill() || rebalanceAndFillUniswap()) && finalise()` can be executed to take a make a position finalizable and then instantly finalise it.
+
+1. She can arb the difference between the current oracle price and the market price.
+   - Say the oracle price is 1000 Dai/Eth, but on-chain DEXes will let you swap at 990 Dai/Eth (with little slippage for the example). Also, say that the bridge has an excess of 5000 Dai it want to buy Eth with. The searcher can then go to the DEX to swap 4950 Dai to 5 eth which she then sells to the bridge for 5000 dai, she has now profited 50 Dai - fees. To sell to the bridge, she uses `rebalanceAndFill()` with her Dai offer, and 0 Weth.
+2. The bridge pays a fee to `tx.origin` (see note earlier), when a DCA position is finalised. The searcher can watch for DCA positions that can be finalised and simply finalise them for profit. As positions can be finalised when they have been fully "swapped", a combination of `(rebalanceAndFill() || rebalanceAndFillUniswap()) && finalise()` can be executed to take a make a position finalizable and then instantly finalise it.
 
 An example of 1 and 2 can be seen in [BiDCABridgeArber.t.sol](../../test/bridges/dca/BiDCABridgeArber.t.sol).
 
