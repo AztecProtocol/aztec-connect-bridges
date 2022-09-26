@@ -80,11 +80,13 @@ To function optimally, the bridge relies on external parties coming in to arb it
 There are two ways in which a searcher can "extract value" from this bridge:
 
 1. She can arb the difference between the current oracle price and the market price.
-   - Say the oracle price is 1000 Dai/Eth, but on-chain DEXes will let you swap at 990 Dai/Eth (with little slippage for the example). Also, say that the bridge has an excess of 5000 Dai it want to buy Eth with. The searcher can then go to the DEX to swap 4950 Dai to 5 eth which she then sells to the bridge for 5000 dai, she has now profited 50 Dai - fees. To sell to the bridge, she uses `rebalanceAndFill()` with her Dai offer, and 0 Weth.
+   - Say the oracle price is 1000 Dai/Eth, but on-chain DEXes will let you swap at 990 Dai/Eth (with little slippage for the example). Also, say that the bridge has an excess of 5000 Dai it wants to buy Eth with. The searcher can then go to the DEX to swap 4950 Dai to 5 eth which she then sells to the bridge for 5000 dai, she has now profited 50 Dai - fees. To sell to the bridge, she uses `rebalanceAndFill()` with her Dai offer, and 0 Weth.
 2. The bridge pays a fee to `tx.origin` (see note earlier), when a DCA position is finalised. The searcher can watch for DCA positions that can be finalised and simply finalise them for profit. As positions can be finalised when they have been fully "swapped", a combination of `(rebalanceAndFill() || rebalanceAndFillUniswap()) && finalise()` can be executed to take a make a position finalizable and then instantly finalise it.
 
 An example of 1 and 2 can be seen in [BiDCABridgeArber.t.sol](../../test/bridges/dca/BiDCABridgeArber.t.sol).
 
-To figure out if the swap can be made profitable, she might check the `getAvailable()` to get an upper limit on the swappable value, if only one of the returnValues are non-zero, you know it is all excess and swappable, otherwise, simulating `rebalanceAndFill()` off-chain should be an easy way to figure out it the trade is profitable or not.
+To figure out how much can be traded with the bridge call `getAvailable()` to get an upper limit on the swappable value.
+If only one of the returned values is zero, you know that the full non-zero value is excess and can be traded with the bridge.
+If both values are non-zero you should simulate a `rebalanceAndFill(...)` call to determine profitability.
 
 The bridge was deployed at [0x94679A39679ffE53B53b6a1187aa1c649A101321](https://etherscan.io/address/0x94679A39679ffE53B53b6a1187aa1c649A101321).
