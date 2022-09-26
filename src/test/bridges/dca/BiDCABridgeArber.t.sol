@@ -91,7 +91,7 @@ contract BiDCATestUnit is Test {
         vm.warp(block.timestamp + 3 days); // next tick + 2 days
 
         bridge.rebalanceAndFillUniswap(type(uint256).max);
-        (uint256 acc, bool complete) = bridge.getAccumulated(nonce);
+        (uint256 acc, ) = bridge.getAccumulated(nonce);
 
         uint256 balanceBefore = WETH.balanceOf(SEARCHER);
 
@@ -106,7 +106,6 @@ contract BiDCATestUnit is Test {
 
     function testSearcherSwap() public {
         uint256 daiDeposit = 5000e18;
-        uint256 nonce = 0;
 
         // Create a position, 5000 dai -> eth over 2 day
         deal(address(assetA), address(bridge), daiDeposit);
