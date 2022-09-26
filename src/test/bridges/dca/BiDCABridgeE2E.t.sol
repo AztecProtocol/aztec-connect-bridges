@@ -18,27 +18,6 @@ import {ISwapRouter} from "../../../interfaces/uniswapv3/ISwapRouter.sol";
 
 import {UniswapDCABridge} from "../../../bridges/dca/UniswapDCABridge.sol";
 
-/**
- * @notice ERC20 token implementation useful in testing
- * @author Lasse Herskind
- */
-contract Testtoken is ERC20 {
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        uint8 _decimals
-    ) ERC20(_name, _symbol) {}
-
-    /**
-     * @notice Mint tokens to address
-     * @param _to The receiver of tokens
-     * @param _amount The amount of tokens to mint
-     */
-    function mint(address _to, uint256 _amount) external {
-        _mint(_to, _amount);
-    }
-}
-
 contract BiDCATestE2E is BridgeTestBase {
     using SafeERC20 for IERC20;
     using SafeERC20 for ERC20;
