@@ -74,3 +74,14 @@ The bridge maintains state of the individual DCA positions and the aggregated ti
 ## Any other relevant information
 
 To function optimally, the bridge relies on external parties coming in to arb it.
+
+## How to arbitrage the bridge?
+
+Since the bridge allows external parties to swap tokens at an oracle price there is an arbitrage opportunity in case the oracle price deviates enough from the DEX price.
+The bridge can be arbitraged by doing the following:
+
+1. Simulating a call to `rebalanceAndFill(uint256 _offerA, uint256 _offerB)` with large `_offerA` and `_offerB` values,
+2. checking how much of assets was taken and received,
+3. comparing it with the prices on DEXes and determining whether the trade makes sense given the current gas price.
+
+The bridge was deployed at [0x94679A39679ffE53B53b6a1187aa1c649A101321](https://etherscan.io/address/0x94679A39679ffE53B53b6a1187aa1c649A101321).
