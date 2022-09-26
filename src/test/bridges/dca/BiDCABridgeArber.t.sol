@@ -18,7 +18,7 @@ import {ISwapRouter} from "../../../interfaces/uniswapv3/ISwapRouter.sol";
 import {BiDCABridge} from "../../../bridges/dca/BiDCABridge.sol";
 import {UniswapDCABridge} from "../../../bridges/dca/UniswapDCABridge.sol";
 
-contract BiDCATestUnit is Test {
+contract BiDCABridgeArberTest is Test {
     using SafeERC20 for IERC20;
     using SafeERC20 for ERC20;
 
