@@ -7,8 +7,9 @@ import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from 
 
 export class ERC4626BridgeData implements BridgeDataFieldGetters {
   readonly WETH = EthAddress.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
+  shareToAssetMap = new Map<EthAddress, EthAddress>();
 
-  private constructor(private ethersProvider: Web3Provider) {}
+  protected constructor(protected ethersProvider: Web3Provider) {}
 
   static create(provider: EthereumProvider) {
     const ethersProvider = createWeb3Provider(provider);
@@ -80,5 +81,20 @@ export class ERC4626BridgeData implements BridgeDataFieldGetters {
     } else {
       throw "Invalid auxData";
     }
+  }
+
+  /**
+   * @notice Gets asset for a given share
+   * @param share Address of the share/vault
+   * @return Address of the underlying asset
+   */
+  async getAsset(share: EthAddress): Promise<EthAddress> {
+    let asset = this.shareToAssetMap.get(share);
+    if (asset === undefined) {
+      const vault = IERC4626__factory.connect(share.toString(), this.ethersProvider);
+      asset = EthAddress.fromString(await vault.asset());
+      this.shareToAssetMap.set(share, asset);
+    }
+    return asset;
   }
 }
