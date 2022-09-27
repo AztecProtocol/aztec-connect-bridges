@@ -1,5 +1,5 @@
-import { DCABridgeData } from "./dca";
-import { BiDCABridge, BiDCABridge__factory, IERC20__factory } from "../../../typechain-types";
+import { DCABridgeData } from "./dca-bridge-data";
+import { BiDCABridge, BiDCABridge__factory } from "../../../typechain-types";
 import { AztecAsset, AztecAssetType } from "../bridge-data";
 import { BigNumber } from "ethers";
 import { EthAddress } from "@aztec/barretenberg/address";
@@ -123,15 +123,18 @@ describe("DCA bridge data", () => {
     };
 
     dcaBridgeData = createDCABridge(dcaBridgeContract as any);
-    const res = await dcaBridgeData.getInteractionPresentValue(0);
+
+    // User owned half the batch
+    const inputValue = dcas[0].amount.toBigInt() / 2n;
+    const res = await dcaBridgeData.getInteractionPresentValue(0, inputValue);
 
     expect(res[0]).toEqual({
       assetId: 1,
-      value: (55n * 10n ** 18n) / 10n,
+      value: (55n * 10n ** 18n) / 10n / 2n,
     });
     expect(res[1]).toEqual({
       assetId: 0,
-      value: (15n * 10n ** 18n) / 10000n,
+      value: (15n * 10n ** 18n) / 10000n / 2n,
     });
   });
 

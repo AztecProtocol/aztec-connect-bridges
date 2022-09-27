@@ -25,7 +25,6 @@ export class DCABridgeData implements BridgeDataFieldGetters {
     return new DCABridgeData(bidcaContract);
   }
 
-  // Unused
   public auxDataConfig: AuxDataConfig[] = [
     {
       start: 0,
@@ -35,8 +34,7 @@ export class DCABridgeData implements BridgeDataFieldGetters {
     },
   ];
 
-  // Lido bridge contract is stateless
-  async getInteractionPresentValue(interactionNonce: number): Promise<AssetValue[]> {
+  async getInteractionPresentValue(interactionNonce: number, inputValue: bigint): Promise<AssetValue[]> {
     const position = await this.bidcaContract.getDCA(interactionNonce);
 
     const tickAmount = position.amount.div(position.end - position.start);
@@ -65,11 +63,11 @@ export class DCABridgeData implements BridgeDataFieldGetters {
     return [
       {
         assetId: aToB ? 1 : 0,
-        value: position.amount.toBigInt() - soldSum,
+        value: ((position.amount.toBigInt() - soldSum) * inputValue) / position.amount.toBigInt(),
       },
       {
         assetId: !aToB ? 1 : 0,
-        value: boughtSum,
+        value: (boughtSum * inputValue) / position.amount.toBigInt(),
       },
     ];
   }
