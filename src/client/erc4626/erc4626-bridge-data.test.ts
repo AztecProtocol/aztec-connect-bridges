@@ -106,4 +106,19 @@ describe("ERC4626 bridge data", () => {
     )[0];
     expect(expectedOutput).toBe(111111n);
   });
+
+  it("should correctly get asset", async () => {
+    // Setup mocks
+    erc4626Contract = {
+      ...erc4626Contract,
+      asset: jest.fn().mockResolvedValue(mplAsset.erc20Address.toString()),
+    };
+    IERC4626__factory.connect = () => erc4626Contract as any;
+
+    const erc4626BridgeData = ERC4626BridgeData.create({} as any);
+
+    // Test the code using mocked controller
+    const asset = await erc4626BridgeData.getAsset(xmplAsset.erc20Address);
+    expect(asset.toString()).toBe(mplAsset.erc20Address.toString());
+  });
 });
