@@ -1,4 +1,4 @@
-import { EthAddress } from "@aztec/barretenberg/address";
+import { AssetValue } from "@aztec/barretenberg/asset";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
 import "isomorphic-fetch";
@@ -41,5 +41,46 @@ export class EulerBridgeData extends ERC4626BridgeData {
     ).json();
 
     return result.data.asset.supplyAPY / 10 ** 25;
+  }
+
+  /**
+   * @notice Gets market size which in this case means the amount of underlying asset deposited to Euler
+   * @param inputAssetA - The underlying asset
+   * @param inputAssetB - ignored
+   * @param outputAssetA - ignored
+   * @param outputAssetB - ignored
+   * @param auxData - ignored
+   * @return The amount of the underlying asset deposited to Euler
+   */
+  async getMarketSize(
+    inputAssetA: AztecAsset,
+    inputAssetB: AztecAsset,
+    outputAssetA: AztecAsset,
+    outputAssetB: AztecAsset,
+    auxData: number,
+  ): Promise<AssetValue[]> {
+    const result = await (
+      await fetch("https://api.thegraph.com/subgraphs/name/euler-xyz/euler-mainnet", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: `
+        query($id: String!) {
+          asset(id: $id) {
+            totalSupply
+          }
+        }
+      `,
+          variables: {
+            id: inputAssetA.erc20Address.toString().toLowerCase(),
+          },
+        }),
+      })
+    ).json();
+    // TODO: this value is weird - fix onece feedback from Euler team is received
+    const totalSupply = BigInt(result.data.asset.totalSupply);
+    return [{ assetId: inputAssetA.id, value: totalSupply }];
   }
 }

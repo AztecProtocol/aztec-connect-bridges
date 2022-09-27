@@ -53,4 +53,11 @@ describe("Euler bridge data", () => {
     const apr = await eulerBridgeData.getAPR(weDaiAsset);
     expect(apr).toBeGreaterThan(0);
   });
+
+  it("should correctly fetch market size", async () => {
+    const eulerBridgeData = EulerBridgeData.create({} as any);
+    const assetValue = (await eulerBridgeData.getMarketSize(daiAsset, emptyAsset, emptyAsset, emptyAsset, 0))[0];
+    expect(assetValue.assetId).toBe(daiAsset.id);
+    expect(assetValue.value).toBeGreaterThan(0);
+  });
 });
