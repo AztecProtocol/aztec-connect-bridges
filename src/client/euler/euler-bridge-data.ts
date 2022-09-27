@@ -51,6 +51,7 @@ export class EulerBridgeData extends ERC4626BridgeData {
    * @param outputAssetB - ignored
    * @param auxData - ignored
    * @return The amount of the underlying asset deposited to Euler
+   * @dev the returned value is displayed as totalSupply in Euler's UI
    */
   async getMarketSize(
     inputAssetA: AztecAsset,
@@ -69,7 +70,7 @@ export class EulerBridgeData extends ERC4626BridgeData {
           query: `
         query($id: String!) {
           asset(id: $id) {
-            totalSupply
+            totalBalances
           }
         }
       `,
@@ -79,8 +80,6 @@ export class EulerBridgeData extends ERC4626BridgeData {
         }),
       })
     ).json();
-    // TODO: this value is weird - fix onece feedback from Euler team is received
-    const totalSupply = BigInt(result.data.asset.totalSupply);
-    return [{ assetId: inputAssetA.id, value: totalSupply }];
+    return [{ assetId: inputAssetA.id, value: BigInt(result.data.asset.totalBalances) }];
   }
 }
