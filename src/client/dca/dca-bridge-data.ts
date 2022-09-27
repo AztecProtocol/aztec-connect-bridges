@@ -1,10 +1,4 @@
-import {
-  UnderlyingAsset,
-  AuxDataConfig,
-  AztecAsset,
-  SolidityType,
-  BridgeDataFieldGetters,
-} from "../bridge-data";
+import { UnderlyingAsset, AuxDataConfig, AztecAsset, SolidityType, BridgeDataFieldGetters } from "../bridge-data";
 
 import { BiDCABridge, BiDCABridge__factory, IERC20__factory } from "../../../typechain-types";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
