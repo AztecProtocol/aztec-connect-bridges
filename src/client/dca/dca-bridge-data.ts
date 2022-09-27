@@ -3,7 +3,6 @@ import {
   AuxDataConfig,
   AztecAsset,
   SolidityType,
-  AztecAssetType,
   BridgeDataFieldGetters,
 } from "../bridge-data";
 
