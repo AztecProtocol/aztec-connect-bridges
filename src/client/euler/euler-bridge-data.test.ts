@@ -60,4 +60,11 @@ describe("Euler bridge data", () => {
     expect(assetValue.assetId).toBe(daiAsset.id);
     expect(assetValue.value).toBeGreaterThan(0);
   });
+
+  it("should correctly fetch market size for ETH", async () => {
+    const eulerBridgeData = EulerBridgeData.create({} as any);
+    const assetValue = (await eulerBridgeData.getMarketSize(ethAsset, emptyAsset, emptyAsset, emptyAsset, 0))[0];
+    expect(assetValue.assetId).toBe(ethAsset.id);
+    expect(assetValue.value).toBeGreaterThan(0);
+  });
 });

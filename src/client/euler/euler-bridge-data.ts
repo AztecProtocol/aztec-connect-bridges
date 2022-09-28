@@ -3,11 +3,13 @@ import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
 import "isomorphic-fetch";
 import { createWeb3Provider } from "../aztec/provider";
-import { AztecAsset } from "../bridge-data";
+import { AztecAsset, AztecAssetType } from "../bridge-data";
 
 import { ERC4626BridgeData } from "../erc4626/erc4626-bridge-data";
 
 export class EulerBridgeData extends ERC4626BridgeData {
+  private readonly subgraphWethId = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
+
   protected constructor(ethersProvider: Web3Provider) {
     super(ethersProvider);
   }
@@ -60,6 +62,11 @@ export class EulerBridgeData extends ERC4626BridgeData {
     outputAssetB: AztecAsset,
     auxData: number,
   ): Promise<AssetValue[]> {
+    const subgraphAssetId =
+      inputAssetA.assetType === AztecAssetType.ETH
+        ? this.subgraphWethId
+        : inputAssetA.erc20Address.toString().toLowerCase();
+
     const result = await (
       await fetch("https://api.thegraph.com/subgraphs/name/euler-xyz/euler-mainnet", {
         method: "POST",
@@ -75,7 +82,7 @@ export class EulerBridgeData extends ERC4626BridgeData {
         }
       `,
           variables: {
-            id: inputAssetA.erc20Address.toString().toLowerCase(),
+            id: subgraphAssetId,
           },
         }),
       })
