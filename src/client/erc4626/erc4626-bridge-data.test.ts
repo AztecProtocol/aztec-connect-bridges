@@ -1,6 +1,6 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { BigNumber } from "ethers";
-import { IERC4626, IERC4626__factory } from "../../../typechain-types";
+import { IERC20Metadata, IERC20Metadata__factory, IERC4626, IERC4626__factory } from "../../../typechain-types";
 import { AztecAsset, AztecAssetType } from "../bridge-data";
 import { ERC4626BridgeData } from "./erc4626-bridge-data";
 
@@ -14,18 +14,13 @@ type Mockify<T> = {
 
 describe("ERC4626 bridge data", () => {
   let erc4626Contract: Mockify<IERC4626>;
+  let erc2MetadataContract: Mockify<IERC20Metadata>;
 
-  let ethAsset: AztecAsset;
   let mplAsset: AztecAsset;
   let xmplAsset: AztecAsset;
   let emptyAsset: AztecAsset;
 
   beforeAll(() => {
-    ethAsset = {
-      id: 0,
-      assetType: AztecAssetType.ETH,
-      erc20Address: EthAddress.ZERO,
-    };
     mplAsset = {
       id: 10, // Asset has not yet been registered on RollupProcessor so this id is random
       assetType: AztecAssetType.ERC20,
@@ -120,5 +115,32 @@ describe("ERC4626 bridge data", () => {
     // Test the code using mocked controller
     const asset = await erc4626BridgeData.getAsset(xmplAsset.erc20Address);
     expect(asset.toString()).toBe(mplAsset.erc20Address.toString());
+  });
+
+  it("should correctly return underlying asset", async () => {
+    // Setup mocks
+    erc4626Contract = {
+      ...erc4626Contract,
+      asset: jest.fn().mockResolvedValue(mplAsset.erc20Address.toString()),
+      previewRedeem: jest.fn(() => BigNumber.from("100")),
+    };
+    IERC4626__factory.connect = () => erc4626Contract as any;
+
+    erc2MetadataContract = {
+      ...erc2MetadataContract,
+      name: jest.fn().mockResolvedValue("Maple Token"),
+      symbol: jest.fn().mockResolvedValue("MPL"),
+      decimals: jest.fn().mockResolvedValue(18),
+    };
+    IERC20Metadata__factory.connect = () => erc2MetadataContract as any;
+
+    const erc4626BridgeData = ERC4626BridgeData.create({} as any);
+    const underlyingAsset = await erc4626BridgeData.getUnderlyingAmount(xmplAsset, 10n ** 18n);
+
+    expect(underlyingAsset.address.toString()).toBe(mplAsset.erc20Address.toString());
+    expect(underlyingAsset.name).toBe("Maple Token");
+    expect(underlyingAsset.symbol).toBe("MPL");
+    expect(underlyingAsset.decimals).toBe(18);
+    expect(underlyingAsset.amount).toBe(100n);
   });
 });
