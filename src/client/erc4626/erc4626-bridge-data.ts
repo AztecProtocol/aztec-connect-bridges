@@ -1,12 +1,11 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
-import { IERC4626__factory } from "../../../typechain-types";
+import { IERC20Metadata__factory, IERC4626__factory } from "../../../typechain-types";
 import { createWeb3Provider } from "../aztec/provider";
-import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
+import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType, UnderlyingAsset } from "../bridge-data";
 
 export class ERC4626BridgeData implements BridgeDataFieldGetters {
-  readonly WETH = EthAddress.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
   shareToAssetMap = new Map<EthAddress, EthAddress>();
 
   protected constructor(protected ethersProvider: Web3Provider) {}
@@ -96,5 +95,30 @@ export class ERC4626BridgeData implements BridgeDataFieldGetters {
       this.shareToAssetMap.set(share, asset);
     }
     return asset;
+  }
+
+  /**
+   * @notice This function gets the underlying amount of asset corresponding to shares
+   * @param share Address of the share/vault
+   * @param amount Amount of shares to get underlying amount for
+   * @return Underlying amount of asset corresponding to the amount of shares
+   */
+  async getUnderlyingAmount(share: AztecAsset, amount: bigint): Promise<UnderlyingAsset> {
+    const vault = IERC4626__factory.connect(share.erc20Address.toString(), this.ethersProvider);
+    const assetAddress = EthAddress.fromString(await vault.asset());
+
+    const tokenContract = IERC20Metadata__factory.connect(assetAddress.toString(), this.ethersProvider);
+    const namePromise = tokenContract.name();
+    const symbolPromise = tokenContract.symbol();
+    const decimalsPromise = tokenContract.decimals();
+    const amountPromise = vault.previewRedeem(amount);
+
+    return {
+      address: assetAddress,
+      name: await namePromise,
+      symbol: await symbolPromise,
+      decimals: await decimalsPromise,
+      amount: (await amountPromise).toBigInt(),
+    };
   }
 }
