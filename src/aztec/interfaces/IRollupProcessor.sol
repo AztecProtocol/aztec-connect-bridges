@@ -112,5 +112,5 @@ interface IRollupProcessor {
 
     function bridgeGasLimits(uint256 _bridgeAddressId) external view returns (uint256);
 
-    function allowThirdPartyContracts() external view returns(bool);
+    function allowThirdPartyContracts() external view returns (bool);
 }
