@@ -50,7 +50,7 @@ To get started follow the steps below:
    `forge test --match-contract YourBridge -vvv`
 
 6. Write a deployment script.
-   Make a script that inherits from the `BaseDeployment.s.sol` file. The base provides helper functions for listing assets/bridges and a getter for the rollup address. Use the env variables `broadcast = false|true` and `network=mainnet|devnet|testnet` to specify how to run it, with `broadcast = true`, the `listBridge` and `listAsset` helpers will be broadcast, otherwise they are similuated as if they came from the controller. See the example scripts from other bridges, for inspiration on how to do it.
+   Make a script that inherits from the `BaseDeployment.s.sol` file. The base provides helper functions for listing assets/bridges and a getter for the rollup address. Use the env variables `broadcast = false|true` and `network=mainnet|devnet|testnet` to specify how to run it, with `broadcast = true`, the `listBridge` and `listAsset` helpers will be broadcast, otherwise they are simulated as if they came from the controller. See the example scripts from other bridges, for inspiration on how to do it.
 
 All bridges need to be submitted via PRs to this repo.
 To receive a grant payment we expect the following work to be done:
@@ -122,7 +122,7 @@ We decided to have 2 separate approaches of bridge testing:
 
 1. In the first one it is expected that you call convert function directly on the bridge contract.
    This allows for simple debugging because execution traces are simple.
-   Disadvantage of this approach is that you have take care of transferring tokens to and from the bridge (this is handle by the DefiBridgeProxy contract in the production environment).
+   Disadvantage of this approach is that you have to take care of transferring tokens to and from the bridge (this is handled by the DefiBridgeProxy contract in the production environment).
    This type of test can be considered to be a unit test and an example of such a test is [here](./src/test/bridges/example/ExampleUnit.t.sol).
 
 2. In the second approach we construct a `bridgeCallData`, we mock proof data and verifier's response, and we pass this data directly to the RollupProcessor's `processRollup(...)` function.
