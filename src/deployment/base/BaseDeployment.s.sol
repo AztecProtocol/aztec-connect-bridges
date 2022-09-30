@@ -23,7 +23,7 @@ abstract contract BaseDeployment is Test {
      */
     enum Mode {
         INVALID,
-        SIMULATE,
+        SIMULATE_ADMIN,
         BROADCAST
     }
 
@@ -43,10 +43,10 @@ abstract contract BaseDeployment is Test {
     function setUp() public virtual {
         // Read from the .env
         string memory networkKey = "network";
-        string memory modeKey = "broadcast";
+        string memory modeKey = "simulateAdmin";
 
         bool envMode = vm.envBool(modeKey);
-        MODE = envMode ? Mode.BROADCAST : Mode.SIMULATE;
+        MODE = envMode ? Mode.SIMULATE_ADMIN : Mode.BROADCAST;
 
         string memory envNetwork = vm.envString(networkKey);
         bytes32 envNetworkHash = keccak256(abi.encodePacked(envNetwork));
@@ -59,7 +59,7 @@ abstract contract BaseDeployment is Test {
             NETWORK = Network.TESTNET;
         }
 
-        if (envMode) {
+        if (MODE == Mode.BROADCAST) {
             emit log_named_string("broadcasting", envNetwork);
         } else {
             emit log_named_string("simulating", envNetwork);
@@ -140,13 +140,13 @@ abstract contract BaseDeployment is Test {
 
     /**
      * @notice Helper to list a `_bridge` on the rollup with the given `_gasLimit`
-     * @dev If MODE == Mode.SIMULATE it impersonates the lister, otherwise broadcasts
+     * @dev If MODE == Mode.SIMULATE_ADMIN it impersonates the lister, otherwise broadcasts
      * @param _bridge The address of the bridge
      * @param _gasLimit The gasLimit to list the bridge with
      * @return The bridgeAddressId for the bridge
      */
     function listBridge(address _bridge, uint256 _gasLimit) public returns (uint256) {
-        if (MODE == Mode.SIMULATE) {
+        if (MODE == Mode.SIMULATE_ADMIN) {
             vm.prank(TO_IMPERSONATE);
         } else {
             vm.broadcast();
@@ -158,7 +158,7 @@ abstract contract BaseDeployment is Test {
     /**
      * @notice Helper to list an `_asset` on the rollup with the given `_gasLimit`
      * @dev Only lists the asset if not listed already
-     * @dev If MODE == Mode.SIMULATE it impersonates the lister, otherwise broadcasts
+     * @dev If MODE == Mode.SIMULATE_ADMIN it impersonates the lister, otherwise broadcasts
      * @param _asset The address of the bridge
      * @param _gasLimit The gasLimit to list the bridge with
      * @return The assetId
@@ -169,7 +169,7 @@ abstract contract BaseDeployment is Test {
             emit log_named_uint("Asset already listed with id", id);
             return id;
         } else {
-            if (MODE == Mode.SIMULATE) {
+            if (MODE == Mode.SIMULATE_ADMIN) {
                 vm.prank(TO_IMPERSONATE);
             } else {
                 vm.broadcast();
