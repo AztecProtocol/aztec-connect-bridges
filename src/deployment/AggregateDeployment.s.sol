@@ -146,7 +146,7 @@ contract AggregateDeployment is BaseDeployment {
             bridgeAddressIds[4] = 16;
             bridgeTags[4] = "UniswapBridge800K";
             bridgeAddressIds[5] = 17;
-            bridgeTags[5] = "Liquity";
+            bridgeTags[5] = "LiquityTroveBridge";
 
             vm.broadcast();
             DataProvider(provider).addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
