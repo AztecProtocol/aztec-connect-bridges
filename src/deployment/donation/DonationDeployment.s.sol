@@ -19,7 +19,7 @@ contract DonationDeployment is BaseDeployment {
 
     function deployAndList() public {
         address bridge = deploy();
-        uint256 addressId = listBridge(bridge, 5000);
+        uint256 addressId = listBridge(bridge, 100000);
         emit log_named_uint("Donation bridge address id", addressId);
     }
 }

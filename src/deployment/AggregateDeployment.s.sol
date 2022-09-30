@@ -7,6 +7,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 
 import {BaseDeployment} from "./base/BaseDeployment.s.sol";
 import {IRollupProcessor} from "../aztec/interfaces/IRollupProcessor.sol";
+import {DataProvider} from "../aztec/DataProvider.sol";
 
 import {CompoundDeployment} from "./compound/CompoundDeployment.s.sol";
 import {CurveDeployment} from "./curve/CurveDeployment.s.sol";
@@ -17,6 +18,8 @@ import {LiquityTroveDeployment} from "./liquity/LiquityTroveDeployment.s.sol";
 import {UniswapDeployment} from "./uniswap/UniswapDeployment.s.sol";
 import {YearnDeployment} from "./yearn/YearnDeployment.s.sol";
 import {DCADeployment} from "./dca/DCADeployment.s.sol";
+import {AngleSLPDeployment} from "./angle/AngleSLPDeployment.s.sol";
+import {DataProviderDeployment} from "./dataprovider/DataProviderDeployment.s.sol";
 
 /**
  * A helper script that allow easy deployment of multiple bridges
@@ -83,8 +86,89 @@ contract AggregateDeployment is BaseDeployment {
         readStats();
     }
 
-    function readStats() public {
+    function bogota() public {
+        //deployAndListAll();
+
+        emit log("--- Donation ---");
+        {
+            DonationDeployment deploy = new DonationDeployment();
+            deploy.setUp();
+            deploy.deployAndList();
+        }
+
+        emit log("--- Angle ---");
+        {
+            AngleSLPDeployment deploy = new AngleSLPDeployment();
+            deploy.setUp();
+            deploy.deployAndList();
+        }
+
+        emit log("--- Uniswap --");
+        {
+            UniswapDeployment deploy = new UniswapDeployment();
+            deploy.setUp();
+            deploy.deployAndList();
+        }
+
+        emit log("--- Liquity ---");
+        {
+            LiquityTroveDeployment deploy = new LiquityTroveDeployment();
+            deploy.setUp();
+            deploy.deployAndList();
+        }
+
+        emit log("--- data provider ---");
+        {
+            DataProviderDeployment deploy = new DataProviderDeployment();
+            deploy.setUp();
+            address provider = deploy.deployAndListMany();
+
+            uint256[] memory assetIds = new uint256[](3);
+            string[] memory assetTags = new string[](3);
+
+            assetIds[0] = 8;
+            assetIds[1] = 9;
+            assetIds[2] = 10;
+            assetTags[0] = "sandai_eur";
+            assetTags[1] = "sanweth_eur";
+            assetTags[2] = "lusd";
+
+            uint256[] memory bridgeAddressIds = new uint256[](6);
+            string[] memory bridgeTags = new string[](6);
+            bridgeAddressIds[0] = 12;
+            bridgeTags[0] = "DonationBridge";
+            bridgeAddressIds[1] = 13;
+            bridgeTags[1] = "AngleSLPBridgeDeposit";
+            bridgeAddressIds[2] = 14;
+            bridgeTags[2] = "AngleSLPBridgeWithdraw";
+            bridgeAddressIds[3] = 15;
+            bridgeTags[3] = "UniswapBridge500K";
+            bridgeAddressIds[4] = 16;
+            bridgeTags[4] = "UniswapBridge800K";
+            bridgeAddressIds[5] = 17;
+            bridgeTags[5] = "Liquity";
+
+            vm.broadcast();
+            DataProvider(provider).addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
+            deploy.readProvider(provider);
+        }
+
         IRollupProcessor rp = IRollupProcessor(ROLLUP_PROCESSOR);
+        vm.broadcast();
+        rp.setAllowThirdPartyContracts(true);
+
+        readStats();
+    }
+
+    function readStats() public {
+        emit log("--- Stats for the rollup ---");
+        IRollupProcessor rp = IRollupProcessor(ROLLUP_PROCESSOR);
+
+        if (rp.allowThirdPartyContracts()) {
+            emit log("Third parties can deploy bridges");
+        } else {
+            emit log("Third parties cannot deploy bridges");
+        }
 
         uint256 assetCount = assetLength();
         emit log_named_uint("Assets", assetCount + 1);
