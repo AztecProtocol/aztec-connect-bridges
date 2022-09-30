@@ -50,12 +50,13 @@ To get started follow the steps below:
    `forge test --match-contract YourBridge -vvv`
 
 6. Write a deployment script.
-   Make a script that inherits from the `BaseDeployment.s.sol` file. The base provides helper functions for listing assets/bridges and a getter for the rollup address.   
-   Use the env variables `simulateAdmin=false|true` and `network=mainnet|devnet|testnet` to specify how to run it.   
+   Make a script that inherits from the `BaseDeployment.s.sol` file. The base provides helper functions for listing assets/bridges and a getter for the rollup address.  
+   Use the env variables `simulateAdmin=false|true` and `network=mainnet|devnet|testnet` to specify how to run it.  
    With `simulateAdmin=true`, the `listBridge` and `listAsset` helpers will be impersonating an account with access to list, otherwise they are broadcasted. See the example scripts from other bridges for inspiration on how to write the scripts.
 
 7. Testing/using your deployment script
-   To run your deployment script, you need to set the environment up first, this include specifying the RPC you will be sending the transactions to and the environment variables from above. You can do it using a private key, or even with a Ledger or Trezor, see the foundry book for more info on using hardware wallets. 
+   To run your deployment script, you need to set the environment up first, this include specifying the RPC you will be sending the transactions to and the environment variables from above. You can do it using a private key, or even with a Ledger or Trezor, see the foundry book for more info on using hardware wallets.
+
    ```bash
    # Use --broadcast when you intend to broadcast the tx's, otherwise it will just simulate
    # When using the testnet, add --legacy, Ganache and EIP-1559 is not the best friends
