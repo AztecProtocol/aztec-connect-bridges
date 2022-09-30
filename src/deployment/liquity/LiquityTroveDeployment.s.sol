@@ -6,7 +6,7 @@ import {BaseDeployment} from "../base/BaseDeployment.s.sol";
 import {TroveBridge} from "../../bridges/liquity/TroveBridge.sol";
 
 contract LiquityTroveDeployment is BaseDeployment {
-    uint256 internal constant INITIAL_CR = 30; // TODO: update
+    uint256 internal constant INITIAL_CR = 250;
 
     function deploy() public returns (address) {
         emit log("Deploying example bridge");
@@ -21,7 +21,9 @@ contract LiquityTroveDeployment is BaseDeployment {
 
     function deployAndList() public {
         address bridge = deploy();
-        uint256 addressId = listBridge(bridge, 250000);
+        uint256 addressId = listBridge(bridge, 1000000);
         emit log_named_uint("Example bridge address id", addressId);
+
+        listAsset(TroveBridge(payable(bridge)).LUSD(), 55000);
     }
 }

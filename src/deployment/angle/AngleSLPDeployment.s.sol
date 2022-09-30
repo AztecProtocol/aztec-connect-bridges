@@ -18,9 +18,9 @@ contract AngleSLPDeployment is BaseDeployment {
 
     function deployAndList() public returns (address) {
         address payable bridge = deploy();
-        uint256 addressId = listBridge(bridge, 170000);
+        uint256 addressId = listBridge(bridge, 250000);
         emit log_named_uint("Angle SLP deposit bridge address id", addressId);
-        addressId = listBridge(bridge, 200000);
+        addressId = listBridge(bridge, 1500000);
         emit log_named_uint("Angle SLP withdraw bridge address id", addressId);
 
         // Listing just the san tokens whose underlying are currently listed

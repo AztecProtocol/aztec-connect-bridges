@@ -28,7 +28,9 @@ contract DataProviderDeployment is BaseDeployment {
         DataProvider.AssetData[] memory assets = provider.getAssets();
         for (uint256 i = 0; i < assets.length; i++) {
             DataProvider.AssetData memory asset = assets[i];
-            emit log_named_uint(asset.label, asset.assetId);
+            if (i == 0 || asset.assetId != 0) {
+                emit log_named_uint(asset.label, asset.assetId);
+            }
         }
 
         DataProvider.BridgeData[] memory bridges = provider.getBridges();
@@ -40,7 +42,7 @@ contract DataProviderDeployment is BaseDeployment {
         }
     }
 
-    function deployAndListMany() public {
+    function deployAndListMany() public returns (address) {
         address provider = deploy();
 
         uint256[] memory assetIds = new uint256[](8);
@@ -79,7 +81,7 @@ contract DataProviderDeployment is BaseDeployment {
         vm.broadcast();
         DataProvider(provider).addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
 
-        readProvider(provider);
+        return provider;
     }
 
     function _listBridge(

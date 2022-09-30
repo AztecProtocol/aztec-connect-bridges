@@ -31,5 +31,7 @@ contract UniswapDeployment is BaseDeployment {
         address bridge = deploy();
         uint256 addressId = listBridge(bridge, 500000);
         emit log_named_uint("Uniswap bridge address id", addressId);
+        uint256 addressIdLarge = listBridge(bridge, 800000);
+        emit log_named_uint("Uniswap large bridge address id", addressIdLarge);
     }
 }
