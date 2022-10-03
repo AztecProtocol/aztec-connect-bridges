@@ -31,6 +31,9 @@ abstract contract BaseDeployment is Test {
     address private constant DEVNET_MS = 0x7095057A08879e09DC1c0a85520e3160A0F67C96;
     address private constant TESTNET_MS = 0x7095057A08879e09DC1c0a85520e3160A0F67C96;
 
+    string private constant MAINNET_URL = "https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c";
+    string private constant TESTNET_AND_DEVNET_URL = "https://mainnet-fork.aztec.network:8545";
+
     /* solhint-disable var-name-mixedcase */
 
     Network private NETWORK;
@@ -53,10 +56,13 @@ abstract contract BaseDeployment is Test {
 
         if (envNetworkHash == keccak256(abi.encodePacked("mainnet"))) {
             NETWORK = Network.MAINNET;
+            vm.selectFork(vm.createFork(MAINNET_URL));
         } else if (envNetworkHash == keccak256(abi.encodePacked("devnet"))) {
             NETWORK = Network.DEVNET;
+            vm.selectFork(vm.createFork(TESTNET_AND_DEVNET_URL));
         } else if (envNetworkHash == keccak256(abi.encodePacked("testnet"))) {
             NETWORK = Network.TESTNET;
+            vm.selectFork(vm.createFork(TESTNET_AND_DEVNET_URL));
         }
 
         if (MODE == Mode.BROADCAST) {

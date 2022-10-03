@@ -55,21 +55,20 @@ To get started follow the steps below:
    With `simulateAdmin=true`, the `listBridge` and `listAsset` helpers will be impersonating an account with access to list, otherwise they are broadcasted. See the example scripts from other bridges for inspiration on how to write the scripts.
 
 7. Testing/using your deployment script
-   To run your deployment script, you need to set the environment up first, this include specifying the RPC you will be sending the transactions to and the environment variables from above. You can do it using a private key, or even with a Ledger or Trezor, see the foundry book for more info on using hardware wallets.
+   To run your deployment script, you need to set the environment up first. You can do it using a private key, or even with a Ledger or Trezor, see the foundry book for more info on using hardware wallets.
 
    ```bash
-   # Use --broadcast when you intend to broadcast the tx's, otherwise it will just simulate
+   # Use --broadcast when you intend to broadcast the txs, otherwise it will just simulate
    # When using the testnet, add --legacy, Ganache and EIP-1559 is not the best friends
    # --ffi is used to allow outside calls, which is used to fetch the latest Rollup address
    # on testnet this will fetch from the Aztec endpoints, on mainnet, this will lookup the `rollup.aztec.eth` ens
-   export RPC=https://mainnet-fork.aztec.network:8545
    export PRIV_KEY=<DEV_KEY> # If using a private-key directly
    export network=testnet # When using the testnet
    export simulateAdmin=false # When you want to broadcast, use `true` if simulating admin
-   forge script --fork-url $RPC --ffi --private-key $PRIV <NAME_OF_DEPLOYMENT_SCRIPT> --sig "<FUNCTION_SIG>" --broadcast
+   forge script --ffi --private-key $PRIV <NAME_OF_DEPLOYMENT_SCRIPT> --sig "<FUNCTION_SIG>" --broadcast
 
    # Example script reading the current assets and bridges:
-   forge script --fork-url $RPC --ffi AggregateDeployment --sig "readStats()"
+   forge script --ffi AggregateDeployment --sig "readStats()"
    ```
 
 All bridges need to be submitted via PRs to this repo.
