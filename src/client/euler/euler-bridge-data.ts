@@ -1,3 +1,4 @@
+import { EthAddress } from "@aztec/barretenberg/address";
 import { AssetValue } from "@aztec/barretenberg/asset";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
@@ -6,17 +7,26 @@ import { createWeb3Provider } from "../aztec/provider";
 import { AztecAsset, AztecAssetType } from "../bridge-data";
 
 import { ERC4626BridgeData } from "../erc4626/erc4626-bridge-data";
+import { LidoBridgeData } from "../lido/lido-bridge-data";
 
 export class EulerBridgeData extends ERC4626BridgeData {
   private readonly subgraphWethId = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
+  private readonly wstETH = EthAddress.fromString("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0");
 
-  protected constructor(ethersProvider: Web3Provider) {
+  protected constructor(ethersProvider: Web3Provider, private lidoBridgeData: LidoBridgeData | undefined) {
     super(ethersProvider);
   }
 
   static create(provider: EthereumProvider) {
     const ethersProvider = createWeb3Provider(provider);
-    return new EulerBridgeData(ethersProvider);
+    return new EulerBridgeData(ethersProvider, undefined);
+  }
+
+  static createWithLido(provider: EthereumProvider, lidoOracleAddress: EthAddress) {
+    const ethersProvider = createWeb3Provider(provider);
+    // Note: passing in only the addresses which are relevant for the getAPR method to keep it simple
+    const lidoBridgeData = LidoBridgeData.create(provider, EthAddress.ZERO, lidoOracleAddress, EthAddress.ZERO);
+    return new EulerBridgeData(ethersProvider, lidoBridgeData);
   }
 
   async getAPR(yieldAsset: AztecAsset): Promise<number> {
@@ -42,7 +52,15 @@ export class EulerBridgeData extends ERC4626BridgeData {
       })
     ).json();
 
-    return result.data.asset.supplyAPY / 10 ** 25;
+    let APR = result.data.asset.supplyAPY / 10 ** 25;
+
+    if (underlyingAddress.equals(this.wstETH) && this.lidoBridgeData !== undefined) {
+      // Increase the Euler APR by Lido's
+      const lidoAPR = await this.lidoBridgeData.getAPR(yieldAsset);
+      APR = ((1 + APR / 100) * (1 + lidoAPR / 100) - 1) * 100;
+    }
+
+    return APR;
   }
 
   /**

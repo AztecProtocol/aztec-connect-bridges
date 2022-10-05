@@ -1,5 +1,6 @@
 import { EthAddress } from "@aztec/barretenberg/address";
-import { IERC4626, IERC4626__factory } from "../../../typechain-types";
+import { BigNumber } from "ethers";
+import { IERC4626, IERC4626__factory, ILidoOracle, ILidoOracle__factory } from "../../../typechain-types";
 import { AztecAsset, AztecAssetType } from "../bridge-data";
 import { EulerBridgeData } from "./euler-bridge-data";
 
@@ -13,10 +14,13 @@ type Mockify<T> = {
 
 describe("Euler bridge data", () => {
   let erc4626Contract: Mockify<IERC4626>;
+  let lidoOracleContract: Mockify<ILidoOracle>;
 
   let ethAsset: AztecAsset;
   let weDaiAsset: AztecAsset;
   let daiAsset: AztecAsset;
+  let weWstethAsset: AztecAsset;
+  let wstethAsset: AztecAsset;
   let emptyAsset: AztecAsset;
 
   beforeAll(() => {
@@ -35,6 +39,16 @@ describe("Euler bridge data", () => {
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString("0x6b175474e89094c44da98b954eedeac495271d0f"),
     };
+    weWstethAsset = {
+      id: 7,
+      assetType: AztecAssetType.ERC20,
+      erc20Address: EthAddress.fromString("0x60897720AA966452e8706e74296B018990aEc527"),
+    };
+    wstethAsset = {
+      id: 1,
+      assetType: AztecAssetType.ERC20,
+      erc20Address: EthAddress.fromString("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"),
+    };
     emptyAsset = {
       id: 0,
       assetType: AztecAssetType.NOT_USED,
@@ -52,6 +66,30 @@ describe("Euler bridge data", () => {
     const eulerBridgeData = EulerBridgeData.create({} as any);
     const apr = await eulerBridgeData.getAPR(weDaiAsset);
     expect(apr).toBeGreaterThan(0);
+  });
+
+  it("should correctly fetch APR for wstETH", async () => {
+    const mockedLidoAPR = 4.32;
+
+    erc4626Contract = {
+      ...erc4626Contract,
+      asset: jest.fn().mockResolvedValue(wstethAsset.erc20Address.toString()),
+    };
+    IERC4626__factory.connect = () => erc4626Contract as any;
+
+    lidoOracleContract = {
+      ...lidoOracleContract,
+      getLastCompletedReportDelta: jest.fn().mockResolvedValue({
+        timeElapsed: BigNumber.from(86400n),
+        postTotalPooledEther: BigNumber.from(2777258873714679039007057n),
+        preTotalPooledEther: BigNumber.from(2776930205843708039007057n),
+      }),
+    };
+    ILidoOracle__factory.connect = () => lidoOracleContract as any;
+
+    const eulerBridgeData = EulerBridgeData.createWithLido({} as any, {} as any);
+    const combinedEulerLidoAPR = await eulerBridgeData.getAPR(weWstethAsset);
+    expect(combinedEulerLidoAPR).toBeGreaterThan(mockedLidoAPR);
   });
 
   it("should correctly fetch market size", async () => {
