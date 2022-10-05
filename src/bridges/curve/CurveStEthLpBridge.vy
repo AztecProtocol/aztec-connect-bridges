@@ -1,4 +1,4 @@
-# @version >=0.3.6
+# @version >=0.3.7
 
 """
 @title  A bridge for entering and exiting a Curve LP position for the ETH/STETH pool
@@ -31,16 +31,16 @@ struct AztecAsset:
     erc20Address: address
     assetType: uint8 # solidity and vyper enums differ, (NON_USED, ETH, ERC20, VIRTUAL)
 
-STETH: constant(address) = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84
-WSTETH: constant(address) = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0
-CURVE_POOL: constant(address) = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022
-SUBSIDY: constant(address) = 0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA
+STETH: public(constant(address)) = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84
+WSTETH: public(constant(address)) = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0
+CURVE_POOL: public(constant(address)) = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022
+SUBSIDY: public(constant(address)) = 0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA
 CURVE_ETH_INDEX: constant(int128) = 0
 CURVE_STETH_INDEX: constant(int128) = 1
-PRICE_PRECISION: constant(uint256) = 1000000
+PRICE_PRECISION: public(constant(uint256)) = 1000000
 
-LP_TOKEN: immutable(address)
-ROLLUP_PROCESSOR: immutable(address)
+LP_TOKEN: public(immutable(address))
+ROLLUP_PROCESSOR: public(immutable(address))
 
 @external
 def __init__(_rollupProcessor: address):
@@ -111,16 +111,6 @@ def convert_11192637865(
     if deposit:
         return self._deposit(_totalInputValue, _inputAssetA.assetType == 1, _auxData, _rollupBeneficiary)
     return self._withdraw(_totalInputValue, _interactionNonce, _auxData, _rollupBeneficiary)
-
-@external
-@view
-def get_lp_token() -> address:
-    return LP_TOKEN
-
-@external
-@view 
-def get_rollup_processor() -> address:
-    return ROLLUP_PROCESSOR
 
 @external
 @view
