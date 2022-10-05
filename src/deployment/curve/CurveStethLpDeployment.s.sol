@@ -15,7 +15,7 @@ import {ICurvePool} from "../../interfaces/curve/ICurvePool.sol";
 interface ICurveStEthLpBridge {
     function CURVE_POOL() external view returns (address);
 
-    function get_lp_token() external view returns (address);
+    function LP_TOKEN() external view returns (address);
 }
 
 interface ICurveStEthPool {
@@ -31,7 +31,7 @@ contract CurveStethLpDeployment is BaseDeployment {
 
     function fundWithDust(address _bridge) public {
         ICurveStEthLpBridge bridge = ICurveStEthLpBridge(_bridge);
-        IERC20 lpToken = IERC20(bridge.get_lp_token());
+        IERC20 lpToken = IERC20(bridge.LP_TOKEN());
 
         vm.label(address(STETH), "STETH");
         vm.label(address(WSTETH), "WSTETH");
@@ -77,12 +77,12 @@ contract CurveStethLpDeployment is BaseDeployment {
 
         emit log_named_address("Curve LP bridge deployed to", address(bridge));
 
-        emit log_named_address("Lp token", bridge.get_lp_token());
+        emit log_named_address("Lp token", bridge.LP_TOKEN());
 
         assertEq(WSTETH.allowance(address(bridge), ROLLUP_PROCESSOR), type(uint256).max);
         assertEq(STETH.allowance(address(bridge), address(WSTETH)), type(uint256).max);
         assertEq(STETH.allowance(address(bridge), CURVE_POOL), type(uint256).max);
-        assertEq(IERC20(bridge.get_lp_token()).allowance(address(bridge), ROLLUP_PROCESSOR), type(uint256).max);
+        assertEq(IERC20(bridge.LP_TOKEN()).allowance(address(bridge), ROLLUP_PROCESSOR), type(uint256).max);
 
         return bridgeAddress;
     }
@@ -100,8 +100,8 @@ contract CurveStethLpDeployment is BaseDeployment {
         uint256 addressId = listBridge(bridge, 250000);
         emit log_named_uint("Curve bridge address id", addressId);
 
-        listAsset(bridge_.get_lp_token(), 100000);
+        listAsset(bridge_.LP_TOKEN(), 100000);
 
-        return (bridge, bridge_.get_lp_token());
+        return (bridge, bridge_.LP_TOKEN());
     }
 }
