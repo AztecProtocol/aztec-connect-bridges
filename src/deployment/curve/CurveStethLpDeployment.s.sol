@@ -100,7 +100,7 @@ contract CurveStethLpDeployment is BaseDeployment {
         uint256 addressId = listBridge(bridge, 250000);
         emit log_named_uint("Curve bridge address id", addressId);
 
-        listAsset(bridge_.LP_TOKEN(), 100000);
+        listAsset(bridge_.LP_TOKEN(), 55000);
 
         return (bridge, bridge_.LP_TOKEN());
     }
