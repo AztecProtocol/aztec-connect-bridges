@@ -20,6 +20,7 @@ import {YearnDeployment} from "./yearn/YearnDeployment.s.sol";
 import {DCADeployment} from "./dca/DCADeployment.s.sol";
 import {AngleSLPDeployment} from "./angle/AngleSLPDeployment.s.sol";
 import {DataProviderDeployment} from "./dataprovider/DataProviderDeployment.s.sol";
+import {CurveStethLpDeployment} from "./curve/CurveStethLpDeployment.s.sol";
 
 /**
  * A helper script that allow easy deployment of multiple bridges
@@ -61,19 +62,25 @@ contract AggregateDeployment is BaseDeployment {
             lister.setUp();
 
             address erc4626EulerWETH = 0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0;
+            lister.listVault(erc4626Bridge, erc4626EulerWETH);
             uint256 weWethAssetId = listAsset(erc4626EulerWETH, 55000);
             emit log_named_uint("ERC4626 euler weth id", weWethAssetId);
-            lister.listVault(erc4626Bridge, erc4626EulerWETH);
 
             address erc4626EulerWSTETH = 0x60897720AA966452e8706e74296B018990aEc527;
+            lister.listVault(erc4626Bridge, erc4626EulerWSTETH);
             uint256 wewstEthAssetId = listAsset(erc4626EulerWSTETH, 55000);
             emit log_named_uint("ERC4626 euler wstEth id", wewstEthAssetId);
-            lister.listVault(erc4626Bridge, erc4626EulerWSTETH);
 
             address erc4626EulerDai = 0x4169Df1B7820702f566cc10938DA51F6F597d264;
+            if (erc4626EulerDai.code.length == 0) {
+                vm.broadcast();
+                address(0x1e8020cFB10b6a6a9B5F06e3ABAe140f7DE541E1).call(
+                    hex"abeccaa40000000000000000000000006b175474e89094c44da98b954eedeac495271d0f"
+                );
+            }
+            lister.listVault(erc4626Bridge, erc4626EulerDai);
             uint256 wedaiAssetId = listAsset(erc4626EulerDai, 55000);
             emit log_named_uint("ERC4626 euler dai id", wedaiAssetId);
-            lister.listVault(erc4626Bridge, erc4626EulerDai);
         }
 
         emit log("--- DCA ---");
@@ -82,12 +89,10 @@ contract AggregateDeployment is BaseDeployment {
             deploy.setUp();
             deploy.deployAndList();
         }
-
-        readStats();
     }
 
     function bogota() public {
-        //deployAndListAll();
+        deployAndListAll();
 
         emit log("--- Donation ---");
         {
@@ -117,24 +122,37 @@ contract AggregateDeployment is BaseDeployment {
             deploy.deployAndList();
         }
 
+        emit log("--- Curve steth lp ---");
+        {
+            CurveStethLpDeployment deploy = new CurveStethLpDeployment();
+            deploy.setUp();
+            deploy.deployAndList();
+        }
+
+        IRollupProcessor rp = IRollupProcessor(ROLLUP_PROCESSOR);
+        vm.broadcast();
+        rp.setAllowThirdPartyContracts(true);
+
         emit log("--- data provider ---");
         {
             DataProviderDeployment deploy = new DataProviderDeployment();
             deploy.setUp();
             address provider = deploy.deployAndListMany();
 
-            uint256[] memory assetIds = new uint256[](3);
-            string[] memory assetTags = new string[](3);
+            uint256[] memory assetIds = new uint256[](4);
+            string[] memory assetTags = new string[](4);
 
             assetIds[0] = 8;
             assetIds[1] = 9;
             assetIds[2] = 10;
+            assetIds[3] = 11;
             assetTags[0] = "sandai_eur";
             assetTags[1] = "sanweth_eur";
             assetTags[2] = "lusd";
+            assetTags[3] = "stecrv";
 
-            uint256[] memory bridgeAddressIds = new uint256[](6);
-            string[] memory bridgeTags = new string[](6);
+            uint256[] memory bridgeAddressIds = new uint256[](7);
+            string[] memory bridgeTags = new string[](7);
             bridgeAddressIds[0] = 12;
             bridgeTags[0] = "DonationBridge";
             bridgeAddressIds[1] = 13;
@@ -147,21 +165,19 @@ contract AggregateDeployment is BaseDeployment {
             bridgeTags[4] = "UniswapBridge800K";
             bridgeAddressIds[5] = 17;
             bridgeTags[5] = "LiquityTroveBridge";
+            bridgeAddressIds[6] = 18;
+            bridgeTags[6] = "CurveStEthLpBridge";
 
             vm.broadcast();
             DataProvider(provider).addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
             deploy.readProvider(provider);
         }
 
-        IRollupProcessor rp = IRollupProcessor(ROLLUP_PROCESSOR);
-        vm.broadcast();
-        rp.setAllowThirdPartyContracts(true);
-
-        readStats();
+        // readStats();
     }
 
     function readStats() public {
-        emit log("--- Stats for the rollup ---");
+        emit log("--- Stats for the Rollup ---");
         IRollupProcessor rp = IRollupProcessor(ROLLUP_PROCESSOR);
 
         if (rp.allowThirdPartyContracts()) {

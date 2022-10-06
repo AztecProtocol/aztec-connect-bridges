@@ -4,12 +4,19 @@ orbs:
 jobs:
   build-and-test:
     docker:
-      - image: "cimg/base:stable-20.04"
+      - image: "cimg/python:3.10.6"
     steps:
       - checkout
       - node/install:
           install-yarn: true
           node-version: "16.13"
+      - run:
+          name: Setup Vyper
+          shell: /bin/bash
+          command: |
+            pip install vyper
+            export PATH=/home/cicleci/.local/bin:$PATH
+            vyper --version
       - run:
           name: Setup Foundry
           shell: /bin/bash
@@ -74,6 +81,13 @@ jobs:
       - run:
           name: Authenticate with registry
           command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc
+      - run:
+          name: Setup Vyper
+          shell: /bin/bash
+          command: |
+            pip install vyper
+            export PATH=/home/cicleci/.local/bin:$PATH
+            vyper --version
       - run:
           name: Setup Foundry
           shell: /bin/bash
