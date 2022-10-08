@@ -44,7 +44,6 @@ To get started follow the steps below:
 4. Implement the bridges and tests.
    See the [example bridge](./src/bridges/example/ExampleBridge.sol), [example bridge tests](./src/test/bridges/example) and documentation of [IDefiBridge](./src/aztec/interfaces/IDefiBridge.sol) for more details.
    For a more complex example check out other bridges in this repository.
-   
 5. Debug your bridge:
 
    `forge test --match-contract YourBridge -vvv`
