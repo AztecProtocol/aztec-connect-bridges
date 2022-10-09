@@ -359,6 +359,11 @@ abstract contract BridgeTestBase is Test {
     {
         uint256 nextRollupId_ = nextRollupId;
 
+        // SLOADing rollupBeneficiary directly from storage in YUL could cause issues because address could be packed
+        // into a slot with other data. I could solve this issue by simply moving rollupBeneficiary between two 256 bit
+        // vars but I think this is more robust because we might modify this contract and run into the issue gain.
+        address rollupBeneficiaryUnpacked = rollupBeneficiary;
+
         /* solhint-disable no-inline-assembly */
         assembly {
             data := mload(0x40)
@@ -370,7 +375,7 @@ abstract contract BridgeTestBase is Test {
             mstore(add(data, 0x60), mul(nextRollupId_, 2))
             mstore(add(data, 0x180), _encodedBridgeCallData)
             mstore(add(data, 0x580), _totalInputValue)
-            mstore(add(data, 0x11a0), sload(rollupBeneficiary.slot))
+            mstore(add(data, 0x11a0), rollupBeneficiaryUnpacked)
 
             // Mock values
             // mstore(add(data, 0x20), 0x0000000000000000000000000000000000000000000000000000000000000000)
