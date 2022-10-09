@@ -21,7 +21,7 @@
     "test:pinned": "yarn test:pinned:14000000 && yarn test:pinned:14970000 && yarn test:pinned:14972000",
     "test:contracts:block": "forge test --fork-block-number",
     "cast": "cast",
-    "test:contracts": "forge test --no-match-contract 'Element|AceOfZk' --no-match-test 'testRedistribution' && yarn test:pinned",
+    "test:contracts": "forge test --no-match-contract 'Element' --no-match-test 'testRedistribution' && yarn test:pinned",
     "build": "yarn clean && yarn compile:client-dest",
     "formatting": "yarn prettier --write .",
     "formatting:check": "prettier --check .",
