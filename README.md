@@ -44,7 +44,6 @@ To get started follow the steps below:
 4. Implement the bridges and tests.
    See the [example bridge](./src/bridges/example/ExampleBridge.sol), [example bridge tests](./src/test/bridges/example) and documentation of [IDefiBridge](./src/aztec/interfaces/IDefiBridge.sol) for more details.
    For a more complex example check out other bridges in this repository.
-
 5. Debug your bridge:
 
    `forge test --match-contract YourBridge -vvv`
@@ -62,11 +61,11 @@ To get started follow the steps below:
    # When using the testnet, add --legacy, Ganache and EIP-1559 is not the best friends
    # --ffi is used to allow outside calls, which is used to fetch the latest Rollup address
    # on testnet this will fetch from the Aztec endpoints, on mainnet, this will lookup the `rollup.aztec.eth` ens
-   export RPC=https://mainnet-fork.aztec.network:8545
+   export RPC=https://aztec-connect-testnet-eth-host.aztec.network:8545
    export PRIV_KEY=<DEV_KEY> # If using a private-key directly
    export network=testnet # When using the testnet
    export simulateAdmin=false # When you want to broadcast, use `true` if simulating admin
-   forge script --fork-url $RPC --ffi --private-key $PRIV <NAME_OF_DEPLOYMENT_SCRIPT> --sig "<FUNCTION_SIG>" --broadcast
+   forge script --fork-url $RPC --ffi --legacy --private-key $PRIV <NAME_OF_DEPLOYMENT_SCRIPT> --sig "<FUNCTION_SIG>" --broadcast
 
    # Example script reading the current assets and bridges:
    forge script --fork-url $RPC --ffi AggregateDeployment --sig "readStats()"
