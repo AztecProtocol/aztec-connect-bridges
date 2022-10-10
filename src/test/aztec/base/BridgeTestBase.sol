@@ -117,8 +117,8 @@ abstract contract BridgeTestBase is Test {
 
     AztecTypes.AztecAsset internal emptyAsset;
 
-    uint256 public nextRollupId = 0;
     address public rollupBeneficiary;
+    uint256 public nextRollupId = 0;
 
     constructor() {
         vm.label(address(ROLLUP_PROCESSOR), "Rollup");
