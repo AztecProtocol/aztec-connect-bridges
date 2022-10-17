@@ -9,7 +9,6 @@ import {BaseDeployment} from "./base/BaseDeployment.s.sol";
 import {IRollupProcessor} from "../aztec/interfaces/IRollupProcessor.sol";
 import {DataProvider} from "../aztec/DataProvider.sol";
 
-import {CompoundDeployment} from "./compound/CompoundDeployment.s.sol";
 import {CurveDeployment} from "./curve/CurveDeployment.s.sol";
 import {DonationDeployment} from "./donation/DonationDeployment.s.sol";
 import {ERC4626Deployment} from "./erc4626/ERC4626Deployment.s.sol";

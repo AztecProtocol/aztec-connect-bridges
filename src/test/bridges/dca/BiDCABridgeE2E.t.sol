@@ -9,7 +9,6 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 import {Test} from "forge-std/Test.sol";
 import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
-import {ICERC20} from "../../../interfaces/compound/ICERC20.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {IWETH} from "../../../interfaces/IWETH.sol";
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
