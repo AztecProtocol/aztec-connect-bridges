@@ -15,10 +15,9 @@ contract ERC4626Lister is BaseDeployment {
         IERC4626 vault = IERC4626(_vault);
         IERC20 asset = IERC20(vault.asset());
 
+        // Not checking `asset.allowance(address(bridge), ROLLUP_PROCESSOR)` because it could have been set before
+        // when listing other vaults with the same asset
         if (vault.allowance(address(bridge), ROLLUP_PROCESSOR) == type(uint256).max) {
-            return;
-        }
-        if (asset.allowance(address(bridge), ROLLUP_PROCESSOR) == type(uint256).max) {
             return;
         }
         if (asset.allowance(address(bridge), address(vault)) == type(uint256).max) {

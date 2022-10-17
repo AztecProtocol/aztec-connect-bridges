@@ -47,9 +47,20 @@ contract DataProviderDeployment is BaseDeployment {
             DataProvider.AssetData memory asset = assets[i];
             if (i == 0 || asset.assetId != 0) {
                 uint256 gas = i > 0 ? rp.assetGasLimits(asset.assetId) : 30000;
-                emit log_named_string(
-                    string(abi.encodePacked("AssetId ", Strings.toString(asset.assetId))),
-                    string(abi.encodePacked(asset.label, " (", Strings.toString(gas), " gas)"))
+                emit log_string(
+                    string(
+                        abi.encodePacked(
+                            "AssetId ",
+                            Strings.toString(asset.assetId),
+                            ", address ",
+                            Strings.toHexString(asset.assetAddress),
+                            ", ",
+                            asset.label,
+                            " (",
+                            Strings.toString(gas),
+                            " gas)"
+                        )
+                    )
                 );
             }
         }
@@ -59,9 +70,20 @@ contract DataProviderDeployment is BaseDeployment {
             DataProvider.BridgeData memory bridge = bridges[i];
             if (bridge.bridgeAddressId != 0) {
                 uint256 gas = rp.bridgeGasLimits(bridge.bridgeAddressId);
-                emit log_named_string(
-                    string(abi.encodePacked("BridgeAddressId ", Strings.toString(bridge.bridgeAddressId))),
-                    string(abi.encodePacked(bridge.label, " (", Strings.toString(gas), " gas)"))
+                emit log_string(
+                    string(
+                        abi.encodePacked(
+                            "AddressId ",
+                            Strings.toString(bridge.bridgeAddressId),
+                            ", address ",
+                            Strings.toHexString(bridge.bridgeAddress),
+                            ", ",
+                            bridge.label,
+                            " (",
+                            Strings.toString(gas),
+                            " gas)"
+                        )
+                    )
                 );
             }
         }
