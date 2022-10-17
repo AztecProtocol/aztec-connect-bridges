@@ -59,9 +59,20 @@ contract DataProviderDeployment is BaseDeployment {
             DataProvider.BridgeData memory bridge = bridges[i];
             if (bridge.bridgeAddressId != 0) {
                 uint256 gas = rp.bridgeGasLimits(bridge.bridgeAddressId);
-                emit log_named_string(
-                    string(abi.encodePacked("BridgeAddressId ", Strings.toString(bridge.bridgeAddressId))),
-                    string(abi.encodePacked(bridge.label, " (", Strings.toString(gas), " gas)"))
+                emit log_string(
+                    string(
+                        abi.encodePacked(
+                            "AddressId ",
+                            Strings.toString(bridge.bridgeAddressId),
+                            ", address ",
+                            Strings.toHexString(bridge.bridgeAddress),
+                            ", ",
+                            bridge.label,
+                            " (",
+                            Strings.toString(gas),
+                            " gas)"
+                        )
+                    )
                 );
             }
         }
