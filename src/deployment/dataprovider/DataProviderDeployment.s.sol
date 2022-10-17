@@ -47,9 +47,20 @@ contract DataProviderDeployment is BaseDeployment {
             DataProvider.AssetData memory asset = assets[i];
             if (i == 0 || asset.assetId != 0) {
                 uint256 gas = i > 0 ? rp.assetGasLimits(asset.assetId) : 30000;
-                emit log_named_string(
-                    string(abi.encodePacked("AssetId ", Strings.toString(asset.assetId))),
-                    string(abi.encodePacked(asset.label, " (", Strings.toString(gas), " gas)"))
+                emit log_string(
+                    string(
+                        abi.encodePacked(
+                            "AssetId ",
+                            Strings.toString(asset.assetId),
+                            ", address ",
+                            Strings.toHexString(asset.assetAddress),
+                            ", ",
+                            asset.label,
+                            " (",
+                            Strings.toString(gas),
+                            " gas)"
+                        )
+                    )
                 );
             }
         }
