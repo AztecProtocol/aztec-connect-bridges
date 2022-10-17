@@ -18,9 +18,6 @@ contract ERC4626Lister is BaseDeployment {
         if (vault.allowance(address(bridge), ROLLUP_PROCESSOR) == type(uint256).max) {
             return;
         }
-        if (asset.allowance(address(bridge), ROLLUP_PROCESSOR) == type(uint256).max) {
-            return;
-        }
         if (asset.allowance(address(bridge), address(vault)) == type(uint256).max) {
             return;
         }
