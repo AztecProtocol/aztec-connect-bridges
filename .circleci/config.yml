@@ -72,7 +72,7 @@ jobs:
             yarn build
   publish:
     docker:
-      - image: "cimg/base:stable-20.04"
+      - image: "cimg/python:3.10.6"
     steps:
       - checkout
       - node/install:
