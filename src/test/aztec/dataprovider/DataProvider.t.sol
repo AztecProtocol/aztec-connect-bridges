@@ -186,16 +186,24 @@ contract DataProviderTest is BridgeTestBase {
         vm.warp(block.timestamp + 1 days);
 
         uint256 bridgeCallData = encodeBridgeCallData(7, eth, empty, vyvault, empty, 0);
-        uint256 subsidy = provider.getAccumulatedSubsidyAmount(bridgeCallData);
-
+        (uint256 criteria, uint256 subsidy) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
+        assertEq(criteria, 0, "Subsidy have accrued");
         assertGt(subsidy, 0, "No subsidy accrued");
+
+        {
+            uint256 bridgeCallData = encodeBridgeCallData(7, vyvault, empty, eth, empty, 1);
+            (uint256 criteria, uint256 subsidy) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
+            assertEq(criteria, 1, "Wrong criteria");
+            assertEq(subsidy, 0, "Subsidy accrued");
+        }
     }
 
     function testHappySubsidyHelper2InOut() public {
         AztecTypes.AztecAsset memory eth = getRealAztecAsset(address(0));
         AztecTypes.AztecAsset memory dai = getRealAztecAsset(0x6B175474E89094C44Da98b954EedeAC495271d0F);
         uint256 bridgeCallData = encodeBridgeCallData(7, dai, eth, dai, eth, 0);
-        uint256 subsidy = provider.getAccumulatedSubsidyAmount(bridgeCallData);
+        (uint256 criteria, uint256 subsidy) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
+        assertEq(criteria, 0, "Wrong criteria");
         assertGt(subsidy, 0, "No subsidy accrued");
     }
 
@@ -208,7 +216,8 @@ contract DataProviderTest is BridgeTestBase {
         });
 
         uint256 bridgeCallData = encodeBridgeCallData(7, virtualAsset, eth, virtualAsset, eth, 0);
-        uint256 subsidy = provider.getAccumulatedSubsidyAmount(bridgeCallData);
+        (uint256 criteria, uint256 subsidy) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
+        assertEq(criteria, 0, "Wrong criteria");
         assertGt(subsidy, 0, "No subsidy accrued");
     }
 
@@ -216,7 +225,8 @@ contract DataProviderTest is BridgeTestBase {
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory dai = getRealAztecAsset(0x6B175474E89094C44Da98b954EedeAC495271d0F);
         uint256 bridgeCallData = encodeBridgeCallData(1, dai, empty, dai, empty, 0);
-        uint256 subsidy = provider.getAccumulatedSubsidyAmount(bridgeCallData);
+        (uint256 criteria, uint256 subsidy) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
+        assertEq(criteria, 0, "Wrong criteria");
         assertEq(subsidy, 0, "Subsidy have accrued");
     }
 }
