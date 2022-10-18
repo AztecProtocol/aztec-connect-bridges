@@ -1,5 +1,5 @@
 import { EthAddress } from "@aztec/barretenberg/address";
-import { IERC4626, IERC4626__factory, ILidoOracle } from "../../../typechain-types";
+import { IERC4626, IERC4626__factory } from "../../../typechain-types";
 import { AztecAsset, AztecAssetType } from "../bridge-data";
 import { AaveV2BridgeData } from "./aavev2-bridge-data";
 
@@ -54,17 +54,17 @@ describe("AaveV2 bridge data", () => {
     expect(apr).toBeGreaterThan(0);
   });
 
-  // it("should correctly fetch market size", async () => {
-  //   const aavev2BridgeData = AaveV2BridgeData.create({} as any);
-  //   const assetValue = (await aavev2BridgeData.getMarketSize(daiAsset, emptyAsset, emptyAsset, emptyAsset, 0))[0];
-  //   expect(assetValue.assetId).toBe(daiAsset.id);
-  //   expect(assetValue.value).toBeGreaterThan(0);
-  // });
+  it("should correctly fetch market size", async () => {
+    const aaveV2BridgeData = AaveV2BridgeData.create({} as any);
+    const assetValue = (await aaveV2BridgeData.getMarketSize(daiAsset, emptyAsset, emptyAsset, emptyAsset, 0))[0];
+    expect(assetValue.assetId).toBe(daiAsset.id);
+    expect(assetValue.value).toBeGreaterThan(0);
+  });
 
-  // it("should correctly fetch market size for ETH", async () => {
-  //   const aavev2BridgeData = AaveV2BridgeData.create({} as any);
-  //   const assetValue = (await aavev2BridgeData.getMarketSize(ethAsset, emptyAsset, emptyAsset, emptyAsset, 0))[0];
-  //   expect(assetValue.assetId).toBe(ethAsset.id);
-  //   expect(assetValue.value).toBeGreaterThan(0);
-  // });
+  it("should correctly fetch market size for ETH", async () => {
+    const aaveV2BridgeData = AaveV2BridgeData.create({} as any);
+    const assetValue = (await aaveV2BridgeData.getMarketSize(ethAsset, emptyAsset, emptyAsset, emptyAsset, 0))[0];
+    expect(assetValue.assetId).toBe(ethAsset.id);
+    expect(assetValue.value).toBeGreaterThan(0);
+  });
 });
