@@ -100,7 +100,7 @@ jobs:
             yarn setup:foundry
             yarn compile:typechain
             yarn test:contracts
-            yarn test:client
+            yarn test:clients
             yarn build
             yarn publish --access public
 
