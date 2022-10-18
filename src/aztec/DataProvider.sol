@@ -34,6 +34,15 @@ contract DataProvider is Ownable {
         mapping(bytes32 => uint256) tagToId;
     }
 
+    struct AccVal {
+        uint256 bridgeAddressId;
+        address bridgeAddress;
+        uint256 inputAId;
+        uint256 inputBId;
+        uint256 outputAId;
+        uint256 outputBId;
+    }
+
     uint256 private constant INPUT_ASSET_ID_A_SHIFT = 32;
     uint256 private constant INPUT_ASSET_ID_B_SHIFT = 62;
     uint256 private constant OUTPUT_ASSET_ID_A_SHIFT = 92;
@@ -176,33 +185,36 @@ contract DataProvider is Ownable {
     /**
      * @notice Fetches the subsidy that can be claimed by the specific call, if it is the next performed.
      * @param _bridgeCallData The bridge call data for a specific bridge interaction
+     * @return The criteria passed to the subsidy contract
      * @return The amount of eth claimed at the current gas prices
      */
-    function getAccumulatedSubsidyAmount(uint256 _bridgeCallData) public view returns (uint256) {
-        uint256 bridgeAddressId = _bridgeCallData & MASK_THIRTY_TWO_BITS;
-        address bridgeAddress = ROLLUP_PROCESSOR.getSupportedBridge(bridgeAddressId);
+    function getAccumulatedSubsidyAmount(uint256 _bridgeCallData) public view returns (uint256, uint256) {
+        AccVal memory vars;
 
-        uint256 inputAId = (_bridgeCallData >> INPUT_ASSET_ID_A_SHIFT) & MASK_THIRTY_BITS;
-        uint256 inputBId = (_bridgeCallData >> INPUT_ASSET_ID_B_SHIFT) & MASK_THIRTY_BITS;
-        uint256 outputAId = (_bridgeCallData >> OUTPUT_ASSET_ID_A_SHIFT) & MASK_THIRTY_BITS;
-        uint256 outputBId = (_bridgeCallData >> OUTPUT_ASSET_ID_B_SHIFT) & MASK_THIRTY_BITS;
+        vars.bridgeAddressId = _bridgeCallData & MASK_THIRTY_TWO_BITS;
+        vars.bridgeAddress = ROLLUP_PROCESSOR.getSupportedBridge(vars.bridgeAddressId);
+
+        vars.inputAId = (_bridgeCallData >> INPUT_ASSET_ID_A_SHIFT) & MASK_THIRTY_BITS;
+        vars.inputBId = (_bridgeCallData >> INPUT_ASSET_ID_B_SHIFT) & MASK_THIRTY_BITS;
+        vars.outputAId = (_bridgeCallData >> OUTPUT_ASSET_ID_A_SHIFT) & MASK_THIRTY_BITS;
+        vars.outputBId = (_bridgeCallData >> OUTPUT_ASSET_ID_B_SHIFT) & MASK_THIRTY_BITS;
         uint256 bitconfig = (_bridgeCallData >> BITCONFIG_SHIFT) & MASK_THIRTY_TWO_BITS;
         uint256 auxData = (_bridgeCallData >> AUX_DATA_SHIFT) & MASK_SIXTY_FOUR_BITS;
 
-        AztecTypes.AztecAsset memory inputA = _aztecAsset(inputAId);
+        AztecTypes.AztecAsset memory inputA = _aztecAsset(vars.inputAId);
         AztecTypes.AztecAsset memory inputB;
         if (bitconfig & 1 == 1) {
-            inputB = _aztecAsset(inputBId);
+            inputB = _aztecAsset(vars.inputBId);
         }
 
-        AztecTypes.AztecAsset memory outputA = _aztecAsset(outputAId);
+        AztecTypes.AztecAsset memory outputA = _aztecAsset(vars.outputAId);
         AztecTypes.AztecAsset memory outputB;
 
         if (bitconfig & 2 == 2) {
-            outputB = _aztecAsset(outputBId);
+            outputB = _aztecAsset(vars.outputBId);
         }
 
-        (bool success, bytes memory returnData) = bridgeAddress.staticcall(
+        (bool success, bytes memory returnData) = vars.bridgeAddress.staticcall(
             abi.encodeWithSelector(
                 BridgeBase.computeCriteria.selector,
                 inputA,
@@ -214,12 +226,12 @@ contract DataProvider is Ownable {
         );
 
         if (!success) {
-            return 0;
+            return (0, 0);
         }
 
         uint256 criteria = abi.decode(returnData, (uint256));
 
-        return SUBSIDY.getAccumulatedSubsidyAmount(bridgeAddress, criteria);
+        return (criteria, SUBSIDY.getAccumulatedSubsidyAmount(vars.bridgeAddress, criteria));
     }
 
     function _aztecAsset(uint256 _assetId) internal view returns (AztecTypes.AztecAsset memory) {
