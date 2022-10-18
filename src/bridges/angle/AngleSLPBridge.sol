@@ -9,7 +9,7 @@ import {BridgeBase} from "../base/BridgeBase.sol";
 import {IStableMaster} from "../../interfaces/angle/IStableMaster.sol";
 import {IPoolManager, IStrategy} from "../../interfaces/angle/IPoolManager.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
-import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "rollup-encoder/interfaces/IRollupProcessor.sol";
 
 /**
  * @title Angle Protocol bridge contract.

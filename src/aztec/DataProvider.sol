@@ -3,7 +3,7 @@
 pragma solidity >=0.8.4;
 import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IRollupProcessor} from "./interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "rollup-encoder/interfaces/IRollupProcessor.sol";
 import {BridgeBase} from "../bridges/base/BridgeBase.sol";
 import {ISubsidy} from "./interfaces/ISubsidy.sol";
 
