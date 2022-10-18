@@ -49,9 +49,9 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         uint256 collateral = bound(_collateral, 1e17, 1e21);
 
         // Use the helper function to fetch Aztec assets
-        AztecTypes.AztecAsset memory ethAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(0));
-        AztecTypes.AztecAsset memory tbAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(bridge));
-        AztecTypes.AztecAsset memory lusdAsset = ROLLUP_ENCODER.getRealAztecAssetset(tokens["LUSD"].addr);
+        AztecTypes.AztecAsset memory ethAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
+        AztecTypes.AztecAsset memory tbAsset = ROLLUP_ENCODER.getRealAztecAsset(address(bridge));
+        AztecTypes.AztecAsset memory lusdAsset = ROLLUP_ENCODER.getRealAztecAsset(tokens["LUSD"].addr);
 
         // BORROW
         // Mint the collateral amount of ETH to rollupProcessor

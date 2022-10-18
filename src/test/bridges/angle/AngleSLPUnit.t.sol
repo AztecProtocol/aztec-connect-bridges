@@ -45,13 +45,13 @@ contract AngleSLPUnitTest is BridgeTestBase {
 
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
-        daiAsset = ROLLUP_ENCODER.getRealAztecAssetset(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-        usdcAsset = ROLLUP_ENCODER.getRealAztecAssetset(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-        ethAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(0));
-        wethAsset = ROLLUP_ENCODER.getRealAztecAssetset(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-        sanWethAsset = ROLLUP_ENCODER.getRealAztecAssetset(0x30c955906735e48D73080fD20CB488518A6333C8);
-        sanDaiAsset = ROLLUP_ENCODER.getRealAztecAssetset(0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450);
-        sanUsdcAsset = ROLLUP_ENCODER.getRealAztecAssetset(0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad);
+        daiAsset = ROLLUP_ENCODER.getRealAztecAsset(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+        usdcAsset = ROLLUP_ENCODER.getRealAztecAsset(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+        ethAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
+        wethAsset = ROLLUP_ENCODER.getRealAztecAsset(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+        sanWethAsset = ROLLUP_ENCODER.getRealAztecAsset(0x30c955906735e48D73080fD20CB488518A6333C8);
+        sanDaiAsset = ROLLUP_ENCODER.getRealAztecAsset(0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450);
+        sanUsdcAsset = ROLLUP_ENCODER.getRealAztecAsset(0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad);
         unsupportedAsset = AztecTypes.AztecAsset({
             id: 456,
             erc20Address: 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5,

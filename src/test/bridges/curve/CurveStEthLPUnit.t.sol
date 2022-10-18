@@ -51,12 +51,12 @@ contract CurveLpUnitTest is BridgeTestBase {
         ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 500000);
         bridgeAddressId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
-        ethAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(0));
-        wstETHAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(WRAPPED_STETH));
+        ethAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
+        wstETHAsset = ROLLUP_ENCODER.getRealAztecAsset(address(WRAPPED_STETH));
 
         vm.prank(MULTI_SIG);
         ROLLUP_PROCESSOR.setSupportedAsset(address(LP_TOKEN), 100000);
-        lpAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(LP_TOKEN));
+        lpAsset = ROLLUP_ENCODER.getRealAztecAsset(address(LP_TOKEN));
 
         // Prefund to save gas
         deal(address(WRAPPED_STETH), address(ROLLUP_PROCESSOR), WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)) + 1);

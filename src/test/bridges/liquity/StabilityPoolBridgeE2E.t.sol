@@ -55,8 +55,8 @@ contract StabilityPoolBridgeE2ETest is BridgeTestBase {
         vm.assume(_depositAmount > 1);
 
         // Use the helper function to fetch Aztec assets
-        AztecTypes.AztecAsset memory lusdAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(LUSD));
-        AztecTypes.AztecAsset memory spbAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(bridge));
+        AztecTypes.AztecAsset memory lusdAsset = ROLLUP_ENCODER.getRealAztecAsset(address(LUSD));
+        AztecTypes.AztecAsset memory spbAsset = ROLLUP_ENCODER.getRealAztecAsset(address(bridge));
 
         // DEPOSIT
         // Mint the depositAmount of LUSD to rollupProcessor
@@ -75,9 +75,15 @@ contract StabilityPoolBridgeE2ETest is BridgeTestBase {
 
         uint256 stabilityPoolBalanceBefore = LUSD.balanceOf(stabilityPool);
 
-        vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, _depositAmount, 0, true, "");
-
+        ROLLUP_ENCODER.registerEventToBeChecked(
+            bridgeCallData,
+            ROLLUP_ENCODER.getNextNonce(),
+            _depositAmount,
+            _depositAmount,
+            0,
+            true,
+            ""
+        );
         ROLLUP_ENCODER.processRollup();
 
         assertGe(

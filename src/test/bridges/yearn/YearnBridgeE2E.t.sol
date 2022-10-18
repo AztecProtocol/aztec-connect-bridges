@@ -56,7 +56,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         uint32 gasPerMinute = 200;
         SUBSIDY.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
         SUBSIDY.registerBeneficiary(BENEFICIARY);
-        setRollupBeneficiary(BENEFICIARY);
+        ROLLUP_ENCODER.setRollupBeneficiary(BENEFICIARY);
     }
 
     function testERC20DepositAndWithdrawal(uint256 _depositAmount) public {
@@ -144,8 +144,8 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         // Warp time for the subsidy to accrue
         vm.warp(block.timestamp + 1 days);
 
-        AztecTypes.AztecAsset memory depositInputAssetA = ROLLUP_ENCODER.getRealAztecAssetset(underlyingToken);
-        AztecTypes.AztecAsset memory depositOutputAssetA = ROLLUP_ENCODER.getRealAztecAssetset(address(_vault));
+        AztecTypes.AztecAsset memory depositInputAssetA = ROLLUP_ENCODER.getRealAztecAsset(underlyingToken);
+        AztecTypes.AztecAsset memory depositOutputAssetA = ROLLUP_ENCODER.getRealAztecAsset(address(_vault));
 
         uint256 inputAssetABefore = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 outputAssetABefore = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
@@ -167,8 +167,16 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         emit Transfer(address(bridge), address(_vault), _depositAmount);
         vm.expectEmit(true, true, false, false); //Log 4 -> transfer _receiveAmount from bridge to rollup
         emit Transfer(address(bridge), address(ROLLUP_PROCESSOR), _depositAmount);
-        vm.expectEmit(true, true, false, false); //Log 5 -> Validate DefiBridge
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, _depositAmount, 0, true, "");
+
+        ROLLUP_ENCODER.registerEventToBeChecked(
+            bridgeCallData,
+            ROLLUP_ENCODER.getNextNonce(),
+            _depositAmount,
+            _depositAmount,
+            0,
+            true,
+            ""
+        );
         ROLLUP_ENCODER.processRollup();
 
         uint256 claimableSubsidyAfterDeposit = SUBSIDY.claimableAmount(BENEFICIARY);
@@ -204,8 +212,16 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         emit Transfer(address(_vault), address(bridge), withdrawAmount);
         vm.expectEmit(true, true, false, false); //Log 4 -> transfer _withdrawAmount from bridge to Rollup
         emit Transfer(address(bridge), address(ROLLUP_PROCESSOR), withdrawAmount);
-        vm.expectEmit(true, true, false, false); //Log 5 -> Validate DefiBridge
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), withdrawAmount, withdrawAmount, 1, true, "");
+
+        ROLLUP_ENCODER.registerEventToBeChecked(
+            bridgeCallData,
+            ROLLUP_ENCODER.getNextNonce(),
+            withdrawAmount,
+            withdrawAmount,
+            1,
+            true,
+            ""
+        );
         ROLLUP_ENCODER.processRollup();
         uint256 inputAssetAAfter = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 outputAssetAAfter = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
@@ -232,8 +248,8 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         vm.deal(address(ROLLUP_PROCESSOR), _depositAmount);
         _addSupportedIfNotAdded(address(_vault));
 
-        AztecTypes.AztecAsset memory depositInputAssetA = ROLLUP_ENCODER.getRealAztecAssetset(address(0));
-        AztecTypes.AztecAsset memory depositOutputAssetA = ROLLUP_ENCODER.getRealAztecAssetset(address(_vault));
+        AztecTypes.AztecAsset memory depositInputAssetA = ROLLUP_ENCODER.getRealAztecAsset(address(0));
+        AztecTypes.AztecAsset memory depositOutputAssetA = ROLLUP_ENCODER.getRealAztecAsset(address(_vault));
 
         uint256 inputAssetABefore = address(ROLLUP_PROCESSOR).balance;
         uint256 outputAssetABefore = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
@@ -271,7 +287,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
     }
 
     function _addSupportedIfNotAdded(address _asset) internal {
-        if (!isSupportedAsset(_asset)) {
+        if (!ROLLUP_ENCODER.isSupportedAsset(_asset)) {
             vm.prank(MULTI_SIG);
             ROLLUP_PROCESSOR.setSupportedAsset(_asset, 200000);
         }

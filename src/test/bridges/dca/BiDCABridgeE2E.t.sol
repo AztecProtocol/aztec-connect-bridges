@@ -65,8 +65,8 @@ contract BiDCATestE2E is BridgeTestBase {
 
         vm.stopPrank();
 
-        aztecAssetA = ROLLUP_ENCODER.getRealAztecAssetset(address(assetA));
-        aztecAssetB = ROLLUP_ENCODER.getRealAztecAssetset(address(assetB));
+        aztecAssetA = ROLLUP_ENCODER.getRealAztecAsset(address(assetA));
+        aztecAssetB = ROLLUP_ENCODER.getRealAztecAsset(address(assetB));
 
         vm.label(address(assetA), "DAI");
         vm.label(address(assetB), "WETH");

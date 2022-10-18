@@ -6,6 +6,7 @@ import {BridgeTestBase} from "../../aztec/base/BridgeTestBase.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {ERC4626Bridge} from "../../../bridges/erc4626/ERC4626Bridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {WETHVault} from "./mocks/WETHVault.sol";
@@ -56,8 +57,8 @@ contract ERC4626Test is BridgeTestBase {
             ROLLUP_PROCESSOR.setSupportedAsset(asset, 30000);
             vm.stopPrank();
 
-            shares.push(ROLLUP_ENCODER.getRealAztecAssetset(share));
-            assets.push(ROLLUP_ENCODER.getRealAztecAssetset(asset));
+            shares.push(ROLLUP_ENCODER.getRealAztecAsset(share));
+            assets.push(ROLLUP_ENCODER.getRealAztecAsset(asset));
 
             // EIP-1087 optimization related mints
             deal(share, address(bridge), 1);
@@ -166,8 +167,8 @@ contract ERC4626Test is BridgeTestBase {
 
         bridge.listVault(wethVault);
 
-        AztecTypes.AztecAsset memory shareAsset = ROLLUP_ENCODER.getRealAztecAssetset(wethVault);
-        AztecTypes.AztecAsset memory ethAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(0));
+        AztecTypes.AztecAsset memory shareAsset = ROLLUP_ENCODER.getRealAztecAsset(wethVault);
+        AztecTypes.AztecAsset memory ethAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
 
         // Mint ETH to RollupProcessor
         deal(address(ROLLUP_PROCESSOR), assetAmount);
@@ -228,8 +229,8 @@ contract ERC4626Test is BridgeTestBase {
 
         bridge.listVault(wethVault);
 
-        AztecTypes.AztecAsset memory ethAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(0));
-        AztecTypes.AztecAsset memory shareAsset = ROLLUP_ENCODER.getRealAztecAssetset(wethVault);
+        AztecTypes.AztecAsset memory ethAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
+        AztecTypes.AztecAsset memory shareAsset = ROLLUP_ENCODER.getRealAztecAsset(wethVault);
 
         {
             // Subsidize deposit

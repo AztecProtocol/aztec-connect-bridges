@@ -4,9 +4,9 @@ pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
-import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
 import {DonationBridge} from "../../../bridges/donation/DonationBridge.sol";
@@ -43,7 +43,7 @@ contract DonationBridgeE2ETest is BridgeTestBase {
     }
 
     function setUp() public {
-        ethAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(0));
+        ethAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
         bridge = new DonationBridge(address(ROLLUP_PROCESSOR));
 
         bridge.listDonee(DONEE);
@@ -70,8 +70,8 @@ contract DonationBridgeE2ETest is BridgeTestBase {
             1,
             _amount
         );
-        vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _amount, 0, 0, true, "");
+
+        ROLLUP_ENCODER.registerEventToBeChecked(bridgeCallData, ROLLUP_ENCODER.getNextNonce(), _amount, 0, 0, true, "");
         ROLLUP_ENCODER.processRollup();
 
         assertEq(DONEE.balance, doneeBalanceBefore + _amount, "Donee did not receive eth");
@@ -83,7 +83,7 @@ contract DonationBridgeE2ETest is BridgeTestBase {
             uint8 decimals = token.decimals();
             uint256 amount = bound(_amount, 10**decimals, 1e6 * 10**decimals);
 
-            if (!isSupportedAsset(address(token))) {
+            if (!ROLLUP_ENCODER.isSupportedAsset(address(token))) {
                 vm.prank(address(MULTI_SIG));
                 ROLLUP_PROCESSOR.setSupportedAsset(address(token), 100000);
             }
@@ -94,15 +94,23 @@ contract DonationBridgeE2ETest is BridgeTestBase {
 
             uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
                 bridgeAddressId,
-                ROLLUP_ENCODER.getRealAztecAssetset(address(token)),
+                ROLLUP_ENCODER.getRealAztecAsset(address(token)),
                 emptyAsset,
                 emptyAsset,
                 emptyAsset,
                 1,
                 amount
             );
-            vm.expectEmit(true, true, false, true);
-            emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), amount, 0, 0, true, "");
+
+            ROLLUP_ENCODER.registerEventToBeChecked(
+                bridgeCallData,
+                ROLLUP_ENCODER.getNextNonce(),
+                _amount,
+                0,
+                0,
+                true,
+                ""
+            );
             ROLLUP_ENCODER.processRollup();
 
             assertEq(token.balanceOf(DONEE), doneeBalanceBefore + amount, "Donee did not receive token");
@@ -122,9 +130,18 @@ contract DonationBridgeE2ETest is BridgeTestBase {
             2,
             _amount
         );
-        vm.expectEmit(true, true, false, true);
+
         bytes memory err = abi.encodePacked(ErrorLib.InvalidAuxData.selector);
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _amount, 0, 0, false, err);
+
+        ROLLUP_ENCODER.registerEventToBeChecked(
+            bridgeCallData,
+            ROLLUP_ENCODER.getNextNonce(),
+            _amount,
+            0,
+            0,
+            false,
+            err
+        );
         ROLLUP_ENCODER.processRollup();
     }
 
@@ -140,12 +157,21 @@ contract DonationBridgeE2ETest is BridgeTestBase {
             emptyAsset,
             emptyAsset,
             emptyAsset,
-            doneeId,
+            uint64(doneeId),
             _amount
         );
-        vm.expectEmit(true, true, false, true);
+
         bytes memory err = abi.encodePacked(EthTransferFailed.selector);
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _amount, 0, 0, false, err);
+
+        ROLLUP_ENCODER.registerEventToBeChecked(
+            bridgeCallData,
+            ROLLUP_ENCODER.getNextNonce(),
+            _amount,
+            0,
+            0,
+            false,
+            err
+        );
         ROLLUP_ENCODER.processRollup();
     }
 
@@ -167,12 +193,19 @@ contract DonationBridgeE2ETest is BridgeTestBase {
             emptyAsset,
             emptyAsset,
             emptyAsset,
-            doneeId,
+            uint64(doneeId),
             _amount
         );
-        vm.expectEmit(true, true, false, true);
         bytes memory err = abi.encodePacked(ErrorLib.InvalidInputA.selector);
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _amount, 0, 0, false, err);
+        ROLLUP_ENCODER.registerEventToBeChecked(
+            bridgeCallData,
+            ROLLUP_ENCODER.getNextNonce(),
+            _amount,
+            0,
+            0,
+            false,
+            err
+        );
         ROLLUP_ENCODER.processRollup();
     }
 

@@ -75,17 +75,19 @@ contract UniswapBridgeE2ETest is BridgeTestBase {
         // 000000000000000000000 00000 | 0011110 01 100 10 001 11 | 1000110 01 010 10 001 10
         uint64 encodedPath = 0xF323C6546;
 
-        address[] memory tokensIn = new address[](1);
-        tokensIn[0] = LUSD;
+        {
+            address[] memory tokensIn = new address[](1);
+            tokensIn[0] = LUSD;
 
-        address[] memory tokensOut = new address[](1);
-        tokensOut[0] = LQTY;
+            address[] memory tokensOut = new address[](1);
+            tokensOut[0] = LQTY;
 
-        bridge.preApproveTokens(tokensIn, tokensOut);
+            bridge.preApproveTokens(tokensIn, tokensOut);
+        }
 
         // Define input and output assets
-        AztecTypes.AztecAsset memory lusdAsset = ROLLUP_ENCODER.getRealAztecAssetset(LUSD);
-        AztecTypes.AztecAsset memory lqtyAsset = ROLLUP_ENCODER.getRealAztecAssetset(LQTY);
+        AztecTypes.AztecAsset memory lusdAsset = ROLLUP_ENCODER.getRealAztecAsset(LUSD);
+        AztecTypes.AztecAsset memory lqtyAsset = ROLLUP_ENCODER.getRealAztecAsset(LQTY);
 
         deal(LUSD, address(ROLLUP_PROCESSOR), swapAmount);
 
@@ -105,11 +107,15 @@ contract UniswapBridgeE2ETest is BridgeTestBase {
             swapAmount
         );
 
-        vm.expectEmit(true, true, false, true);
-        // Second part of cheatcode, emit the event that we are to match against.
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), swapAmount, quote, 0, true, "");
-
-        // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
+        ROLLUP_ENCODER.registerEventToBeChecked(
+            bridgeCallData,
+            ROLLUP_ENCODER.getNextNonce(),
+            swapAmount,
+            quote,
+            0,
+            true,
+            ""
+        );
         ROLLUP_ENCODER.processRollup();
     }
 }

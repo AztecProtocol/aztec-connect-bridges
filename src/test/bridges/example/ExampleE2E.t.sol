@@ -50,7 +50,7 @@ contract ExampleE2ETest is BridgeTestBase {
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
         // Subsidize the bridge when used with USDC and register a beneficiary
-        AztecTypes.AztecAsset memory usdcAsset = ROLLUP_ENCODER.getRealAztecAssetset(USDC);
+        AztecTypes.AztecAsset memory usdcAsset = ROLLUP_ENCODER.getRealAztecAsset(USDC);
         uint256 criteria = bridge.computeCriteria(usdcAsset, emptyAsset, usdcAsset, emptyAsset, 0);
         uint32 gasPerMinute = 200;
         SUBSIDY.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
@@ -58,7 +58,7 @@ contract ExampleE2ETest is BridgeTestBase {
         SUBSIDY.registerBeneficiary(BENEFICIARY);
 
         // Set the rollupBeneficiary on BridgeTestBase so that it gets included in the proofData
-        setRollupBeneficiary(BENEFICIARY);
+        ROLLUP_ENCODER.setRollupBeneficiary(BENEFICIARY);
     }
 
     // @dev In order to avoid overflows we set _depositAmount to be uint96 instead of uint256.
@@ -67,7 +67,7 @@ contract ExampleE2ETest is BridgeTestBase {
         vm.warp(block.timestamp + 1 days);
 
         // Use the helper function to fetch the support AztecAsset for DAI
-        AztecTypes.AztecAsset memory usdcAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(USDC));
+        AztecTypes.AztecAsset memory usdcAsset = ROLLUP_ENCODER.getRealAztecAsset(address(USDC));
 
         // Mint the depositAmount of Dai to rollupProcessor
         deal(USDC, address(ROLLUP_PROCESSOR), _depositAmount);

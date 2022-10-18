@@ -38,8 +38,8 @@ contract LidoTest is BridgeTestBase {
         ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 500000);
         idOut = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
-        ethAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(0));
-        wstETHAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(WRAPPED_STETH));
+        ethAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
+        wstETHAsset = ROLLUP_ENCODER.getRealAztecAsset(address(WRAPPED_STETH));
 
         // Prefund to save gas
         deal(address(WRAPPED_STETH), address(ROLLUP_PROCESSOR), WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)) + 1);
@@ -142,8 +142,16 @@ contract LidoTest is BridgeTestBase {
             0,
             _depositAmount
         );
-        vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, wstEthIncrease, 0, true, "");
+
+        ROLLUP_ENCODER.registerEventToBeChecked(
+            bridgeCallData,
+            ROLLUP_ENCODER.getNextNonce(),
+            _depositAmount,
+            wstEthIncrease,
+            0,
+            true,
+            ""
+        );
         ROLLUP_ENCODER.processRollup();
 
         assertEq(address(ROLLUP_PROCESSOR).balance, beforeETHBalance - _depositAmount, "ETH balance not matching");
@@ -171,8 +179,16 @@ contract LidoTest is BridgeTestBase {
             0,
             _depositAmount
         );
-        vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, expectedEth, 0, true, "");
+
+        ROLLUP_ENCODER.registerEventToBeChecked(
+            bridgeCallData,
+            ROLLUP_ENCODER.getNextNonce(),
+            _depositAmount,
+            expectedEth,
+            0,
+            true,
+            ""
+        );
         ROLLUP_ENCODER.processRollup();
 
         assertEq(address(ROLLUP_PROCESSOR).balance, beforeETHBalance + expectedEth, "ETH balance not maching");

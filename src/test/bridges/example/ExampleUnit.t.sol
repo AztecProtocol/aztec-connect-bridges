@@ -38,7 +38,7 @@ contract ExampleUnitTest is BridgeTestBase {
         vm.label(address(bridge), "Example Bridge");
 
         // Subsidize the bridge when used with Dai and register a beneficiary
-        AztecTypes.AztecAsset memory daiAsset = ROLLUP_ENCODER.getRealAztecAssetset(DAI);
+        AztecTypes.AztecAsset memory daiAsset = ROLLUP_ENCODER.getRealAztecAsset(DAI);
         uint256 criteria = bridge.computeCriteria(daiAsset, emptyAsset, daiAsset, emptyAsset, 0);
         uint32 gasPerMinute = 200;
         SUBSIDY.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);

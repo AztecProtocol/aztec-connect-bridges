@@ -52,8 +52,8 @@ contract StakingBridgeE2ETest is BridgeTestBase {
         vm.assume(_depositAmount > 1);
 
         // Use the helper function to fetch Aztec assets
-        AztecTypes.AztecAsset memory lqtyAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(LQTY));
-        AztecTypes.AztecAsset memory sbAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(bridge));
+        AztecTypes.AztecAsset memory lqtyAsset = ROLLUP_ENCODER.getRealAztecAsset(address(LQTY));
+        AztecTypes.AztecAsset memory sbAsset = ROLLUP_ENCODER.getRealAztecAsset(address(bridge));
 
         // DEPOSIT
         // Mint the depositAmount of LQTY to rollupProcessor
@@ -72,9 +72,15 @@ contract StakingBridgeE2ETest is BridgeTestBase {
 
         uint256 stakingBalanceBefore = LQTY.balanceOf(stakingContract);
 
-        vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, _depositAmount, 0, true, "");
-
+        ROLLUP_ENCODER.registerEventToBeChecked(
+            bridgeCallData,
+            ROLLUP_ENCODER.getNextNonce(),
+            _depositAmount,
+            _depositAmount,
+            0,
+            true,
+            ""
+        );
         ROLLUP_ENCODER.processRollup();
 
         assertGe(
@@ -90,7 +96,7 @@ contract StakingBridgeE2ETest is BridgeTestBase {
 
         // WITHDRAWAL
         // Compute withdrawal calldata
-        encodeBridgeCallData(id, sbAsset, emptyAsset, lqtyAsset, emptyAsset, 0, _depositAmount);
+        ROLLUP_ENCODER.defiInteractionL2(id, sbAsset, emptyAsset, lqtyAsset, emptyAsset, 0, _depositAmount);
 
         uint256 processorBalanceBefore = LQTY.balanceOf(address(ROLLUP_PROCESSOR));
 
