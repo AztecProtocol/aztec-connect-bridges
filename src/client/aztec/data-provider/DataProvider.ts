@@ -94,7 +94,11 @@ export class DataProviderWrapper {
     return EthAddress.fromString(await this.dataProvider.ROLLUP_PROCESSOR());
   }
 
-  async getAccumulatedSubsidyAmount(bridgeCallData: bigint): Promise<bigint> {
-    return (await this.dataProvider.getAccumulatedSubsidyAmount(bridgeCallData)).toBigInt();
+  async getAccumulatedSubsidyAmount(bridgeCallData: bigint): Promise<{ criteria: bigint; amount: bigint }> {
+    const res = await this.dataProvider.getAccumulatedSubsidyAmount(bridgeCallData);
+    return {
+      criteria: res[0].toBigInt(),
+      amount: res[1].toBigInt(),
+    };
   }
 }
