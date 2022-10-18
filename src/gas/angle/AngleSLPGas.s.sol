@@ -4,7 +4,7 @@ pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AngleSLPBridge, IWETH} from "../../bridges/angle/AngleSLPBridge.sol";
-import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {ISubsidy} from "../../aztec/interfaces/ISubsidy.sol";
 
 import {AngleSLPDeployment, BaseDeployment} from "../../deployment/angle/AngleSLPDeployment.s.sol";

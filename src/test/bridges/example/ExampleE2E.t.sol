@@ -3,7 +3,7 @@
 pragma solidity >=0.8.4;
 
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
-import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
 // Example-specific imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -50,7 +50,7 @@ contract ExampleE2ETest is BridgeTestBase {
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
         // Subsidize the bridge when used with USDC and register a beneficiary
-        AztecTypes.AztecAsset memory usdcAsset = getRealAztecAsset(USDC);
+        AztecTypes.AztecAsset memory usdcAsset = ROLLUP_ENCODER.getRealAztecAssetset(USDC);
         uint256 criteria = bridge.computeCriteria(usdcAsset, emptyAsset, usdcAsset, emptyAsset, 0);
         uint32 gasPerMinute = 200;
         SUBSIDY.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
@@ -67,16 +67,16 @@ contract ExampleE2ETest is BridgeTestBase {
         vm.warp(block.timestamp + 1 days);
 
         // Use the helper function to fetch the support AztecAsset for DAI
-        AztecTypes.AztecAsset memory usdcAsset = getRealAztecAsset(address(USDC));
+        AztecTypes.AztecAsset memory usdcAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(USDC));
 
         // Mint the depositAmount of Dai to rollupProcessor
         deal(USDC, address(ROLLUP_PROCESSOR), _depositAmount);
 
         // Computes the encoded data for the specific bridge interaction
-        uint256 bridgeCallData = encodeBridgeCallData(id, usdcAsset, emptyAsset, usdcAsset, emptyAsset, 0);
+        ROLLUP_ENCODER.defiInteractionL2(id, usdcAsset, emptyAsset, usdcAsset, emptyAsset, 0, _depositAmount);
 
         // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, _depositAmount);
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         // Note: Unlike in unit tests there is no need to manually transfer the tokens - RollupProcessor does this
 
@@ -91,8 +91,10 @@ contract ExampleE2ETest is BridgeTestBase {
         // Perform a second rollup with half the deposit, perform similar checks.
         uint256 secondDeposit = _depositAmount / 2;
 
+        ROLLUP_ENCODER.defiInteractionL2(id, usdcAsset, emptyAsset, usdcAsset, emptyAsset, 0, secondDeposit);
+
         // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
-        (outputValueA, outputValueB, isAsync) = sendDefiRollup(bridgeCallData, secondDeposit);
+        (outputValueA, outputValueB, isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         // Check the output values are as expected
         assertEq(outputValueA, secondDeposit, "outputValueA doesn't equal second deposit");

@@ -2,7 +2,7 @@
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
-import {AztecTypes} from "./../../../aztec/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {BridgeTestBase} from "../base/BridgeTestBase.sol";
 import {DataProvider} from "../../../aztec/DataProvider.sol";
 
@@ -180,12 +180,14 @@ contract DataProviderTest is BridgeTestBase {
 
     function testHappySubsidyHelper() public {
         AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory eth = getRealAztecAsset(address(0));
-        AztecTypes.AztecAsset memory vyvault = getRealAztecAsset(0xa258C4606Ca8206D8aA700cE2143D7db854D168c);
+        AztecTypes.AztecAsset memory eth = ROLLUP_ENCODER.getRealAztecAssetset(address(0));
+        AztecTypes.AztecAsset memory vyvault = ROLLUP_ENCODER.getRealAztecAssetset(
+            0xa258C4606Ca8206D8aA700cE2143D7db854D168c
+        );
 
         vm.warp(block.timestamp + 1 days);
 
-        uint256 bridgeCallData = encodeBridgeCallData(7, eth, empty, vyvault, empty, 0);
+    uint256 bridgeCallData = ROLLUP_ENCODER.encodeBridgeCallData(7, eth, empty, vyvault, empty, 0);
         (uint256 criteria, uint256 subsidy) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
         assertEq(criteria, 0, "Subsidy have accrued");
         assertGt(subsidy, 0, "No subsidy accrued");
@@ -199,23 +201,24 @@ contract DataProviderTest is BridgeTestBase {
     }
 
     function testHappySubsidyHelper2InOut() public {
-        AztecTypes.AztecAsset memory eth = getRealAztecAsset(address(0));
-        AztecTypes.AztecAsset memory dai = getRealAztecAsset(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-        uint256 bridgeCallData = encodeBridgeCallData(7, dai, eth, dai, eth, 0);
+        AztecTypes.AztecAsset memory eth = ROLLUP_ENCODER.getRealAztecAssetset(address(0));
+        AztecTypes.AztecAsset memory dai = ROLLUP_ENCODER.getRealAztecAssetset(
+            0x6B175474E89094C44Da98b954EedeAC495271d0F
+        );
+        uint256 bridgeCallData = ROLLUP_ENCODER.encodeBridgeCallData(7, dai, eth, dai, eth, 0);
         (uint256 criteria, uint256 subsidy) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
-        assertEq(criteria, 0, "Wrong criteria");
         assertGt(subsidy, 0, "No subsidy accrued");
     }
 
     function testHappySubsidyHelperVirtual() public {
-        AztecTypes.AztecAsset memory eth = getRealAztecAsset(address(0));
+        AztecTypes.AztecAsset memory eth = ROLLUP_ENCODER.getRealAztecAssetset(address(0));
         AztecTypes.AztecAsset memory virtualAsset = AztecTypes.AztecAsset({
             id: 0,
             erc20Address: address(0),
             assetType: AztecTypes.AztecAssetType.VIRTUAL
         });
 
-        uint256 bridgeCallData = encodeBridgeCallData(7, virtualAsset, eth, virtualAsset, eth, 0);
+        uint256 bridgeCallData = ROLLUP_ENCODER.encodeBridgeCallData(7, virtualAsset, eth, virtualAsset, eth, 0);
         (uint256 criteria, uint256 subsidy) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
         assertEq(criteria, 0, "Wrong criteria");
         assertGt(subsidy, 0, "No subsidy accrued");
@@ -223,8 +226,10 @@ contract DataProviderTest is BridgeTestBase {
 
     function testUnHappySubsidyHelper() public {
         AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory dai = getRealAztecAsset(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-        uint256 bridgeCallData = encodeBridgeCallData(1, dai, empty, dai, empty, 0);
+        AztecTypes.AztecAsset memory dai = ROLLUP_ENCODER.getRealAztecAssetset(
+            0x6B175474E89094C44Da98b954EedeAC495271d0F
+        );
+        uint256 bridgeCallData = ROLLUP_ENCODER.encodeBridgeCallData(1, dai, empty, dai, empty, 0);
         (uint256 criteria, uint256 subsidy) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
         assertEq(criteria, 0, "Wrong criteria");
         assertEq(subsidy, 0, "Subsidy have accrued");

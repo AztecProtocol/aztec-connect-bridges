@@ -17,7 +17,7 @@ import {IWrappedPosition} from "../../../interfaces/element/IWrappedPosition.sol
 import {MockDeploymentValidator} from "./MockDeploymentValidator.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
-import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
 // @dev Note: these tests are deprecated and will be replaced once Element v2 is released
 contract ElementTest is Test {

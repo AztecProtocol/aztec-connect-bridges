@@ -13,7 +13,7 @@ import {IDefiBridge} from "../../../aztec/interfaces/IDefiBridge.sol";
 import {ISubsidy} from "../../../aztec/interfaces/ISubsidy.sol";
 
 import {CurveStEthBridge} from "../../../bridges/curve/CurveStEthBridge.sol";
-import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
 import {Deployer} from "../../../bridges/curve/Deployer.sol";
@@ -52,12 +52,12 @@ contract CurveLpE2ETest is BridgeTestBase {
         ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 500000);
         bridgeAddressId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
-        ethAsset = getRealAztecAsset(address(0));
-        wstETHAsset = getRealAztecAsset(address(WRAPPED_STETH));
+        ethAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(0));
+        wstETHAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(WRAPPED_STETH));
 
         vm.prank(MULTI_SIG);
         ROLLUP_PROCESSOR.setSupportedAsset(address(LP_TOKEN), 100000);
-        lpAsset = getRealAztecAsset(address(LP_TOKEN));
+        lpAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(LP_TOKEN));
 
         // Prefund to save gas
         deal(address(WRAPPED_STETH), address(ROLLUP_PROCESSOR), WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR)) + 1);
@@ -130,11 +130,19 @@ contract CurveLpE2ETest is BridgeTestBase {
             ? address(ROLLUP_PROCESSOR).balance
             : WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
 
-        uint256 bridgeCallData = encodeBridgeCallData(bridgeAddressId, _inputAsset, emptyAsset, lpAsset, emptyAsset, 0);
+        ROLLUP_ENCODER.defiInteractionL2(
+            bridgeAddressId,
+            _inputAsset,
+            emptyAsset,
+            lpAsset,
+            emptyAsset,
+            0,
+            _depositAmount
+        );
 
         uint256 claimableBefore = SUBSIDY.claimableAmount(BENEFICAIRY);
 
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, _depositAmount);
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         assertGt(SUBSIDY.claimableAmount(BENEFICAIRY), claimableBefore, "No subsidy accumulated");
 
@@ -154,8 +162,8 @@ contract CurveLpE2ETest is BridgeTestBase {
         uint256 rollupEthBalance = address(ROLLUP_PROCESSOR).balance;
         uint256 rollupWstEThBalance = WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
 
-        uint256 bridgeCallData = encodeBridgeCallData(bridgeAddressId, lpAsset, emptyAsset, ethAsset, wstETHAsset, 0);
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, _inputAmount);
+        ROLLUP_ENCODER.defiInteractionL2(bridgeAddressId, lpAsset, emptyAsset, ethAsset, wstETHAsset, 0, _inputAmount);
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         uint256 rollupLpBalanceAfter = LP_TOKEN.balanceOf(address(ROLLUP_PROCESSOR));
         uint256 rollupEthBalanceAfter = address(ROLLUP_PROCESSOR).balance;

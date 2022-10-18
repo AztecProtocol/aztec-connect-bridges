@@ -4,7 +4,7 @@ pragma solidity >=0.8.4;
 
 import {IDefiBridge} from "../../aztec/interfaces/IDefiBridge.sol";
 import {ISubsidy} from "../../aztec/interfaces/ISubsidy.sol";
-import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {ErrorLib} from "./ErrorLib.sol";
 
 /**

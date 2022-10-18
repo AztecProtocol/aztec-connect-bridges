@@ -8,7 +8,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {Test} from "forge-std/Test.sol";
-import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {IWETH} from "../../../interfaces/IWETH.sol";
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
@@ -65,8 +65,8 @@ contract BiDCATestE2E is BridgeTestBase {
 
         vm.stopPrank();
 
-        aztecAssetA = getRealAztecAsset(address(assetA));
-        aztecAssetB = getRealAztecAsset(address(assetB));
+        aztecAssetA = ROLLUP_ENCODER.getRealAztecAssetset(address(assetA));
+        aztecAssetB = ROLLUP_ENCODER.getRealAztecAssetset(address(assetB));
 
         vm.label(address(assetA), "DAI");
         vm.label(address(assetB), "WETH");
@@ -127,16 +127,17 @@ contract BiDCATestE2E is BridgeTestBase {
                 // Deposit with asset A
 
                 deal(address(_aFirst ? assetA : assetB), address(ROLLUP_PROCESSOR), deposit1);
-                uint256 encodedBridgeCallData = encodeBridgeCallData(
+                ROLLUP_ENCODER.defiInteractionL2(
                     bridgeAddressId,
                     _aFirst ? aztecAssetA : aztecAssetB,
                     emptyAsset,
                     _aFirst ? aztecAssetB : aztecAssetA,
                     emptyAsset,
-                    uint64(length1)
+                    uint64(length1),
+                    deposit1
                 );
 
-                sendDefiRollup(encodedBridgeCallData, deposit1);
+                ROLLUP_ENCODER.processRollup();
 
                 vm.warp(block.timestamp + timediff * 1 days);
             }
@@ -145,16 +146,17 @@ contract BiDCATestE2E is BridgeTestBase {
                 // Deposit2
 
                 deal(address(_aFirst ? assetB : assetA), address(ROLLUP_PROCESSOR), deposit2);
-                uint256 encodedBridgeCallData = encodeBridgeCallData(
+                ROLLUP_ENCODER.defiInteractionL2(
                     bridgeAddressId,
                     _aFirst ? aztecAssetB : aztecAssetA,
                     emptyAsset,
                     _aFirst ? aztecAssetA : aztecAssetB,
                     emptyAsset,
-                    uint64(length2)
+                    uint64(length2),
+                    deposit2
                 );
 
-                sendDefiRollup(encodedBridgeCallData, deposit2);
+                ROLLUP_ENCODER.processRollup();
                 vm.warp(endTime);
             }
         }

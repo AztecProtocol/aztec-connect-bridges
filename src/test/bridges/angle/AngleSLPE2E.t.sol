@@ -3,7 +3,7 @@
 pragma solidity >=0.8.4;
 
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
-import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -47,16 +47,16 @@ contract AngleSLPE2ETest is BridgeTestBase {
 
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
-        ethAsset = getRealAztecAsset(address(0));
+        ethAsset = ROLLUP_ENCODER.getRealAztecAssetset(address(0));
 
-        daiAsset = getRealAztecAsset(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-        sanDaiAsset = getRealAztecAsset(0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450);
+        daiAsset = ROLLUP_ENCODER.getRealAztecAssetset(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+        sanDaiAsset = ROLLUP_ENCODER.getRealAztecAssetset(0x7B8E89b0cE7BAC2cfEC92A371Da899eA8CBdb450);
 
-        usdcAsset = getRealAztecAsset(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-        sanUsdcAsset = getRealAztecAsset(0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad);
+        usdcAsset = ROLLUP_ENCODER.getRealAztecAssetset(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+        sanUsdcAsset = ROLLUP_ENCODER.getRealAztecAssetset(0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad);
 
-        wethAsset = getRealAztecAsset(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-        sanWethAsset = getRealAztecAsset(0x30c955906735e48D73080fD20CB488518A6333C8);
+        wethAsset = ROLLUP_ENCODER.getRealAztecAssetset(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+        sanWethAsset = ROLLUP_ENCODER.getRealAztecAssetset(0x30c955906735e48D73080fD20CB488518A6333C8);
 
         deal(daiAsset.erc20Address, address(bridge), DUST);
         deal(sanDaiAsset.erc20Address, address(bridge), DUST);
@@ -73,7 +73,7 @@ contract AngleSLPE2ETest is BridgeTestBase {
         SUBSIDY.subsidize{value: 10 ether}(address(bridge), 1, 500);
         SUBSIDY.registerBeneficiary(BENEFICIARY);
 
-        setRollupBeneficiary(BENEFICIARY);
+        ROLLUP_ENCODER.setRollupBeneficiary(BENEFICIARY);
     }
 
     function testValidDeposit(uint96 _amount) public {
@@ -90,8 +90,8 @@ contract AngleSLPE2ETest is BridgeTestBase {
 
         uint256 balanceRollupBeforeSanWETH = IERC20(sanWethAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
 
-        uint256 bridgeCallData = encodeBridgeCallData(id, ethAsset, emptyAsset, sanWethAsset, emptyAsset, 0);
-        (uint256 outputValueA, , ) = sendDefiRollup(bridgeCallData, amount);
+        ROLLUP_ENCODER.defiInteractionL2(id, ethAsset, emptyAsset, sanWethAsset, emptyAsset, 0, amount);
+        (uint256 outputValueA, , ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_WETH());
 
@@ -124,8 +124,8 @@ contract AngleSLPE2ETest is BridgeTestBase {
 
         uint256 balanceRollupBeforeETH = address(ROLLUP_PROCESSOR).balance;
 
-        uint256 bridgeCallData = encodeBridgeCallData(id, sanWethAsset, emptyAsset, ethAsset, emptyAsset, 1);
-        (uint256 outputValueA, , ) = sendDefiRollup(bridgeCallData, amount);
+        ROLLUP_ENCODER.defiInteractionL2(id, sanWethAsset, emptyAsset, ethAsset, emptyAsset, 1, amount);
+        (uint256 outputValueA, , ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_WETH());
 
@@ -166,8 +166,8 @@ contract AngleSLPE2ETest is BridgeTestBase {
 
         uint256 balanceRollupBeforeOutput = IERC20(_outputAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
 
-        uint256 bridgeCallData = encodeBridgeCallData(id, _inputAsset, emptyAsset, _outputAsset, emptyAsset, 0);
-        (uint256 outputValueA, , ) = sendDefiRollup(bridgeCallData, amount);
+        ROLLUP_ENCODER.defiInteractionL2(id, _inputAsset, emptyAsset, _outputAsset, emptyAsset, 0, amount);
+        (uint256 outputValueA, , ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(_poolManager);
 
@@ -193,8 +193,8 @@ contract AngleSLPE2ETest is BridgeTestBase {
         uint256 balanceRollupBeforeOutput = IERC20(_outputAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 balanceRollupBeforeInput = IERC20(_inputAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
 
-        uint256 bridgeCallData = encodeBridgeCallData(id, _inputAsset, emptyAsset, _outputAsset, emptyAsset, 1);
-        (uint256 outputValueA, , ) = sendDefiRollup(bridgeCallData, _amount);
+        ROLLUP_ENCODER.defiInteractionL2(id, _inputAsset, emptyAsset, _outputAsset, emptyAsset, 1, _amount);
+        (uint256 outputValueA, , ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(_poolManager);
 
