@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity >=0.6.10;
 
-import "../IERC20Permit.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 
-interface ITranche is IERC20Permit {
+interface ITranche is IERC20, IERC20Permit {
     function deposit(uint256 _shares, address destination) external returns (uint256, uint256);
 
     function prefundedDeposit(address _destination) external returns (uint256, uint256);

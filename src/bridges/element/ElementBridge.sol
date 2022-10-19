@@ -2,12 +2,11 @@
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IVault, IAsset, PoolSpecialization} from "../../interfaces/element/IVault.sol";
 import {IPool} from "../../interfaces/element/IPool.sol";
 import {ITranche} from "../../interfaces/element/ITranche.sol";
 import {IDeploymentValidator} from "../../interfaces/element/IDeploymentValidator.sol";
-import {IERC20Permit, IERC20} from "../../interfaces/IERC20Permit.sol";
 import {IWrappedPosition} from "../../interfaces/element/IWrappedPosition.sol";
 import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
 import {MinHeap} from "./MinHeap.sol";
@@ -539,9 +538,9 @@ contract ElementBridge is BridgeBase {
         });
 
         // approve the transfer of tokens to the balancer address
-        ERC20(inputAsset).approve(balancerAddress, inputQuantity);
+        IERC20(inputAsset).approve(balancerAddress, inputQuantity);
 
-        uint256 trancheTokenQuantityBefore = ERC20(pool.trancheAddress).balanceOf(address(this));
+        uint256 trancheTokenQuantityBefore = IERC20(pool.trancheAddress).balanceOf(address(this));
         quantityReceived = IVault(balancerAddress).swap(
             singleSwap,
             fundManagement,
@@ -549,7 +548,7 @@ contract ElementBridge is BridgeBase {
             block.timestamp
         );
 
-        uint256 trancheTokenQuantityAfter = ERC20(pool.trancheAddress).balanceOf(address(this));
+        uint256 trancheTokenQuantityAfter = IERC20(pool.trancheAddress).balanceOf(address(this));
         // ensure we haven't lost tokens!
         if (trancheTokenQuantityAfter < trancheTokenQuantityBefore) {
             revert INVALID_CHANGE_IN_BALANCE();
@@ -709,7 +708,7 @@ contract ElementBridge is BridgeBase {
         }
 
         // approve the transfer of funds back to the rollup contract
-        ERC20(outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, amountToAllocate);
+        IERC20(outputAssetA.erc20Address).approve(ROLLUP_PROCESSOR, amountToAllocate);
         interaction.finalised = true;
         popInteractionFromNonceMapping(interaction, interactionNonce);
         outputValueA = amountToAllocate;
@@ -918,7 +917,7 @@ contract ElementBridge is BridgeBase {
         IWrappedPosition wrappedPosition = IWrappedPosition(wpAddress);
         address underlyingAddress = address(wrappedPosition.token());
         address yearnVaultAddress = address(wrappedPosition.vault());
-        uint256 vaultQuantity = ERC20(underlyingAddress).balanceOf(yearnVaultAddress);
+        uint256 vaultQuantity = IERC20(underlyingAddress).balanceOf(yearnVaultAddress);
         if (trancheAccount.quantityTokensHeld > vaultQuantity) {
             trancheAccount.redemptionStatus = TrancheRedemptionStatus.REDEMPTION_FAILED;
             return (false, "VAULT_BALANCE");

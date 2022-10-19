@@ -2,10 +2,11 @@
 pragma solidity >=0.7.5;
 pragma abicoder v2;
 
-import {IERC20Permit, IERC20} from "../IERC20Permit.sol";
 import {IVault} from "./IVault.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 
-interface IPool is IERC20Permit {
+interface IPool is IERC20, IERC20Permit {
     /// @dev Returns the poolId for this pool
     /// @return The poolId for this pool
     function getPoolId() external view returns (bytes32);
