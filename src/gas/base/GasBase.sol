@@ -34,12 +34,7 @@ contract GasBase {
         address _rollupBeneficiary,
         uint256 _gasLimit
     ) external {
-        uint256 paymentSlot;
-        assembly {
-            paymentSlot := ethPayments.slot
-        }
-
-        (bool success, ) = address(defiProxy).delegatecall{gas: _gasLimit}(
+        (bool success, bytes memory data) = address(defiProxy).delegatecall{gas: _gasLimit}(
             abi.encodeWithSelector(
                 DEFI_BRIDGE_PROXY_CONVERT_SELECTOR,
                 _bridgeAddress,
@@ -50,13 +45,16 @@ contract GasBase {
                 _totalInputValue,
                 _interactionNonce,
                 _auxInputData,
-                paymentSlot,
+                _getPaymentsSlot(),
                 _rollupBeneficiary
             )
         );
 
         if (!success) {
-            revert("Failure, should only fail with OOM");
+            if (data.length == 0) revert("Revert without error message --> probably out of gas");
+            assembly {
+                revert(add(32, data), mload(data))
+            }
         }
     }
 
@@ -66,5 +64,11 @@ contract GasBase {
 
     function getSupportedAssetsLength() external view returns (uint256) {
         return 0;
+    }
+
+    function _getPaymentsSlot() private returns (uint256 paymentSlot) {
+        assembly {
+            paymentSlot := ethPayments.slot
+        }
     }
 }
