@@ -261,13 +261,13 @@ We can notice that with virtual assets there are no actual transfers on L1.
 Virtual assets are used simply as a packet of information which can be used by the bridge to represent some form of ownership.
 This is far more gas efficient than minting and transferring ERC20 tokens, and generally they are recommended to be used when the bridge holds an asset which is not natively supported by `RollupProcessor` contract (e.g. NFTs).
 
-> Note 1: Value notes represent ownership of assets on L2.
-
-> Note 2: We don't call `bridge`'s `convert(...)` method directly from the `RollupProcessor` in order to separate the asset transfer functionality from the main contract.
-
 When virtual assets are returned from a `convert(...)` function their `assetId` is set to the `interactionNonce` of the bridge call.
 An `interactionNonce` is globally unique.
 Virtual assets can be used to construct complex flows, such as entering or exiting LP positions.
+
+> Note 1: Value notes represent ownership of assets on L2.
+
+> Note 2: We don't call `bridge`'s `convert(...)` method directly from the `RollupProcessor` in order to separate the asset transfer functionality from the main contract.
 
 > Note 3: The fact that it's currently impossible to return a virtual assets with the same `assetId` from multiple `convert(...)` function calls is a bit limiting and we might change it in the future.
 
