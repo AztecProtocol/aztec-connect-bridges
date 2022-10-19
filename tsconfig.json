@@ -16,6 +16,5 @@
     "declarationMap": true,
     "resolveJsonModule": true
   },
-  "include": ["client", "typechain-types"],
-  "files": ["hardhat.config.ts"]
+  "include": ["client", "typechain-types"]
 }

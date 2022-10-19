@@ -1,7 +1,6 @@
 cache/
 out/
 node_modules/
-artifacts/
 yarn-error.log
 client-dest/
 typechain-types/

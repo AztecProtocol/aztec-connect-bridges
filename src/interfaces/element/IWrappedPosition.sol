@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity >=0.8.4;
 
-import "../IERC20Permit.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 
-interface IWrappedPosition is IERC20Permit {
+interface IWrappedPosition is IERC20, IERC20Permit {
     function token() external view returns (IERC20);
 
     function vault() external view returns (address);
