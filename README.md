@@ -221,16 +221,55 @@ The rollup will call a bridge contract with a fixed deterministic amount of gas 
 The source of funds for any Aztec Connect transaction is an Aztec-shielded asset.
 When a user interacts with an Aztec Connect Bridge contract, their identity is kept hidden, but balances sent to the bridge are public.
 
-### Virtual Assets
+### Asset Types
 
-Aztec uses the concept of Virtual Assets or Position tokens to represent a share of assets held by a Bridge contract.
-This is far more gas efficient than minting ERC20 tokens.
-These are used when the bridge holds an asset that Aztec doesn't support (e.g. Uniswap Position NFTs or other non-fungible assets).
+There are 3 types of assets:
 
-If the output asset of any interaction is specified as "VIRTUAL", the user will receive encrypted notes on Aztec representing their share of the position, but no tokens or ETH need to be transferred.
-The position tokens have an `assetId` that is the `interactionNonce` of the DeFi Bridge call.
-This is globally unique.
-Virtual assets can be used to construct complex flows, such as entering or exiting LP positions (e.g. one bridge contract can have multiple flows which are triggered using different input assets).
+1. `ETH`,
+2. `ERC20`,
+3. `VIRTUAL`.
+
+We call **ETH** and **ERC20** real assets.
+
+Virtual assets behave similarly to the real ones but the difference is that they don't have any token representation on L1 and exist solely within the Aztec network as a cryptographic value note.
+
+To be more explicit, this is what happens when users initiate a bridge call with **ERC20** tokens on input and output:
+
+1. Users' cryptographic value notes on L2 are destroyed, and they receive cryptographic claim notes which make them eligible for the results of the interaction (output tokens),
+2. `rollup provider` creates a rollup block and sends it to the `RollupProcessor` contract (the rollup block contains the corresponding bridge call),
+3. `RollupProcessor` calls `DefiBridgeProxy`'s `convert(...)` function via delegate call (input and output assets are of `ERC20` type),
+4. `DefiBridgeProxy` contract transfers `totalInputValue` of input tokens to the `bridge`,
+5. `DefiBridgeProxy` calls the `bridge`'s convert function,
+6. in the convert function `bridge` approves `RollupProcessor` to spend `outputValue[A,B]` of output tokens,
+7. `DefiBridgeProxy` pulls the `outputValue[A,B]` of output tokens to `RollupProcessor`,
+8. once the interaction is finished `rollup provider` submits a claim on behalf of each user who partook in the interaction (claim note is destroyed and new value note is created).
+
+The flow when dealing with **ETH** on input and output is very similar to the **ERC20** one.
+The difference is that **ETH** gets passed to the bridge directly as a `msg.value` of the `convert(...)` function call.
+When returning it, the bridge calls `RollupProcessor.receiveEthFromBridge{value: outputValue}(uint256 _interactionNonce)`.
+
+The flow with **VIRTUAL** asset on the input and output is quite different from the real ones:
+
+1. Users' cryptographic value notes on L2 are destroyed, and they receive cryptographic claim notes which make them eligible for the results of the interaction (output tokens),
+2. `rollup provider` creates a rollup block and sends it to the `RollupProcessor` contract (the rollup block contains the corresponding bridge call),
+3. `RollupProcessor` calls `DefiBridgeProxy`'s `convert(...)` function via delegate call (input and output assets are of `ERC20` type),
+4. `DefiBridgeProxy` calls the `bridge`'s convert function,
+5. `DefiBridgeProxy` transfers the `outputValue[A,B]` of output tokens to `RollupProcessor`,
+6. once the interaction is finished `rollup provider` submits a claim on behalf of each user who partook in the interaction (claim note is destroyed and new value note is created)
+
+We can notice that with virtual assets there are no actual transfers on L1.
+Virtual assets are used simply as a packet of information which can be used by the bridge to represent some form of ownership.
+This is far more gas efficient than minting and transferring ERC20 tokens, and generally they are recommended to be used when the bridge holds an asset which is not natively supported by `RollupProcessor` contract (e.g. NFTs).
+
+When virtual assets are returned from a `convert(...)` function their `assetId` is set to the `interactionNonce` of the bridge call.
+An `interactionNonce` is globally unique.
+Virtual assets can be used to construct complex flows, such as entering or exiting LP positions.
+
+> Note 1: Value notes represent ownership of assets on L2.
+
+> Note 2: We don't call `bridge`'s `convert(...)` method directly from the `RollupProcessor` in order to separate the asset transfer functionality from the main contract.
+
+> Note 3: The fact that it's currently impossible to return a virtual assets with the same `assetId` from multiple `convert(...)` function calls is a bit limiting and we might change it in the future.
 
 ### Example flows and asset configurations
 
