@@ -16,4 +16,5 @@
     "declarationMap": true,
     "resolveJsonModule": true
   },
-  "include": ["client", "typechain-types"]}
+  "include": ["client", "typechain-types"]
+}
