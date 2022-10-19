@@ -241,7 +241,7 @@ To be more explicit, this is what happens when users initiate a bridge call with
 4. `DefiBridgeProxy` contract transfers `totalInputValue` of input tokens to the `bridge`,
 5. `DefiBridgeProxy` calls the `bridge`'s convert function,
 6. in the convert function `bridge` approves `RollupProcessor` to spend `outputValue[A,B]` of output tokens,
-7. `DefiBridgeProxy` transfers the `outputValue[A,B]` of output tokens to `RollupProcessor`,
+7. `DefiBridgeProxy` pulls the `outputValue[A,B]` of output tokens to `RollupProcessor`,
 8. once the interaction is finished `rollup provider` submits a claim on behalf of each user who partook in the interaction (claim note is destroyed and new value note is created).
 
 The flow when dealing with **ETH** on input and output is very similar to the **ERC20** one.
