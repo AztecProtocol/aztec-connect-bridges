@@ -27,7 +27,7 @@ jobs:
             export PATH=/home/circleci/.foundry/bin:$PATH
             export PATH=/home/circleci/.forge/bin:$PATH
             yarn setup:foundry
-            yarn compile:typechain
+            yarn build
       - run:
           name: Check Formatting
           shell: /bin/bash
@@ -98,9 +98,10 @@ jobs:
             export PATH=/home/circleci/.foundry/bin:$PATH
             export PATH=/home/circleci/.forge/bin:$PATH
             yarn setup:foundry
-            yarn compile:typechain
-            yarn test:contracts
-            yarn test:clients
+      - run:
+          name: Build and Publish
+          shell: /bin/bash
+          command: |
             yarn build
             yarn publish --access public
 
