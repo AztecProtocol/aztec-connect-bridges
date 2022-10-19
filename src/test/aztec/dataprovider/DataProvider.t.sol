@@ -205,6 +205,7 @@ contract DataProviderTest is BridgeTestBase {
         AztecTypes.AztecAsset memory dai = ROLLUP_ENCODER.getRealAztecAsset(0x6B175474E89094C44Da98b954EedeAC495271d0F);
         uint256 bridgeCallData = ROLLUP_ENCODER.encodeBridgeCallData(7, dai, eth, dai, eth, 0);
         (uint256 criteria, uint256 subsidy) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
+        assertEq(criteria, 0, "Wrong criteria");
         assertGt(subsidy, 0, "No subsidy accrued");
     }
 
