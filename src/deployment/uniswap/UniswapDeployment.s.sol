@@ -15,7 +15,7 @@ contract UniswapDeployment is BaseDeployment {
         vm.broadcast();
         UniswapBridge bridge = new UniswapBridge(ROLLUP_PROCESSOR);
 
-        emit log_named_address("Example uniswap deployed to", address(bridge));
+        emit log_named_address("Uniswap bridge deployed to", address(bridge));
 
         address[] memory tokens = new address[](2);
         tokens[0] = DAI;
