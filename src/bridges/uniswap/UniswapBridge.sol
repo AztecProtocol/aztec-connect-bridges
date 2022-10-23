@@ -338,9 +338,9 @@ contract UniswapBridge is BridgeBase {
     /**
      * @notice A function which encodes a split path.
      * @param _path - Split path to encode
-     * @return Encoded split path (in the last 19 bits of uint)
-     * @dev In place of unused middle tokens and address(0). When fee tier is unused place there any valid value. This
-     *      value gets ignored.
+     * @return Encoded split path (in the last 19 bits of uint256)
+     * @dev In place of unused middle tokens leave address(0).
+     * @dev Fee tier corresponding to unused middle token is ignored.
      */
     function _encodeSplitPath(SplitPath calldata _path) internal pure returns (uint256) {
         if (_path.percentage == 0) return 0;
@@ -356,7 +356,7 @@ contract UniswapBridge is BridgeBase {
     /**
      * @notice A function which encodes fee tier.
      * @param _feeTier - Fee tier in bps
-     * @return Encoded fee tier (in the last 2 bits of uint)
+     * @return Encoded fee tier (in the last 2 bits of uint256)
      */
     function _encodeFeeTier(uint256 _feeTier) internal pure returns (uint256) {
         if (_feeTier == 100) {
