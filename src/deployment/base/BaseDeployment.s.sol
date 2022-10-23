@@ -66,6 +66,7 @@ abstract contract BaseDeployment is Test {
         }
 
         (ROLLUP_PROCESSOR, TO_IMPERSONATE) = getRollupProcessorAndLister();
+        /* solhint-disable custom-error-over-require */
         require(ROLLUP_PROCESSOR != address(0), "RollupProcessor address resolved to 0");
         emit log_named_address("Rollup at", ROLLUP_PROCESSOR);
     }
