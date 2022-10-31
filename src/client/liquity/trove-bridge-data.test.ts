@@ -1,4 +1,6 @@
 import { EthAddress } from "@aztec/barretenberg/address";
+import { BigNumber } from "ethers";
+import { ITroveManager, ITroveManager__factory, TroveBridge, TroveBridge__factory } from "../../../typechain-types";
 import { AztecAsset, AztecAssetType } from "../bridge-data";
 import { TroveBridgeData } from "./trove-bridge-data";
 
@@ -10,7 +12,10 @@ type Mockify<T> = {
   [P in keyof T]: jest.Mock | any;
 };
 
-describe("ERC4626 bridge data", () => {
+describe("Liquity trove bridge data", () => {
+  let troveBridge: Mockify<TroveBridge>;
+  let troveManager: Mockify<ITroveManager>;
+
   let ethAsset: AztecAsset;
   let lusdAsset: AztecAsset;
   let tbAsset: AztecAsset;
@@ -40,7 +45,7 @@ describe("ERC4626 bridge data", () => {
   });
 
   it("should correctly fetch auxData when borrowing", async () => {
-    const troveBridgeData = TroveBridgeData.create({} as any);
+    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
 
     // Test the code using mocked controller
     const auxDataBorrow = await troveBridgeData.getAuxData(ethAsset, emptyAsset, tbAsset, lusdAsset);
@@ -48,10 +53,65 @@ describe("ERC4626 bridge data", () => {
   });
 
   it("should correctly fetch auxData when not borrowing", async () => {
-    const troveBridgeData = TroveBridgeData.create({} as any);
+    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
 
     // Test the code using mocked controller
     const auxDataBorrow = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, lusdAsset);
     expect(auxDataBorrow[0]).toBe(0);
+  });
+
+  it("should correctly get expected output when borrowing", async () => {
+    // Setup mocks
+    troveBridge = {
+      ...troveBridge,
+      callStatic: {
+        computeAmtToBorrow: jest.fn().mockResolvedValue(BigNumber.from("1000000000000000000000")), // 1000 LUSD
+      },
+    };
+    TroveBridge__factory.connect = () => troveBridge as any;
+
+    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+
+    // Test the code using mocked controller
+    const outputBorrow = await troveBridgeData.getExpectedOutput(
+      ethAsset,
+      emptyAsset,
+      tbAsset,
+      lusdAsset,
+      troveBridgeData.MAX_FEE,
+      10n ** 18n,
+    );
+    expect(outputBorrow[0]).toBe(10n ** 21n);
+  });
+
+  it("should correctly get expected output when repaying", async () => {
+    // Setup mocks
+    troveBridge = {
+      ...troveBridge,
+      totalSupply: jest.fn().mockResolvedValue(BigNumber.from("1000000000000000000000")), // 1000 TB
+    };
+    TroveBridge__factory.connect = () => troveBridge as any;
+
+    troveManager = {
+      ...troveManager,
+      getEntireDebtAndColl: jest.fn().mockResolvedValue({
+        debt: BigNumber.from("1000000000000000000000"), // 100k LUSD
+        coll: BigNumber.from("1000000000000000000000"), // 1000 ETH
+        pendingLUSDDebtReward: BigNumber.from("0"), // not used - can be 0
+        pendingETHReward: BigNumber.from("0"), // not used - can be 0
+      }),
+    };
+
+    ITroveManager__factory.connect = () => troveManager as any;
+
+    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+
+    // Test the code using mocked controller
+    const inputValue = 10n ** 18n;
+    const output = await troveBridgeData.getExpectedOutput(tbAsset, lusdAsset, ethAsset, lusdAsset, 0, inputValue);
+    const expectedCollateralWithdrawn = inputValue;
+    const lusdReturned = 0n;
+    expect(output[0]).toBe(expectedCollateralWithdrawn);
+    expect(output[1]).toBe(lusdReturned);
   });
 });
