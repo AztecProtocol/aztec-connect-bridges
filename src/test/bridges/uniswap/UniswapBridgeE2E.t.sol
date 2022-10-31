@@ -3,7 +3,7 @@
 pragma solidity >=0.8.4;
 
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
-import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
@@ -75,17 +75,19 @@ contract UniswapBridgeE2ETest is BridgeTestBase {
         // 000000000000000000000 00000 | 0011110 01 100 10 001 11 | 1000110 01 010 10 001 10
         uint64 encodedPath = 0xF323C6546;
 
-        address[] memory tokensIn = new address[](1);
-        tokensIn[0] = LUSD;
+        {
+            address[] memory tokensIn = new address[](1);
+            tokensIn[0] = LUSD;
 
-        address[] memory tokensOut = new address[](1);
-        tokensOut[0] = LQTY;
+            address[] memory tokensOut = new address[](1);
+            tokensOut[0] = LQTY;
 
-        bridge.preApproveTokens(tokensIn, tokensOut);
+            bridge.preApproveTokens(tokensIn, tokensOut);
+        }
 
         // Define input and output assets
-        AztecTypes.AztecAsset memory lusdAsset = getRealAztecAsset(LUSD);
-        AztecTypes.AztecAsset memory lqtyAsset = getRealAztecAsset(LQTY);
+        AztecTypes.AztecAsset memory lusdAsset = ROLLUP_ENCODER.getRealAztecAsset(LUSD);
+        AztecTypes.AztecAsset memory lqtyAsset = ROLLUP_ENCODER.getRealAztecAsset(LQTY);
 
         deal(LUSD, address(ROLLUP_PROCESSOR), swapAmount);
 
@@ -95,13 +97,25 @@ contract UniswapBridgeE2ETest is BridgeTestBase {
         quote += QUOTER.quoteExactInput(referenceSplitPath2, swapAmount - swapAmountSplitPath1);
 
         // Computes the encoded data for the specific bridge interaction
-        uint256 bridgeCallData = encodeBridgeCallData(id, lusdAsset, emptyAsset, lqtyAsset, emptyAsset, encodedPath);
+        uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
+            id,
+            lusdAsset,
+            emptyAsset,
+            lqtyAsset,
+            emptyAsset,
+            encodedPath,
+            swapAmount
+        );
 
-        vm.expectEmit(true, true, false, true);
-        // Second part of cheatcode, emit the event that we are to match against.
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), swapAmount, quote, 0, true, "");
-
-        // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
-        sendDefiRollup(bridgeCallData, swapAmount);
+        ROLLUP_ENCODER.registerEventToBeChecked(
+            bridgeCallData,
+            ROLLUP_ENCODER.getNextNonce(),
+            swapAmount,
+            quote,
+            0,
+            true,
+            ""
+        );
+        ROLLUP_ENCODER.processRollup();
     }
 }

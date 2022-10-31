@@ -6,7 +6,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BaseDeployment} from "../base/BaseDeployment.s.sol";
 import {DataProvider} from "../../aztec/DataProvider.sol";
-import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "rollup-encoder/interfaces/IRollupProcessor.sol";
 
 contract DataProviderDeployment is BaseDeployment {
     function deploy() public returns (address) {

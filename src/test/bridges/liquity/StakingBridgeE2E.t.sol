@@ -4,7 +4,7 @@ pragma solidity >=0.8.4;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
@@ -52,22 +52,36 @@ contract StakingBridgeE2ETest is BridgeTestBase {
         vm.assume(_depositAmount > 1);
 
         // Use the helper function to fetch Aztec assets
-        AztecTypes.AztecAsset memory lqtyAsset = getRealAztecAsset(address(LQTY));
-        AztecTypes.AztecAsset memory sbAsset = getRealAztecAsset(address(bridge));
+        AztecTypes.AztecAsset memory lqtyAsset = ROLLUP_ENCODER.getRealAztecAsset(address(LQTY));
+        AztecTypes.AztecAsset memory sbAsset = ROLLUP_ENCODER.getRealAztecAsset(address(bridge));
 
         // DEPOSIT
         // Mint the depositAmount of LQTY to rollupProcessor
         deal(address(LQTY), address(ROLLUP_PROCESSOR), _depositAmount);
 
         // Compute deposit calldata
-        uint256 bridgeCallData = encodeBridgeCallData(id, lqtyAsset, emptyAsset, sbAsset, emptyAsset, 0);
+        uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
+            id,
+            lqtyAsset,
+            emptyAsset,
+            sbAsset,
+            emptyAsset,
+            0,
+            _depositAmount
+        );
 
         uint256 stakingBalanceBefore = LQTY.balanceOf(stakingContract);
 
-        vm.expectEmit(true, true, false, true);
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, _depositAmount, 0, true, "");
-
-        sendDefiRollup(bridgeCallData, _depositAmount);
+        ROLLUP_ENCODER.registerEventToBeChecked(
+            bridgeCallData,
+            ROLLUP_ENCODER.getNextNonce(),
+            _depositAmount,
+            _depositAmount,
+            0,
+            true,
+            ""
+        );
+        ROLLUP_ENCODER.processRollup();
 
         assertGe(
             LQTY.balanceOf(stakingContract) - stakingBalanceBefore,
@@ -82,11 +96,11 @@ contract StakingBridgeE2ETest is BridgeTestBase {
 
         // WITHDRAWAL
         // Compute withdrawal calldata
-        bridgeCallData = encodeBridgeCallData(id, sbAsset, emptyAsset, lqtyAsset, emptyAsset, 0);
+        ROLLUP_ENCODER.defiInteractionL2(id, sbAsset, emptyAsset, lqtyAsset, emptyAsset, 0, _depositAmount);
 
         uint256 processorBalanceBefore = LQTY.balanceOf(address(ROLLUP_PROCESSOR));
 
-        (uint256 outputValueA, uint256 outputValueB, ) = sendDefiRollup(bridgeCallData, _depositAmount);
+        (uint256 outputValueA, uint256 outputValueB, ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         assertGe(outputValueA, _depositAmount, "Output value not bigger than deposit");
         assertEq(outputValueB, 0, "Output value B is not 0");

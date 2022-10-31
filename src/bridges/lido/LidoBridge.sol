@@ -5,12 +5,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ICurvePool} from "../../interfaces/curve/ICurvePool.sol";
 import {ILido} from "../../interfaces/lido/ILido.sol";
 import {IWstETH} from "../../interfaces/lido/IWstETH.sol";
-import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "rollup-encoder/interfaces/IRollupProcessor.sol";
 
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
-import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
-
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract LidoBridge is BridgeBase {

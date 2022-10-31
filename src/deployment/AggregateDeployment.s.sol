@@ -6,7 +6,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {BaseDeployment} from "./base/BaseDeployment.s.sol";
-import {IRollupProcessor} from "../aztec/interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "rollup-encoder/interfaces/IRollupProcessor.sol";
 import {DataProvider} from "../aztec/DataProvider.sol";
 
 import {CurveDeployment} from "./curve/CurveDeployment.s.sol";

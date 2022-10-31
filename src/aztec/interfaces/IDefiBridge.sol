@@ -2,7 +2,7 @@
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
-import {AztecTypes} from "../libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
 interface IDefiBridge {
     /**

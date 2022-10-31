@@ -2,11 +2,11 @@
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
-import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
-import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
+import {BridgeTestBase} from "../../aztec/base/BridgeTestBase.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {ERC4626Bridge} from "../../../bridges/erc4626/ERC4626Bridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {WETHVault} from "./mocks/WETHVault.sol";
@@ -19,9 +19,9 @@ contract ERC4626Test is BridgeTestBase {
         0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0, // ERC4626-Wrapped Euler WETH (weWETH)
         0x20706baA0F89e2dccF48eA549ea5A13B9b30462f, // ERC4626-Wrapped Euler oSQTH (weoSQTH)
         0x60897720AA966452e8706e74296B018990aEc527, //  ERC4626-Wrapped Euler wstETH (wewstETH)
-        0x4169Df1B7820702f566cc10938DA51F6F597d264, //  ERC4626-Wrapped Euler DAI (weDAI)
-        0xbcb91e0B4Ad56b0d41e0C168E3090361c0039abC, //  ERC4626-Wrapped AAVE V2 DAI (wa2DAI)
-        0xc21F107933612eCF5677894d45fc060767479A9b //  ERC4626-Wrapped AAVE V2 WETH (wa2WETH)
+        0x4169Df1B7820702f566cc10938DA51F6F597d264 //  ERC4626-Wrapped Euler DAI (weDAI)
+        //        0xbcb91e0B4Ad56b0d41e0C168E3090361c0039abC, //  ERC4626-Wrapped AAVE V2 DAI (wa2DAI)
+        //        0xc21F107933612eCF5677894d45fc060767479A9b //  ERC4626-Wrapped AAVE V2 WETH (wa2WETH)
     ];
     AztecTypes.AztecAsset[] private shares;
     AztecTypes.AztecAsset[] private assets;
@@ -57,8 +57,8 @@ contract ERC4626Test is BridgeTestBase {
             ROLLUP_PROCESSOR.setSupportedAsset(asset, 30000);
             vm.stopPrank();
 
-            shares.push(getRealAztecAsset(share));
-            assets.push(getRealAztecAsset(asset));
+            shares.push(ROLLUP_ENCODER.getRealAztecAsset(share));
+            assets.push(ROLLUP_ENCODER.getRealAztecAsset(asset));
 
             // EIP-1087 optimization related mints
             deal(share, address(bridge), 1);
@@ -111,8 +111,17 @@ contract ERC4626Test is BridgeTestBase {
 
             bridge.listVault(shares[i].erc20Address);
 
-            uint256 bridgeCallData = encodeBridgeCallData(id, assets[i], emptyAsset, shares[i], emptyAsset, 0);
-            (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, assetAmount);
+            uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
+                id,
+                assets[i],
+                emptyAsset,
+                shares[i],
+                emptyAsset,
+                0,
+                assetAmount
+            );
+            (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER
+                .processRollupAndGetBridgeResult();
 
             assertEq(outputValueA, expectedAmount, "Received amount of shares differs from the expected one");
             assertEq(outputValueB, 0, "Non-zero outputValueB");
@@ -126,8 +135,16 @@ contract ERC4626Test is BridgeTestBase {
             uint256 redeemAmount = bound(_shareAmount, 10, outputValueA);
             uint256 expectedAssetAmountReturned = IERC4626(shares[i].erc20Address).previewRedeem(redeemAmount);
 
-            bridgeCallData = encodeBridgeCallData(id, shares[i], emptyAsset, assets[i], emptyAsset, 1);
-            (outputValueA, outputValueB, isAsync) = sendDefiRollup(bridgeCallData, redeemAmount);
+            bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
+                id,
+                shares[i],
+                emptyAsset,
+                assets[i],
+                emptyAsset,
+                1,
+                redeemAmount
+            );
+            (outputValueA, outputValueB, isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
             assertEq(
                 IERC20(shares[i].erc20Address).balanceOf(address(ROLLUP_PROCESSOR)) + redeemAmount,
@@ -150,16 +167,24 @@ contract ERC4626Test is BridgeTestBase {
 
         bridge.listVault(wethVault);
 
-        AztecTypes.AztecAsset memory shareAsset = getRealAztecAsset(wethVault);
-        AztecTypes.AztecAsset memory ethAsset = getRealAztecAsset(address(0));
+        AztecTypes.AztecAsset memory shareAsset = ROLLUP_ENCODER.getRealAztecAsset(wethVault);
+        AztecTypes.AztecAsset memory ethAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
 
         // Mint ETH to RollupProcessor
         deal(address(ROLLUP_PROCESSOR), assetAmount);
 
         uint256 expectedAmount = IERC4626(shareAsset.erc20Address).previewDeposit(assetAmount);
 
-        uint256 bridgeCallData = encodeBridgeCallData(id, ethAsset, emptyAsset, shareAsset, emptyAsset, 0);
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, assetAmount);
+        uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
+            id,
+            ethAsset,
+            emptyAsset,
+            shareAsset,
+            emptyAsset,
+            0,
+            assetAmount
+        );
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         assertEq(outputValueA, expectedAmount, "Received amount of shares differs from the expected one");
         assertEq(weth.balanceOf(wethVault), assetAmount, "Unexpected vault WETH balance");
@@ -169,8 +194,16 @@ contract ERC4626Test is BridgeTestBase {
         // Immediately redeem the shares
         uint256 redeemAmount = outputValueA;
 
-        bridgeCallData = encodeBridgeCallData(id, shareAsset, emptyAsset, ethAsset, emptyAsset, 1);
-        (outputValueA, outputValueB, isAsync) = sendDefiRollup(bridgeCallData, redeemAmount);
+        bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
+            id,
+            shareAsset,
+            emptyAsset,
+            ethAsset,
+            emptyAsset,
+            1,
+            redeemAmount
+        );
+        (outputValueA, outputValueB, isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         assertApproxEqAbs(outputValueA, assetAmount, 2, "Received amount of asset differs from the expected one");
         assertEq(weth.balanceOf(wethVault), 0, "Non-zero vault WETH balance");
@@ -192,12 +225,12 @@ contract ERC4626Test is BridgeTestBase {
         IERC20 weth = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
         address beneficiary = address(11);
-        setRollupBeneficiary(beneficiary);
+        ROLLUP_ENCODER.setRollupBeneficiary(beneficiary);
 
         bridge.listVault(wethVault);
 
-        AztecTypes.AztecAsset memory ethAsset = getRealAztecAsset(address(0));
-        AztecTypes.AztecAsset memory shareAsset = getRealAztecAsset(wethVault);
+        AztecTypes.AztecAsset memory ethAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
+        AztecTypes.AztecAsset memory shareAsset = ROLLUP_ENCODER.getRealAztecAsset(wethVault);
 
         {
             // Subsidize deposit
@@ -221,8 +254,16 @@ contract ERC4626Test is BridgeTestBase {
 
         uint256 expectedAmount = IERC4626(shareAsset.erc20Address).previewDeposit(assetAmount);
 
-        uint256 bridgeCallData = encodeBridgeCallData(id, ethAsset, emptyAsset, shareAsset, emptyAsset, 0);
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = sendDefiRollup(bridgeCallData, assetAmount);
+        uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
+            id,
+            ethAsset,
+            emptyAsset,
+            shareAsset,
+            emptyAsset,
+            0,
+            assetAmount
+        );
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         assertEq(outputValueA, expectedAmount, "Received amount of shares differs from the expected one");
         assertEq(weth.balanceOf(wethVault), assetAmount, "Unexpected vault WETH balance");
@@ -239,8 +280,16 @@ contract ERC4626Test is BridgeTestBase {
         uint256 redeemAmount = bound(_shareAmount, 1, outputValueA);
         uint256 expectedAssetAmountReturned = IERC4626(shareAsset.erc20Address).previewRedeem(redeemAmount);
 
-        bridgeCallData = encodeBridgeCallData(id, shareAsset, emptyAsset, ethAsset, emptyAsset, 1);
-        (outputValueA, outputValueB, isAsync) = sendDefiRollup(bridgeCallData, redeemAmount);
+        bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
+            id,
+            shareAsset,
+            emptyAsset,
+            ethAsset,
+            emptyAsset,
+            1,
+            redeemAmount
+        );
+        (outputValueA, outputValueB, isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         assertEq(
             IERC20(shareAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR)) + redeemAmount,

@@ -3,7 +3,7 @@
 pragma solidity >=0.8.4;
 
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
-import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -56,7 +56,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         uint32 gasPerMinute = 200;
         SUBSIDY.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);
         SUBSIDY.registerBeneficiary(BENEFICIARY);
-        setRollupBeneficiary(BENEFICIARY);
+        ROLLUP_ENCODER.setRollupBeneficiary(BENEFICIARY);
     }
 
     function testERC20DepositAndWithdrawal(uint256 _depositAmount) public {
@@ -144,19 +144,20 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         // Warp time for the subsidy to accrue
         vm.warp(block.timestamp + 1 days);
 
-        AztecTypes.AztecAsset memory depositInputAssetA = getRealAztecAsset(underlyingToken);
-        AztecTypes.AztecAsset memory depositOutputAssetA = getRealAztecAsset(address(_vault));
+        AztecTypes.AztecAsset memory depositInputAssetA = ROLLUP_ENCODER.getRealAztecAsset(underlyingToken);
+        AztecTypes.AztecAsset memory depositOutputAssetA = ROLLUP_ENCODER.getRealAztecAsset(address(_vault));
 
         uint256 inputAssetABefore = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 outputAssetABefore = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
         // Computes the encoded data for the specific bridge interaction
-        uint256 bridgeCallData = encodeBridgeCallData(
+        uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
             depositBridgeId,
             depositInputAssetA,
             emptyAsset,
             depositOutputAssetA,
             emptyAsset,
-            0
+            0,
+            _depositAmount
         );
         vm.expectEmit(true, true, false, false); //Log 1 -> transfer _depositAmount from ROLLUP_PROCESSOR to bridge
         emit Transfer(address(ROLLUP_PROCESSOR), address(bridge), _depositAmount);
@@ -166,9 +167,17 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         emit Transfer(address(bridge), address(_vault), _depositAmount);
         vm.expectEmit(true, true, false, false); //Log 4 -> transfer _receiveAmount from bridge to rollup
         emit Transfer(address(bridge), address(ROLLUP_PROCESSOR), _depositAmount);
-        vm.expectEmit(true, true, false, false); //Log 5 -> Validate DefiBridge
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), _depositAmount, _depositAmount, 0, true, "");
-        sendDefiRollup(bridgeCallData, _depositAmount);
+
+        ROLLUP_ENCODER.registerEventToBeChecked(
+            bridgeCallData,
+            ROLLUP_ENCODER.getNextNonce(),
+            _depositAmount,
+            _depositAmount,
+            0,
+            true,
+            ""
+        );
+        ROLLUP_ENCODER.processRollup();
 
         uint256 claimableSubsidyAfterDeposit = SUBSIDY.claimableAmount(BENEFICIARY);
         assertGt(SUBSIDY.claimableAmount(BENEFICIARY), 0, "Claimable was not updated");
@@ -184,13 +193,15 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         }
 
         uint256 withdrawAmount = outputAssetAMid;
-        bridgeCallData = encodeBridgeCallData(
+
+        bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
             withdrawBridgeId,
             depositOutputAssetA,
             emptyAsset,
             depositInputAssetA,
             emptyAsset,
-            1
+            1,
+            withdrawAmount
         );
 
         vm.expectEmit(true, true, false, false); //Log 1 -> transfer _withdrawAmount from Rollup to bridge
@@ -201,9 +212,17 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         emit Transfer(address(_vault), address(bridge), withdrawAmount);
         vm.expectEmit(true, true, false, false); //Log 4 -> transfer _withdrawAmount from bridge to Rollup
         emit Transfer(address(bridge), address(ROLLUP_PROCESSOR), withdrawAmount);
-        vm.expectEmit(true, true, false, false); //Log 5 -> Validate DefiBridge
-        emit DefiBridgeProcessed(bridgeCallData, getNextNonce(), withdrawAmount, withdrawAmount, 1, true, "");
-        sendDefiRollup(bridgeCallData, withdrawAmount);
+
+        ROLLUP_ENCODER.registerEventToBeChecked(
+            bridgeCallData,
+            ROLLUP_ENCODER.getNextNonce(),
+            withdrawAmount,
+            withdrawAmount,
+            1,
+            true,
+            ""
+        );
+        ROLLUP_ENCODER.processRollup();
         uint256 inputAssetAAfter = IERC20(underlyingToken).balanceOf(address(ROLLUP_PROCESSOR));
         uint256 outputAssetAAfter = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
 
@@ -229,36 +248,38 @@ contract YearnBridgeE2ETest is BridgeTestBase {
         vm.deal(address(ROLLUP_PROCESSOR), _depositAmount);
         _addSupportedIfNotAdded(address(_vault));
 
-        AztecTypes.AztecAsset memory depositInputAssetA = getRealAztecAsset(address(0));
-        AztecTypes.AztecAsset memory depositOutputAssetA = getRealAztecAsset(address(_vault));
+        AztecTypes.AztecAsset memory depositInputAssetA = ROLLUP_ENCODER.getRealAztecAsset(address(0));
+        AztecTypes.AztecAsset memory depositOutputAssetA = ROLLUP_ENCODER.getRealAztecAsset(address(_vault));
 
         uint256 inputAssetABefore = address(ROLLUP_PROCESSOR).balance;
         uint256 outputAssetABefore = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
 
-        uint256 bridgeCallData = encodeBridgeCallData(
+        ROLLUP_ENCODER.defiInteractionL2(
             depositBridgeId,
             depositInputAssetA,
             emptyAsset,
             depositOutputAssetA,
             emptyAsset,
-            0
+            0,
+            _depositAmount
         );
-        sendDefiRollup(bridgeCallData, _depositAmount);
+        ROLLUP_ENCODER.processRollup();
         uint256 inputAssetAMid = address(ROLLUP_PROCESSOR).balance;
         uint256 outputAssetAMid = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
         assertEq(inputAssetAMid, inputAssetABefore - _depositAmount, "deposit eth - input asset balance too high");
         assertGt(outputAssetAMid, outputAssetABefore, "deposit eth - output asset balance too low");
 
-        uint256 outBridgeId = encodeBridgeCallData(
+        ROLLUP_ENCODER.defiInteractionL2(
             withdrawBridgeId,
             depositOutputAssetA,
             emptyAsset,
             depositInputAssetA,
             emptyAsset,
-            1
+            1,
+            _withdrawAmount
         );
         vm.assume(_withdrawAmount > 1 && _withdrawAmount <= outputAssetAMid);
-        sendDefiRollup(outBridgeId, _withdrawAmount);
+        ROLLUP_ENCODER.processRollup();
         uint256 inputAssetAAfter = address(ROLLUP_PROCESSOR).balance;
         uint256 outputAssetAAfter = IERC20(address(_vault)).balanceOf(address(ROLLUP_PROCESSOR));
         assertGt(inputAssetAAfter, inputAssetAMid, "withdraw eth - input asset balance too low");
@@ -266,7 +287,7 @@ contract YearnBridgeE2ETest is BridgeTestBase {
     }
 
     function _addSupportedIfNotAdded(address _asset) internal {
-        if (!isSupportedAsset(_asset)) {
+        if (!ROLLUP_ENCODER.isSupportedAsset(_asset)) {
             vm.prank(MULTI_SIG);
             ROLLUP_PROCESSOR.setSupportedAsset(_asset, 200000);
         }

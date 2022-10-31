@@ -150,7 +150,7 @@ We decided to have 2 separate approaches of bridge testing:
 
 We encourage you to first write all tests as unit tests to be able to leverage simple traces while you are debugging the bridge.
 Once you make the bridge work in the unit tests environment convert the relevant tests to E2E.
-Converting unit tests to E2E is straightforward because we made the `BridgeTestBase.sendDefiRollup(...)` function return the same values as `IDefiBridge.convert(...)`.
+Converting unit tests to E2E is straightforward because we made the `ROLLUP_ENCODER.processRollupAndGetBridgeResult()` function return the same values as `IDefiBridge.convert(...)`.
 
 In production, the rollup contract will supply `_totalInputValue` of both input assets and use the `_interactionNonce` as a globally unique ID.
 For testing, you may provide this value.

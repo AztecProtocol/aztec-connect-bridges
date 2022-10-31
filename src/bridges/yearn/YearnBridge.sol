@@ -2,8 +2,8 @@
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
-import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
-import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
+import {IRollupProcessor} from "rollup-encoder/interfaces/IRollupProcessor.sol";
 import {IYearnRegistry} from "../../interfaces/yearn/IYearnRegistry.sol";
 import {IYearnVault} from "../../interfaces/yearn/IYearnVault.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";

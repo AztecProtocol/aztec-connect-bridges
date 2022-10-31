@@ -5,7 +5,7 @@ pragma solidity >=0.8.4;
 import {Vm} from "forge-std/Vm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
@@ -49,22 +49,22 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         uint256 collateral = bound(_collateral, 1e17, 1e21);
 
         // Use the helper function to fetch Aztec assets
-        AztecTypes.AztecAsset memory ethAsset = getRealAztecAsset(address(0));
-        AztecTypes.AztecAsset memory tbAsset = getRealAztecAsset(address(bridge));
-        AztecTypes.AztecAsset memory lusdAsset = getRealAztecAsset(tokens["LUSD"].addr);
+        AztecTypes.AztecAsset memory ethAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
+        AztecTypes.AztecAsset memory tbAsset = ROLLUP_ENCODER.getRealAztecAsset(address(bridge));
+        AztecTypes.AztecAsset memory lusdAsset = ROLLUP_ENCODER.getRealAztecAsset(tokens["LUSD"].addr);
 
         // BORROW
         // Mint the collateral amount of ETH to rollupProcessor
         vm.deal(address(ROLLUP_PROCESSOR), collateral);
 
         // Compute borrow calldata
-        uint256 bridgeCallData = encodeBridgeCallData(id, ethAsset, emptyAsset, tbAsset, lusdAsset, MAX_FEE);
+        ROLLUP_ENCODER.defiInteractionL2(id, ethAsset, emptyAsset, tbAsset, lusdAsset, MAX_FEE, collateral);
 
         (uint256 debtBeforeBorrowing, uint256 collBeforeBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
             address(bridge)
         );
 
-        (uint256 outputValueA, uint256 outputValueB, ) = sendDefiRollup(bridgeCallData, collateral);
+        (uint256 outputValueA, uint256 outputValueB, ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
             address(bridge)
@@ -93,9 +93,9 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         deal(lusdAsset.erc20Address, address(ROLLUP_PROCESSOR), tbBalanceAfterBorrowing + bridge.DUST());
 
         // Compute repay calldata
-        bridgeCallData = encodeBridgeCallData(id, tbAsset, lusdAsset, ethAsset, lusdAsset, MAX_FEE);
+        ROLLUP_ENCODER.defiInteractionL2(id, tbAsset, lusdAsset, ethAsset, lusdAsset, MAX_FEE, tbBalanceAfterBorrowing);
 
-        (outputValueA, outputValueB, ) = sendDefiRollup(bridgeCallData, tbBalanceAfterBorrowing);
+        (outputValueA, outputValueB, ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         assertApproxEqAbs(outputValueA, collateral, 1, "output value differs from colalteral by more than 1 wei");
         assertEq(outputValueB, 0, "Non-zero LUSD amount returned");

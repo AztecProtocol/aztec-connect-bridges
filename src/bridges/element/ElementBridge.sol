@@ -8,14 +8,14 @@ import {IPool} from "../../interfaces/element/IPool.sol";
 import {ITranche} from "../../interfaces/element/ITranche.sol";
 import {IDeploymentValidator} from "../../interfaces/element/IDeploymentValidator.sol";
 import {IWrappedPosition} from "../../interfaces/element/IWrappedPosition.sol";
-import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "rollup-encoder/interfaces/IRollupProcessor.sol";
 import {MinHeap} from "./MinHeap.sol";
 import {FullMath} from "../../libraries/uniswapv3/FullMath.sol";
 
 import {BridgeBase} from "../base/BridgeBase.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 
-import {AztecTypes} from "../../aztec/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
 /**
  * @title Element Bridge

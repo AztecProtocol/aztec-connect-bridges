@@ -3,7 +3,7 @@
 pragma solidity >=0.8.4;
 
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
-import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
 // Example-specific imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -38,7 +38,7 @@ contract ExampleUnitTest is BridgeTestBase {
         vm.label(address(bridge), "Example Bridge");
 
         // Subsidize the bridge when used with Dai and register a beneficiary
-        AztecTypes.AztecAsset memory daiAsset = getRealAztecAsset(DAI);
+        AztecTypes.AztecAsset memory daiAsset = ROLLUP_ENCODER.getRealAztecAsset(DAI);
         uint256 criteria = bridge.computeCriteria(daiAsset, emptyAsset, daiAsset, emptyAsset, 0);
         uint32 gasPerMinute = 200;
         SUBSIDY.subsidize{value: 1 ether}(address(bridge), criteria, gasPerMinute);

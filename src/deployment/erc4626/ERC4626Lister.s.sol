@@ -6,7 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BaseDeployment} from "../base/BaseDeployment.s.sol";
 import {ERC4626Bridge} from "../../bridges/erc4626/ERC4626Bridge.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import {IRollupProcessor} from "../../aztec/interfaces/IRollupProcessor.sol";
+import {IRollupProcessor} from "rollup-encoder/interfaces/IRollupProcessor.sol";
 
 contract ERC4626Lister is BaseDeployment {
     function listVault(address _bridge, address _vault) public {
