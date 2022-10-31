@@ -143,7 +143,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     }
 
     /**
-     * @notice A function which stakes or unstakes LQTY to/from LQTYStaking.sol.
+     * @notice A function which allows interaction with this bridge's trove from withing Aztec Connect.
      * @dev This method can only be called from the RollupProcessor.sol. If the input asset is ETH, borrowing flow is
      * executed. If TB, repaying. RollupProcessor.sol has to transfer the tokens to the bridge before calling
      * the method. If this is not the case, the function will revert.
