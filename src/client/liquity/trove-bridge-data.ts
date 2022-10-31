@@ -1,7 +1,12 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
-import { ITroveManager, ITroveManager__factory, TroveBridge__factory } from "../../../typechain-types";
+import {
+  IPriceFeed__factory,
+  ITroveManager,
+  ITroveManager__factory,
+  TroveBridge__factory,
+} from "../../../typechain-types";
 import { createWeb3Provider } from "../aztec/provider";
 import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
 
@@ -106,5 +111,23 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
       }
     }
     throw "Incorrect combination of input/output assets.";
+  }
+
+  /**
+   * @notice This function computes borrowing fee for a given borrow amount
+   * @param borrowAmount An amount of LUSD borrowed
+   * @return amount of fee to be paid for a given borrow amount (in LUSD)
+   */
+  async getBorrowingFee(borrowAmount: bigint): Promise<bigint> {
+    const priceFeedAddress = await this.troveManager.priceFeed();
+    const priceFeed = IPriceFeed__factory.connect(priceFeedAddress, this.ethersProvider);
+    const price = await priceFeed.callStatic.fetchPrice();
+    const isRecoveryMode = await this.troveManager.checkRecoveryMode(price);
+    if (isRecoveryMode) {
+      return 0n;
+    }
+
+    const borrowingRate = await this.troveManager.getBorrowingRateWithDecay();
+    return (borrowingRate.toBigInt() * borrowAmount) / 10n ** 36n;
   }
 }
