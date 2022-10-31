@@ -153,7 +153,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
      * @param _inputAssetB -        None                 LUSD                 LUSD                   None
      * @param _outputAssetA -       TB                   ETH                  ETH                    ETH
      * @param _outputAssetB -       LUSD                 LUSD                 TB                     None
-     * @param _totalInputValue -         ETH amount           TB and LUSD amt.     TB and LUSD amt.       TB amount
+     * @param _totalInputValue -    ETH amount           TB and LUSD amt.     TB and LUSD amt.       TB amount
      * @param _interactionNonce -   nonce                nonce                nonce                  nonce
      * @param _auxData -            max borrower fee     0                    0                      0
      * @return outputValueA -       TB amount            ETH amount           ETH amount             ETH amount
