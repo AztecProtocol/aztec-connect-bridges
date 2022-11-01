@@ -147,4 +147,9 @@ export interface BridgeDataFieldGetters {
 
   // Used only in Element, TODO: remove once clients get refactored to not share 1 class
   getTermAPR?(underlying: AztecAsset, auxData: number, inputValue: bigint): Promise<number>;
+
+  // The following 3 functions are only used in Liquity's TroveBridge
+  getBorrowingFee?(borrowAmount: bigint): Promise<bigint>;
+  getCurrentCR?(): Promise<bigint>;
+  getUserDebtAndCollateral?(tbAmount: bigint): Promise<[bigint, bigint]>;
 }
