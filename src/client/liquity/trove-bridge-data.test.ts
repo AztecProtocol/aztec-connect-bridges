@@ -53,10 +53,17 @@ describe("Liquity trove bridge data", () => {
   });
 
   it("should correctly fetch auxData when borrowing", async () => {
+    troveManager = {
+      ...troveManager,
+      getBorrowingRateWithDecay: jest.fn().mockResolvedValue(BigNumber.from("5000000000591148")),
+    };
+
+    ITroveManager__factory.connect = () => troveManager as any;
+
     const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
 
     const auxDataBorrow = await troveBridgeData.getAuxData(ethAsset, emptyAsset, tbAsset, lusdAsset);
-    expect(auxDataBorrow[0]).toBe(troveBridgeData.MAX_FEE);
+    expect(auxDataBorrow[0]).toBe(6000000000000000);
   });
 
   it("should correctly fetch auxData when not borrowing", async () => {
@@ -84,7 +91,7 @@ describe("Liquity trove bridge data", () => {
       emptyAsset,
       tbAsset,
       lusdAsset,
-      troveBridgeData.MAX_FEE,
+      0, // not used in the function
       10n ** 18n,
     );
     expect(outputBorrow[0]).toBe(10n ** 21n);

@@ -14,7 +14,6 @@ import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, Soli
 
 export class TroveBridgeData implements BridgeDataFieldGetters {
   public readonly LUSD = EthAddress.fromString("0x5f98805A4E8be255a32880FDeC7F6728C6568bA0");
-  public readonly MAX_FEE = 2 * 10 ** 16; // 2 % borrowing fee
   private price?: BigNumber;
 
   protected constructor(
@@ -44,10 +43,8 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
   ];
 
   /**
-   * @dev Returns 2 percent borrowing fee when the input/output asset combination corresponds to borrowing. Return
-   *      value is always 0 otherwise.
-   * @dev I decided to return 2 % because it seems to be a reasonable value which should not cause revert
-   *      in the future (Liquity's borrowing fee is currently 0.5 % and I don't expect it to rise above 2 %)
+   * @return Borrowing rate rounded up to tenths of percents when the input/output asset combination corresponds
+   *         to borrowing. Returns 0 for non-borrowing flows.
    */
   async getAuxData(
     inputAssetA: AztecAsset,
@@ -61,7 +58,12 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
       outputAssetA.erc20Address.equals(EthAddress.fromString(this.bridge.address)) &&
       outputAssetB.erc20Address.equals(this.LUSD)
     ) {
-      return [this.MAX_FEE];
+      const currentBorrowingRate = await this.troveManager.getBorrowingRateWithDecay();
+      // Borrowing rate is decaying to a value defined by governance --> this means the value is changing
+      // --> we don't want to break aggregation by there occurring irrelevant borrowing rate changes
+      // so I will set the irrelevant decimals to 0 and increase the acceptable fee by 0.1 %
+      const borrowingRate = (currentBorrowingRate.toBigInt() / 10n ** 15n) * 10n ** 15n + 10n ** 15n;
+      return [Number(borrowingRate)];
     }
     return [0];
   }
