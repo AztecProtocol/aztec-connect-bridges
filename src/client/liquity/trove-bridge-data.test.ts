@@ -1,6 +1,13 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { BigNumber } from "ethers";
-import { ITroveManager, ITroveManager__factory, TroveBridge, TroveBridge__factory } from "../../../typechain-types";
+import {
+  IPriceFeed,
+  IPriceFeed__factory,
+  ITroveManager,
+  ITroveManager__factory,
+  TroveBridge,
+  TroveBridge__factory,
+} from "../../../typechain-types";
 import { AztecAsset, AztecAssetType } from "../bridge-data";
 import { TroveBridgeData } from "./trove-bridge-data";
 
@@ -15,6 +22,7 @@ type Mockify<T> = {
 describe("Liquity trove bridge data", () => {
   let troveBridge: Mockify<TroveBridge>;
   let troveManager: Mockify<ITroveManager>;
+  let priceFeed: Mockify<IPriceFeed>;
 
   let ethAsset: AztecAsset;
   let lusdAsset: AztecAsset;
@@ -47,7 +55,6 @@ describe("Liquity trove bridge data", () => {
   it("should correctly fetch auxData when borrowing", async () => {
     const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
 
-    // Test the code using mocked controller
     const auxDataBorrow = await troveBridgeData.getAuxData(ethAsset, emptyAsset, tbAsset, lusdAsset);
     expect(auxDataBorrow[0]).toBe(troveBridgeData.MAX_FEE);
   });
@@ -55,7 +62,6 @@ describe("Liquity trove bridge data", () => {
   it("should correctly fetch auxData when not borrowing", async () => {
     const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
 
-    // Test the code using mocked controller
     const auxDataBorrow = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, lusdAsset);
     expect(auxDataBorrow[0]).toBe(0);
   });
@@ -72,7 +78,6 @@ describe("Liquity trove bridge data", () => {
 
     const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
 
-    // Test the code using mocked controller
     const outputBorrow = await troveBridgeData.getExpectedOutput(
       ethAsset,
       emptyAsset,
@@ -106,12 +111,87 @@ describe("Liquity trove bridge data", () => {
 
     const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
 
-    // Test the code using mocked controller
     const inputValue = 10n ** 18n;
     const output = await troveBridgeData.getExpectedOutput(tbAsset, lusdAsset, ethAsset, lusdAsset, 0, inputValue);
     const expectedCollateralWithdrawn = inputValue;
     const lusdReturned = 0n;
     expect(output[0]).toBe(expectedCollateralWithdrawn);
     expect(output[1]).toBe(lusdReturned);
+  });
+
+  it("should correctly get borrowing fee out of recovery mode", async () => {
+    // Setup mocks
+    troveManager = {
+      ...troveManager,
+      priceFeed: jest.fn().mockResolvedValue(EthAddress.random().toString()),
+      checkRecoveryMode: jest.fn().mockResolvedValue(false),
+      getBorrowingRateWithDecay: jest.fn().mockResolvedValue(BigNumber.from("5000000000576535")),
+    };
+
+    ITroveManager__factory.connect = () => troveManager as any;
+
+    priceFeed = {
+      ...priceFeed,
+      callStatic: {
+        fetchPrice: jest.fn().mockResolvedValue(BigNumber.from("1000")),
+      },
+    };
+    IPriceFeed__factory.connect = () => priceFeed as any;
+
+    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+
+    const borrowAmount = 1000n * 10n ** 18n; // 1000 LUSD
+    const borrowingFee = await troveBridgeData.getBorrowingFee(borrowAmount);
+    expect(borrowingFee).toBe(5000000000576535000n);
+  });
+
+  it("borrowing fee in recovery mode should be 0", async () => {
+    // Setup mocks
+    troveManager = {
+      ...troveManager,
+      priceFeed: jest.fn().mockResolvedValue(EthAddress.random().toString()),
+      checkRecoveryMode: jest.fn().mockResolvedValue(true),
+      getBorrowingRateWithDecay: jest.fn().mockResolvedValue(BigNumber.from("5000000000576535")),
+    };
+
+    ITroveManager__factory.connect = () => troveManager as any;
+
+    priceFeed = {
+      ...priceFeed,
+      callStatic: {
+        fetchPrice: jest.fn().mockResolvedValue(BigNumber.from("1000")),
+      },
+    };
+    IPriceFeed__factory.connect = () => priceFeed as any;
+
+    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+
+    const borrowAmount = 1000n * 10n ** 18n; // 1000 LUSD
+    const borrowingFee = await troveBridgeData.getBorrowingFee(borrowAmount);
+    expect(borrowingFee).toBe(0n);
+  });
+
+  it("should correctly get current CR", async () => {
+    // Setup mocks
+    troveManager = {
+      ...troveManager,
+      priceFeed: jest.fn().mockResolvedValue(EthAddress.random().toString()),
+      getCurrentICR: jest.fn().mockResolvedValue(BigNumber.from("2500000000000000000")),
+    };
+
+    ITroveManager__factory.connect = () => troveManager as any;
+
+    priceFeed = {
+      ...priceFeed,
+      callStatic: {
+        fetchPrice: jest.fn().mockResolvedValue(BigNumber.from("1000")),
+      },
+    };
+    IPriceFeed__factory.connect = () => priceFeed as any;
+
+    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+
+    const currentCR = await troveBridgeData.getCurrentCR();
+    expect(currentCR).toBe(250n);
   });
 });

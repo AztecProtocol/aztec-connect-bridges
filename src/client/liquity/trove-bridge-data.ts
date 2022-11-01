@@ -1,6 +1,7 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
+import { BigNumber } from "ethers";
 import {
   IPriceFeed__factory,
   ITroveManager,
@@ -13,17 +14,22 @@ import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, Soli
 export class TroveBridgeData implements BridgeDataFieldGetters {
   public readonly LUSD = EthAddress.fromString("0x5f98805A4E8be255a32880FDeC7F6728C6568bA0");
   public readonly MAX_FEE = 2 * 10 ** 16; // 2 % borrowing fee
+  private price?: BigNumber;
 
   protected constructor(
     protected ethersProvider: Web3Provider,
-    protected tb: EthAddress,
+    protected bridge: EthAddress,
     protected troveManager: ITroveManager,
   ) {}
 
-  static create(provider: EthereumProvider, tb: EthAddress) {
+  /**
+   * @param provider Ethereum provider
+   * @param bridge Address of the bridge address (and the corresponding accounting token)
+   */
+  static create(provider: EthereumProvider, bridge: EthAddress) {
     const ethersProvider = createWeb3Provider(provider);
     const troveManager = ITroveManager__factory.connect("0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2", ethersProvider);
-    return new TroveBridgeData(ethersProvider, tb, troveManager);
+    return new TroveBridgeData(ethersProvider, bridge, troveManager);
   }
 
   auxDataConfig: AuxDataConfig[] = [
@@ -50,7 +56,7 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
     if (
       inputAssetA.assetType === AztecAssetType.ETH &&
       inputAssetB.assetType === AztecAssetType.NOT_USED &&
-      outputAssetA.erc20Address.equals(this.tb) &&
+      outputAssetA.erc20Address.equals(this.bridge) &&
       outputAssetB.erc20Address.equals(this.LUSD)
     ) {
       return [this.MAX_FEE];
@@ -66,18 +72,18 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
     auxData: number,
     inputValue: bigint,
   ): Promise<bigint[]> {
-    const bridge = TroveBridge__factory.connect(this.tb.toString(), this.ethersProvider);
+    const bridge = TroveBridge__factory.connect(this.bridge.toString(), this.ethersProvider);
     if (
       inputAssetA.assetType === AztecAssetType.ETH &&
       inputAssetB.assetType === AztecAssetType.NOT_USED &&
-      outputAssetA.erc20Address.equals(this.tb) &&
+      outputAssetA.erc20Address.equals(this.bridge) &&
       outputAssetB.erc20Address.equals(this.LUSD)
     ) {
       const amountOut = await bridge.callStatic.computeAmtToBorrow(inputValue);
       // Borrowing
       return [amountOut.toBigInt()];
     } else if (
-      inputAssetA.erc20Address.equals(this.tb) &&
+      inputAssetA.erc20Address.equals(this.bridge) &&
       inputAssetB.erc20Address.equals(this.LUSD) &&
       outputAssetA.assetType === AztecAssetType.ETH
     ) {
@@ -85,7 +91,7 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
       const tbTotalSupply = await bridge.totalSupply();
 
       const { debt, coll, pendingLUSDDebtReward, pendingETHReward } = await this.troveManager.getEntireDebtAndColl(
-        this.tb.toString(),
+        this.bridge.toString(),
       );
 
       if (inputAssetB.erc20Address.equals(this.LUSD)) {
@@ -94,7 +100,7 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
           const debtToRepay = (inputValue * debt.toBigInt()) / tbTotalSupply.toBigInt();
           const lusdReturned = inputValue - debtToRepay;
           return [collateralToWithdraw, lusdReturned];
-        } else if (outputAssetB.erc20Address.equals(this.tb)) {
+        } else if (outputAssetB.erc20Address.equals(this.bridge)) {
           // Repaying after redistribution flow
           // Note: this code assumes the flash swap doesn't fail (if it would fail some tb would get returned)
           return [collateralToWithdraw, 0n];
@@ -105,7 +111,7 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
       ) {
         // Redeeming
         // Fetching bridge's ETH balance because it's possible the collateral was already claimed
-        const ethHeldByBridge = (await this.ethersProvider.getBalance(this.tb.toString())).toBigInt();
+        const ethHeldByBridge = (await this.ethersProvider.getBalance(this.bridge.toString())).toBigInt();
         const collateralToWithdraw = (inputValue * (coll.toBigInt() + ethHeldByBridge)) / tbTotalSupply.toBigInt();
         return [collateralToWithdraw, 0n];
       }
@@ -119,15 +125,31 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
    * @return amount of fee to be paid for a given borrow amount (in LUSD)
    */
   async getBorrowingFee(borrowAmount: bigint): Promise<bigint> {
-    const priceFeedAddress = await this.troveManager.priceFeed();
-    const priceFeed = IPriceFeed__factory.connect(priceFeedAddress, this.ethersProvider);
-    const price = await priceFeed.callStatic.fetchPrice();
-    const isRecoveryMode = await this.troveManager.checkRecoveryMode(price);
+    const isRecoveryMode = await this.troveManager.checkRecoveryMode(await this.fetchPrice());
     if (isRecoveryMode) {
       return 0n;
     }
 
     const borrowingRate = await this.troveManager.getBorrowingRateWithDecay();
-    return (borrowingRate.toBigInt() * borrowAmount) / 10n ** 36n;
+    return (borrowingRate.toBigInt() * borrowAmount) / 10n ** 18n;
+  }
+
+  /**
+   * @notice Returns current collateral ratio of the bridge
+   * @return Current collateral ratio of the bridge denominated in percents
+   */
+  async getCurrentCR(): Promise<bigint> {
+    const cr = await this.troveManager.getCurrentICR(this.bridge.toString(), await this.fetchPrice());
+    return cr.toBigInt() / 10n ** 16n;
+  }
+
+  private async fetchPrice(): Promise<BigNumber> {
+    if (this.price === undefined) {
+      const priceFeedAddress = await this.troveManager.priceFeed();
+      const priceFeed = IPriceFeed__factory.connect(priceFeedAddress, this.ethersProvider);
+      this.price = await priceFeed.callStatic.fetchPrice();
+    }
+
+    return this.price;
   }
 }
