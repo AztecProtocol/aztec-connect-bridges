@@ -73,6 +73,7 @@ describe("Liquity trove bridge data", () => {
       callStatic: {
         computeAmtToBorrow: jest.fn().mockResolvedValue(BigNumber.from("1000000000000000000000")), // 1000 LUSD
       },
+      address: tbAsset.erc20Address.toString(),
     };
     TroveBridge__factory.connect = () => troveBridge as any;
 
@@ -100,7 +101,7 @@ describe("Liquity trove bridge data", () => {
     troveManager = {
       ...troveManager,
       getEntireDebtAndColl: jest.fn().mockResolvedValue({
-        debt: BigNumber.from("1000000000000000000000"), // 100k LUSD
+        debt: BigNumber.from("1000000000000000000000"), // 1000 LUSD
         coll: BigNumber.from("1000000000000000000000"), // 1000 ETH
         pendingLUSDDebtReward: BigNumber.from("0"), // not used - can be 0
         pendingETHReward: BigNumber.from("0"), // not used - can be 0
@@ -193,5 +194,36 @@ describe("Liquity trove bridge data", () => {
 
     const currentCR = await troveBridgeData.getCurrentCR();
     expect(currentCR).toBe(250n);
+  });
+
+  it("should correctly get user's debt and collateral", async () => {
+    // Setup mocks
+    troveBridge = {
+      ...troveBridge,
+      totalSupply: jest.fn().mockResolvedValue(BigNumber.from("1000000000000000000000")), // 1000 TB
+    };
+    TroveBridge__factory.connect = () => troveBridge as any;
+
+    troveManager = {
+      ...troveManager,
+      getEntireDebtAndColl: jest.fn().mockResolvedValue({
+        debt: BigNumber.from("1000000000000000000000"), // 1000 LUSD
+        coll: BigNumber.from("1000000000000000000000"), // 1000 ETH
+        pendingLUSDDebtReward: BigNumber.from("0"), // not used - can be 0
+        pendingETHReward: BigNumber.from("0"), // not used - can be 0
+      }),
+    };
+
+    ITroveManager__factory.connect = () => troveManager as any;
+
+    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+
+    const inputValue = 10n ** 18n; // 1 TB
+    const output = await troveBridgeData.getUserDebtAndCollateral(inputValue);
+
+    const expectedCollateral = 10n ** 18n; // 1 ETH
+    const expectedDebt = 10n ** 18n; // 1 LUSD
+    expect(output[0]).toBe(expectedCollateral);
+    expect(output[1]).toBe(expectedDebt);
   });
 });
