@@ -88,6 +88,20 @@ contract AggregateDeployment is BaseDeployment {
             deploy.setUp();
             deploy.deployAndList();
         }
+
+        emit log("--- Liquity CR 250%---");
+        {
+            LiquityTroveDeployment deploy = new LiquityTroveDeployment();
+            deploy.setUp();
+            deploy.deployAndList(250);
+        }
+
+        emit log("--- Liquity CR 350%---");
+        {
+            LiquityTroveDeployment deploy = new LiquityTroveDeployment();
+            deploy.setUp();
+            deploy.deployAndList(350);
+        }
     }
 
     function bogota() public {
@@ -118,7 +132,7 @@ contract AggregateDeployment is BaseDeployment {
         {
             LiquityTroveDeployment deploy = new LiquityTroveDeployment();
             deploy.setUp();
-            deploy.deployAndList();
+            deploy.deployAndList(250);
         }
 
         emit log("--- Curve steth lp ---");
