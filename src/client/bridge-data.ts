@@ -150,6 +150,6 @@ export interface BridgeDataFieldGetters {
 
   // The following 3 functions are only used in Liquity's TroveBridge
   getBorrowingFee?(borrowAmount: bigint): Promise<bigint>;
-  getCurrentCR(): Promise<bigint>;
-  getUserDebtAndCollateral(tbAmount: bigint): Promise<[bigint, bigint]>;
+  getCurrentCR?(): Promise<bigint>;
+  getUserDebtAndCollateral?(tbAmount: bigint): Promise<[bigint, bigint]>;
 }
