@@ -64,6 +64,9 @@ contract TroveBridgeMeasure is LiquityTroveDeployment {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
+        vm.label(lusdAsset.erc20Address, "LUSD");
+        vm.label(tbAsset.erc20Address, "TB");
+
         // List vaults and fund subsidy
         //        vm.startBroadcast();
         //        SUBSIDY.subsidize{value: 1e17}(
@@ -102,8 +105,31 @@ contract TroveBridgeMeasure is LiquityTroveDeployment {
         }
 
         uint256 claimableSubsidyAfterDeposit = SUBSIDY.claimableAmount(BENEFICIARY);
-        assertGt(claimableSubsidyAfterDeposit, 0, "Subsidy was not claimed during deposit");
+        //        assertGt(claimableSubsidyAfterDeposit, 0, "Subsidy was not claimed during deposit");
         emit log_named_uint("Claimable subsidy after deposit", claimableSubsidyAfterDeposit);
+
+        // Repay
+        {
+            uint256 lusdBalance = IERC20(lusdAsset.erc20Address).balanceOf(address(gasBase));
+            uint256 tbBalance = IERC20(tbAsset.erc20Address).balanceOf(address(gasBase));
+
+            emit log_named_uint("LUSD balance", lusdBalance);
+            emit log_named_uint("TB balance", tbBalance);
+
+            vm.broadcast();
+            gasBase.convert(
+                address(bridge),
+                tbAsset,
+                lusdAsset,
+                ethAsset,
+                lusdAsset,
+                lusdBalance / 2,
+                0,
+                0,
+                BENEFICIARY,
+                500000
+            );
+        }
     }
 
     function _openTrove() internal {
