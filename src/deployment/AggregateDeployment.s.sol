@@ -83,20 +83,6 @@ contract AggregateDeployment is BaseDeployment {
             deploy.deployAndList();
         }
 
-        emit log("--- Liquity CR 250%---");
-        {
-            LiquityTroveDeployment deploy = new LiquityTroveDeployment();
-            deploy.setUp();
-            deploy.deployAndList(250);
-        }
-
-        emit log("--- Liquity CR 350%---");
-        {
-            LiquityTroveDeployment deploy = new LiquityTroveDeployment();
-            deploy.setUp();
-            deploy.deployAndList(350);
-        }
-
         emit log("--- AAVE v2 ---");
         {
             ERC4626Lister lister = new ERC4626Lister();
@@ -111,6 +97,20 @@ contract AggregateDeployment is BaseDeployment {
             lister.listVault(erc4626Bridge, erc4626AaveV2WETH);
             uint256 erc4626AaveV2WETHId = listAsset(erc4626AaveV2WETH, 55000);
             emit log_named_uint("ERC4626 aave v2 weth id", erc4626AaveV2WETHId);
+        }
+
+        emit log("--- Liquity CR 250%---");
+        {
+            LiquityTroveDeployment deploy = new LiquityTroveDeployment();
+            deploy.setUp();
+            deploy.deployAndList(250);
+        }
+
+        emit log("--- Liquity CR 350%---");
+        {
+            LiquityTroveDeployment deploy = new LiquityTroveDeployment();
+            deploy.setUp();
+            deploy.deployAndList(350);
         }
     }
 
