@@ -236,10 +236,10 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-  ): Promise<number[]> {
+  ): Promise<bigint[]> {
     const assetExpiries = await this.elementBridgeContract.getAssetExpiries(inputAssetA.erc20Address.toString());
     if (assetExpiries && assetExpiries.length) {
-      return assetExpiries.map(a => a.toNumber());
+      return assetExpiries.map(a => a.toBigInt());
     }
     return [];
   }
@@ -258,14 +258,14 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
     inputValue: bigint,
   ): Promise<bigint[]> {
     // bridge is async the third parameter represents this
     return [BigInt(0), BigInt(0), BigInt(1)];
   }
 
-  async getTermAPR(underlying: AztecAsset, auxData: number, inputValue: bigint): Promise<number> {
+  async getTermAPR(underlying: AztecAsset, auxData: bigint, inputValue: bigint): Promise<number> {
     const assetExpiryHash = await this.elementBridgeContract.hashAssetAndExpiry(
       underlying.erc20Address.toString(),
       auxData,
@@ -300,7 +300,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
 
     const outputAssetAValue = deltas[1];
 
-    const timeToExpiration = BigInt(auxData - latestBlock.timestamp);
+    const timeToExpiration = auxData - BigInt(latestBlock.timestamp);
 
     const YEAR = 60n * 60n * 24n * 365n;
     const interest = -outputAssetAValue.toBigInt() - inputValue;

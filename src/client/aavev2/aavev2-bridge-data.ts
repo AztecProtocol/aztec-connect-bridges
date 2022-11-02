@@ -67,7 +67,7 @@ export class AaveV2BridgeData extends ERC4626BridgeData {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
   ): Promise<AssetValue[]> {
     const subgraphAssetId =
       inputAssetA.assetType === AztecAssetType.ETH

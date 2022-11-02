@@ -50,7 +50,7 @@ describe("ERC4626 bridge data", () => {
 
     // Test the code using mocked controller
     const auxDataIssue = await erc4626BridgeData.getAuxData(mplAsset, emptyAsset, xmplAsset, emptyAsset);
-    expect(auxDataIssue[0]).toBe(0);
+    expect(auxDataIssue[0]).toBe(0n);
   });
 
   it("should correctly fetch auxData when redeeming shares", async () => {
@@ -65,7 +65,7 @@ describe("ERC4626 bridge data", () => {
 
     // Test the code using mocked controller
     const auxDataRedeem = await erc4626BridgeData.getAuxData(xmplAsset, emptyAsset, mplAsset, emptyAsset);
-    expect(auxDataRedeem[0]).toBe(1);
+    expect(auxDataRedeem[0]).toBe(1n);
   });
 
   it("should correctly compute expected output when issuing shares", async () => {
@@ -80,7 +80,7 @@ describe("ERC4626 bridge data", () => {
 
     // Test the code using mocked controller
     const expectedOutput = (
-      await erc4626BridgeData.getExpectedOutput(mplAsset, emptyAsset, xmplAsset, emptyAsset, 0, 10n ** 18n)
+      await erc4626BridgeData.getExpectedOutput(mplAsset, emptyAsset, xmplAsset, emptyAsset, 0n, 10n ** 18n)
     )[0];
     expect(expectedOutput).toBe(111111n);
   });
@@ -97,7 +97,7 @@ describe("ERC4626 bridge data", () => {
 
     // Test the code using mocked controller
     const expectedOutput = (
-      await erc4626BridgeData.getExpectedOutput(xmplAsset, emptyAsset, mplAsset, emptyAsset, 1, 10n ** 18n)
+      await erc4626BridgeData.getExpectedOutput(xmplAsset, emptyAsset, mplAsset, emptyAsset, 1n, 10n ** 18n)
     )[0];
     expect(expectedOutput).toBe(111111n);
   });

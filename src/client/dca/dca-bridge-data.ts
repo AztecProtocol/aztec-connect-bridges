@@ -71,8 +71,8 @@ export class DCABridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-  ): Promise<number[]> {
-    return [Number(this.dcaLength)];
+  ): Promise<bigint[]> {
+    return [this.dcaLength];
   }
 
   // Not useful for this bridge. Unknown at time of execution.
@@ -81,7 +81,7 @@ export class DCABridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
     inputValue: bigint,
   ): Promise<bigint[]> {
     return [0n];
@@ -97,7 +97,7 @@ export class DCABridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
   ): Promise<AssetValue[]> {
     const input = IERC20__factory.connect(inputAssetA.erc20Address.toString(), this.bidcaContract.provider);
     const output = IERC20__factory.connect(outputAssetA.erc20Address.toString(), this.bidcaContract.provider);

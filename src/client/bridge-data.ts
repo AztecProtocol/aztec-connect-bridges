@@ -62,7 +62,7 @@ export interface BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-  ): Promise<number[]>;
+  ): Promise<bigint[]>;
 
   /**
    * @dev This public variable defines the structure of the auxData
@@ -84,7 +84,7 @@ export interface BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
     inputValue: bigint,
   ): Promise<bigint[]>;
 
@@ -126,7 +126,7 @@ export interface BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
   ): Promise<AssetValue[]>;
 
   /**
@@ -146,7 +146,7 @@ export interface BridgeDataFieldGetters {
   getUnderlyingAmount?(asset: AztecAsset, amount: bigint): Promise<UnderlyingAsset>;
 
   // Used only in Element, TODO: remove once clients get refactored to not share 1 class
-  getTermAPR?(underlying: AztecAsset, auxData: number, inputValue: bigint): Promise<number>;
+  getTermAPR?(underlying: AztecAsset, auxData: bigint, inputValue: bigint): Promise<number>;
 
   // The following 3 functions are only used in Liquity's TroveBridge
   getBorrowingFee?(borrowAmount: bigint): Promise<bigint>;

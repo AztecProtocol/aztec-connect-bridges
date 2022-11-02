@@ -75,7 +75,7 @@ describe("lido bridge data", () => {
       emptyAsset,
       wstETHAsset,
       emptyAsset,
-      0,
+      0n,
       depositAmount,
     );
     expect(expectedOutput == output[0]).toBeTruthy();
@@ -98,7 +98,7 @@ describe("lido bridge data", () => {
       emptyAsset,
       wstETHAsset,
       emptyAsset,
-      0,
+      0n,
       depositAmount,
     );
     expect(expectedOutput == output[0]).toBeTruthy();
@@ -127,7 +127,7 @@ describe("lido bridge data", () => {
       emptyAsset,
       ethAsset,
       emptyAsset,
-      0,
+      0n,
       depositAmount,
     );
 

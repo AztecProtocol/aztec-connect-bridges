@@ -58,7 +58,7 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-  ): Promise<number[]> {
+  ): Promise<bigint[]> {
     const [allYvETH, allVaultsForTokens] = await this.getAllVaultsAndTokens();
 
     if (!(await this.isSupportedAsset(inputAssetA))) {
@@ -74,13 +74,13 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
         outputAssetA.assetType == AztecAssetType.ERC20 && // Check if we are receiving ERC20
         allYvETH.findIndex(token => token.toString() === outputAssetA.erc20Address.toString()) > -1 // Check if we are receiving yvETH
       ) {
-        return [0]; // deposit via zap
+        return [0n]; // deposit via zap
       } else if (
         inputAssetA.assetType == AztecAssetType.ERC20 && // Check if we are withdrawing ERC20
         allYvETH.findIndex(token => token.toString() === inputAssetA.erc20Address.toString()) > -1 && // Check if we are withdrawing from yvETH
         outputAssetA.assetType == AztecAssetType.ETH // Check if we are receiving ETH
       ) {
-        return [1]; // withdraw via zap
+        return [1n]; // withdraw via zap
       } else {
         throw "Invalid input and/or output asset";
       }
@@ -93,14 +93,14 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     const matchDepositSituation =
       hasInputAsset && hasInputAsset.findIndex(token => token.toString() === outputAssetA.erc20Address.toString()) > -1;
     if (matchDepositSituation) {
-      return [0];
+      return [0n];
     }
     // standard withdraw
     const matchWithdrawSituation =
       hasOutputAsset &&
       hasOutputAsset.findIndex(token => token.toString() === inputAssetA.erc20Address.toString()) > -1;
     if (matchWithdrawSituation) {
-      return [1];
+      return [1n];
     }
     throw "Invalid input and/or output asset";
   }
@@ -110,10 +110,10 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
     inputValue: bigint,
   ): Promise<bigint[]> {
-    if (auxData === 0) {
+    if (auxData === 0n) {
       let tokenAddress = inputAssetA.erc20Address.toString();
       if (inputAssetA.assetType == AztecAssetType.ETH) {
         // Deposit via zap
@@ -128,7 +128,7 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
       const expectedShares = BigNumber.from(inputValue).mul(BigNumber.from(10).pow(decimals)).div(pricePerShare);
       return [expectedShares.toBigInt(), 0n];
     }
-    if (auxData === 1) {
+    if (auxData === 1n) {
       let tokenAddress = outputAssetA.erc20Address.toString();
       if (outputAssetA.assetType == AztecAssetType.ETH) {
         // Withdraw via zap
@@ -172,7 +172,7 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     yvToken: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
   ): Promise<AssetValue[]> {
     const yvTokenContract = IYearnVault__factory.connect(yvToken.erc20Address.toString(), this.ethersProvider);
     const totalAssets = await yvTokenContract.totalAssets();
@@ -195,7 +195,7 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
     const namePromise = tokenContract.name();
     const symbolPromise = tokenContract.symbol();
     const decimalsPromise = tokenContract.decimals();
-    const amountPromise = this.getExpectedOutput(vaultAsset, emptyAsset, underlyingAsset, emptyAsset, 1, amount);
+    const amountPromise = this.getExpectedOutput(vaultAsset, emptyAsset, underlyingAsset, emptyAsset, 1n, amount);
     return {
       address: underlyingAsset.erc20Address,
       name: await namePromise,

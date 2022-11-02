@@ -106,9 +106,9 @@ describe("Testing Yearn auxData", () => {
 
     const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
     const auxDataDepositERC20 = await yearnBridgeData.getAuxData(daiAsset, emptyAsset, yvDaiAsset, emptyAsset);
-    expect(auxDataDepositERC20[0]).toBe(0);
+    expect(auxDataDepositERC20[0]).toBe(0n);
     const auxDataDepositETH = await yearnBridgeData.getAuxData(ethAsset, emptyAsset, yvEthAsset, emptyAsset);
-    expect(auxDataDepositETH[0]).toBe(0);
+    expect(auxDataDepositETH[0]).toBe(0n);
   });
 
   it("should correctly fetch auxData for withdrawal", async () => {
@@ -147,9 +147,9 @@ describe("Testing Yearn auxData", () => {
 
     const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
     const auxDataDepositERC20 = await yearnBridgeData.getAuxData(yvDaiAsset, emptyAsset, daiAsset, emptyAsset);
-    expect(auxDataDepositERC20[0]).toBe(1);
+    expect(auxDataDepositERC20[0]).toBe(1n);
     const auxDataDepositETH = await yearnBridgeData.getAuxData(yvEthAsset, emptyAsset, ethAsset, emptyAsset);
-    expect(auxDataDepositETH[0]).toBe(1);
+    expect(auxDataDepositETH[0]).toBe(1n);
   });
 
   it("should throw when getting auxData for unsupported inputAssetA", async () => {
@@ -335,7 +335,7 @@ describe("Testing Yearn expectedOutput", () => {
       emptyAsset,
       yvDaiAsset,
       emptyAsset,
-      0,
+      0n,
       10n ** 18n,
     );
     expect(expectedOutputERC20[0]).toBe(989902989507028311n);
@@ -346,7 +346,7 @@ describe("Testing Yearn expectedOutput", () => {
       emptyAsset,
       yvEthAsset,
       emptyAsset,
-      0,
+      0n,
       10n ** 18n,
     );
     expect(expectedOutputETH[0]).toBe(989902989507028311n);
@@ -369,7 +369,7 @@ describe("Testing Yearn expectedOutput", () => {
       emptyAsset,
       daiAsset,
       emptyAsset,
-      1,
+      1n,
       10n ** 18n,
     );
     expect(expectedOutputERC20[0]).toBe(1110200000000000000n);
@@ -380,7 +380,7 @@ describe("Testing Yearn expectedOutput", () => {
       emptyAsset,
       ethAsset,
       emptyAsset,
-      1,
+      1n,
       10n ** 18n,
     );
     expect(expectedOutputETH[0]).toBe(1110200000000000000n);
@@ -400,13 +400,13 @@ describe("Testing Yearn expectedOutput", () => {
 
     expect.assertions(3);
     await expect(
-      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 0, 10n ** 18n),
+      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 0n, 10n ** 18n),
     ).rejects.toEqual(new Error("Token not found"));
     await expect(
-      yearnBridgeData.getExpectedOutput(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 1, 10n ** 18n),
+      yearnBridgeData.getExpectedOutput(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 1n, 10n ** 18n),
     ).rejects.toEqual(new Error("Token not found"));
     await expect(
-      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 3, 10n ** 18n),
+      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, daiAsset, emptyAsset, 3n, 10n ** 18n),
     ).rejects.toEqual("Invalid auxData");
   });
 
@@ -414,10 +414,10 @@ describe("Testing Yearn expectedOutput", () => {
     const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
 
     await expect(
-      yearnBridgeData.getExpectedOutput(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0n),
+      yearnBridgeData.getExpectedOutput(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0n, 0n),
     ).rejects.toEqual(new Error("Token not found"));
     await expect(
-      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0n),
+      yearnBridgeData.getExpectedOutput(yvDaiAsset, emptyAsset, emptyAsset, emptyAsset, 0n, 0n),
     ).rejects.toEqual(new Error("Token not found"));
   });
 });
@@ -485,8 +485,9 @@ describe("Testing Yearn getMarketSize", () => {
     IYearnVault__factory.connect = () => vaultContract as any;
 
     const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
-    const expectedMarketSize = (await yearnBridgeData.getMarketSize(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 0))[0]
-      .value;
+    const expectedMarketSize = (
+      await yearnBridgeData.getMarketSize(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 0n)
+    )[0].value;
     expect(expectedMarketSize).toBe(97513214188808613008055674n);
   });
 });

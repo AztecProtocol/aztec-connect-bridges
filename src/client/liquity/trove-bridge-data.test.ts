@@ -63,14 +63,14 @@ describe("Liquity trove bridge data", () => {
     const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
 
     const auxDataBorrow = await troveBridgeData.getAuxData(ethAsset, emptyAsset, tbAsset, lusdAsset);
-    expect(auxDataBorrow[0]).toBe(6000000000000000);
+    expect(auxDataBorrow[0]).toBe(6000000000000000n);
   });
 
   it("should correctly fetch auxData when not borrowing", async () => {
     const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
 
     const auxDataBorrow = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, lusdAsset);
-    expect(auxDataBorrow[0]).toBe(0);
+    expect(auxDataBorrow[0]).toBe(0n);
   });
 
   it("should correctly get expected output when borrowing", async () => {
@@ -91,7 +91,7 @@ describe("Liquity trove bridge data", () => {
       emptyAsset,
       tbAsset,
       lusdAsset,
-      0, // not used in the function
+      0n, // not used in the function
       10n ** 18n,
     );
     expect(outputBorrow[0]).toBe(10n ** 21n);
@@ -120,7 +120,7 @@ describe("Liquity trove bridge data", () => {
     const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
 
     const inputValue = 10n ** 18n;
-    const output = await troveBridgeData.getExpectedOutput(tbAsset, lusdAsset, ethAsset, lusdAsset, 0, inputValue);
+    const output = await troveBridgeData.getExpectedOutput(tbAsset, lusdAsset, ethAsset, lusdAsset, 0n, inputValue);
     const expectedCollateralWithdrawn = inputValue;
     const lusdReturned = 0n;
     expect(output[0]).toBe(expectedCollateralWithdrawn);

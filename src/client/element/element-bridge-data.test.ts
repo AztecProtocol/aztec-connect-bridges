@@ -281,8 +281,8 @@ describe("element bridge data", () => {
   });
 
   it("should return the correct yield of the tranche", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const expiry = now + 86400 * 30;
+    const now = BigInt(Date.now()) / 1000n;
+    const expiry = now + 86400n * 30n;
     const trancheAddress = "0x90ca5cef5b29342b229fb8ae2db5d8f4f894d652";
     const poolId = "0x90ca5cef5b29342b229fb8ae2db5d8f4f894d6520002000000000000000000b5";
     const interest = BigInt(1e16);

@@ -22,8 +22,8 @@ export class ExampleBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-  ): Promise<number[]> {
-    return [0];
+  ): Promise<bigint[]> {
+    return [0n];
   }
 
   public auxDataConfig: AuxDataConfig[] = [
@@ -40,7 +40,7 @@ export class ExampleBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
     inputValue: bigint,
   ): Promise<bigint[]> {
     return [100n, 0n];
@@ -51,7 +51,7 @@ export class ExampleBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
   ): Promise<AssetValue[]> {
     return [{ assetId: 0, value: 100n }];
   }
