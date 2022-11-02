@@ -9,9 +9,9 @@ import {ISubsidy} from "../../aztec/interfaces/ISubsidy.sol";
 
 import {LiquityTroveDeployment, BaseDeployment} from "../../deployment/liquity/LiquityTroveDeployment.s.sol";
 import {GasBase} from "../base/GasBase.sol";
-import "../../interfaces/liquity/IHintHelpers.sol";
-import "../../interfaces/liquity/ITroveManager.sol";
-import "../../interfaces/liquity/ISortedTroves.sol";
+import {IHintHelpers} from "../../interfaces/liquity/IHintHelpers.sol";
+import {ITroveManager} from "../../interfaces/liquity/ITroveManager.sol";
+import {ISortedTroves} from "../../interfaces/liquity/ISortedTroves.sol";
 
 interface IRead {
     function defiBridgeProxy() external view returns (address);
@@ -67,15 +67,11 @@ contract TroveBridgeMeasure is LiquityTroveDeployment {
         vm.label(lusdAsset.erc20Address, "LUSD");
         vm.label(tbAsset.erc20Address, "TB");
 
-        // List vaults and fund subsidy
-        //        vm.startBroadcast();
-        //        SUBSIDY.subsidize{value: 1e17}(
-        //            address(bridge),
-        //            bridge.computeCriteria(wewethAsset, emptyAsset, lusdAsset, emptyAsset, 0),
-        //            500
-        //        );
-        //        SUBSIDY.registerBeneficiary(BENEFICIARY);
-        //        vm.stopBroadcast();
+        // Fund subsidy
+        vm.startBroadcast();
+        SUBSIDY.subsidize{value: 1e17}(address(bridge), 0, 500);
+        SUBSIDY.registerBeneficiary(BENEFICIARY);
+        vm.stopBroadcast();
 
         // Warp time to increase subsidy
         vm.warp(block.timestamp + 10 days);
@@ -98,14 +94,14 @@ contract TroveBridgeMeasure is LiquityTroveDeployment {
                 lusdAsset,
                 1 ether,
                 0,
-                MAX_FEE, // accept up to 5 % borrowing fee
+                MAX_FEE,
                 BENEFICIARY,
                 500000
             );
         }
 
         uint256 claimableSubsidyAfterDeposit = SUBSIDY.claimableAmount(BENEFICIARY);
-        //        assertGt(claimableSubsidyAfterDeposit, 0, "Subsidy was not claimed during deposit");
+        assertGt(claimableSubsidyAfterDeposit, 0, "Subsidy was not claimed during deposit");
         emit log_named_uint("Claimable subsidy after deposit", claimableSubsidyAfterDeposit);
 
         // Repay
@@ -127,7 +123,7 @@ contract TroveBridgeMeasure is LiquityTroveDeployment {
                 0,
                 0,
                 BENEFICIARY,
-                500000
+                390000
             );
         }
     }
