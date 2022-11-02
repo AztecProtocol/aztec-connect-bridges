@@ -10,7 +10,7 @@ import {
   IVault,
   IVault__factory,
 } from "../../../typechain-types";
-import { AsyncDefiBridgeProcessedEvent } from "../../../typechain-types/IRollupProcessor";
+import { AsyncDefiBridgeProcessedEvent } from "../../../typechain-types/RollupProcessor";
 import { createWeb3Provider } from "../aztec/provider";
 import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
 import "isomorphic-fetch";
