@@ -2,18 +2,16 @@ import { EthAddress } from "@aztec/barretenberg/address";
 import { AssetValue } from "@aztec/barretenberg/asset";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { BridgeCallData } from "@aztec/barretenberg/bridge_call_data";
+import "isomorphic-fetch";
 import {
   ElementBridge,
-  ElementBridge__factory,
-  IRollupProcessor,
-  IRollupProcessor__factory,
-  IVault,
+  ElementBridge__factory, IVault,
   IVault__factory,
+  RollupProcessor__factory
 } from "../../../typechain-types";
-import { AsyncDefiBridgeProcessedEvent } from "../../../typechain-types/RollupProcessor";
+import { AsyncDefiBridgeProcessedEvent, RollupProcessor } from "../../../typechain-types/RollupProcessor";
 import { createWeb3Provider } from "../aztec/provider";
 import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
-import "isomorphic-fetch";
 
 export type BatchSwapStep = {
   poolId: string;
@@ -69,7 +67,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   private constructor(
     private elementBridgeContract: ElementBridge,
     private balancerContract: IVault,
-    private rollupContract: IRollupProcessor,
+    private rollupContract: RollupProcessor,
     private falafelGraphQlEndpoint: string,
   ) {}
 
@@ -82,7 +80,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   ) {
     const ethersProvider = createWeb3Provider(provider);
     const elementBridgeContract = ElementBridge__factory.connect(elementBridgeAddress.toString(), ethersProvider);
-    const rollupContract = IRollupProcessor__factory.connect(rollupContractAddress.toString(), ethersProvider);
+    const rollupContract = RollupProcessor__factory.connect(rollupContractAddress.toString(), ethersProvider);
     const vaultContract = IVault__factory.connect(balancerAddress.toString(), ethersProvider);
     return new ElementBridgeData(elementBridgeContract, vaultContract, rollupContract, falafelGraphQlEndpoint);
   }
