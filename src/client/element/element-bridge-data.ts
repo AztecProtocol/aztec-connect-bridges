@@ -5,9 +5,10 @@ import { BridgeCallData } from "@aztec/barretenberg/bridge_call_data";
 import "isomorphic-fetch";
 import {
   ElementBridge,
-  ElementBridge__factory, IVault,
+  ElementBridge__factory,
+  IVault,
   IVault__factory,
-  RollupProcessor__factory
+  RollupProcessor__factory,
 } from "../../../typechain-types";
 import { AsyncDefiBridgeProcessedEvent, RollupProcessor } from "../../../typechain-types/RollupProcessor";
 import { createWeb3Provider } from "../aztec/provider";
