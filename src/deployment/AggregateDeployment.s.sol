@@ -71,12 +71,6 @@ contract AggregateDeployment is BaseDeployment {
             emit log_named_uint("ERC4626 euler wstEth id", wewstEthAssetId);
 
             address erc4626EulerDai = 0x4169Df1B7820702f566cc10938DA51F6F597d264;
-            if (erc4626EulerDai.code.length == 0) {
-                vm.broadcast();
-                address(0x1e8020cFB10b6a6a9B5F06e3ABAe140f7DE541E1).call(
-                    hex"abeccaa40000000000000000000000006b175474e89094c44da98b954eedeac495271d0f"
-                );
-            }
             lister.listVault(erc4626Bridge, erc4626EulerDai);
             uint256 wedaiAssetId = listAsset(erc4626EulerDai, 55000);
             emit log_named_uint("ERC4626 euler dai id", wedaiAssetId);
@@ -101,6 +95,22 @@ contract AggregateDeployment is BaseDeployment {
             LiquityTroveDeployment deploy = new LiquityTroveDeployment();
             deploy.setUp();
             deploy.deployAndList(350);
+        }
+
+        emit log("--- AAVE v2 ---");
+        {
+            ERC4626Lister lister = new ERC4626Lister();
+            lister.setUp();
+
+            address erc4626AaveV2Dai = 0xbcb91e0B4Ad56b0d41e0C168E3090361c0039abC;
+            lister.listVault(erc4626Bridge, erc4626AaveV2Dai);
+            uint256 erc4626AaveV2DaiId = listAsset(erc4626AaveV2Dai, 55000);
+            emit log_named_uint("ERC4626 aave v2 dai id", erc4626AaveV2DaiId);
+
+            address erc4626AaveV2WETH = 0xc21F107933612eCF5677894d45fc060767479A9b;
+            lister.listVault(erc4626Bridge, erc4626AaveV2WETH);
+            uint256 erc4626AaveV2WETHId = listAsset(erc4626AaveV2WETH, 55000);
+            emit log_named_uint("ERC4626 aave v2 weth id", erc4626AaveV2WETHId);
         }
     }
 
