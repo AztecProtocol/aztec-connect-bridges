@@ -51,7 +51,7 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-  ): Promise<number[]> {
+  ): Promise<bigint[]> {
     if (
       inputAssetA.assetType === AztecAssetType.ETH &&
       inputAssetB.assetType === AztecAssetType.NOT_USED &&
@@ -63,9 +63,9 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
       // --> we don't want to break aggregation by there occurring irrelevant borrowing rate changes
       // so I will set the irrelevant decimals to 0 and increase the acceptable fee by 0.1 %
       const borrowingRate = (currentBorrowingRate.toBigInt() / 10n ** 15n) * 10n ** 15n + 10n ** 15n;
-      return [Number(borrowingRate)];
+      return [borrowingRate];
     }
-    return [0];
+    return [0n];
   }
 
   async getExpectedOutput(
@@ -73,7 +73,7 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
     inputValue: bigint,
   ): Promise<bigint[]> {
     const bridge = TroveBridge__factory.connect(this.bridge.address, this.ethersProvider);

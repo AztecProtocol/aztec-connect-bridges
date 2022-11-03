@@ -143,7 +143,7 @@ describe("DCA bridge data", () => {
   it("get aux data", async () => {
     dcaBridgeData = createDCABridge(dcaBridgeContract as any);
     const result = await dcaBridgeData.getAuxData(emptyAsset, emptyAsset, emptyAsset, emptyAsset);
-    expect(result[0]).toBe(7);
+    expect(result[0]).toBe(7n);
   });
 
   it("get expected output", async () => {
@@ -153,7 +153,7 @@ describe("DCA bridge data", () => {
       emptyAsset,
       daiAsset,
       emptyAsset,
-      0,
+      0n,
       10n * 10n ** 18n,
     );
     expect(result[0]).toBe(0n);

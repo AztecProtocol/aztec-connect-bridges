@@ -60,7 +60,7 @@ export class AngleBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-  ): Promise<number[]> {
+  ): Promise<bigint[]> {
     const inputAssetAAddress = inputAssetA.erc20Address.toString().toLowerCase();
     const outputAssetAAddress = outputAssetA.erc20Address.toString().toLowerCase();
 
@@ -74,12 +74,12 @@ export class AngleBridgeData implements BridgeDataFieldGetters {
       const poolManager = this.poolManagers[inputAssetAAddress];
       const { sanToken } = await this.angleStableMaster.collateralMap(poolManager);
       if (sanToken.toLowerCase() !== outputAssetAAddress) throw "invalid outputAssetA";
-      return [0];
+      return [0n];
     } else if (this.poolManagers[outputAssetAAddress]) {
       const poolManager = this.poolManagers[outputAssetAAddress];
       const { sanToken } = await this.angleStableMaster.collateralMap(poolManager);
       if (sanToken.toLowerCase() !== inputAssetAAddress) throw "invalid inputAssetA";
-      return [1];
+      return [1n];
     }
 
     throw "invalid input/output asset";
@@ -90,18 +90,18 @@ export class AngleBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
     inputValue: bigint,
   ): Promise<bigint[]> {
     // first check if assets are valid
     const _auxData = await this.getAuxData(inputAssetA, inputAssetB, outputAssetA, outputAssetB);
     if (auxData !== _auxData[0]) throw "invalid auxData";
 
-    if (auxData === 0) {
+    if (auxData === 0n) {
       const poolManager = this.poolManagers[inputAssetA.erc20Address.toString().toLowerCase()];
       const { sanRate } = await this.angleStableMaster.collateralMap(poolManager);
       return [(inputValue * this.scalingFactor) / sanRate.toBigInt()];
-    } else if (auxData === 1) {
+    } else if (auxData === 1n) {
       const poolManager = this.poolManagers[outputAssetA.erc20Address.toString().toLowerCase()];
       const { sanRate } = await this.angleStableMaster.collateralMap(poolManager);
       return [(inputValue * sanRate.toBigInt()) / this.scalingFactor];
@@ -115,14 +115,14 @@ export class AngleBridgeData implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
   ): Promise<AssetValue[]> {
     let poolManager: string;
     let token: AztecAsset;
-    if (auxData === 0) {
+    if (auxData === 0n) {
       poolManager = this.poolManagers[inputAssetA.erc20Address.toString().toLowerCase()];
       token = inputAssetA;
-    } else if (auxData === 1) {
+    } else if (auxData === 1n) {
       poolManager = this.poolManagers[outputAssetA.erc20Address.toString().toLowerCase()];
       token = outputAssetA;
     } else {

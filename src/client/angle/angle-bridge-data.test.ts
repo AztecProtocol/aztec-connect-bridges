@@ -97,8 +97,8 @@ describe("Testing Angle Bridge", () => {
     angleBridgeData = createBridgeData({
       collateralMap: jest.fn().mockResolvedValue({ sanToken: sanDAI.erc20Address.toString().toLowerCase() }),
     } as any);
-    expect(await angleBridgeData.getAuxData(sanDAI, emptyAsset, DAI, emptyAsset)).toEqual([1]);
-    expect(await angleBridgeData.getAuxData(DAI, emptyAsset, sanDAI, emptyAsset)).toEqual([0]);
+    expect(await angleBridgeData.getAuxData(sanDAI, emptyAsset, DAI, emptyAsset)).toEqual([1n]);
+    expect(await angleBridgeData.getAuxData(DAI, emptyAsset, sanDAI, emptyAsset)).toEqual([0n]);
 
     angleBridgeData = createBridgeData({
       collateralMap: jest.fn().mockResolvedValue({ sanToken: sanWETH.erc20Address.toString().toLowerCase() }),
@@ -106,7 +106,7 @@ describe("Testing Angle Bridge", () => {
     await expect(() => angleBridgeData.getAuxData(DAI, emptyAsset, sanDAI, emptyAsset)).rejects.toEqual(
       "invalid outputAssetA",
     );
-    expect(await angleBridgeData.getAuxData(WETH, emptyAsset, sanWETH, emptyAsset)).toEqual([0]);
+    expect(await angleBridgeData.getAuxData(WETH, emptyAsset, sanWETH, emptyAsset)).toEqual([0n]);
   });
 
   it("should get correct output", async () => {
@@ -123,13 +123,13 @@ describe("Testing Angle Bridge", () => {
         emptyAsset,
         sanDAI,
         emptyAsset,
-        0,
+        0n,
         10n * angleBridgeData.scalingFactor,
       ),
     ).toEqual([8333333333333333333n]);
 
     await expect(() =>
-      angleBridgeData.getExpectedOutput(DAI, emptyAsset, sanDAI, emptyAsset, 1, 10n * angleBridgeData.scalingFactor),
+      angleBridgeData.getExpectedOutput(DAI, emptyAsset, sanDAI, emptyAsset, 1n, 10n * angleBridgeData.scalingFactor),
     ).rejects.toEqual("invalid auxData");
 
     expect(
@@ -138,7 +138,7 @@ describe("Testing Angle Bridge", () => {
         emptyAsset,
         DAI,
         emptyAsset,
-        1,
+        1n,
         10n * angleBridgeData.scalingFactor,
       ),
     ).toEqual([12000000000000000000n]);
