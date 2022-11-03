@@ -120,7 +120,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
 
     const response = await fetch(`${this.falafelEndpoint}/rollup/${id}`, {
       headers: { "Content-Type": "application/json" },
-      method: "GET"
+      method: "GET",
     });
 
     const data = await response.json();
