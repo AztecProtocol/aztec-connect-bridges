@@ -91,7 +91,7 @@ contract AggregateDeployment is BaseDeployment {
             uint256 depositAddressId = listBridge(erc4626Bridge, 400000);
             emit log_named_uint("ERC4626 bridge address id (400k gas)", depositAddressId);
 
-            uint256 depositAddressId = listBridge(erc4626Bridge, 500000);
+            depositAddressId = listBridge(erc4626Bridge, 500000);
             emit log_named_uint("ERC4626 bridge address id (500k gas)", depositAddressId);
         }
 
