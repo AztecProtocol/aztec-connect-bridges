@@ -30,16 +30,16 @@ contract AggregateDeployment is BaseDeployment {
     function deployAndListAll() public {
         emit log("--- Curve ---");
         {
-            CurveDeployment cDeploy = new CurveDeployment();
-            cDeploy.setUp();
-            cDeploy.deployAndList();
+            CurveDeployment curveDeployment = new CurveDeployment();
+            curveDeployment.setUp();
+            curveDeployment.deployAndList();
         }
 
         emit log("--- Yearn ---");
         {
-            YearnDeployment yDeploy = new YearnDeployment();
-            yDeploy.setUp();
-            yDeploy.deployAndList();
+            YearnDeployment yearnDeployment = new YearnDeployment();
+            yearnDeployment.setUp();
+            yearnDeployment.deployAndList();
         }
 
         emit log("--- Element 2M ---");
@@ -50,9 +50,12 @@ contract AggregateDeployment is BaseDeployment {
 
         emit log("--- ERC4626 ---");
         {
-            ERC4626Deployment deploy = new ERC4626Deployment();
-            deploy.setUp();
-            erc4626Bridge = deploy.deployAndList();
+            ERC4626Deployment erc4626Deployment = new ERC4626Deployment();
+            erc4626Deployment.setUp();
+            erc4626Bridge = erc4626Deployment.deploy();
+
+            uint256 depositAddressId = listBridge(erc4626Bridge, 300000);
+            emit log_named_uint("ERC4626 bridge address id (300k gas)", depositAddressId);
         }
 
         emit log("--- Euler ---");
@@ -78,9 +81,18 @@ contract AggregateDeployment is BaseDeployment {
 
         emit log("--- DCA ---");
         {
-            DCADeployment deploy = new DCADeployment();
-            deploy.setUp();
-            deploy.deployAndList();
+            DCADeployment dcaDeployment = new DCADeployment();
+            dcaDeployment.setUp();
+            dcaDeployment.deployAndList();
+        }
+
+        emit log("--- ERC4626 400k and 500k gas configurations ---");
+        {
+            uint256 depositAddressId = listBridge(erc4626Bridge, 400000);
+            emit log_named_uint("ERC4626 bridge address id (400k gas)", depositAddressId);
+
+            uint256 depositAddressId = listBridge(erc4626Bridge, 500000);
+            emit log_named_uint("ERC4626 bridge address id (500k gas)", depositAddressId);
         }
 
         emit log("--- AAVE v2 ---");
@@ -99,18 +111,13 @@ contract AggregateDeployment is BaseDeployment {
             emit log_named_uint("ERC4626 aave v2 weth id", erc4626AaveV2WETHId);
         }
 
-        emit log("--- Liquity CR 250%---");
+        emit log("--- Liquity 275% CR and 400% CR deployments ---");
         {
-            LiquityTroveDeployment deploy = new LiquityTroveDeployment();
-            deploy.setUp();
-            deploy.deployAndList(250);
-        }
+            LiquityTroveDeployment liquityTroveDeployment = new LiquityTroveDeployment();
+            liquityTroveDeployment.setUp();
 
-        emit log("--- Liquity CR 350%---");
-        {
-            LiquityTroveDeployment deploy = new LiquityTroveDeployment();
-            deploy.setUp();
-            deploy.deployAndList(350);
+            liquityTroveDeployment.deployAndList(275);
+            liquityTroveDeployment.deployAndList(400);
         }
     }
 

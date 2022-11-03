@@ -6,8 +6,6 @@ import {BaseDeployment} from "../base/BaseDeployment.s.sol";
 import {TroveBridge} from "../../bridges/liquity/TroveBridge.sol";
 
 contract LiquityTroveDeployment is BaseDeployment {
-    uint256 internal constant INITIAL_CR = 250;
-
     function deploy(uint256 _initialCr) public returns (address) {
         emit log("Deploying example bridge");
 
