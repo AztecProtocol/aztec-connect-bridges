@@ -9,7 +9,7 @@ import {IManager} from "../../../interfaces/tokemak/IManager.sol";
 
 import {TokemakBridge} from "../../../bridges/tokemak/TokemakBridge.sol";
 
-import {AztecTypes} from "../../../aztec/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
 import {Ttoken} from "../../../interfaces/tokemak/Ttoken.sol";
 
@@ -55,7 +55,7 @@ contract TokemakBridgeTest is BridgeTestBase {
 
         IManager _manager = IManager(MANAGER);
         address[] memory _pools = _manager.getPools();
-        for (uint256 i = 0; i < _pools.length; i++) {
+        for (uint256 i = 0; i < 1; i++) {
             address _pool = _pools[i];
 
             if (excludedPoolsMapping[_pool]) continue;
@@ -71,8 +71,8 @@ contract TokemakBridgeTest is BridgeTestBase {
             validateTokemakBridge(
                 _balance,
                 _amount,
-                getRealAztecAsset(address(_inputToken)),
-                getRealAztecAsset(address(_token))
+                ROLLUP_ENCODER.getRealAztecAsset(address(_inputToken)),
+                ROLLUP_ENCODER.getRealAztecAsset(address(_token))
             );
         }
     }
@@ -101,7 +101,7 @@ contract TokemakBridgeTest is BridgeTestBase {
         //Test if automatic process withdrawal working
         uint256 output2 = depositToPool(_amount, _inputAsset, _outputAsset);
 
-        nonce = getNextNonce();
+        nonce = ROLLUP_ENCODER.getNextNonce();
 
         //Request Withdraw
         requestWithdrawFromPool(output2, _inputAsset, _outputAsset);
@@ -122,16 +122,17 @@ contract TokemakBridgeTest is BridgeTestBase {
         AztecTypes.AztecAsset memory _inputAsset,
         AztecTypes.AztecAsset memory _outputAsset
     ) public returns (uint256) {
-        uint256 bridgeCallData = encodeBridgeCallData(
+        ROLLUP_ENCODER.defiInteractionL2(
             bridgeAddressId,
             _inputAsset,
             emptyAsset,
             _outputAsset,
             emptyAsset,
-            0
+            0,
+            _depositAmount
         );
 
-        (uint256 outputValueA, , ) = sendDefiRollup(bridgeCallData, _depositAmount);
+        (uint256 outputValueA, , ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         return outputValueA;
     }
@@ -141,16 +142,17 @@ contract TokemakBridgeTest is BridgeTestBase {
         AztecTypes.AztecAsset memory _inputAsset,
         AztecTypes.AztecAsset memory _outputAsset
     ) public returns (uint256) {
-        uint256 bridgeCallData = encodeBridgeCallData(
+        ROLLUP_ENCODER.defiInteractionL2(
             bridgeAddressId,
             _outputAsset,
             emptyAsset,
             _inputAsset,
             emptyAsset,
-            1
+            1,
+            _withdrawAmount
         );
 
-        (uint256 outputValueA, , ) = sendDefiRollup(bridgeCallData, _withdrawAmount);
+        (uint256 outputValueA, , ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         return outputValueA;
     }
