@@ -68,8 +68,8 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   private constructor(
     private elementBridgeContract: ElementBridge,
     private balancerContract: IVault,
-    private rollupContract: RollupProcessor,
-    private falafelGraphQlEndpoint: string,
+    private rollupContract: IRollupProcessor,
+    private falafelEndpoint: string,
   ) {}
 
   static create(
@@ -77,13 +77,13 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     elementBridgeAddress: EthAddress,
     balancerAddress: EthAddress,
     rollupContractAddress: EthAddress,
-    falafelGraphQlEndpoint: string,
+    falafelEndpoint: string,
   ) {
     const ethersProvider = createWeb3Provider(provider);
     const elementBridgeContract = ElementBridge__factory.connect(elementBridgeAddress.toString(), ethersProvider);
     const rollupContract = RollupProcessor__factory.connect(rollupContractAddress.toString(), ethersProvider);
     const vaultContract = IVault__factory.connect(balancerAddress.toString(), ethersProvider);
-    return new ElementBridgeData(elementBridgeContract, vaultContract, rollupContract, falafelGraphQlEndpoint);
+    return new ElementBridgeData(elementBridgeContract, vaultContract, rollupContract, falafelEndpoint);
   }
 
   private async storeEventBlocks(events: AsyncDefiBridgeProcessedEvent[]) {
@@ -117,20 +117,10 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
 
   private async getBlockNumber(interactionNonce: number) {
     const id = Math.floor(interactionNonce / 32);
-    const query = `query Block($id: Int!) {
-      block: rollup(id: $id) {
-        ethTxHash
-      }
-    }`;
 
-    const response = await fetch(this.falafelGraphQlEndpoint, {
+    const response = await fetch(`${this.falafelEndpoint}/rollup/${id}`, {
       headers: { "Content-Type": "application/json" },
-      method: "POST",
-      body: JSON.stringify({
-        query,
-        operationName: "Block",
-        variables: { id },
-      }),
+      method: "GET"
     });
 
     const data = await response.json();
