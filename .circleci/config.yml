@@ -89,7 +89,7 @@ jobs:
             export PATH=/home/cicleci/.local/bin:$PATH
             vyper --version
       - run:
-          name: Setup Foundry
+          name: Setup Foundry and Build
           shell: /bin/bash
           command: |
             yarn config set script-shell /bin/bash
@@ -98,11 +98,11 @@ jobs:
             export PATH=/home/circleci/.foundry/bin:$PATH
             export PATH=/home/circleci/.forge/bin:$PATH
             yarn setup:foundry
+            yarn build
       - run:
-          name: Build and Publish
+          name: Publish
           shell: /bin/bash
           command: |
-            yarn build
             yarn publish --access public
 
 workflows:
