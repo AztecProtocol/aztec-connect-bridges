@@ -71,6 +71,8 @@ contract TroveBridgeMeasure is LiquityTroveDeployment {
         vm.startBroadcast();
         SUBSIDY.subsidize{value: 1e17}(address(bridge), 0, 500);
         SUBSIDY.registerBeneficiary(BENEFICIARY);
+        SUBSIDY.subsidize{value: 1e17}(address(bridge), 1, 300);
+        SUBSIDY.registerBeneficiary(BENEFICIARY);
         vm.stopBroadcast();
 
         // Warp time to increase subsidy
@@ -96,7 +98,7 @@ contract TroveBridgeMeasure is LiquityTroveDeployment {
                 0,
                 MAX_FEE,
                 BENEFICIARY,
-                500000
+                520000
             );
         }
 
@@ -123,9 +125,17 @@ contract TroveBridgeMeasure is LiquityTroveDeployment {
                 0,
                 0,
                 BENEFICIARY,
-                390000
+                410000
             );
         }
+
+        uint256 claimableSubsidyAfterRepayment = SUBSIDY.claimableAmount(BENEFICIARY);
+        assertGt(
+            claimableSubsidyAfterRepayment,
+            claimableSubsidyAfterDeposit,
+            "Subsidy was not claimed during repayment"
+        );
+        emit log_named_uint("Claimable subsidy after repayment", claimableSubsidyAfterRepayment);
     }
 
     function _openTrove() internal {
