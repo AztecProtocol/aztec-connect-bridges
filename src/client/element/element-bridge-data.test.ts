@@ -4,8 +4,8 @@ import { BigNumber } from "ethers";
 import {
   ElementBridge,
   ElementBridge__factory,
-  IRollupProcessor,
-  IRollupProcessor__factory,
+  RollupProcessor,
+  RollupProcessor__factory,
   IVault,
   IVault__factory,
 } from "../../../typechain-types";
@@ -144,7 +144,7 @@ describe("element bridge data", () => {
     (elementBridge.provider as any).getTransactionReceipt = async () => ({ blockNumber: event?.blockNumber });
   };
 
-  const rollupContract: Mockify<IRollupProcessor> = {
+  const rollupContract: Mockify<RollupProcessor> = {
     queryFilter: jest.fn().mockImplementation((filter: any, from: number, to: number) => {
       const nonce = filter.interactionNonce;
       const [defiEvent] = getDefiEvents(nonce, from, to);
@@ -176,11 +176,11 @@ describe("element bridge data", () => {
   const createElementBridgeData = (
     element: ElementBridge = elementBridge as any,
     balancer: IVault = balancerContract as any,
-    rollup: IRollupProcessor = rollupContract as any,
+    rollup: RollupProcessor = rollupContract as any,
   ) => {
     ElementBridge__factory.connect = () => element as any;
     IVault__factory.connect = () => balancer as any;
-    IRollupProcessor__factory.connect = () => rollup as any;
+    RollupProcessor__factory.connect = () => rollup as any;
     return ElementBridgeData.create(
       {} as any,
       EthAddress.ZERO,
