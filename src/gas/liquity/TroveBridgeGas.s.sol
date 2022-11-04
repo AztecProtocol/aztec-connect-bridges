@@ -49,7 +49,7 @@ contract TroveBridgeMeasure is LiquityTroveDeployment {
 
         address temp = ROLLUP_PROCESSOR;
         ROLLUP_PROCESSOR = address(gasBase);
-        bridge = TroveBridge(payable(deploy()));
+        bridge = TroveBridge(payable(deploy(400)));
         ROLLUP_PROCESSOR = temp;
 
         ethAsset = AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
