@@ -120,7 +120,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         // This is approximately 520k / (24 * 60) / 2 --> targeting 1 full subsidized call per 2 days
         minGasPerMinute[0] = 180;
 
-        // This is approximately 390k / (24 * 60) / 4 --> targeting 1 full subsidized call per 4 days
+        // This is approximately 410k / (24 * 60) / 4 --> targeting 1 full subsidized call per 4 days
         minGasPerMinute[1] = 70;
 
         // We set gas usage and minGasPerMinute in the Subsidy contract
