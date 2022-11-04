@@ -19,9 +19,9 @@ contract ERC4626Test is BridgeTestBase {
         0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0, // ERC4626-Wrapped Euler WETH (weWETH)
         0x20706baA0F89e2dccF48eA549ea5A13B9b30462f, // ERC4626-Wrapped Euler oSQTH (weoSQTH)
         0x60897720AA966452e8706e74296B018990aEc527, //  ERC4626-Wrapped Euler wstETH (wewstETH)
-        0x4169Df1B7820702f566cc10938DA51F6F597d264 //  ERC4626-Wrapped Euler DAI (weDAI)
-        //        0xbcb91e0B4Ad56b0d41e0C168E3090361c0039abC, //  ERC4626-Wrapped AAVE V2 DAI (wa2DAI)
-        //        0xc21F107933612eCF5677894d45fc060767479A9b //  ERC4626-Wrapped AAVE V2 WETH (wa2WETH)
+        0x4169Df1B7820702f566cc10938DA51F6F597d264, //  ERC4626-Wrapped Euler DAI (weDAI)
+        0xbcb91e0B4Ad56b0d41e0C168E3090361c0039abC, //  ERC4626-Wrapped AAVE V2 DAI (wa2DAI)
+        0xc21F107933612eCF5677894d45fc060767479A9b //  ERC4626-Wrapped AAVE V2 WETH (wa2WETH)
     ];
     AztecTypes.AztecAsset[] private shares;
     AztecTypes.AztecAsset[] private assets;
@@ -102,7 +102,7 @@ contract ERC4626Test is BridgeTestBase {
     }
 
     function testFullFlow(uint96 _assetAmount, uint96 _shareAmount) public {
-        uint256 assetAmount = bound(_assetAmount, 100, type(uint256).max);
+        uint256 assetAmount = bound(_assetAmount, 100, type(uint96).max);
 
         for (uint256 i = 0; i < shares.length; ++i) {
             deal(assets[i].erc20Address, address(ROLLUP_PROCESSOR), assetAmount);
@@ -162,7 +162,7 @@ contract ERC4626Test is BridgeTestBase {
     }
 
     function testEthWrappingAndUnwrapping(uint96 _assetAmount) public {
-        uint256 assetAmount = bound(_assetAmount, 10, type(uint256).max);
+        uint256 assetAmount = bound(_assetAmount, 10, type(uint96).max);
         IERC20 weth = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
         bridge.listVault(wethVault);
@@ -221,7 +221,7 @@ contract ERC4626Test is BridgeTestBase {
         uint96 _shareAmount,
         uint96 _yield
     ) public {
-        uint256 assetAmount = bound(_assetAmount, 10, type(uint256).max);
+        uint256 assetAmount = bound(_assetAmount, 10, type(uint96).max);
         IERC20 weth = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
         address beneficiary = address(11);
