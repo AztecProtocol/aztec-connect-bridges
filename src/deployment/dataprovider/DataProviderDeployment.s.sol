@@ -129,7 +129,7 @@ contract DataProviderDeployment is BaseDeployment {
         bridgeTags[5] = "ERC4626";
         bridgeTags[6] = "DCA400K";
         bridgeTags[7] = "ERC4626_500K";
-        bridgeTags[8] = "ERC4626:400K";
+        bridgeTags[8] = "ERC4626_400K";
 
         vm.broadcast();
         DataProvider(provider).addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
