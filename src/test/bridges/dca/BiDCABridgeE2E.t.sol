@@ -106,8 +106,8 @@ contract BiDCATestE2E is BridgeTestBase {
         uint8 _timediff,
         uint8 _ff
     ) public {
-        uint256 deposit1 = bound(_deposit1, 0.1e18, !_aFirst ? 1000e18 : 1e24);
-        uint256 deposit2 = bound(_deposit2, 0.1e18, _aFirst ? 1000e18 : 1e24);
+        uint256 deposit1 = bound(_deposit1, 0.1e18, !_aFirst ? 100e18 : 1e23);
+        uint256 deposit2 = bound(_deposit2, 0.1e18, _aFirst ? 100e18 : 1e23);
         uint256 priceBefore = bridge.getPrice();
 
         {
