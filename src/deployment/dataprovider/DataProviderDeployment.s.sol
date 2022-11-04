@@ -92,8 +92,8 @@ contract DataProviderDeployment is BaseDeployment {
     function deployAndListMany() public returns (address) {
         address provider = deploy();
 
-        uint256[] memory assetIds = new uint256[](8);
-        string[] memory assetTags = new string[](8);
+        uint256[] memory assetIds = new uint256[](10);
+        string[] memory assetTags = new string[](10);
         for (uint256 i = 0; i < assetIds.length; i++) {
             assetIds[i] = i;
         }
@@ -105,9 +105,11 @@ contract DataProviderDeployment is BaseDeployment {
         assetTags[5] = "weweth";
         assetTags[6] = "wewsteth";
         assetTags[7] = "wedai";
+        assetTags[8] = "we2dai";
+        assetTags[9] = "we2weth";
 
-        uint256[] memory bridgeAddressIds = new uint256[](7);
-        string[] memory bridgeTags = new string[](7);
+        uint256[] memory bridgeAddressIds = new uint256[](9);
+        string[] memory bridgeTags = new string[](9);
 
         bridgeAddressIds[0] = 1;
         bridgeAddressIds[1] = 6;
@@ -116,6 +118,8 @@ contract DataProviderDeployment is BaseDeployment {
         bridgeAddressIds[4] = 9;
         bridgeAddressIds[5] = 10;
         bridgeAddressIds[6] = 11;
+        bridgeAddressIds[7] = 12;
+        bridgeAddressIds[8] = 13;
 
         bridgeTags[0] = "ElementBridge";
         bridgeTags[1] = "CurveStEthBridge";
@@ -124,6 +128,8 @@ contract DataProviderDeployment is BaseDeployment {
         bridgeTags[4] = "ElementBridge2M";
         bridgeTags[5] = "ERC4626";
         bridgeTags[6] = "DCA400K";
+        bridgeTags[7] = "ERC4626_500K";
+        bridgeTags[8] = "ERC4626:400K";
 
         vm.broadcast();
         DataProvider(provider).addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
