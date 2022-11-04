@@ -88,11 +88,11 @@ contract AggregateDeployment is BaseDeployment {
 
         emit log("--- ERC4626 400k and 500k gas configurations ---");
         {
-            uint256 depositAddressId = listBridge(erc4626Bridge, 400000);
-            emit log_named_uint("ERC4626 bridge address id (400k gas)", depositAddressId);
-
-            depositAddressId = listBridge(erc4626Bridge, 500000);
+            uint256 depositAddressId = listBridge(erc4626Bridge, 500000);
             emit log_named_uint("ERC4626 bridge address id (500k gas)", depositAddressId);
+
+            depositAddressId = listBridge(erc4626Bridge, 400000);
+            emit log_named_uint("ERC4626 bridge address id (400k gas)", depositAddressId);
         }
 
         emit log("--- AAVE v2 ---");
@@ -143,13 +143,6 @@ contract AggregateDeployment is BaseDeployment {
             UniswapDeployment deploy = new UniswapDeployment();
             deploy.setUp();
             deploy.deployAndList();
-        }
-
-        emit log("--- Liquity ---");
-        {
-            LiquityTroveDeployment deploy = new LiquityTroveDeployment();
-            deploy.setUp();
-            deploy.deployAndList(250);
         }
 
         emit log("--- Curve steth lp ---");

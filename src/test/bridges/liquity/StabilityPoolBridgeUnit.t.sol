@@ -49,7 +49,7 @@ contract StabilityPoolBridgeUnitTest is TestUtil {
         uint64 _ethRewards,
         uint72 _lqtyRewards
     ) public {
-        uint256 depositAmount = bound(_depositAmount, 10, type(uint128).max);
+        uint256 depositAmount = bound(_depositAmount, 10, type(uint96).max);
         uint256 spbReceived = _deposit(depositAmount);
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
