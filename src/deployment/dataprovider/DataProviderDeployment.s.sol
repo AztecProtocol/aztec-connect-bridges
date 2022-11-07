@@ -20,8 +20,7 @@ contract DataProviderDeployment is BaseDeployment {
     }
 
     function read() public {
-        // TODO: Input data provider on network to read
-        readProvider(address(0));
+        readProvider(0x9092E8E72000AAE776E4785662582e8f49a19258);
     }
 
     function readBogota() public {

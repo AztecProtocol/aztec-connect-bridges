@@ -88,7 +88,7 @@ abstract contract BaseDeployment is Test {
             return (getMainnetRollupProcessor(), MAINNET_MS);
         } else if (chainId == 0xa57ec && NETWORK == Network.TESTNET) {
             return (getTestnetRollupProcessor(), TESTNET_MS);
-        } else if (chainId == 0xa57ec && NETWORK == Network.DEVNET) {
+        } else if (chainId == 3567 && NETWORK == Network.DEVNET) {
             return (getDevnetRollupProcessor(), DEVNET_MS);
         } else {
             revert("Invalid configuration");
