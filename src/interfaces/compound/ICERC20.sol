@@ -10,6 +10,8 @@ interface ICERC20 is IERC20 {
 
     function balanceOfUnderlying(address) external view returns (uint256);
 
+    function totalBorrows() external view returns (uint256);
+
     function exchangeRateStored() external view returns (uint256);
 
     function exchangeRateCurrent() external returns (uint256);

@@ -5,7 +5,7 @@ import { Web3Provider } from "@ethersproject/providers";
 import "isomorphic-fetch";
 import { ICERC20__factory, ICompoundERC4626__factory, IERC20__factory } from "../../../typechain-types";
 import { createWeb3Provider } from "../aztec/provider";
-import { AztecAsset, AztecAssetType } from "../bridge-data";
+import { AztecAsset } from "../bridge-data";
 
 import { ERC4626BridgeData } from "../erc4626/erc4626-bridge-data";
 
@@ -54,19 +54,18 @@ export class CompoundBridgeData extends ERC4626BridgeData {
       throw "Invalid auxData";
     }
 
-    let marketSize;
-    if (underlyingAsset.assetType === AztecAssetType.ETH) {
-      marketSize = await this.ethersProvider.getBalance(cTokenAddress.toString());
-    } else {
-      marketSize = await IERC20__factory.connect(
-        underlyingAsset.erc20Address.toString(),
-        this.ethersProvider,
-      ).balanceOf(cTokenAddress.toString());
-    }
+    const underlying = IERC20__factory.connect(underlyingAsset.erc20Address.toString(), this.ethersProvider);
+    const cToken = ICERC20__factory.connect(underlyingAsset.erc20Address.toString(), this.ethersProvider);
+
+    const underlyingBalancePromise = underlying.balanceOf(cTokenAddress.toString());
+    const totalBorrowsPromise = cToken.totalBorrows();
+
+    const marketSize = (await underlyingBalancePromise).add(await totalBorrowsPromise).toBigInt();
+
     return [
       {
         assetId: underlyingAsset.id,
-        value: marketSize.toBigInt(),
+        value: marketSize,
       },
     ];
   }

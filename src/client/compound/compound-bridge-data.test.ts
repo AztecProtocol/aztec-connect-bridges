@@ -76,9 +76,16 @@ describe("compound lending bridge data", () => {
 
     erc20Contract = {
       ...erc20Contract,
-      balanceOf: jest.fn().mockResolvedValue(BigNumber.from("368442895892448315882277748")),
+      balanceOf: jest.fn().mockResolvedValue(BigNumber.from("354266465288194354360018823")),
     };
     IERC20__factory.connect = () => erc20Contract as any;
+
+    cerc20Contract = {
+      ...cerc20Contract,
+      totalBorrows: jest.fn().mockResolvedValue(BigNumber.from("302183964811046170986358904")),
+    };
+    IERC20__factory.connect = () => erc20Contract as any;
+
     const compoundBridgeData = CompoundBridgeData.create({} as any);
 
     // Test the code using mocked controller
@@ -87,6 +94,6 @@ describe("compound lending bridge data", () => {
       await compoundBridgeData.getMarketSize(wcdaiAsset, emptyAsset, daiAsset, emptyAsset, 1)
     )[0];
     expect(marketSizeMint.value).toBe(marketSizeRedeem.value);
-    expect(marketSizeMint.value).toBe(368442895892448315882277748n);
+    expect(marketSizeMint.value).toBe(656450430099240525346377727n);
   });
 });
