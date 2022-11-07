@@ -5,6 +5,7 @@ pragma solidity >=0.8.4;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
+import {Subsidy} from "../../../aztec/Subsidy.sol";
 
 import {TroveBridge} from "../../../bridges/liquity/TroveBridge.sol";
 import {TroveBridgeTestBase} from "./TroveBridgeTestBase.sol";
@@ -14,6 +15,10 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
 
     function setUp() public {
         rollupProcessor = address(this);
+
+        // Some of the tests are being pinned to a block before the subsidy was deployed so I deploy it if it's
+        // the case.
+        _ensureSubsidyIsDeployed();
 
         vm.prank(OWNER);
         bridge = new TroveBridge(rollupProcessor, 160);
@@ -611,5 +616,12 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
 
         assertEq(address(bridge).balance, 0, "Bridge holds ETH after interaction");
         assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST(), "Bridge holds LUSD after interaction");
+    }
+
+    function _ensureSubsidyIsDeployed() private {
+        address subsidy = 0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA;
+        if (subsidy.code.length == 0) {
+            vm.etch(subsidy, address(new Subsidy()).code);
+        }
     }
 }

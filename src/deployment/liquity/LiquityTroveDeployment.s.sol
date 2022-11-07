@@ -7,12 +7,12 @@ import {TroveBridge} from "../../bridges/liquity/TroveBridge.sol";
 
 contract LiquityTroveDeployment is BaseDeployment {
     function deploy(uint256 _initialCr) public returns (address) {
-        emit log("Deploying example bridge");
+        emit log("Deploying trove bridge");
 
         vm.broadcast();
         TroveBridge bridge = new TroveBridge(ROLLUP_PROCESSOR, _initialCr);
 
-        emit log_named_address("Example bridge deployed to", address(bridge));
+        emit log_named_address("Trove bridge deployed to", address(bridge));
 
         return address(bridge);
     }
@@ -20,7 +20,7 @@ contract LiquityTroveDeployment is BaseDeployment {
     function deployAndList(uint256 _initialCr) public {
         address bridge = deploy(_initialCr);
         uint256 addressId = listBridge(bridge, 1000000);
-        emit log_named_uint("Example bridge address id", addressId);
+        emit log_named_uint("Trove bridge address id", addressId);
 
         listAsset(TroveBridge(payable(bridge)).LUSD(), 55000);
     }

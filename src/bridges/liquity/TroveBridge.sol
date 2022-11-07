@@ -105,6 +105,26 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     {
         INITIAL_ICR = _initialICRPerc * 1e16;
         _mint(address(this), DUST);
+
+        // Registering the bridge for subsidy
+        uint256[] memory criteria = new uint256[](2);
+        uint32[] memory gasUsage = new uint32[](2);
+        uint32[] memory minGasPerMinute = new uint32[](2);
+
+        criteria[0] = 0; // Borrow flow
+        criteria[1] = 1; // Repay/redeem flow
+
+        gasUsage[0] = 520000;
+        gasUsage[1] = 410000;
+
+        // This is approximately 520k / (24 * 60) / 2 --> targeting 1 full subsidized call per 2 days
+        minGasPerMinute[0] = 180;
+
+        // This is approximately 410k / (24 * 60) / 4 --> targeting 1 full subsidized call per 4 days
+        minGasPerMinute[1] = 70;
+
+        // We set gas usage and minGasPerMinute in the Subsidy contract
+        SUBSIDY.setGasUsageAndMinGasPerMinute(criteria, gasUsage, minGasPerMinute);
     }
 
     receive() external payable {}
@@ -156,6 +176,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
      * @param _totalInputValue -    ETH amount           TB and LUSD amt.     TB and LUSD amt.       TB amount
      * @param _interactionNonce -   nonce                nonce                nonce                  nonce
      * @param _auxData -            max borrower fee     0                    0                      0
+     * @param _rollupBeneficiary - Address which receives subsidy if the call is eligible for it
      * @return outputValueA -       TB amount            ETH amount           ETH amount             ETH amount
      * @return outputValueB -       LUSD amount          LUSD amount          TB amount              0
      * @dev The amount of LUSD returned (outputValueB) during repayment will be non-zero only when the trove was
@@ -169,7 +190,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         uint256 _totalInputValue,
         uint256 _interactionNonce,
         uint64 _auxData,
-        address
+        address _rollupBeneficiary
     )
         external
         payable
@@ -183,6 +204,8 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     {
         Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(this)));
 
+        uint256 subsidyCriteria;
+
         if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
             _outputAssetA.erc20Address == address(this) &&
@@ -191,6 +214,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             // Borrowing
             if (troveStatus != Status.active) revert InvalidStatus(Status.active, Status.active, troveStatus);
             (outputValueA, outputValueB) = _borrow(_totalInputValue, _auxData);
+            subsidyCriteria = 0;
         } else if (
             _inputAssetA.erc20Address == address(this) &&
             _inputAssetB.erc20Address == LUSD &&
@@ -208,6 +232,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             } else {
                 revert ErrorLib.InvalidOutputB();
             }
+            subsidyCriteria = 1;
         } else if (
             _inputAssetA.erc20Address == address(this) && _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
@@ -216,9 +241,13 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
                 revert InvalidStatus(Status.closedByRedemption, Status.closedByLiquidation, troveStatus);
             }
             outputValueA = _redeem(_totalInputValue, _interactionNonce);
+            // Repaying and redeeming has the same subsidy criteria
+            subsidyCriteria = 1;
         } else {
             revert ErrorLib.InvalidInput();
         }
+
+        SUBSIDY.claimSubsidy(subsidyCriteria, _rollupBeneficiary);
     }
 
     /**
