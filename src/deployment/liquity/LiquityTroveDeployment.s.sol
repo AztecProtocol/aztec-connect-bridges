@@ -19,9 +19,10 @@ contract LiquityTroveDeployment is BaseDeployment {
 
     function deployAndList(uint256 _initialCr) public {
         address bridge = deploy(_initialCr);
-        uint256 addressId = listBridge(bridge, 1000000);
+        uint256 addressId = listBridge(bridge, 550_000);
         emit log_named_uint("Trove bridge address id", addressId);
 
-        listAsset(TroveBridge(payable(bridge)).LUSD(), 55000);
+        listAsset(TroveBridge(payable(bridge)).LUSD(), 55_000);
+        listAsset(bridge, 55_000);
     }
 }
