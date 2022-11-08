@@ -94,7 +94,8 @@ describe("Liquity trove bridge data", () => {
       0n, // not used in the function
       10n ** 18n,
     );
-    expect(outputBorrow[0]).toBe(10n ** 21n);
+    expect(outputBorrow[0]).toBe(0n);
+    expect(outputBorrow[1]).toBe(10n ** 21n);
   });
 
   it("should correctly get expected output when repaying", async () => {

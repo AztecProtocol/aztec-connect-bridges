@@ -85,7 +85,8 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
     ) {
       const amountOut = await bridge.callStatic.computeAmtToBorrow(inputValue);
       // Borrowing
-      return [amountOut.toBigInt()];
+      // Note: returning dummy value on index 0 because the frontend doesn't care about it
+      return [0n, amountOut.toBigInt()];
     } else if (
       inputAssetA.erc20Address.equals(EthAddress.fromString(this.bridge.address)) &&
       outputAssetA.assetType === AztecAssetType.ETH
