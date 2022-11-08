@@ -1,4 +1,5 @@
 import { EthAddress } from "@aztec/barretenberg/address";
+import { AssetValue } from "@aztec/barretenberg/asset";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
 import { BigNumber } from "ethers";
@@ -121,6 +122,24 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
       }
     }
     throw "Incorrect combination of input/output assets.";
+  }
+
+  async getMarketSize(
+    inputAssetA: AztecAsset,
+    inputAssetB: AztecAsset,
+    outputAssetA: AztecAsset,
+    outputAssetB: AztecAsset,
+    auxData: bigint,
+  ): Promise<AssetValue[]> {
+    const { debt, coll, pendingLUSDDebtReward, pendingETHReward } = await this.troveManager.getEntireDebtAndColl(
+      this.bridge.address,
+    );
+    return [
+      {
+        assetId: 0,
+        value: coll.toBigInt(),
+      },
+    ];
   }
 
   /**

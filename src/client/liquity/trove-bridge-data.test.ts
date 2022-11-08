@@ -128,6 +128,28 @@ describe("Liquity trove bridge data", () => {
     expect(output[1]).toBe(lusdReturned);
   });
 
+  it("should correctly get expected output when repaying", async () => {
+    // Setup mocks
+    troveManager = {
+      ...troveManager,
+      getEntireDebtAndColl: jest.fn().mockResolvedValue({
+        debt: BigNumber.from("0"), // not used - can be 0
+        coll: BigNumber.from("1000000000000000000000"), // 1000 ETH
+        pendingLUSDDebtReward: BigNumber.from("0"), // not used - can be 0
+        pendingETHReward: BigNumber.from("0"), // not used - can be 0
+      }),
+    };
+
+    ITroveManager__factory.connect = () => troveManager as any;
+
+    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+
+    const output = await troveBridgeData.getMarketSize(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0n);
+    const marketSize = output[0];
+    expect(marketSize.assetId).toBe(0);
+    expect(marketSize.value).toBe(10n ** 21n);
+  });
+
   it("should correctly get borrowing fee out of recovery mode", async () => {
     // Setup mocks
     troveManager = {
