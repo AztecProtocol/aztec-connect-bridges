@@ -1,4 +1,5 @@
 import { EthAddress } from "@aztec/barretenberg/address";
+import { AssetValue } from "@aztec/barretenberg/asset";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
 import { BigNumber } from "ethers";
@@ -85,7 +86,8 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
     ) {
       const amountOut = await bridge.callStatic.computeAmtToBorrow(inputValue);
       // Borrowing
-      return [amountOut.toBigInt()];
+      // Note: returning dummy value on index 0 because the frontend doesn't care about it
+      return [0n, amountOut.toBigInt()];
     } else if (
       inputAssetA.erc20Address.equals(EthAddress.fromString(this.bridge.address)) &&
       outputAssetA.assetType === AztecAssetType.ETH
@@ -120,6 +122,24 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
       }
     }
     throw "Incorrect combination of input/output assets.";
+  }
+
+  async getMarketSize(
+    inputAssetA: AztecAsset,
+    inputAssetB: AztecAsset,
+    outputAssetA: AztecAsset,
+    outputAssetB: AztecAsset,
+    auxData: bigint,
+  ): Promise<AssetValue[]> {
+    const { debt, coll, pendingLUSDDebtReward, pendingETHReward } = await this.troveManager.getEntireDebtAndColl(
+      this.bridge.address,
+    );
+    return [
+      {
+        assetId: 0,
+        value: coll.toBigInt(),
+      },
+    ];
   }
 
   /**

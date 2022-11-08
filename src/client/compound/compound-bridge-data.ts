@@ -38,15 +38,15 @@ export class CompoundBridgeData extends ERC4626BridgeData {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
   ): Promise<AssetValue[]> {
     let cTokenAddress;
     let underlyingAsset;
-    if (auxData === 0) {
+    if (auxData === 0n) {
       // Minting
       cTokenAddress = this.getCToken(outputAssetA.erc20Address);
       underlyingAsset = inputAssetA;
-    } else if (auxData === 1) {
+    } else if (auxData === 1n) {
       // Redeeming
       cTokenAddress = this.getCToken(inputAssetA.erc20Address);
       underlyingAsset = outputAssetA;

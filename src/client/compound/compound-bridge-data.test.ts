@@ -89,9 +89,11 @@ describe("compound lending bridge data", () => {
     const compoundBridgeData = CompoundBridgeData.create({} as any);
 
     // Test the code using mocked controller
-    const marketSizeMint = (await compoundBridgeData.getMarketSize(daiAsset, emptyAsset, wcdaiAsset, emptyAsset, 0))[0];
+    const marketSizeMint = (
+      await compoundBridgeData.getMarketSize(daiAsset, emptyAsset, wcdaiAsset, emptyAsset, 0n)
+    )[0];
     const marketSizeRedeem = (
-      await compoundBridgeData.getMarketSize(wcdaiAsset, emptyAsset, daiAsset, emptyAsset, 1)
+      await compoundBridgeData.getMarketSize(wcdaiAsset, emptyAsset, daiAsset, emptyAsset, 1n)
     )[0];
     expect(marketSizeMint.value).toBe(marketSizeRedeem.value);
     expect(marketSizeMint.value).toBe(656450430099240525346377727n);
