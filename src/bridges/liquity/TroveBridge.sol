@@ -49,7 +49,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     using Strings for uint256;
 
     error NonZeroTotalSupply();
-    error InvalidStatus(Status acceptableStatus1, Status acceptableStatus2, Status received);
+    error InvalidStatus(Status status);
     error InvalidDeltaAmounts();
     error OwnerNotLast();
     error InsufficientAmountOut();
@@ -217,7 +217,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             _outputAssetB.erc20Address == LUSD
         ) {
             // Borrowing
-            if (troveStatus != Status.active) revert InvalidStatus(Status.active, Status.active, troveStatus);
+            if (troveStatus != Status.active) revert InvalidStatus(troveStatus);
             (outputValueA, outputValueB) = _borrow(_totalInputValue, _auxData);
             subsidyCriteria = 0;
         } else if (
@@ -226,7 +226,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
             // Repaying
-            if (troveStatus != Status.active) revert InvalidStatus(Status.active, Status.active, troveStatus);
+            if (troveStatus != Status.active) revert InvalidStatus(troveStatus);
             if (_outputAssetB.erc20Address == LUSD) {
                 // A case when the trove was partially redeemed (1 TB corresponding to less than 1 LUSD of debt) or not
                 // redeemed and not touched by redistribution (1 TB corresponding to exactly 1 LUSD of debt)
@@ -249,7 +249,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
                 outputValueA = _redeem(_totalInputValue, _interactionNonce);
                 // Repaying and redeeming has the same subsidy criteria
             } else {
-                revert InvalidStatus(Status.closedByRedemption, Status.closedByLiquidation, troveStatus);
+                revert InvalidStatus(troveStatus);
             }
             subsidyCriteria = 1;
         } else {
