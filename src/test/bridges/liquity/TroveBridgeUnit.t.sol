@@ -263,7 +263,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
             outputAssetB,
             inputValue,
             1,
-            MAX_FEE,
+            0,
             address(0)
         );
 
@@ -523,7 +523,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
             outputAssetB,
             inputValue,
             _interactionNonce,
-            MAX_FEE,
+            0,
             address(0)
         );
 

@@ -93,7 +93,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         deal(lusdAsset.erc20Address, address(ROLLUP_PROCESSOR), tbBalanceAfterBorrowing + bridge.DUST());
 
         // Compute repay calldata
-        ROLLUP_ENCODER.defiInteractionL2(id, tbAsset, lusdAsset, ethAsset, lusdAsset, MAX_FEE, tbBalanceAfterBorrowing);
+        ROLLUP_ENCODER.defiInteractionL2(id, tbAsset, lusdAsset, ethAsset, lusdAsset, 0, tbBalanceAfterBorrowing);
 
         (outputValueA, outputValueB, ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
