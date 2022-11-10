@@ -350,6 +350,42 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         _openTrove();
     }
 
+    function testRepayingAfterRedistributionRevertsWhenInsufficientAmountOut() public {
+        _setUpRedistribution();
+
+        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
+            2,
+            address(bridge),
+            AztecTypes.AztecAssetType.ERC20
+        );
+        AztecTypes.AztecAsset memory inputAssetB = AztecTypes.AztecAsset(
+            1,
+            tokens["LUSD"].addr,
+            AztecTypes.AztecAssetType.ERC20
+        );
+        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH);
+        AztecTypes.AztecAsset memory outputAssetB = AztecTypes.AztecAsset(
+            2,
+            address(bridge),
+            AztecTypes.AztecAssetType.ERC20
+        );
+
+        // inputValue is equal to rollupProcessor TB balance --> we want to repay the debt in full
+        uint256 inputValue = bridge.balanceOf(rollupProcessor);
+        // Transfer TB to the bridge
+        IERC20(inputAssetA.erc20Address).transfer(address(bridge), inputValue);
+
+        // Mint the amount to repay to the bridge
+        deal(inputAssetB.erc20Address, address(bridge), inputValue + bridge.DUST());
+
+        // Set minPrice equal to that from Liquity's oracle increased by 100 LUSD
+        uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
+        uint64 minPrice = uint64((price / 1e18 + 100) * bridge.PRECISION());
+
+        vm.expectRevert(TroveBridge.InsufficientAmountOut.selector);
+        bridge.convert(inputAssetA, inputAssetB, outputAssetA, outputAssetB, inputValue, 1, minPrice, address(0));
+    }
+
     function testRedistributionExitWhenICREqualsMCR() public {
         vm.prank(OWNER);
         bridge = new TroveBridge(rollupProcessor, 500);
