@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
+
 import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IRollupProcessor} from "rollup-encoder/interfaces/IRollupProcessor.sol";
@@ -187,8 +188,17 @@ contract DataProvider is Ownable {
      * @param _bridgeCallData The bridge call data for a specific bridge interaction
      * @return The criteria passed to the subsidy contract
      * @return The amount of eth claimed at the current gas prices
+     * @return The number of gas units (eth claimed / basefee)
      */
-    function getAccumulatedSubsidyAmount(uint256 _bridgeCallData) public view returns (uint256, uint256) {
+    function getAccumulatedSubsidyAmount(uint256 _bridgeCallData)
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
         AccVal memory vars;
 
         vars.bridgeAddressId = _bridgeCallData & MASK_THIRTY_TWO_BITS;
@@ -226,12 +236,13 @@ contract DataProvider is Ownable {
         );
 
         if (!success) {
-            return (0, 0);
+            return (0, 0, 0);
         }
 
         uint256 criteria = abi.decode(returnData, (uint256));
+        uint256 ethSub = SUBSIDY.getAccumulatedSubsidyAmount(vars.bridgeAddress, criteria);
 
-        return (criteria, SUBSIDY.getAccumulatedSubsidyAmount(vars.bridgeAddress, criteria));
+        return (criteria, ethSub, ethSub / block.basefee);
     }
 
     function _aztecAsset(uint256 _assetId) internal view returns (AztecTypes.AztecAsset memory) {
