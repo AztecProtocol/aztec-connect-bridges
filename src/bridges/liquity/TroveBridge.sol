@@ -29,7 +29,7 @@ import {IUniswapV3PoolActions} from "../../interfaces/uniswapv3/pool/IUniswapV3P
  * withdraw their collateral by supplying TB and an equal amount of LUSD to the bridge. Alternatively, they supply only
  * TB on input in which case their debt will be repaid with a part their collateral. In case a user supplies both TB and
  * LUSD on input and 1 TB corresponds to more than 1 LUSD part of the ETH collateral withdrawn is swapped to LUSD and
- * the output amount is repaid. This swap is necessary because it's impossible to deploy different amounts of
+ * the output amount is repaid. This swap is necessary because it's impossible to provide different amounts of
  * _inputAssetA and _inputAssetB. 1 deployment of the bridge contract controls 1 trove. The bridge keeps precise
  * accounting of debt by making sure that no user can change the trove's ICR. This means that when a price goes down
  * the only way how a user can avoid liquidation penalty is to repay their debt.
@@ -87,7 +87,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
 
     uint256 public immutable INITIAL_ICR;
 
-    // Used when computing swap min price
+    // Used when computing minimum acceptable price when selling ETH for LUSD
     uint256 public constant PRECISION = 1e10;
 
     // We are not setting price impact protection and in both swaps zeroForOne is false so sqrtPriceLimitX96
@@ -247,7 +247,6 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             } else if (troveStatus == Status.closedByRedemption || troveStatus == Status.closedByLiquidation) {
                 // Redeeming remaining collateral after the Trove is closed
                 outputValueA = _redeem(_totalInputValue, _interactionNonce);
-                // Repaying and redeeming has the same subsidy criteria
             } else {
                 revert InvalidStatus(troveStatus);
             }
@@ -537,7 +536,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         uint256 swapPrice = (debtToRepay * PRECISION) / collateralSold;
         if (swapPrice < _minPrice) revert InsufficientAmountOut();
 
-        // Flash swap didn't revert - burn all input TB
+        // Burn all input TB
         _burn(address(this), _tbAmount);
 
         // Return ETH to rollup processor
