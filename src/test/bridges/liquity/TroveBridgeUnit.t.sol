@@ -561,7 +561,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
             outputAssetB,
             inputValue,
             _interactionNonce,
-            0,
+            _getMinPriceLowerThanCurrent(),
             address(0)
         );
 
@@ -598,11 +598,6 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
 
         uint256 rollupProcessorEthBalanceBefore = rollupProcessor.balance;
 
-        // Set minPrice equal to that from Liquity's oracle decreased by 100 LUSD
-        // Decreasing by 100 LUSD to make sure the call doesn't revert in normal circumstances
-        uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
-        uint64 minPrice = uint64((price / 1e18 - 100) * bridge.PRECISION());
-
         (uint256 outputValueA, uint256 outputValueB, ) = bridge.convert(
             inputAssetA,
             emptyAsset,
@@ -610,7 +605,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
             emptyAsset,
             inputValue,
             1,
-            minPrice,
+            _getMinPriceLowerThanCurrent(),
             address(0)
         );
 
@@ -710,5 +705,12 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         if (subsidy.code.length == 0) {
             vm.etch(subsidy, address(new Subsidy()).code);
         }
+    }
+
+    function _getMinPriceLowerThanCurrent() private returns (uint64) {
+        // Set minPrice equal to that from Liquity's oracle decreased by 100 LUSD
+        // Decreasing by 100 LUSD to make sure the call doesn't revert in normal circumstances
+        uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
+        return uint64((price / 1e18 - 100) * bridge.PRECISION());
     }
 }

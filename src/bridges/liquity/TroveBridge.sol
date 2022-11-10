@@ -180,7 +180,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
      * @param _outputAssetB -     LUSD             | LUSD            | TB               | None          | None
      * @param _totalInputValue -  ETH amount       | TB and LUSD amt.| TB and LUSD amt. | TB amount     | TB amount
      * @param _interactionNonce - nonce            | nonce           | nonce            | nonce         | nonce
-     * @param _auxData -          max borrower fee | 0               | 0                | min ETH price | 0
+     * @param _auxData -          max borrower fee | 0               | min ETH price    | min ETH price | 0
      * @param _rollupBeneficiary - Address which receives subsidy if the call is eligible for it
      * @return outputValueA -     TB amount        | ETH amount      | ETH amount       | ETH amount    | ETH amount
      * @return outputValueB -     LUSD amount      | LUSD amount     | TB amount        | 0             | 0
@@ -233,7 +233,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
                 (outputValueA, outputValueB) = _repay(_totalInputValue, _interactionNonce);
             } else if (_outputAssetB.erc20Address == address(this)) {
                 // A case when the trove was touched by redistribution (1 TB corresponding to more than 1 LUSD of debt)
-                (outputValueA, outputValueB) = _repayAfterRedistribution(_totalInputValue, _interactionNonce);
+                (outputValueA, outputValueB) = _repayAfterRedistribution(_totalInputValue, _auxData, _interactionNonce);
             } else {
                 revert ErrorLib.InvalidOutputB();
             }
@@ -425,8 +425,9 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     /**
      * @notice Repay debt.
      * @param _tbAmount Amount of TB to burn.
+     * @param _minPrice Minimum acceptable price of ETH denominated in LUSD.
      * @param _interactionNonce Same as in convert(...) method.
-     * @return collateral Amount of collateral withdrawn.
+     * @return collateralReturned Amount of collateral withdrawn.
      * @return tbReturned Amount of TB returned (non-zero only when the flash swap fails)
      * @dev Collateral and debt was redistributed to bridge's trove (1 TB corresponds to more than 1 LUSD worth
      *      of debt). For this reason the bridge doesn't currently have enough LUSD to repay the debt in full.
@@ -444,10 +445,11 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
      *      Note: Since owner is not able to exit until all the TB of everyone else gets burned his funds will be
      *      stuck forever unless the Uniswap pools recover.
      */
-    function _repayAfterRedistribution(uint256 _tbAmount, uint256 _interactionNonce)
-        private
-        returns (uint256 collateral, uint256 tbReturned)
-    {
+    function _repayAfterRedistribution(
+        uint256 _tbAmount,
+        uint256 _minPrice,
+        uint256 _interactionNonce
+    ) private returns (uint256 collateralReturned, uint256 tbReturned) {
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
         // Compute how much debt to be repay
         uint256 tbTotalSupply = totalSupply(); // SLOAD optimization
@@ -455,17 +457,24 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         if (debtToRepay <= _tbAmount) revert ErrorLib.InvalidOutputB();
         // Compute how much collateral to withdraw
         uint256 collToWithdraw = (_tbAmount * collBefore) / tbTotalSupply;
+        uint256 lusdToBuy = debtToRepay - _tbAmount;
 
         try
             IUniswapV3PoolActions(LUSD_USDC_POOL).swap(
                 address(this), // recipient
                 false, // zeroForOne
-                -int256(debtToRepay - _tbAmount), // amount of LUSD to receive
+                -int256(lusdToBuy),
                 SQRT_PRICE_LIMIT_X96,
                 abi.encode(SwapCallbackData({debtToRepay: debtToRepay, collToWithdraw: collToWithdraw}))
             )
         {
-            // Flash swap was executed without error/revert - burn all input TB
+            // Check price at which collateral was sold was sufficient
+            collateralReturned = address(this).balance;
+            uint256 collateralSold = collToWithdraw - collateralReturned;
+            uint256 swapPrice = (lusdToBuy * PRECISION) / collateralSold;
+            if (swapPrice < _minPrice) revert InsufficientAmountOut();
+
+            // Flash swap was executed without error/revert at a good enough price - burn all input TB
             _burn(address(this), _tbAmount);
         } catch (bytes memory) {
             // Flash swap failed - repay as much debt as you can with current LUSD balance and return the remaining TB
@@ -477,10 +486,10 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             BORROWER_OPERATIONS.adjustTrove(0, collToWithdraw, debtToRepay, false, upperHint, lowerHint);
             tbReturned = _tbAmount - tbToBurn;
             _burn(address(this), tbToBurn);
+            collateralReturned = address(this).balance;
         }
         // Return ETH to rollup processor
-        collateral = address(this).balance;
-        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: collateral}(_interactionNonce);
+        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: collateralReturned}(_interactionNonce);
     }
 
     /**
