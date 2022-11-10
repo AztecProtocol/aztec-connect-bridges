@@ -525,7 +525,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
 
         // Check price at which collateral was sold was sufficient
         uint256 collateralSold = collToWithdraw - collateralReturned;
-        uint256 swapPrice = (collateralSold * PRECISION) / debtToRepay;
+        uint256 swapPrice = (debtToRepay * PRECISION) / collateralSold;
         if (swapPrice < _minPrice) revert InsufficientAmountOut();
 
         // Flash swap didn't revert - burn all input TB

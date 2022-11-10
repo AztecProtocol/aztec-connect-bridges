@@ -107,8 +107,9 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
 
         uint256 rollupProcessorEthBalanceBefore = rollupProcessor.balance;
 
-        // ETH price corresponding to 1 ETH being worth 100 LUSD (if call doesn't revert I cry)
-        uint64 minPrice = uint64(100 * bridge.PRECISION());
+        // Set minPrice equal to that from Liquity's oracle increased by 100 LUSD
+        uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
+        uint64 minPrice = uint64((price / 1e18 + 100) * bridge.PRECISION());
 
         vm.expectRevert(TroveBridge.InsufficientAmountOut.selector);
         bridge.convert(inputAssetA, emptyAsset, outputAssetA, emptyAsset, inputValue, 1, minPrice, address(0));
@@ -597,6 +598,11 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
 
         uint256 rollupProcessorEthBalanceBefore = rollupProcessor.balance;
 
+        // Set minPrice equal to that from Liquity's oracle decreased by 100 LUSD
+        // Decreasing by 100 LUSD to make sure the call doesn't revert in normal circumstances
+        uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
+        uint64 minPrice = uint64((price / 1e18 - 100) * bridge.PRECISION());
+
         (uint256 outputValueA, uint256 outputValueB, ) = bridge.convert(
             inputAssetA,
             emptyAsset,
@@ -604,7 +610,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
             emptyAsset,
             inputValue,
             1,
-            0,
+            minPrice,
             address(0)
         );
 
