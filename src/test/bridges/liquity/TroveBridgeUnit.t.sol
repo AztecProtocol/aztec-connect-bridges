@@ -594,8 +594,10 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         // Given that ICR was set to 160% and the debt has been repaid with collateral, received collateral should be
         // approx. equal to (deposit collateral amount) * (100/160). Given that borrowing fee and fee for the flash
         // swap was paid the actual collateral received will be slightly less.
-        uint256 expectedEthReceived = (ROLLUP_PROCESSOR_ETH_BALANCE * 100) / 160;
-        assertGt(rollupProcessorEthBalanceDiff, expectedEthReceived, "Not enough collateral received");
+        uint256 expectedEthReceived = ROLLUP_PROCESSOR_ETH_BALANCE - (ROLLUP_PROCESSOR_ETH_BALANCE * 100) / 160;
+
+        // Accepting to receive at most 0.05 ETH less after repaying
+        assertGt(rollupProcessorEthBalanceDiff, expectedEthReceived - 5e16, "Not enough collateral received");
     }
 
     function _redeem() private {
