@@ -52,6 +52,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     error InvalidStatus(Status acceptableStatus1, Status acceptableStatus2, Status received);
     error InvalidDeltaAmounts();
     error OwnerNotLast();
+    error InsufficientAmountOut();
 
     // Trove status taken from TroveManager.sol
     enum Status {
@@ -85,6 +86,9 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     uint256 public constant DUST = 1;
 
     uint256 public immutable INITIAL_ICR;
+
+    // Used when computing swap min price
+    uint256 public constant PRECISION = 1e10;
 
     // We are not setting price impact protection and in both swaps zeroForOne is false so sqrtPriceLimitX96
     // is set to TickMath.MAX_SQRT_RATIO - 1 = 1461446703485210103287273052203988822378723970341
@@ -484,7 +488,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
      * @param _tbAmount Amount of TB to burn.
      * @param _minPrice Minimum acceptable price of ETH denominated in LUSD.
      * @param _interactionNonce Same as in convert(...) method.
-     * @return collateral Amount of collateral withdrawn.
+     * @return collateralReturned Amount of collateral returned.
      * @dev User is repaying debt with a collateral which is currently locked. It's important that CR never drops
      *      because if the trove was near minimum CR (MCR) the tx would revert. This would effectively stop users from
      *      being able to exit. Unfortunately users are also not able to exit when Liquity is in recovery mode (total
@@ -502,7 +506,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         uint256 _tbAmount,
         uint256 _minPrice,
         uint256 _interactionNonce
-    ) private returns (uint256 collateral) {
+    ) private returns (uint256 collateralReturned) {
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
         // Compute how much debt to be repay
         uint256 tbTotalSupply = totalSupply(); // SLOAD optimization
@@ -517,14 +521,18 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             SQRT_PRICE_LIMIT_X96,
             abi.encode(SwapCallbackData({debtToRepay: debtToRepay, collToWithdraw: collToWithdraw}))
         );
-        collateral = address(this).balance;
-        // TODO: check that there is enough of remaining collateral (by checking amount out corresponds to _minPrice)
+        collateralReturned = address(this).balance;
+
+        // Check price at which collateral was sold was sufficient
+        uint256 collateralSold = collToWithdraw - collateralReturned;
+        uint256 swapPrice = (collateralSold * PRECISION) / debtToRepay;
+        if (swapPrice < _minPrice) revert InsufficientAmountOut();
 
         // Flash swap didn't revert - burn all input TB
         _burn(address(this), _tbAmount);
 
         // Return ETH to rollup processor
-        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: collateral}(_interactionNonce);
+        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: collateralReturned}(_interactionNonce);
     }
 
     /**

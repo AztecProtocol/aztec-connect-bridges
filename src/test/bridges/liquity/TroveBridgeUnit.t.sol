@@ -88,6 +88,32 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         _openTrove();
     }
 
+    function testRepayingWithCollateralRevertsWhenInsufficientAmountOut() public {
+        _openTrove();
+        _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
+
+        // Try repaying debt while setting too high minPrice
+        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
+            2,
+            address(bridge),
+            AztecTypes.AztecAssetType.ERC20
+        );
+        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH);
+
+        // inputValue is equal to rollupProcessor TB balance --> we want to repay the debt in full
+        uint256 inputValue = bridge.balanceOf(rollupProcessor);
+        // Transfer TB to the bridge
+        IERC20(inputAssetA.erc20Address).transfer(address(bridge), inputValue);
+
+        uint256 rollupProcessorEthBalanceBefore = rollupProcessor.balance;
+
+        // ETH price corresponding to 1 ETH being worth 100 LUSD (if call doesn't revert I cry)
+        uint64 minPrice = uint64(100 * bridge.PRECISION());
+
+        vm.expectRevert(TroveBridge.InsufficientAmountOut.selector);
+        bridge.convert(inputAssetA, emptyAsset, outputAssetA, emptyAsset, inputValue, 1, minPrice, address(0));
+    }
+
     function testLiquidationFlow() public {
         _openTrove();
         _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
