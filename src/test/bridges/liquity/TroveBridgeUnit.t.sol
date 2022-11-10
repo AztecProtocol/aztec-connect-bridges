@@ -105,8 +105,6 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         // Transfer TB to the bridge
         IERC20(inputAssetA.erc20Address).transfer(address(bridge), inputValue);
 
-        uint256 rollupProcessorEthBalanceBefore = rollupProcessor.balance;
-
         // Set minPrice equal to that from Liquity's oracle increased by 100 LUSD
         uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
         uint64 minPrice = uint64((price / 1e18 + 100) * bridge.PRECISION());
