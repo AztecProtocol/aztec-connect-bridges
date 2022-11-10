@@ -507,14 +507,13 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         // Compute how much debt to be repay
         uint256 tbTotalSupply = totalSupply(); // SLOAD optimization
         uint256 debtToRepay = (_tbAmount * debtBefore) / tbTotalSupply;
-        if (debtToRepay <= _tbAmount) revert ErrorLib.InvalidOutputB();
         // Compute how much collateral to withdraw
         uint256 collToWithdraw = (_tbAmount * collBefore) / tbTotalSupply;
 
         IUniswapV3PoolActions(LUSD_USDC_POOL).swap(
             address(this), // recipient
             false, // zeroForOne
-            -int256(debtToRepay - _tbAmount), // amount of LUSD to receive
+            -int256(debtToRepay), // amount of LUSD to receive
             SQRT_PRICE_LIMIT_X96,
             abi.encode(SwapCallbackData({debtToRepay: debtToRepay, collToWithdraw: collToWithdraw}))
         );

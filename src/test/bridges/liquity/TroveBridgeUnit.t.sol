@@ -77,6 +77,17 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         _openTrove();
     }
 
+    function testFullFlowRepayingWithColl() public {
+        _openTrove();
+        _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
+        _repayWithCollateral();
+        _closeTrove();
+
+        // Try reopening the trove
+        deal(tokens["LUSD"].addr, OWNER, 0); // delete user's LUSD balance to make accounting easier in _openTrove(...)
+        _openTrove();
+    }
+
     function testLiquidationFlow() public {
         _openTrove();
         _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
@@ -543,6 +554,48 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
             _maxEthDelta,
             "Current rollup processor ETH balance differs from the expected balance by more than maxEthDelta"
         );
+    }
+
+    function _repayWithCollateral() private {
+        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
+            2,
+            address(bridge),
+            AztecTypes.AztecAssetType.ERC20
+        );
+        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH);
+
+        // inputValue is equal to rollupProcessor TB balance --> we want to repay the debt in full
+        uint256 inputValue = bridge.balanceOf(rollupProcessor);
+        // Transfer TB to the bridge
+        IERC20(inputAssetA.erc20Address).transfer(address(bridge), inputValue);
+
+        uint256 rollupProcessorEthBalanceBefore = rollupProcessor.balance;
+
+        (uint256 outputValueA, uint256 outputValueB, ) = bridge.convert(
+            inputAssetA,
+            emptyAsset,
+            outputAssetA,
+            emptyAsset,
+            inputValue,
+            1,
+            0,
+            address(0)
+        );
+
+        uint256 rollupProcessorEthBalanceDiff = rollupProcessor.balance - rollupProcessorEthBalanceBefore;
+        assertEq(rollupProcessorEthBalanceDiff, outputValueA, "ETH received differs from outputValueA");
+
+        assertEq(outputValueB, 0, "Non-zero outputValueB");
+
+        // Check that the bridge doesn't hold any ETH or LUSD
+        assertEq(address(bridge).balance, 0, "Bridge holds ETH after interaction");
+        assertEq(tokens["LUSD"].erc.balanceOf(address(bridge)), bridge.DUST(), "Bridge holds LUSD after interaction");
+
+        // Given that ICR was set to 160% and the debt has been repaid with collateral, received collateral should be
+        // approx. equal to (deposit collateral amount) * (100/160). Given that borrowing fee and fee for the flash
+        // swap was paid the actual collateral received will be slightly less.
+        uint256 expectedEthReceived = (ROLLUP_PROCESSOR_ETH_BALANCE * 100) / 160;
+        assertGt(rollupProcessorEthBalanceDiff, expectedEthReceived, "Not enough collateral received");
     }
 
     function _redeem() private {
