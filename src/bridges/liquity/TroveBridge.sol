@@ -88,7 +88,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
 
     uint256 public immutable INITIAL_ICR;
 
-    // Used when computing maximum cost of buying LUSD
+    // Used when computing acceptable slippage in `_repayWithCollateral(...)` function
     uint256 public constant PRECISION = 1e18;
 
     // We are not setting price impact protection and in both swaps zeroForOne is false so sqrtPriceLimitX96
@@ -298,13 +298,13 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     }
 
     // @inheritdoc IUniswapV3SwapCallback
-    // @dev See _repay(...) method for more information about how this callback is entered.
+    // @dev See _repayWithCollateral(...) method for more information about how this callback is entered.
     function uniswapV3SwapCallback(
         int256 _amount0Delta,
         int256 _amount1Delta,
         bytes calldata _data
     ) external override(IUniswapV3SwapCallback) {
-        // swaps entirely within 0-liquidity regions are not supported
+        // Swaps entirely within 0-liquidity regions are not supported
         if (_amount0Delta <= 0 && _amount1Delta <= 0) revert InvalidDeltaAmounts();
         // Uniswap pools always call callback on msg.sender so this check is enough to prevent malicious behavior
         if (msg.sender == LUSD_USDC_POOL) {
@@ -434,10 +434,10 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
      * @notice Repay debt by selling part of the collateral for LUSD.
      * @param _totalInputValue Amount of TB to burn (and input LUSD to use for repayment if `_lusdOnInput` param
      *                         is set to true).
-     * @param _maxPrice Maximum acceptable price of LUSD denominated in ETH.
+     * @param _maxPrice Maximum acceptable price of LUSD denominated in ETH (ETH/LUSD price).
      * @param _interactionNonce Same as in convert(...) method.
-     * @param _lusdOnInput If true the debt will be covered by both the LUSD on input and by selling part of the
-     *                     collateral. If false the debt will be covered only by selling the collateral.
+     * @param _lusdInput If true the debt will be covered by both the LUSD on input and by selling part of the
+     *                   collateral. If false the debt will be covered only by selling the collateral.
      * @return collateralReturned Amount of collateral withdrawn.
      * @return tbReturned Amount of TB returned (non-zero only when the flash swap fails)
      * @dev It's important that CR never drops because if the trove was near minimum CR (MCR) the tx would revert.
@@ -458,7 +458,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         uint256 _totalInputValue,
         uint256 _maxPrice,
         uint256 _interactionNonce,
-        bool _lusdOnInput
+        bool _lusdInput
     ) private returns (uint256 collateralReturned, uint256 tbReturned) {
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
         // Compute how much debt to be repay
@@ -467,7 +467,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         uint256 collToWithdraw = (_totalInputValue * collBefore) / tbTotalSupply;
 
         uint256 lusdToBuy;
-        if (_lusdOnInput) {
+        if (_lusdInput) {
             // Reverting here because an incorrect flow has been chosen --> there is no reason to be using flash swaps
             // when the amount of LUSD on input is enough to cover the debt
             if (debtToRepay <= _totalInputValue) revert ErrorLib.InvalidOutputB();
@@ -488,6 +488,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         );
 
         if (success) {
+            // Note: Debt repayment took place in the `uniswapV3SwapCallback(...)` function
             collateralReturned = address(this).balance;
 
             {
@@ -499,7 +500,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
 
             // Burn all input TB
             _burn(address(this), _totalInputValue);
-        } else if (_lusdOnInput) {
+        } else if (_lusdInput) {
             // Flash swap failed and some LUSD was provided on input --> repay as much debt as you can with current
             // LUSD balance and return the remaining TB
             debtToRepay = _totalInputValue;
