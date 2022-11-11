@@ -185,4 +185,17 @@ contract TroveBridgeTestBase is TestUtil {
 
         vm.stopPrank();
     }
+
+    /**
+     * @param _ethPriceDiff LUSD denominated difference from the current ETH price
+     * @return Price of LUSD denominated in ETH corresponding to the current market price of ETH modified
+     *         by `_ethPriceDiff`
+     */
+    function _getPrice(int256 _ethPriceDiff) internal returns (uint64) {
+        // Set minPrice equal to that from Liquity's oracle increased by 100 LUSD
+        uint256 minEthPrice = uint256(int256(TROVE_MANAGER.priceFeed().fetchPrice()) + _ethPriceDiff);
+        // Invert the price so that it represent max price at which I am willing to buy LUSD and not min price at which
+        // I am willing to sell ETH (just for consistency sake)
+        return uint64((bridge.PRECISION() * bridge.PRECISION()) / minEthPrice);
+    }
 }
