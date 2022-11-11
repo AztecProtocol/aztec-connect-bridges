@@ -53,6 +53,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     error InvalidDeltaAmounts();
     error OwnerNotLast();
     error MaxCostExceeded();
+    error SwapFailed();
 
     // Trove status taken from TroveManager.sol
     enum Status {
@@ -232,8 +233,16 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
                 // redeemed and not touched by redistribution (1 TB corresponding to exactly 1 LUSD of debt)
                 (outputValueA, outputValueB) = _repay(_totalInputValue, _interactionNonce);
             } else if (_outputAssetB.erc20Address == address(this)) {
-                // A case when the trove was touched by redistribution (1 TB corresponding to more than 1 LUSD of debt)
-                (outputValueA, outputValueB) = _repayAfterRedistribution(_totalInputValue, _auxData, _interactionNonce);
+                // A case when the trove was touched by redistribution (1 TB corresponding to more than 1 LUSD of
+                // debt). For this reason it was impossible to provide enough LUSD on input since it's not currently
+                // allowed to have different input token amounts. Swap part of the collateral to be able to repay
+                // the debt in full.
+                (outputValueA, outputValueB) = _repayWithCollateral(
+                    _totalInputValue,
+                    _auxData,
+                    _interactionNonce,
+                    true
+                );
             } else {
                 revert ErrorLib.InvalidOutputB();
             }
@@ -243,7 +252,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         ) {
             if (troveStatus == Status.active) {
                 // Repaying debt with collateral (using flash swaps)
-                outputValueA = _repayWithCollateral(_totalInputValue, _auxData, _interactionNonce);
+                (outputValueA, ) = _repayWithCollateral(_totalInputValue, _auxData, _interactionNonce, false);
             } else if (troveStatus == Status.closedByRedemption || troveStatus == Status.closedByLiquidation) {
                 // Redeeming remaining collateral after the Trove is closed
                 outputValueA = _redeem(_totalInputValue, _interactionNonce);
@@ -422,15 +431,16 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     }
 
     /**
-     * @notice Repay debt.
-     * @param _tbAmount Amount of TB to burn.
+     * @notice Repay debt by selling part of the collateral for LUSD.
+     * @param _totalInputValue Amount of TB to burn (and input LUSD to use for repayment if `_lusdOnInput` param
+     *                         is set to true).
      * @param _maxPrice Maximum acceptable price of LUSD denominated in ETH.
      * @param _interactionNonce Same as in convert(...) method.
+     * @param _lusdOnInput If true the debt will be covered by both the LUSD on input and by selling part of the
+     *                     collateral. If false the debt will be covered only by selling the collateral.
      * @return collateralReturned Amount of collateral withdrawn.
      * @return tbReturned Amount of TB returned (non-zero only when the flash swap fails)
-     * @dev Collateral and debt was redistributed to bridge's trove (1 TB corresponds to more than 1 LUSD worth
-     *      of debt). For this reason the bridge doesn't currently have enough LUSD to repay the debt in full.
-     *      It's important that CR never drops because if the trove was near minimum CR (MCR) the tx would revert.
+     * @dev It's important that CR never drops because if the trove was near minimum CR (MCR) the tx would revert.
      *      This would effectively stop users from being able to exit. Unfortunately users are also not able
      *      to exit when Liquity is in recovery mode (total collateral ratio < 150%) because in such a case
      *      only pure collateral top-up or debt repayment is allowed.
@@ -444,99 +454,70 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
      *      Note: Since owner is not able to exit until all the TB of everyone else gets burned his funds will be
      *      stuck forever unless the Uniswap pools recover.
      */
-    function _repayAfterRedistribution(
-        uint256 _tbAmount,
+    function _repayWithCollateral(
+        uint256 _totalInputValue,
         uint256 _maxPrice,
-        uint256 _interactionNonce
+        uint256 _interactionNonce,
+        bool _lusdOnInput
     ) private returns (uint256 collateralReturned, uint256 tbReturned) {
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
         // Compute how much debt to be repay
         uint256 tbTotalSupply = totalSupply(); // SLOAD optimization
-        uint256 debtToRepay = (_tbAmount * debtBefore) / tbTotalSupply;
-        if (debtToRepay <= _tbAmount) revert ErrorLib.InvalidOutputB();
-        // Compute how much collateral to withdraw
-        uint256 collToWithdraw = (_tbAmount * collBefore) / tbTotalSupply;
-        uint256 lusdToBuy = debtToRepay - _tbAmount;
+        uint256 debtToRepay = (_totalInputValue * debtBefore) / tbTotalSupply;
+        uint256 collToWithdraw = (_totalInputValue * collBefore) / tbTotalSupply;
 
-        try
-            IUniswapV3PoolActions(LUSD_USDC_POOL).swap(
+        uint256 lusdToBuy;
+        if (_lusdOnInput) {
+            // Reverting here because an incorrect flow has been chosen --> there is no reason to be using flash swaps
+            // when the amount of LUSD on input is enough to cover the debt
+            if (debtToRepay <= _totalInputValue) revert ErrorLib.InvalidOutputB();
+            uint256 lusdToBuy = debtToRepay - _totalInputValue;
+        } else {
+            lusdToBuy = debtToRepay;
+        }
+
+        (bool success, ) = LUSD_USDC_POOL.call(
+            abi.encodeWithSignature(
+                "swap(address,bool,int256,uint160,bytes)",
                 address(this), // recipient
                 false, // zeroForOne
                 -int256(lusdToBuy),
                 SQRT_PRICE_LIMIT_X96,
                 abi.encode(SwapCallbackData({debtToRepay: debtToRepay, collToWithdraw: collToWithdraw}))
             )
-        {
-            // Check that at most `maxCost` of ETH collateral was sold for `debtToRepay` worth of LUSD
-            uint256 maxCost = (lusdToBuy * _maxPrice) / PRECISION;
-            uint256 collateralSold = collToWithdraw - collateralReturned;
-            if (collateralSold > maxCost) revert MaxCostExceeded();
+        );
 
-            // Flash swap was executed without error/revert at a good enough price - burn all input TB
-            _burn(address(this), _tbAmount);
-        } catch (bytes memory) {
-            // Flash swap failed - repay as much debt as you can with current LUSD balance and return the remaining TB
-            debtToRepay = _tbAmount;
+        if (success) {
+            collateralReturned = address(this).balance;
+
+            {
+                // Check that at most `maxCost` of ETH collateral was sold for `debtToRepay` worth of LUSD
+                uint256 maxCost = (lusdToBuy * _maxPrice) / PRECISION;
+                uint256 collateralSold = collToWithdraw - collateralReturned;
+                if (collateralSold > maxCost) revert MaxCostExceeded();
+            }
+
+            // Burn all input TB
+            _burn(address(this), _totalInputValue);
+        } else if (_lusdOnInput) {
+            // Flash swap failed and some LUSD was provided on input --> repay as much debt as you can with current
+            // LUSD balance and return the remaining TB
+            debtToRepay = _totalInputValue;
             uint256 tbToBurn = (debtToRepay * tbTotalSupply) / debtBefore;
             collToWithdraw = (tbToBurn * collBefore) / tbTotalSupply;
-            // Repay _totalInputValue of LUSD and withdraw collateral
-            (address upperHint, address lowerHint) = _getHints();
-            BORROWER_OPERATIONS.adjustTrove(0, collToWithdraw, debtToRepay, false, upperHint, lowerHint);
-            tbReturned = _tbAmount - tbToBurn;
+
+            {
+                // Repay _totalInputValue of LUSD and withdraw collateral
+                (address upperHint, address lowerHint) = _getHints();
+                BORROWER_OPERATIONS.adjustTrove(0, collToWithdraw, debtToRepay, false, upperHint, lowerHint);
+            }
+
+            tbReturned = _totalInputValue - tbToBurn;
             _burn(address(this), tbToBurn);
             collateralReturned = address(this).balance;
+        } else {
+            revert SwapFailed();
         }
-        // Return ETH to rollup processor
-        IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: collateralReturned}(_interactionNonce);
-    }
-
-    /**
-     * @notice Repay debt with collateral
-     * @param _tbAmount Amount of TB to burn.
-     * @param _maxPrice Maximum acceptable price of LUSD denominated in ETH.
-     * @param _interactionNonce Same as in convert(...) method.
-     * @return collateralReturned Amount of collateral returned.
-     * @dev User is repaying debt with a collateral which is currently locked. It's important that CR never drops
-     *      because if the trove was near minimum CR (MCR) the tx would revert. This would effectively stop users from
-     *      being able to exit. Unfortunately users are also not able to exit when Liquity is in recovery mode (total
-     *      collateral ratio < 150%) because in such a case only pure collateral top-up or debt repayment is allowed.
-     *      To avoid CR from ever dropping bellow MCR I came up with the following construction:
-     *        1) Flash swap USDC to LUSD,
-     *        2) repay the user's trove debt in full (in the 1st callback),
-     *        3) flash swap WETH to USDC with recipient being the LUSD_USDC_POOL - this pays for the first swap,
-     *        4) in the 2nd callback deposit part of the withdrawn collateral to WETH and pay for the 2nd swap.
-     *      In case the flash swap fails the whole bridge call reverts. We decided it's acceptable to not handle this
-     *      because there are other flows user could use to repay debt in case there were issues with the flash swaps
-     *      (e.g. due to liquidity issues)
-     */
-    function _repayWithCollateral(
-        uint256 _tbAmount,
-        uint256 _maxPrice,
-        uint256 _interactionNonce
-    ) private returns (uint256 collateralReturned) {
-        (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
-        // Compute how much debt to be repay
-        uint256 tbTotalSupply = totalSupply(); // SLOAD optimization
-        uint256 debtToRepay = (_tbAmount * debtBefore) / tbTotalSupply;
-        // Compute how much collateral to withdraw
-        uint256 collToWithdraw = (_tbAmount * collBefore) / tbTotalSupply;
-
-        IUniswapV3PoolActions(LUSD_USDC_POOL).swap(
-            address(this), // recipient
-            false, // zeroForOne
-            -int256(debtToRepay), // amount of LUSD to receive
-            SQRT_PRICE_LIMIT_X96,
-            abi.encode(SwapCallbackData({debtToRepay: debtToRepay, collToWithdraw: collToWithdraw}))
-        );
-        collateralReturned = address(this).balance;
-
-        // Check that at most `maxCost` of ETH collateral was sold for `debtToRepay` worth of LUSD
-        uint256 maxCost = (debtToRepay * _maxPrice) / PRECISION;
-        uint256 collateralSold = collToWithdraw - collateralReturned;
-        if (collateralSold > maxCost) revert MaxCostExceeded();
-
-        // Burn all input TB
-        _burn(address(this), _tbAmount);
 
         // Return ETH to rollup processor
         IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: collateralReturned}(_interactionNonce);
