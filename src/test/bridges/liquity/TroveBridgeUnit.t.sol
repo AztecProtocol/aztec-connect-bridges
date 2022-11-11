@@ -88,7 +88,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         _openTrove();
     }
 
-    function testRepayingWithCollateralRevertsWhenInsufficientAmountOut() public {
+    function testRepayingWithCollateralRevertsWhenMaxCostExceeded() public {
         _openTrove();
         _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
 
@@ -106,11 +106,13 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         IERC20(inputAssetA.erc20Address).transfer(address(bridge), inputValue);
 
         // Set minPrice equal to that from Liquity's oracle increased by 100 LUSD
-        uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
-        uint64 minPrice = uint64((price / 1e18 + 100) * bridge.PRECISION());
+        uint256 minPrice = TROVE_MANAGER.priceFeed().fetchPrice() + 1e20;
+        // Invert the price so that it represent max price at which I am willing to buy LUSD and not min price at which
+        // I am willing to sell ETH (just for consistency sake)
+        uint64 maxPrice = uint64((bridge.PRECISION() * bridge.PRECISION()) / minPrice);
 
-        vm.expectRevert(TroveBridge.InsufficientAmountOut.selector);
-        bridge.convert(inputAssetA, emptyAsset, outputAssetA, emptyAsset, inputValue, 1, minPrice, address(0));
+        vm.expectRevert(TroveBridge.MaxCostExceeded.selector);
+        bridge.convert(inputAssetA, emptyAsset, outputAssetA, emptyAsset, inputValue, 1, maxPrice, address(0));
     }
 
     function testLiquidationFlow() public {
@@ -350,7 +352,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         _openTrove();
     }
 
-    function testRepayingAfterRedistributionRevertsWhenInsufficientAmountOut() public {
+    function testRepayingAfterRedistributionRevertsWhenMaxCostExceeded() public {
         _setUpRedistribution();
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
@@ -382,7 +384,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
         uint64 minPrice = uint64((price / 1e18 + 100) * bridge.PRECISION());
 
-        vm.expectRevert(TroveBridge.InsufficientAmountOut.selector);
+        vm.expectRevert(TroveBridge.MaxCostExceeded.selector);
         bridge.convert(inputAssetA, inputAssetB, outputAssetA, outputAssetB, inputValue, 1, minPrice, address(0));
     }
 
@@ -595,7 +597,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
             outputAssetB,
             inputValue,
             _interactionNonce,
-            _getMinPriceLowerThanCurrent(),
+            _getMaxPriceLowerThanCurrent(),
             address(0)
         );
 
@@ -639,7 +641,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
             emptyAsset,
             inputValue,
             1,
-            _getMinPriceLowerThanCurrent(),
+            _getMaxPriceLowerThanCurrent(),
             address(0)
         );
 
@@ -741,10 +743,11 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         }
     }
 
-    function _getMinPriceLowerThanCurrent() private returns (uint64) {
-        // Set minPrice equal to that from Liquity's oracle decreased by 100 LUSD
-        // Decreasing by 100 LUSD to make sure the call doesn't revert in normal circumstances
-        uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
-        return uint64((price / 1e18 - 100) * bridge.PRECISION());
+    function _getMaxPriceLowerThanCurrent() private returns (uint64) {
+        // Set minPrice equal to that from Liquity's oracle increased by 100 LUSD
+        uint256 minPrice = TROVE_MANAGER.priceFeed().fetchPrice() - 1e20;
+        // Invert the price so that it represent max price at which I am willing to buy LUSD and not min price at which
+        // I am willing to sell ETH (just for consistency sake)
+        return uint64((bridge.PRECISION() * bridge.PRECISION()) / minPrice);
     }
 }

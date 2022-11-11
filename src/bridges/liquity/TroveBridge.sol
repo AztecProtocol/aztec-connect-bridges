@@ -52,7 +52,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     error InvalidStatus(Status status);
     error InvalidDeltaAmounts();
     error OwnerNotLast();
-    error InsufficientAmountOut();
+    error MaxCostExceeded();
 
     // Trove status taken from TroveManager.sol
     enum Status {
@@ -87,8 +87,8 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
 
     uint256 public immutable INITIAL_ICR;
 
-    // Used when computing minimum acceptable price when selling ETH for LUSD
-    uint256 public constant PRECISION = 1e10;
+    // Used when computing maximum cost of buying LUSD
+    uint256 public constant PRECISION = 1e18;
 
     // We are not setting price impact protection and in both swaps zeroForOne is false so sqrtPriceLimitX96
     // is set to TickMath.MAX_SQRT_RATIO - 1 = 1461446703485210103287273052203988822378723970341
@@ -180,7 +180,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
      * @param _outputAssetB -     LUSD             | LUSD            | TB               | None          | None
      * @param _totalInputValue -  ETH amount       | TB and LUSD amt.| TB and LUSD amt. | TB amount     | TB amount
      * @param _interactionNonce - nonce            | nonce           | nonce            | nonce         | nonce
-     * @param _auxData -          max borrower fee | 0               | min ETH price    | min ETH price | 0
+     * @param _auxData -          max borrower fee | 0               | max ETH price    | max ETH price | 0
      * @param _rollupBeneficiary - Address which receives subsidy if the call is eligible for it
      * @return outputValueA -     TB amount        | ETH amount      | ETH amount       | ETH amount    | ETH amount
      * @return outputValueB -     LUSD amount      | LUSD amount     | TB amount        | 0             | 0
@@ -424,7 +424,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     /**
      * @notice Repay debt.
      * @param _tbAmount Amount of TB to burn.
-     * @param _minPrice Minimum acceptable price of ETH denominated in LUSD.
+     * @param _maxPrice Maximum acceptable price of LUSD denominated in ETH.
      * @param _interactionNonce Same as in convert(...) method.
      * @return collateralReturned Amount of collateral withdrawn.
      * @return tbReturned Amount of TB returned (non-zero only when the flash swap fails)
@@ -446,7 +446,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
      */
     function _repayAfterRedistribution(
         uint256 _tbAmount,
-        uint256 _minPrice,
+        uint256 _maxPrice,
         uint256 _interactionNonce
     ) private returns (uint256 collateralReturned, uint256 tbReturned) {
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
@@ -467,11 +467,10 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
                 abi.encode(SwapCallbackData({debtToRepay: debtToRepay, collToWithdraw: collToWithdraw}))
             )
         {
-            // Check price at which collateral was sold was sufficient
-            collateralReturned = address(this).balance;
+            // Check that at most `maxCost` of ETH collateral was sold for `debtToRepay` worth of LUSD
+            uint256 maxCost = (lusdToBuy * _maxPrice) / PRECISION;
             uint256 collateralSold = collToWithdraw - collateralReturned;
-            uint256 swapPrice = (lusdToBuy * PRECISION) / collateralSold;
-            if (swapPrice < _minPrice) revert InsufficientAmountOut();
+            if (collateralSold > maxCost) revert MaxCostExceeded();
 
             // Flash swap was executed without error/revert at a good enough price - burn all input TB
             _burn(address(this), _tbAmount);
@@ -494,7 +493,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     /**
      * @notice Repay debt with collateral
      * @param _tbAmount Amount of TB to burn.
-     * @param _minPrice Minimum acceptable price of ETH denominated in LUSD.
+     * @param _maxPrice Maximum acceptable price of LUSD denominated in ETH.
      * @param _interactionNonce Same as in convert(...) method.
      * @return collateralReturned Amount of collateral returned.
      * @dev User is repaying debt with a collateral which is currently locked. It's important that CR never drops
@@ -512,7 +511,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
      */
     function _repayWithCollateral(
         uint256 _tbAmount,
-        uint256 _minPrice,
+        uint256 _maxPrice,
         uint256 _interactionNonce
     ) private returns (uint256 collateralReturned) {
         (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(this));
@@ -531,10 +530,10 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         );
         collateralReturned = address(this).balance;
 
-        // Check price at which collateral was sold was sufficient
+        // Check that at most `maxCost` of ETH collateral was sold for `debtToRepay` worth of LUSD
+        uint256 maxCost = (debtToRepay * _maxPrice) / PRECISION;
         uint256 collateralSold = collToWithdraw - collateralReturned;
-        uint256 swapPrice = (debtToRepay * PRECISION) / collateralSold;
-        if (swapPrice < _minPrice) revert InsufficientAmountOut();
+        if (collateralSold > maxCost) revert MaxCostExceeded();
 
         // Burn all input TB
         _burn(address(this), _tbAmount);
