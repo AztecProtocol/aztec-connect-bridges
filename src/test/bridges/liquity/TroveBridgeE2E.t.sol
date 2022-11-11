@@ -68,7 +68,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         _repayWithCollateral(collateral);
     }
 
-    function _borrow(uint256 _collateral) public {
+    function _borrow(uint256 _collateral) private {
         // Mint the collateral amount of ETH to rollupProcessor
         vm.deal(address(ROLLUP_PROCESSOR), _collateral);
 
@@ -103,7 +103,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         );
     }
 
-    function _repay(uint256 _collateral) public {
+    function _repay(uint256 _collateral) private {
         uint256 tbBalance = bridge.balanceOf(address(ROLLUP_PROCESSOR));
 
         // Mint the amount to repay to rollup processor - sufficient amount is not there since borrowing because we
@@ -119,7 +119,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         assertEq(outputValueB, 0, "Non-zero LUSD amount returned");
     }
 
-    function _repayWithCollateral(uint256 _collateral) public {
+    function _repayWithCollateral(uint256 _collateral) private {
         uint256 tbBalance = bridge.balanceOf(address(ROLLUP_PROCESSOR));
 
         // Mint the amount to repay to rollup processor - sufficient amount is not there since borrowing because we
@@ -129,7 +129,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         // Compute repay calldata
         ROLLUP_ENCODER.defiInteractionL2(id, tbAsset, emptyAsset, ethAsset, emptyAsset, _getPrice(-1e20), tbBalance);
 
-        (uint256 outputValueA, uint256 outputValueB, ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
+        (uint256 outputValueA, , ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         // Given that ICR was set to 160% and the debt has been repaid with collateral, received collateral should be
         // approx. equal to (deposit collateral amount) * (100/160). Given that borrowing fee and fee for the flash
