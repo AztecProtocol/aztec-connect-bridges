@@ -88,7 +88,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
 
     uint256 public immutable INITIAL_ICR;
 
-    // Price precision of LUSD/ETH
+    // Price precision
     uint256 public constant PRECISION = 1e18;
 
     // We are not setting price impact protection and in both swaps zeroForOne is false so sqrtPriceLimitX96
@@ -432,9 +432,9 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
 
     /**
      * @notice Repay debt by selling part of the collateral for LUSD.
-     * @param _totalInputValue Amount of TB to burn (and input LUSD to use for repayment if `_lusdOnInput` param
-     *                         is set to true).
-     * @param _maxPrice Maximum acceptable price of LUSD denominated in ETH (LUSD/ETH price).
+     * @param _totalInputValue Amount of TB to burn (and input LUSD to use for repayment if `_lusdInput` param is set
+     *                         to true).
+     * @param _maxPrice Maximum acceptable price of LUSD denominated in ETH.
      * @param _interactionNonce Same as in convert(...) method.
      * @param _lusdInput If true the debt will be covered by both the LUSD on input and by selling part of the
      *                   collateral. If false the debt will be covered only by selling the collateral.
