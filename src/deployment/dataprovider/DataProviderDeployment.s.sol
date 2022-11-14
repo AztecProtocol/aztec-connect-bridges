@@ -100,9 +100,10 @@ contract DataProviderDeployment is BaseDeployment {
         DataProvider provider = DataProvider(_provider);
         IRollupProcessor rp = provider.ROLLUP_PROCESSOR();
 
-        uint256[] memory assetIds = new uint256[](13);
-        string[] memory assetTags = new string[](13);
-        for (uint256 i = 0; i < assetIds.length; i++) {
+        uint256 supportedAssetLength = rp.getSupportedAssetsLength();
+        uint256[] memory assetIds = new uint256[](supportedAssetLength);
+        string[] memory assetTags = new string[](supportedAssetLength);
+        for (uint256 i = 0; i < supportedAssetLength; i++) {
             assetIds[i] = i;
             assetTags[i] = i == 0 ? "Eth" : IERC20Metadata(rp..getSupportedAsset(i)).symbol();
         }
@@ -122,13 +123,13 @@ contract DataProviderDeployment is BaseDeployment {
         bridgeAddressIds[9] = 14;
         bridgeAddressIds[10] = 15;
 
-        bridgeTags[0] = "ElementBridge";
-        bridgeTags[1] = "CurveStEthBridge";
-        bridgeTags[2] = "YearnBridge_Deposit";
-        bridgeTags[3] = "YearnBridge_Withdraw";
-        bridgeTags[4] = "ElementBridge2M";
-        bridgeTags[5] = "ERC4626";
-        bridgeTags[6] = "DCA400K";
+        bridgeTags[0] = "ElementBridge_800K";
+        bridgeTags[1] = "CurveStEthBridge_250K";
+        bridgeTags[2] = "YearnBridgeDeposit_200K";
+        bridgeTags[3] = "YearnBridgeWithdraw_800K";
+        bridgeTags[4] = "ElementBridge_2M";
+        bridgeTags[5] = "ERC4626_300K";
+        bridgeTags[6] = "DCA_400K";
         bridgeTags[7] = "ERC4626_500K";
         bridgeTags[8] = "ERC4626_400K";
         bridgeTags[9] = "Liquity275_550K";
