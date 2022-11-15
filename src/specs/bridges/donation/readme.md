@@ -23,7 +23,7 @@ The bridge can only be impacted by other parties, if a donation is made to an, a
 The expected behaviour from the user perspective would be that the transaction reverts, but it is possible for a searcher (MEV) to frontrun the defi-interaction and list itself as Donee on the bridge to match the id.
 In this case, the searcher would get the funds instead of a revert and refund to the rollup.
 
-## What functions are available in the [client](../../client/donation/donation-bridge-data.ts)?
+## What functions are available in the [client](../../../client/donation/donation-bridge-data.ts)?
 
 While there is a client class, it is of little use, as the bridge never expects to receive anything back.
 

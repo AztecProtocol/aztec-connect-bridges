@@ -18,7 +18,7 @@ The bridge interacts with two protocols, namely Lido and Curve.
 
 There are two main flows of the Curve stEth LP Bridge, namely adding liquidity and remove liquidity.
 
-![Curve LP Flow](./CurveLp.svg)
+![Curve LP Flow](CurveLp.svg)
 
 ### Deposit
 
