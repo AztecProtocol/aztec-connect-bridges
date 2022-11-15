@@ -1,4 +1,4 @@
-# DataProvider contract
+# DataProvider
 
 ## What does it do?
 
