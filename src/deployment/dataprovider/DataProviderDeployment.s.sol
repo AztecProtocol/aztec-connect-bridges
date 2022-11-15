@@ -105,7 +105,7 @@ contract DataProviderDeployment is BaseDeployment {
         string[] memory assetTags = new string[](supportedAssetLength);
         for (uint256 i = 0; i < supportedAssetLength; i++) {
             assetIds[i] = i;
-            assetTags[i] = i == 0 ? "Eth" : IERC20Metadata(rp..getSupportedAsset(i)).symbol();
+            assetTags[i] = i == 0 ? "Eth" : IERC20Metadata(rp.getSupportedAsset(i)).symbol();
         }
 
         uint256[] memory bridgeAddressIds = new uint256[](11);
