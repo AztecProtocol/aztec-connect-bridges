@@ -8,7 +8,7 @@
     "install:foundryup": "curl -L https://foundry.paradigm.xyz | bash",
     "install:foundry": "foundryup",
     "install:dependencies": "git submodule update --init --recursive && yarn",
-    "setup": "yarn install:foundryup && yarn install:foundry && yarn",
+    "setup": "yarn install:foundryup && yarn install:foundry && yarn install:dependencies",
     "clean": "rm -rf ./cache ./dest ./out ./typechain-types ./client-dest",
     "compile:typechain": "forge build && typechain --target ethers-v5 --out-dir ./typechain-types './out/!(test*|Test*|*.t.sol|*.s.sol)/*.json'",
     "compile:client-dest": "yarn compile:typechain && tsc --project tsconfig.client-dest.json",
