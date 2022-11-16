@@ -3,9 +3,24 @@
 ## What does it do?
 
 It is a contract we use as a source of truth when it comes to configuration of bridges and assets.
-It is mainly used by our frontend to get a bridge or asset information by a tag.
+It is mainly used by our frontend to get a bridge or asset information by a tag, but the information can be used by one.
 
 ## Usage
+
+The contract is deployed [here](https://etherscan.io/address/0xB4319947947781FFe91dDf96A32aF2D4693FEf64) and these are the 4 relevant functions:
+
+```solidity
+function getAsset(uint256 _assetId) public view returns (AssetData memory);
+
+function getAsset(string memory _tag) public view returns (AssetData memory);
+
+function getAssets() public view returns (AssetData[] memory);
+
+function getBridges() public view returns (BridgeData[] memory);
+
+```
+
+## Usage by owner
 
 Before running the commands bellow export relevant environment variables:
 
