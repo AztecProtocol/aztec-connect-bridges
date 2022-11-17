@@ -7,9 +7,9 @@ import {
   ITroveManager__factory,
   TroveBridge,
   TroveBridge__factory,
-} from "../../../typechain-types";
-import { AztecAsset, AztecAssetType } from "../bridge-data";
-import { TroveBridgeData } from "./trove-bridge-data";
+} from "../../../typechain-types/index.js";
+import { AztecAsset, AztecAssetType } from "../bridge-data.js";
+import { TroveBridgeData } from "./trove-bridge-data.js";
 
 jest.mock("../aztec/provider", () => ({
   createWeb3Provider: jest.fn(),

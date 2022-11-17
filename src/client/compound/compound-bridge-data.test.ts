@@ -7,9 +7,9 @@ import {
   ICompoundERC4626__factory,
   IERC20,
   IERC20__factory,
-} from "../../../typechain-types";
-import { AztecAsset, AztecAssetType } from "../bridge-data";
-import { CompoundBridgeData } from "./compound-bridge-data";
+} from "../../../typechain-types/index.js";
+import { AztecAsset, AztecAssetType } from "../bridge-data.js";
+import { CompoundBridgeData } from "./compound-bridge-data.js";
 
 jest.mock("../aztec/provider", () => ({
   createWeb3Provider: jest.fn(),

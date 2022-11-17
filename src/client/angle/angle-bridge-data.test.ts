@@ -1,6 +1,6 @@
-import { AngleBridgeData } from "./angle-bridge-data";
-import { IStableMaster, IStableMaster__factory } from "../../../typechain-types";
-import { AztecAsset, AztecAssetType } from "../bridge-data";
+import { AngleBridgeData } from "./angle-bridge-data.js";
+import { IStableMaster, IStableMaster__factory } from "../../../typechain-types/index.js";
+import { AztecAsset, AztecAssetType } from "../bridge-data.js";
 import { utils } from "ethers";
 import { EthAddress } from "@aztec/barretenberg/address";
 

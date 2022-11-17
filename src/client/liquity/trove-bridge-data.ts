@@ -9,9 +9,9 @@ import {
   ITroveManager__factory,
   TroveBridge,
   TroveBridge__factory,
-} from "../../../typechain-types";
-import { createWeb3Provider } from "../aztec/provider";
-import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
+} from "../../../typechain-types/index.js";
+import { createWeb3Provider } from "../aztec/provider/web3_provider.js";
+import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data.js";
 
 export class TroveBridgeData implements BridgeDataFieldGetters {
   public readonly LUSD = EthAddress.fromString("0x5f98805A4E8be255a32880FDeC7F6728C6568bA0");

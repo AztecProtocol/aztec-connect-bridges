@@ -1,6 +1,6 @@
-import { DCABridgeData } from "./dca-bridge-data";
-import { BiDCABridge, BiDCABridge__factory } from "../../../typechain-types";
-import { AztecAsset, AztecAssetType } from "../bridge-data";
+import { DCABridgeData } from "./dca-bridge-data.js";
+import { BiDCABridge, BiDCABridge__factory } from "../../../typechain-types/index.js";
+import { AztecAsset, AztecAssetType } from "../bridge-data.js";
 import { BigNumber } from "ethers";
 import { EthAddress } from "@aztec/barretenberg/address";
 

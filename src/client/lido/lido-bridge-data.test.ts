@@ -1,4 +1,4 @@
-import { LidoBridgeData } from "./lido-bridge-data";
+import { LidoBridgeData } from "./lido-bridge-data.js";
 import {
   IWstETH,
   ICurvePool,
@@ -6,8 +6,8 @@ import {
   IWstETH__factory,
   ICurvePool__factory,
   ILidoOracle__factory,
-} from "../../../typechain-types";
-import { AztecAsset, AztecAssetType } from "../bridge-data";
+} from "../../../typechain-types/index.js";
+import { AztecAsset, AztecAssetType } from "../bridge-data.js";
 import { BigNumber } from "ethers";
 import { EthAddress } from "@aztec/barretenberg/address";
 

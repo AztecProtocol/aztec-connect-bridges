@@ -3,11 +3,11 @@ import { AssetValue } from "@aztec/barretenberg/asset";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
 import "isomorphic-fetch";
-import { ICERC20__factory, ICompoundERC4626__factory, IERC20__factory } from "../../../typechain-types";
-import { createWeb3Provider } from "../aztec/provider";
-import { AztecAsset } from "../bridge-data";
+import { ICERC20__factory, ICompoundERC4626__factory, IERC20__factory } from "../../../typechain-types/index.js";
+import { createWeb3Provider } from "../aztec/provider/web3_provider.js";
+import { AztecAsset } from "../bridge-data.js";
 
-import { ERC4626BridgeData } from "../erc4626/erc4626-bridge-data";
+import { ERC4626BridgeData } from "../erc4626/erc4626-bridge-data.js";
 
 export class CompoundBridgeData extends ERC4626BridgeData {
   protected constructor(ethersProvider: Web3Provider) {

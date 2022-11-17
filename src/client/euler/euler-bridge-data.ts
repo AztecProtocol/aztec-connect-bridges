@@ -3,11 +3,11 @@ import { AssetValue } from "@aztec/barretenberg/asset";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
 import "isomorphic-fetch";
-import { createWeb3Provider } from "../aztec/provider";
-import { AztecAsset, AztecAssetType } from "../bridge-data";
+import { createWeb3Provider } from "../aztec/provider/web3_provider.js";
+import { AztecAsset, AztecAssetType } from "../bridge-data.js";
 
-import { ERC4626BridgeData } from "../erc4626/erc4626-bridge-data";
-import { LidoBridgeData } from "../lido/lido-bridge-data";
+import { ERC4626BridgeData } from "../erc4626/erc4626-bridge-data.js";
+import { LidoBridgeData } from "../lido/lido-bridge-data.js";
 
 export class EulerBridgeData extends ERC4626BridgeData {
   private readonly subgraphWethId = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";

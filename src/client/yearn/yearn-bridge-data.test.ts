@@ -9,9 +9,9 @@ import {
   IYearnRegistry__factory,
   IYearnVault,
   IYearnVault__factory,
-} from "../../../typechain-types";
-import { AztecAsset, AztecAssetType } from "../bridge-data";
-import { YearnBridgeData } from "./yearn-bridge-data";
+} from "../../../typechain-types/index.js";
+import { AztecAsset, AztecAssetType } from "../bridge-data.js";
+import { YearnBridgeData } from "./yearn-bridge-data.js";
 
 jest.mock("../aztec/provider", () => ({
   createWeb3Provider: jest.fn(),

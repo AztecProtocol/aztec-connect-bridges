@@ -8,9 +8,9 @@ import {
   RollupProcessor__factory,
   IVault,
   IVault__factory,
-} from "../../../typechain-types";
-import { AztecAssetType } from "../bridge-data";
-import { ElementBridgeData } from "./element-bridge-data";
+} from "../../../typechain-types/index.js";
+import { AztecAssetType } from "../bridge-data.js";
+import { ElementBridgeData } from "./element-bridge-data.js";
 
 jest.mock("../aztec/provider", () => ({
   createWeb3Provider: jest.fn(),
@@ -47,8 +47,8 @@ describe("element bridge data", () => {
   const expiration1 = BigInt(now + 86400 * 60);
   const expiration2 = BigInt(now + 86400 * 90);
   const startDate = BigInt(now - 86400 * 30);
-  const bridgeCallData1 = new BridgeCallData(1, 4, 4, undefined, undefined, Number(expiration1));
-  const bridgeCallData2 = new BridgeCallData(1, 5, 5, undefined, undefined, Number(expiration2));
+  const bridgeCallData1 = new BridgeCallData(1, 4, 4, undefined, undefined, expiration1);
+  const bridgeCallData2 = new BridgeCallData(1, 5, 5, undefined, undefined, expiration2);
   const outputValue = 10n * 10n ** 18n;
   const testAddress = EthAddress.random();
 

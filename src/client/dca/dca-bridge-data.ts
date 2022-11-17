@@ -1,8 +1,8 @@
-import { UnderlyingAsset, AuxDataConfig, AztecAsset, SolidityType, BridgeDataFieldGetters } from "../bridge-data";
+import { UnderlyingAsset, AuxDataConfig, AztecAsset, SolidityType, BridgeDataFieldGetters } from "../bridge-data.js";
 
-import { BiDCABridge, BiDCABridge__factory, IERC20__factory } from "../../../typechain-types";
+import { BiDCABridge, BiDCABridge__factory, IERC20__factory } from "../../../typechain-types/index.js";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
-import { createWeb3Provider } from "../aztec/provider";
+import { createWeb3Provider } from "../aztec/provider/web3_provider.js";
 import { EthAddress } from "@aztec/barretenberg/address";
 import { AssetValue } from "@aztec/barretenberg/asset";
 

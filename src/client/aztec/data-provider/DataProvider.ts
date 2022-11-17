@@ -1,8 +1,8 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
-import { DataProvider__factory } from "../../../../typechain-types";
-import { DataProvider } from "../../../../typechain-types";
-import { createWeb3Provider } from "../provider";
+import { DataProvider__factory } from "../../../../typechain-types/index.js";
+import { DataProvider } from "../../../../typechain-types/index.js";
+import { createWeb3Provider } from "../provider/web3_provider.js";
 
 export interface AssetData {
   assetAddress: EthAddress;

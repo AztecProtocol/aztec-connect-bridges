@@ -1,7 +1,7 @@
 import { EthAddress } from "@aztec/barretenberg/address";
-import { IERC4626, IERC4626__factory } from "../../../typechain-types";
-import { AztecAsset, AztecAssetType } from "../bridge-data";
-import { AaveV2BridgeData } from "./aavev2-bridge-data";
+import { IERC4626, IERC4626__factory } from "../../../typechain-types/index.js";
+import { AztecAsset, AztecAssetType } from "../bridge-data.js";
+import { AaveV2BridgeData } from "./aavev2-bridge-data.js";
 
 jest.mock("../aztec/provider", () => ({
   createWeb3Provider: jest.fn(),

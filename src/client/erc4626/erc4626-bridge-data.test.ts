@@ -1,8 +1,8 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { BigNumber } from "ethers";
-import { IERC20Metadata, IERC20Metadata__factory, IERC4626, IERC4626__factory } from "../../../typechain-types";
-import { AztecAsset, AztecAssetType } from "../bridge-data";
-import { ERC4626BridgeData } from "./erc4626-bridge-data";
+import { IERC20Metadata, IERC20Metadata__factory, IERC4626, IERC4626__factory } from "../../../typechain-types/index.js";
+import { AztecAsset, AztecAssetType } from "../bridge-data.js";
+import { ERC4626BridgeData } from "./erc4626-bridge-data.js";
 
 jest.mock("../aztec/provider", () => ({
   createWeb3Provider: jest.fn(),

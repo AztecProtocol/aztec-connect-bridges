@@ -2,7 +2,7 @@ import { EthAddress } from "@aztec/barretenberg/address";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
 import { BigNumber } from "ethers";
-import { createWeb3Provider } from "../aztec/provider";
+import { createWeb3Provider } from "../aztec/provider/web3_provider.js";
 
 import "isomorphic-fetch";
 
@@ -14,7 +14,7 @@ import {
   IYearnRegistry,
   IYearnRegistry__factory,
   IYearnVault__factory,
-} from "../../../typechain-types";
+} from "../../../typechain-types/index.js";
 import {
   AuxDataConfig,
   AztecAsset,
@@ -22,7 +22,7 @@ import {
   BridgeDataFieldGetters,
   SolidityType,
   UnderlyingAsset,
-} from "../bridge-data";
+} from "../bridge-data.js";
 
 export class YearnBridgeData implements BridgeDataFieldGetters {
   allYvETH?: EthAddress[];
