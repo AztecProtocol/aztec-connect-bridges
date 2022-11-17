@@ -3,5 +3,5 @@ out/
 node_modules/
 yarn-error.log
 client-dest/
-typechain-types/
+# typechain-types/
 broadcast/
