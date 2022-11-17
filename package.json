@@ -27,7 +27,7 @@
     "lint:clients": "eslint \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
-    "@aztec/barretenberg": "2.1.51",
+    "@aztec/barretenberg": "2.1.52",
     "@ethersproject/providers": "^5.7.2",
     "@openzeppelin/contracts": "^4.7.3",
     "@typechain/ethers-v5": "^10.1.1",

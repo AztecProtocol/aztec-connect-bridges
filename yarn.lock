@@ -10,10 +10,10 @@
     "@jridgewell/gen-mapping" "^0.1.0"
     "@jridgewell/trace-mapping" "^0.3.9"
 
-"@aztec/barretenberg@2.1.51":
-  version "2.1.51"
-  resolved "https://registry.yarnpkg.com/@aztec/barretenberg/-/barretenberg-2.1.51.tgz#7065636c2fb65f70d67e245ec6cddfd66e3090e4"
-  integrity sha512-JCdRe+a+6gk7vJKG8cXeHi7yj9AnF7k4o5YSD4uVqRPgKiwKigbxlUrezD+CWY5n7Hntc65JZPNjz7tOO2F5OA==
+"@aztec/barretenberg@2.1.52":
+  version "2.1.52"
+  resolved "https://registry.yarnpkg.com/@aztec/barretenberg/-/barretenberg-2.1.52.tgz#0456d80e893535f0429d8d90d421797a2dedb250"
+  integrity sha512-kCrMBTyBtdsfQHcGQbjL4LoUZFikG/3gfqCGzRSx/dGZIl/1ktG7WachrMGcFliAVEYBloSVV3++6cd1broKnA==
   dependencies:
     "@types/levelup" "^4.3.0"
     browserify-cipher "^1.0.1"
