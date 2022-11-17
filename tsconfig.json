@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "esnext",
+    "target": "es2020",
     "lib": ["dom", "esnext", "es2017.object", "DOM.Iterable"],
     "outDir": "dest",
     "module": "NodeNext",
