@@ -19,7 +19,7 @@
     "test:pinned:14972000": "forge test --fork-block-number 14972000 -m 'testRedistributionFailingSwap' --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c",
     "test:pinned": "yarn test:pinned:14000000 && yarn test:pinned:14970000 && yarn test:pinned:14972000",
     "test:contracts": "forge test --no-match-contract 'Element' --no-match-test 'testRedistribution' && yarn test:pinned",
-    "test:clients": "jest test",
+    "test:clients": "NODE_OPTIONS=--experimental-vm-modules yarn jest",
     "test": "yarn test:contracts && yarn test:clients",
     "formatting": "forge fmt && yarn prettier --write ./src/client/**/*.ts",
     "formatting:check": "forge fmt --check && prettier --check ./src/client/**/*.ts",
