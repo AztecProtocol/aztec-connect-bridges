@@ -14,7 +14,7 @@
     "inlineSourceMap": true,
     "declarationMap": true,
     "resolveJsonModule": true,
-    "moduleResolution":"NodeNext"
+    "moduleResolution": "NodeNext"
   },
   "include": ["client", "typechain-types"]
 }
