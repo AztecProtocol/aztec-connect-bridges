@@ -471,7 +471,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             // Reverting here because an incorrect flow has been chosen --> there is no reason to be using flash swaps
             // when the amount of LUSD on input is enough to cover the debt
             if (debtToRepay <= _totalInputValue) revert ErrorLib.InvalidOutputB();
-            uint256 lusdToBuy = debtToRepay - _totalInputValue;
+            lusdToBuy = debtToRepay - _totalInputValue;
         } else {
             lusdToBuy = debtToRepay;
         }
