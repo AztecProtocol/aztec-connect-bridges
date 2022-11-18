@@ -14,6 +14,7 @@ contract DataProviderTest is BridgeTestBase {
 
         // fund yearn bridge to ensure that there are funds.
         SUBSIDY.topUp{value: 10 ether}(ROLLUP_PROCESSOR.getSupportedBridge(7), 0);
+        SUBSIDY.topUp{value: 10 ether}(ROLLUP_PROCESSOR.getSupportedBridge(7), 1);
     }
 
     function testAddMultipleAssetsAndBridgesWrongInput() public {
@@ -200,7 +201,7 @@ contract DataProviderTest is BridgeTestBase {
                 bridgeCallData
             );
             assertEq(criteria, 1, "Wrong criteria");
-            assertEq(subsidy, 0, "Subsidy accrued");
+            assertGe(subsidy, 0, "Subsidy accrued");
             assertGe(subsidy, gasUnits * block.basefee, "Invalid gas units accrued");
             assertEq(gasUnits, subsidy / block.basefee, "Invalid gas units accrued");
         }
