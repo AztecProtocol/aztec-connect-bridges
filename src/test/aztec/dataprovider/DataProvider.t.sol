@@ -14,6 +14,7 @@ contract DataProviderTest is BridgeTestBase {
 
         // fund yearn bridge to ensure that there are funds.
         SUBSIDY.topUp{value: 10 ether}(ROLLUP_PROCESSOR.getSupportedBridge(7), 0);
+        SUBSIDY.topUp{value: 10 ether}(ROLLUP_PROCESSOR.getSupportedBridge(7), 1);
     }
 
     function testAddMultipleAssetsAndBridgesWrongInput() public {
@@ -188,15 +189,21 @@ contract DataProviderTest is BridgeTestBase {
         vm.warp(block.timestamp + 1 days);
 
         uint256 bridgeCallData = ROLLUP_ENCODER.encodeBridgeCallData(7, eth, empty, vyvault, empty, 0);
-        (uint256 criteria, uint256 subsidy) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
+        (uint256 criteria, uint256 subsidy, uint256 gasUnits) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
         assertEq(criteria, 0, "Subsidy have accrued");
         assertGt(subsidy, 0, "No subsidy accrued");
+        assertGe(subsidy, gasUnits * block.basefee, "Invalid gas units accrued");
+        assertEq(gasUnits, subsidy / block.basefee, "Invalid gas units accrued");
 
         {
             uint256 bridgeCallData = ROLLUP_ENCODER.encodeBridgeCallData(7, vyvault, empty, eth, empty, 1);
-            (uint256 criteria, uint256 subsidy) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
+            (uint256 criteria, uint256 subsidy, uint256 gasUnits) = provider.getAccumulatedSubsidyAmount(
+                bridgeCallData
+            );
             assertEq(criteria, 1, "Wrong criteria");
-            assertEq(subsidy, 0, "Subsidy accrued");
+            assertGe(subsidy, 0, "Subsidy accrued");
+            assertGe(subsidy, gasUnits * block.basefee, "Invalid gas units accrued");
+            assertEq(gasUnits, subsidy / block.basefee, "Invalid gas units accrued");
         }
     }
 
@@ -204,9 +211,11 @@ contract DataProviderTest is BridgeTestBase {
         AztecTypes.AztecAsset memory eth = ROLLUP_ENCODER.getRealAztecAsset(address(0));
         AztecTypes.AztecAsset memory dai = ROLLUP_ENCODER.getRealAztecAsset(0x6B175474E89094C44Da98b954EedeAC495271d0F);
         uint256 bridgeCallData = ROLLUP_ENCODER.encodeBridgeCallData(7, dai, eth, dai, eth, 0);
-        (uint256 criteria, uint256 subsidy) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
+        (uint256 criteria, uint256 subsidy, uint256 gasUnits) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
         assertEq(criteria, 0, "Wrong criteria");
         assertGt(subsidy, 0, "No subsidy accrued");
+        assertGe(subsidy, gasUnits * block.basefee, "Invalid gas units accrued");
+        assertEq(gasUnits, subsidy / block.basefee, "Invalid gas units accrued");
     }
 
     function testHappySubsidyHelperVirtual() public {
@@ -218,17 +227,21 @@ contract DataProviderTest is BridgeTestBase {
         });
 
         uint256 bridgeCallData = ROLLUP_ENCODER.encodeBridgeCallData(7, virtualAsset, eth, virtualAsset, eth, 0);
-        (uint256 criteria, uint256 subsidy) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
+        (uint256 criteria, uint256 subsidy, uint256 gasUnits) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
         assertEq(criteria, 0, "Wrong criteria");
         assertGt(subsidy, 0, "No subsidy accrued");
+        assertGe(subsidy, gasUnits * block.basefee, "Invalid gas units accrued");
+        assertEq(gasUnits, subsidy / block.basefee, "Invalid gas units accrued");
     }
 
     function testUnHappySubsidyHelper() public {
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory dai = ROLLUP_ENCODER.getRealAztecAsset(0x6B175474E89094C44Da98b954EedeAC495271d0F);
         uint256 bridgeCallData = ROLLUP_ENCODER.encodeBridgeCallData(1, dai, empty, dai, empty, 0);
-        (uint256 criteria, uint256 subsidy) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
+        (uint256 criteria, uint256 subsidy, uint256 gasUnits) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
         assertEq(criteria, 0, "Wrong criteria");
         assertEq(subsidy, 0, "Subsidy have accrued");
+        assertGe(subsidy, gasUnits * block.basefee, "Invalid gas units accrued");
+        assertEq(gasUnits, subsidy / block.basefee, "Invalid gas units accrued");
     }
 }

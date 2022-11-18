@@ -4,6 +4,7 @@ pragma solidity >=0.8.4;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {BaseDeployment} from "../base/BaseDeployment.s.sol";
 import {DataProvider} from "../../aztec/DataProvider.sol";
 import {IRollupProcessor} from "rollup-encoder/interfaces/IRollupProcessor.sol";
@@ -90,25 +91,25 @@ contract DataProviderDeployment is BaseDeployment {
 
     function deployAndListMany() public returns (address) {
         address provider = deploy();
+        updateNames(provider);
+        readProvider(provider);
+        return provider;
+    }
 
-        uint256[] memory assetIds = new uint256[](10);
-        string[] memory assetTags = new string[](10);
-        for (uint256 i = 0; i < assetIds.length; i++) {
+    function updateNames(address _provider) public {
+        DataProvider provider = DataProvider(_provider);
+        IRollupProcessor rp = provider.ROLLUP_PROCESSOR();
+
+        uint256 supportedAssetLength = rp.getSupportedAssetsLength();
+        uint256[] memory assetIds = new uint256[](supportedAssetLength);
+        string[] memory assetTags = new string[](supportedAssetLength);
+        for (uint256 i = 0; i < supportedAssetLength; i++) {
             assetIds[i] = i;
+            assetTags[i] = i == 0 ? "Eth" : IERC20Metadata(rp.getSupportedAsset(i)).symbol();
         }
-        assetTags[0] = "eth";
-        assetTags[1] = "dai";
-        assetTags[2] = "wsteth";
-        assetTags[3] = "vydai";
-        assetTags[4] = "vyweth";
-        assetTags[5] = "weweth";
-        assetTags[6] = "wewsteth";
-        assetTags[7] = "wedai";
-        assetTags[8] = "we2dai";
-        assetTags[9] = "we2weth";
 
-        uint256[] memory bridgeAddressIds = new uint256[](9);
-        string[] memory bridgeTags = new string[](9);
+        uint256[] memory bridgeAddressIds = new uint256[](11);
+        string[] memory bridgeTags = new string[](11);
 
         bridgeAddressIds[0] = 1;
         bridgeAddressIds[1] = 6;
@@ -119,21 +120,25 @@ contract DataProviderDeployment is BaseDeployment {
         bridgeAddressIds[6] = 11;
         bridgeAddressIds[7] = 12;
         bridgeAddressIds[8] = 13;
+        bridgeAddressIds[9] = 14;
+        bridgeAddressIds[10] = 15;
 
-        bridgeTags[0] = "ElementBridge";
-        bridgeTags[1] = "CurveStEthBridge";
-        bridgeTags[2] = "YearnBridge_Deposit";
-        bridgeTags[3] = "YearnBridge_Withdraw";
-        bridgeTags[4] = "ElementBridge2M";
-        bridgeTags[5] = "ERC4626";
-        bridgeTags[6] = "DCA400K";
+        bridgeTags[0] = "ElementBridge_800K";
+        bridgeTags[1] = "CurveStEthBridge_250K";
+        bridgeTags[2] = "YearnBridgeDeposit_200K";
+        bridgeTags[3] = "YearnBridgeWithdraw_800K";
+        bridgeTags[4] = "ElementBridge_2M";
+        bridgeTags[5] = "ERC4626_300K";
+        bridgeTags[6] = "DCA_400K";
         bridgeTags[7] = "ERC4626_500K";
         bridgeTags[8] = "ERC4626_400K";
+        bridgeTags[9] = "Liquity275_550K";
+        bridgeTags[10] = "Liquity400_550K";
 
         vm.broadcast();
-        DataProvider(provider).addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
+        DataProvider(_provider).addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
 
-        return provider;
+        readProvider(_provider);
     }
 
     function _listBridge(

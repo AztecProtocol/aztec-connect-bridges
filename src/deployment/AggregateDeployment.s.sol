@@ -119,6 +119,8 @@ contract AggregateDeployment is BaseDeployment {
             liquityTroveDeployment.deployAndList(275);
             liquityTroveDeployment.deployAndList(400);
         }
+
+        readStats();
     }
 
     function bogota() public {
