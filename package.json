@@ -64,7 +64,7 @@
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
-    "testEnvironment": "jsdom",
+    "testEnvironment": "jest-environment-node",
     "testRegex": ".*\\.test\\.ts$",
     "rootDir": "./src",
     "testTimeout": 30000,

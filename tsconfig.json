@@ -13,7 +13,8 @@
     "experimentalDecorators": true,
     "inlineSourceMap": true,
     "declarationMap": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "moduleResolution":"NodeNext"
   },
   "include": ["client", "typechain-types"]
 }

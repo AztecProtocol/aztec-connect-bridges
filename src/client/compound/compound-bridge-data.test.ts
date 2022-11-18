@@ -10,6 +10,7 @@ import {
 } from "../../../typechain-types/index.js";
 import { AztecAsset, AztecAssetType } from "../bridge-data.js";
 import { CompoundBridgeData } from "./compound-bridge-data.js";
+import {jest} from '@jest/globals';
 
 jest.mock("../aztec/provider", () => ({
   createWeb3Provider: jest.fn(),
@@ -50,13 +51,13 @@ describe("compound lending bridge data", () => {
     // Setup mocks
     compoundERC4626Contract = {
       ...compoundERC4626Contract,
-      cToken: jest.fn().mockResolvedValue("0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643"),
+      cToken: jest.fn().mockReturnValueOnce("0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643"),
     };
     ICompoundERC4626__factory.connect = () => compoundERC4626Contract as any;
 
     cerc20Contract = {
       ...cerc20Contract,
-      supplyRatePerBlock: jest.fn().mockResolvedValue(BigNumber.from("338149955")),
+      supplyRatePerBlock: jest.fn().mockReturnValueOnce(BigNumber.from("338149955")),
     };
     ICERC20__factory.connect = () => cerc20Contract as any;
     const compoundBridgeData = CompoundBridgeData.create({} as any);
@@ -70,19 +71,19 @@ describe("compound lending bridge data", () => {
     // Setup mocks
     compoundERC4626Contract = {
       ...compoundERC4626Contract,
-      cToken: jest.fn().mockResolvedValue("0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643"),
+      cToken: jest.fn().mockReturnValueOnce("0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643"),
     };
     ICompoundERC4626__factory.connect = () => compoundERC4626Contract as any;
 
     erc20Contract = {
       ...erc20Contract,
-      balanceOf: jest.fn().mockResolvedValue(BigNumber.from("354266465288194354360018823")),
+      balanceOf: jest.fn().mockReturnValueOnce(BigNumber.from("354266465288194354360018823")),
     };
     IERC20__factory.connect = () => erc20Contract as any;
 
     cerc20Contract = {
       ...cerc20Contract,
-      totalBorrows: jest.fn().mockResolvedValue(BigNumber.from("302183964811046170986358904")),
+      totalBorrows: jest.fn().mockReturnValueOnce(BigNumber.from("302183964811046170986358904")),
     };
     IERC20__factory.connect = () => erc20Contract as any;
 
