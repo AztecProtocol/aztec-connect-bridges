@@ -119,7 +119,9 @@ describe("DCA bridge data", () => {
 
     dcaBridgeContract = {
       ...dcaBridgeContract,
+      // @ts-ignore
       getDCA: jest.fn().mockImplementation((_nonce: number) => dcas[_nonce]),
+      // @ts-ignore
       getTick: jest.fn().mockImplementation((_tick: number) => (ticks[_tick] == undefined ? base : ticks[_tick])),
     };
 

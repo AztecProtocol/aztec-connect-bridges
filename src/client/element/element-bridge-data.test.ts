@@ -124,9 +124,11 @@ describe("element bridge data", () => {
   };
 
   elementBridge = {
+    // @ts-ignore
     interactions: jest.fn().mockImplementation(async (nonce: bigint) => {
       return interactions[Number(nonce)];
     }),
+    // @ts-ignore
     getTrancheDeploymentBlockNumber: jest.fn().mockImplementation(async (nonce: bigint) => {
       const promise = Promise.resolve(getTrancheDeploymentBlockNumber(nonce));
       return promise;
@@ -143,6 +145,7 @@ describe("element bridge data", () => {
   };
 
   const rollupContract: Mockify<RollupProcessor> = {
+    // @ts-ignore
     queryFilter: jest.fn().mockImplementation((filter: any, from: number, to: number) => {
       const nonce = filter.interactionNonce;
       const [defiEvent] = getDefiEvents(nonce, from, to);
@@ -162,6 +165,7 @@ describe("element bridge data", () => {
       ];
     }),
     filters: {
+      // @ts-ignore
       AsyncDefiBridgeProcessed: jest.fn().mockImplementation((bridgeCallData: any, interactionNonce: number) => {
         return {
           bridgeCallData,

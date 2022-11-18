@@ -170,14 +170,17 @@ describe("curve steth bridge data", () => {
       ...wstethContract,
       getStETHByWstETH: jest.fn().mockImplementation(async input => {
         // force WSTETH and STETH to have the same value
+        // @ts-ignore
         return BigNumber.from((BigInt(input) * 100n) / 100n);
       }),
     };
 
     curvePoolContract = {
       ...curvePoolContract,
+
       get_dy: jest.fn().mockImplementation(async (x, y, input) => {
         // force ETH and STETH to have the same value
+        // @ts-ignore
         return BigNumber.from((BigInt(input) * 100n) / 100n);
       }),
     };
