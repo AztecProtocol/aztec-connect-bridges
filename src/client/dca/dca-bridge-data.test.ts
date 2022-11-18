@@ -3,10 +3,8 @@ import { BiDCABridge, BiDCABridge__factory } from "../../../typechain-types/inde
 import { AztecAsset, AztecAssetType } from "../bridge-data.js";
 import { BigNumber } from "ethers";
 import { EthAddress } from "@aztec/barretenberg/address";
-
-jest.mock("../aztec/provider", () => ({
-  createWeb3Provider: jest.fn(),
-}));
+import { jest } from "@jest/globals";
+import { JsonRpcProvider } from "../aztec/provider/json_rpc_provider.js";
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock | any;
@@ -22,7 +20,10 @@ describe("DCA bridge data", () => {
 
   const createDCABridge = (dcaBridge: BiDCABridge = dcaBridgeContract as any) => {
     BiDCABridge__factory.connect = () => dcaBridge as any;
-    return DCABridgeData.create({} as any, EthAddress.ZERO);
+    return DCABridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      EthAddress.ZERO,
+    );
   };
 
   beforeAll(() => {

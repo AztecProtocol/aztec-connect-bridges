@@ -57,10 +57,10 @@ export class CompoundBridgeData extends ERC4626BridgeData {
     const underlying = IERC20__factory.connect(underlyingAsset.erc20Address.toString(), this.ethersProvider);
     const cToken = ICERC20__factory.connect(underlyingAsset.erc20Address.toString(), this.ethersProvider);
 
-    const underlyingBalancePromise = underlying.balanceOf(cTokenAddress.toString());
-    const totalBorrowsPromise = cToken.totalBorrows();
+    const underlyingBalance = await underlying.balanceOf(cTokenAddress.toString());
+    const totalBorrows = await cToken.totalBorrows();
 
-    const marketSize = (await underlyingBalancePromise).add(await totalBorrowsPromise).toBigInt();
+    const marketSize = underlyingBalance.add(totalBorrows).toBigInt();
 
     return [
       {

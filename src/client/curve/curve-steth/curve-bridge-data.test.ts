@@ -10,10 +10,8 @@ import {
 import { AztecAsset, AztecAssetType } from "../../bridge-data.js";
 import { BigNumber } from "ethers";
 import { EthAddress } from "@aztec/barretenberg/address";
-
-jest.mock("../../aztec/provider", () => ({
-  createWeb3Provider: jest.fn(),
-}));
+import { jest } from "@jest/globals";
+import { JsonRpcProvider } from "../../aztec/provider/json_rpc_provider.js";
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock | any;
@@ -37,7 +35,12 @@ describe("curve steth bridge data", () => {
     IWstETH__factory.connect = () => wsteth as any;
     ICurvePool__factory.connect = () => curvePool as any;
     ILidoOracle__factory.connect = () => lidoOracle as any;
-    return CurveStethBridgeData.create({} as any, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO); // can pass in dummy values here as the above factories do all of the work
+    return CurveStethBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      EthAddress.ZERO,
+      EthAddress.ZERO,
+      EthAddress.ZERO,
+    ); // can pass in dummy values here as the above factories do all of the work
   };
 
   beforeAll(() => {
@@ -66,12 +69,12 @@ describe("curve steth bridge data", () => {
 
     curvePoolContract = {
       ...curvePoolContract,
-      get_dy: jest.fn().mockResolvedValue(BigNumber.from(stEthAmountOut)),
+      get_dy: jest.fn().mockReturnValue(BigNumber.from(stEthAmountOut)),
     };
 
     wstethContract = {
       ...wstethContract,
-      getWstETHByStETH: jest.fn().mockResolvedValue(BigNumber.from(wstEthAmount)),
+      getWstETHByStETH: jest.fn().mockReturnValue(BigNumber.from(wstEthAmount)),
     };
 
     curveBridgeData = createCurveStethBridgeData(
@@ -99,13 +102,13 @@ describe("curve steth bridge data", () => {
 
     curvePoolContract = {
       ...curvePoolContract,
-      get_dy: jest.fn().mockResolvedValue(BigNumber.from(stEthAmountOut)),
+      get_dy: jest.fn().mockReturnValue(BigNumber.from(stEthAmountOut)),
     };
 
     wstethContract = {
       ...wstethContract,
-      getWstETHByStETH: jest.fn().mockResolvedValue(BigNumber.from(wstEthAmount)),
-      getStETHByWstETH: jest.fn().mockResolvedValue(BigNumber.from(stEthAmountOut)),
+      getWstETHByStETH: jest.fn().mockReturnValue(BigNumber.from(wstEthAmount)),
+      getStETHByWstETH: jest.fn().mockReturnValue(BigNumber.from(stEthAmountOut)),
     };
 
     curveBridgeData = createCurveStethBridgeData(
@@ -134,12 +137,12 @@ describe("curve steth bridge data", () => {
 
     wstethContract = {
       ...wstethContract,
-      getStETHByWstETH: jest.fn().mockResolvedValue(BigNumber.from(stethOutputAmount)),
+      getStETHByWstETH: jest.fn().mockReturnValue(BigNumber.from(stethOutputAmount)),
     };
 
     curvePoolContract = {
       ...curvePoolContract,
-      get_dy: jest.fn().mockResolvedValue(BigNumber.from(expectedOutput)),
+      get_dy: jest.fn().mockReturnValue(BigNumber.from(expectedOutput)),
     };
 
     curveBridgeData = createCurveStethBridgeData(
@@ -181,7 +184,7 @@ describe("curve steth bridge data", () => {
 
     lidoOracleContract = {
       ...lidoOracleContract,
-      getLastCompletedReportDelta: jest.fn().mockResolvedValue({
+      getLastCompletedReportDelta: jest.fn().mockReturnValue({
         timeElapsed: BigNumber.from(86400n),
         postTotalPooledEther: BigNumber.from(2777258873714679039007057n),
         preTotalPooledEther: BigNumber.from(2776930205843708039007057n),

@@ -3,10 +3,8 @@ import { IStableMaster, IStableMaster__factory } from "../../../typechain-types/
 import { AztecAsset, AztecAssetType } from "../bridge-data.js";
 import { utils } from "ethers";
 import { EthAddress } from "@aztec/barretenberg/address";
-
-jest.mock("../aztec/provider", () => ({
-  createWeb3Provider: jest.fn(),
-}));
+import { JsonRpcProvider } from "../aztec/provider/json_rpc_provider.js";
+import { jest } from "@jest/globals";
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock | any;
@@ -31,11 +29,13 @@ describe("Testing Angle Bridge", () => {
 
   const createBridgeData = (stableMaster = stableMasterContract) => {
     IStableMaster__factory.connect = () => stableMaster as any;
-    return AngleBridgeData.create({} as any);
+    return AngleBridgeData.create(new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"));
   };
 
   beforeAll(() => {
-    angleBridgeData = AngleBridgeData.create({} as any);
+    angleBridgeData = AngleBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+    );
 
     ethAsset = {
       id: 1,
@@ -95,13 +95,13 @@ describe("Testing Angle Bridge", () => {
     );
 
     angleBridgeData = createBridgeData({
-      collateralMap: jest.fn().mockResolvedValue({ sanToken: sanDAI.erc20Address.toString().toLowerCase() }),
+      collateralMap: jest.fn().mockReturnValue({ sanToken: sanDAI.erc20Address.toString().toLowerCase() }),
     } as any);
     expect(await angleBridgeData.getAuxData(sanDAI, emptyAsset, DAI, emptyAsset)).toEqual([1n]);
     expect(await angleBridgeData.getAuxData(DAI, emptyAsset, sanDAI, emptyAsset)).toEqual([0n]);
 
     angleBridgeData = createBridgeData({
-      collateralMap: jest.fn().mockResolvedValue({ sanToken: sanWETH.erc20Address.toString().toLowerCase() }),
+      collateralMap: jest.fn().mockReturnValue({ sanToken: sanWETH.erc20Address.toString().toLowerCase() }),
     } as any);
     await expect(() => angleBridgeData.getAuxData(DAI, emptyAsset, sanDAI, emptyAsset)).rejects.toEqual(
       "invalid outputAssetA",
@@ -111,7 +111,7 @@ describe("Testing Angle Bridge", () => {
 
   it("should get correct output", async () => {
     angleBridgeData = createBridgeData({
-      collateralMap: jest.fn().mockResolvedValue({
+      collateralMap: jest.fn().mockReturnValue({
         sanRate: utils.parseEther("1.2"),
         sanToken: sanDAI.erc20Address.toString().toLowerCase(),
       }),

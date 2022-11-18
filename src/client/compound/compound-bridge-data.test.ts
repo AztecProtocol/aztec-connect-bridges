@@ -10,11 +10,8 @@ import {
 } from "../../../typechain-types/index.js";
 import { AztecAsset, AztecAssetType } from "../bridge-data.js";
 import { CompoundBridgeData } from "./compound-bridge-data.js";
-import {jest} from '@jest/globals';
-
-jest.mock("../aztec/provider", () => ({
-  createWeb3Provider: jest.fn(),
-}));
+import { jest } from "@jest/globals";
+import { JsonRpcProvider } from "../aztec/provider/json_rpc_provider.js";
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock | any;
@@ -51,16 +48,18 @@ describe("compound lending bridge data", () => {
     // Setup mocks
     compoundERC4626Contract = {
       ...compoundERC4626Contract,
-      cToken: jest.fn().mockReturnValueOnce("0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643"),
+      cToken: jest.fn().mockReturnValue("0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643"),
     };
     ICompoundERC4626__factory.connect = () => compoundERC4626Contract as any;
 
     cerc20Contract = {
       ...cerc20Contract,
-      supplyRatePerBlock: jest.fn().mockReturnValueOnce(BigNumber.from("338149955")),
+      supplyRatePerBlock: jest.fn().mockReturnValue(BigNumber.from("338149955")),
     };
     ICERC20__factory.connect = () => cerc20Contract as any;
-    const compoundBridgeData = CompoundBridgeData.create({} as any);
+    const compoundBridgeData = CompoundBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+    );
 
     // Test the code using mocked controller
     const APR = await compoundBridgeData.getAPR(wcdaiAsset);
@@ -71,23 +70,25 @@ describe("compound lending bridge data", () => {
     // Setup mocks
     compoundERC4626Contract = {
       ...compoundERC4626Contract,
-      cToken: jest.fn().mockReturnValueOnce("0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643"),
+      cToken: jest.fn().mockReturnValue("0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643"),
     };
     ICompoundERC4626__factory.connect = () => compoundERC4626Contract as any;
 
     erc20Contract = {
       ...erc20Contract,
-      balanceOf: jest.fn().mockReturnValueOnce(BigNumber.from("354266465288194354360018823")),
+      balanceOf: jest.fn().mockReturnValue(BigNumber.from("354266465288194354360018823")),
     };
     IERC20__factory.connect = () => erc20Contract as any;
 
     cerc20Contract = {
       ...cerc20Contract,
-      totalBorrows: jest.fn().mockReturnValueOnce(BigNumber.from("302183964811046170986358904")),
+      totalBorrows: jest.fn().mockReturnValue(BigNumber.from("302183964811046170986358904")),
     };
     IERC20__factory.connect = () => erc20Contract as any;
 
-    const compoundBridgeData = CompoundBridgeData.create({} as any);
+    const compoundBridgeData = CompoundBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+    );
 
     // Test the code using mocked controller
     const marketSizeMint = (

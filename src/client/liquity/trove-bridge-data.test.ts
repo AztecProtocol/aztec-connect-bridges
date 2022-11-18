@@ -10,10 +10,8 @@ import {
 } from "../../../typechain-types/index.js";
 import { AztecAsset, AztecAssetType } from "../bridge-data.js";
 import { TroveBridgeData } from "./trove-bridge-data.js";
-
-jest.mock("../aztec/provider", () => ({
-  createWeb3Provider: jest.fn(),
-}));
+import { jest } from "@jest/globals";
+import { JsonRpcProvider } from "../aztec/provider/json_rpc_provider.js";
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock | any;
@@ -55,19 +53,25 @@ describe("Liquity trove bridge data", () => {
   it("should correctly fetch auxData when borrowing", async () => {
     troveManager = {
       ...troveManager,
-      getBorrowingRateWithDecay: jest.fn().mockResolvedValue(BigNumber.from("5000000000591148")),
+      getBorrowingRateWithDecay: jest.fn().mockReturnValue(BigNumber.from("5000000000591148")),
     };
 
     ITroveManager__factory.connect = () => troveManager as any;
 
-    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      tbAsset.erc20Address,
+    );
 
     const auxDataBorrow = await troveBridgeData.getAuxData(ethAsset, emptyAsset, tbAsset, lusdAsset);
     expect(auxDataBorrow[0]).toBe(6000000000000000n);
   });
 
   it("should correctly fetch auxData when not borrowing", async () => {
-    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      tbAsset.erc20Address,
+    );
 
     const auxDataBorrow = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, lusdAsset);
     expect(auxDataBorrow[0]).toBe(0n);
@@ -78,13 +82,16 @@ describe("Liquity trove bridge data", () => {
     troveBridge = {
       ...troveBridge,
       callStatic: {
-        computeAmtToBorrow: jest.fn().mockResolvedValue(BigNumber.from("1000000000000000000000")), // 1000 LUSD
+        computeAmtToBorrow: jest.fn().mockReturnValue(BigNumber.from("1000000000000000000000")), // 1000 LUSD
       },
       address: tbAsset.erc20Address.toString(),
     };
     TroveBridge__factory.connect = () => troveBridge as any;
 
-    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      tbAsset.erc20Address,
+    );
 
     const outputBorrow = await troveBridgeData.getExpectedOutput(
       ethAsset,
@@ -102,13 +109,13 @@ describe("Liquity trove bridge data", () => {
     // Setup mocks
     troveBridge = {
       ...troveBridge,
-      totalSupply: jest.fn().mockResolvedValue(BigNumber.from("1000000000000000000000")), // 1000 TB
+      totalSupply: jest.fn().mockReturnValue(BigNumber.from("1000000000000000000000")), // 1000 TB
     };
     TroveBridge__factory.connect = () => troveBridge as any;
 
     troveManager = {
       ...troveManager,
-      getEntireDebtAndColl: jest.fn().mockResolvedValue({
+      getEntireDebtAndColl: jest.fn().mockReturnValue({
         debt: BigNumber.from("1000000000000000000000"), // 1000 LUSD
         coll: BigNumber.from("1000000000000000000000"), // 1000 ETH
         pendingLUSDDebtReward: BigNumber.from("0"), // not used - can be 0
@@ -118,7 +125,10 @@ describe("Liquity trove bridge data", () => {
 
     ITroveManager__factory.connect = () => troveManager as any;
 
-    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      tbAsset.erc20Address,
+    );
 
     const inputValue = 10n ** 18n;
     const output = await troveBridgeData.getExpectedOutput(tbAsset, lusdAsset, ethAsset, lusdAsset, 0n, inputValue);
@@ -132,7 +142,7 @@ describe("Liquity trove bridge data", () => {
     // Setup mocks
     troveManager = {
       ...troveManager,
-      getEntireDebtAndColl: jest.fn().mockResolvedValue({
+      getEntireDebtAndColl: jest.fn().mockReturnValue({
         debt: BigNumber.from("0"), // not used - can be 0
         coll: BigNumber.from("1000000000000000000000"), // 1000 ETH
         pendingLUSDDebtReward: BigNumber.from("0"), // not used - can be 0
@@ -142,7 +152,10 @@ describe("Liquity trove bridge data", () => {
 
     ITroveManager__factory.connect = () => troveManager as any;
 
-    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      tbAsset.erc20Address,
+    );
 
     const output = await troveBridgeData.getMarketSize(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0n);
     const marketSize = output[0];
@@ -154,9 +167,9 @@ describe("Liquity trove bridge data", () => {
     // Setup mocks
     troveManager = {
       ...troveManager,
-      priceFeed: jest.fn().mockResolvedValue(EthAddress.random().toString()),
-      checkRecoveryMode: jest.fn().mockResolvedValue(false),
-      getBorrowingRateWithDecay: jest.fn().mockResolvedValue(BigNumber.from("5000000000576535")),
+      priceFeed: jest.fn().mockReturnValue(EthAddress.random().toString()),
+      checkRecoveryMode: jest.fn().mockReturnValue(false),
+      getBorrowingRateWithDecay: jest.fn().mockReturnValue(BigNumber.from("5000000000576535")),
     };
 
     ITroveManager__factory.connect = () => troveManager as any;
@@ -164,12 +177,15 @@ describe("Liquity trove bridge data", () => {
     priceFeed = {
       ...priceFeed,
       callStatic: {
-        fetchPrice: jest.fn().mockResolvedValue(BigNumber.from("1000")),
+        fetchPrice: jest.fn().mockReturnValue(BigNumber.from("1000")),
       },
     };
     IPriceFeed__factory.connect = () => priceFeed as any;
 
-    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      tbAsset.erc20Address,
+    );
 
     const borrowAmount = 1000n * 10n ** 18n; // 1000 LUSD
     const borrowingFee = await troveBridgeData.getBorrowingFee(borrowAmount);
@@ -180,9 +196,9 @@ describe("Liquity trove bridge data", () => {
     // Setup mocks
     troveManager = {
       ...troveManager,
-      priceFeed: jest.fn().mockResolvedValue(EthAddress.random().toString()),
-      checkRecoveryMode: jest.fn().mockResolvedValue(true),
-      getBorrowingRateWithDecay: jest.fn().mockResolvedValue(BigNumber.from("5000000000576535")),
+      priceFeed: jest.fn().mockReturnValue(EthAddress.random().toString()),
+      checkRecoveryMode: jest.fn().mockReturnValue(true),
+      getBorrowingRateWithDecay: jest.fn().mockReturnValue(BigNumber.from("5000000000576535")),
     };
 
     ITroveManager__factory.connect = () => troveManager as any;
@@ -190,12 +206,15 @@ describe("Liquity trove bridge data", () => {
     priceFeed = {
       ...priceFeed,
       callStatic: {
-        fetchPrice: jest.fn().mockResolvedValue(BigNumber.from("1000")),
+        fetchPrice: jest.fn().mockReturnValue(BigNumber.from("1000")),
       },
     };
     IPriceFeed__factory.connect = () => priceFeed as any;
 
-    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      tbAsset.erc20Address,
+    );
 
     const borrowAmount = 1000n * 10n ** 18n; // 1000 LUSD
     const borrowingFee = await troveBridgeData.getBorrowingFee(borrowAmount);
@@ -206,8 +225,8 @@ describe("Liquity trove bridge data", () => {
     // Setup mocks
     troveManager = {
       ...troveManager,
-      priceFeed: jest.fn().mockResolvedValue(EthAddress.random().toString()),
-      getCurrentICR: jest.fn().mockResolvedValue(BigNumber.from("2500000000000000000")),
+      priceFeed: jest.fn().mockReturnValue(EthAddress.random().toString()),
+      getCurrentICR: jest.fn().mockReturnValue(BigNumber.from("2500000000000000000")),
     };
 
     ITroveManager__factory.connect = () => troveManager as any;
@@ -215,12 +234,15 @@ describe("Liquity trove bridge data", () => {
     priceFeed = {
       ...priceFeed,
       callStatic: {
-        fetchPrice: jest.fn().mockResolvedValue(BigNumber.from("1000")),
+        fetchPrice: jest.fn().mockReturnValue(BigNumber.from("1000")),
       },
     };
     IPriceFeed__factory.connect = () => priceFeed as any;
 
-    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      tbAsset.erc20Address,
+    );
 
     const currentCR = await troveBridgeData.getCurrentCR();
     expect(currentCR).toBe(250n);
@@ -230,13 +252,13 @@ describe("Liquity trove bridge data", () => {
     // Setup mocks
     troveBridge = {
       ...troveBridge,
-      totalSupply: jest.fn().mockResolvedValue(BigNumber.from("1000000000000000000000")), // 1000 TB
+      totalSupply: jest.fn().mockReturnValue(BigNumber.from("1000000000000000000000")), // 1000 TB
     };
     TroveBridge__factory.connect = () => troveBridge as any;
 
     troveManager = {
       ...troveManager,
-      getEntireDebtAndColl: jest.fn().mockResolvedValue({
+      getEntireDebtAndColl: jest.fn().mockReturnValue({
         debt: BigNumber.from("1000000000000000000000"), // 1000 LUSD
         coll: BigNumber.from("1000000000000000000000"), // 1000 ETH
         pendingLUSDDebtReward: BigNumber.from("0"), // not used - can be 0
@@ -246,7 +268,10 @@ describe("Liquity trove bridge data", () => {
 
     ITroveManager__factory.connect = () => troveManager as any;
 
-    const troveBridgeData = TroveBridgeData.create({} as any, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      tbAsset.erc20Address,
+    );
 
     const inputValue = 10n ** 18n; // 1 TB
     const output = await troveBridgeData.getUserDebtAndCollateral(inputValue);

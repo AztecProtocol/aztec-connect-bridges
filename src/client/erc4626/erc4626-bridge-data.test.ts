@@ -8,10 +8,8 @@ import {
 } from "../../../typechain-types/index.js";
 import { AztecAsset, AztecAssetType } from "../bridge-data.js";
 import { ERC4626BridgeData } from "./erc4626-bridge-data.js";
-
-jest.mock("../aztec/provider", () => ({
-  createWeb3Provider: jest.fn(),
-}));
+import { jest } from "@jest/globals";
+import { JsonRpcProvider } from "../aztec/provider/json_rpc_provider.js";
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock | any;
@@ -47,11 +45,13 @@ describe("ERC4626 bridge data", () => {
     // Setup mocks
     erc4626Contract = {
       ...erc4626Contract,
-      asset: jest.fn().mockResolvedValue(mplAsset.erc20Address.toString()),
+      asset: jest.fn().mockReturnValue(mplAsset.erc20Address.toString()),
     };
     IERC4626__factory.connect = () => erc4626Contract as any;
 
-    const erc4626BridgeData = ERC4626BridgeData.create({} as any);
+    const erc4626BridgeData = ERC4626BridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+    );
 
     // Test the code using mocked controller
     const auxDataIssue = await erc4626BridgeData.getAuxData(mplAsset, emptyAsset, xmplAsset, emptyAsset);
@@ -62,11 +62,13 @@ describe("ERC4626 bridge data", () => {
     // Setup mocks
     erc4626Contract = {
       ...erc4626Contract,
-      asset: jest.fn().mockResolvedValue(mplAsset.erc20Address.toString()),
+      asset: jest.fn().mockReturnValue(mplAsset.erc20Address.toString()),
     };
     IERC4626__factory.connect = () => erc4626Contract as any;
 
-    const erc4626BridgeData = ERC4626BridgeData.create({} as any);
+    const erc4626BridgeData = ERC4626BridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+    );
 
     // Test the code using mocked controller
     const auxDataRedeem = await erc4626BridgeData.getAuxData(xmplAsset, emptyAsset, mplAsset, emptyAsset);
@@ -77,11 +79,13 @@ describe("ERC4626 bridge data", () => {
     // Setup mocks
     erc4626Contract = {
       ...erc4626Contract,
-      previewDeposit: jest.fn().mockResolvedValue(BigNumber.from("111111")),
+      previewDeposit: jest.fn().mockReturnValue(BigNumber.from("111111")),
     };
     IERC4626__factory.connect = () => erc4626Contract as any;
 
-    const erc4626BridgeData = ERC4626BridgeData.create({} as any);
+    const erc4626BridgeData = ERC4626BridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+    );
 
     // Test the code using mocked controller
     const expectedOutput = (
@@ -94,11 +98,13 @@ describe("ERC4626 bridge data", () => {
     // Setup mocks
     erc4626Contract = {
       ...erc4626Contract,
-      previewRedeem: jest.fn().mockResolvedValue(BigNumber.from("111111")),
+      previewRedeem: jest.fn().mockReturnValue(BigNumber.from("111111")),
     };
     IERC4626__factory.connect = () => erc4626Contract as any;
 
-    const erc4626BridgeData = ERC4626BridgeData.create({} as any);
+    const erc4626BridgeData = ERC4626BridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+    );
 
     // Test the code using mocked controller
     const expectedOutput = (
@@ -111,11 +117,13 @@ describe("ERC4626 bridge data", () => {
     // Setup mocks
     erc4626Contract = {
       ...erc4626Contract,
-      asset: jest.fn().mockResolvedValue(mplAsset.erc20Address.toString()),
+      asset: jest.fn().mockReturnValue(mplAsset.erc20Address.toString()),
     };
     IERC4626__factory.connect = () => erc4626Contract as any;
 
-    const erc4626BridgeData = ERC4626BridgeData.create({} as any);
+    const erc4626BridgeData = ERC4626BridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+    );
 
     // Test the code using mocked controller
     const asset = await erc4626BridgeData.getAsset(xmplAsset.erc20Address);
@@ -126,20 +134,22 @@ describe("ERC4626 bridge data", () => {
     // Setup mocks
     erc4626Contract = {
       ...erc4626Contract,
-      asset: jest.fn().mockResolvedValue(mplAsset.erc20Address.toString()),
+      asset: jest.fn().mockReturnValue(mplAsset.erc20Address.toString()),
       previewRedeem: jest.fn(() => BigNumber.from("100")),
     };
     IERC4626__factory.connect = () => erc4626Contract as any;
 
     erc2MetadataContract = {
       ...erc2MetadataContract,
-      name: jest.fn().mockResolvedValue("Maple Token"),
-      symbol: jest.fn().mockResolvedValue("MPL"),
-      decimals: jest.fn().mockResolvedValue(18),
+      name: jest.fn().mockReturnValue("Maple Token"),
+      symbol: jest.fn().mockReturnValue("MPL"),
+      decimals: jest.fn().mockReturnValue(18),
     };
     IERC20Metadata__factory.connect = () => erc2MetadataContract as any;
 
-    const erc4626BridgeData = ERC4626BridgeData.create({} as any);
+    const erc4626BridgeData = ERC4626BridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+    );
     const underlyingAsset = await erc4626BridgeData.getUnderlyingAmount(xmplAsset, 10n ** 18n);
 
     expect(underlyingAsset.address.toString()).toBe(mplAsset.erc20Address.toString());

@@ -12,10 +12,8 @@ import {
 } from "../../../typechain-types/index.js";
 import { AztecAsset, AztecAssetType } from "../bridge-data.js";
 import { YearnBridgeData } from "./yearn-bridge-data.js";
-
-jest.mock("../aztec/provider", () => ({
-  createWeb3Provider: jest.fn(),
-}));
+import { jest } from "@jest/globals";
+import { JsonRpcProvider } from "../aztec/provider/json_rpc_provider.js";
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock | any;
@@ -104,7 +102,10 @@ describe("Testing Yearn auxData", () => {
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      EthAddress.random(),
+    );
     const auxDataDepositERC20 = await yearnBridgeData.getAuxData(daiAsset, emptyAsset, yvDaiAsset, emptyAsset);
     expect(auxDataDepositERC20[0]).toBe(0n);
     const auxDataDepositETH = await yearnBridgeData.getAuxData(ethAsset, emptyAsset, yvEthAsset, emptyAsset);
@@ -145,7 +146,10 @@ describe("Testing Yearn auxData", () => {
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      EthAddress.random(),
+    );
     const auxDataDepositERC20 = await yearnBridgeData.getAuxData(yvDaiAsset, emptyAsset, daiAsset, emptyAsset);
     expect(auxDataDepositERC20[0]).toBe(1n);
     const auxDataDepositETH = await yearnBridgeData.getAuxData(yvEthAsset, emptyAsset, ethAsset, emptyAsset);
@@ -172,11 +176,14 @@ describe("Testing Yearn auxData", () => {
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn().mockResolvedValue(EthAddress.random().toString()),
+      getSupportedAsset: jest.fn().mockReturnValue(EthAddress.random().toString()),
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      EthAddress.random(),
+    );
 
     expect.assertions(1);
     await expect(yearnBridgeData.getAuxData(yvDaiAsset, emptyAsset, ethAsset, emptyAsset)).rejects.toEqual(
@@ -204,11 +211,14 @@ describe("Testing Yearn auxData", () => {
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn().mockResolvedValue(EthAddress.random().toString()),
+      getSupportedAsset: jest.fn().mockReturnValue(EthAddress.random().toString()),
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      EthAddress.random(),
+    );
 
     expect.assertions(1);
     await expect(yearnBridgeData.getAuxData(ethAsset, emptyAsset, yvEthAsset, emptyAsset)).rejects.toEqual(
@@ -252,7 +262,10 @@ describe("Testing Yearn auxData", () => {
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      EthAddress.random(),
+    );
 
     expect.assertions(8);
     await expect(yearnBridgeData.getAuxData(ethAsset, emptyAsset, yvDaiAsset, emptyAsset)).rejects.toEqual(
@@ -328,7 +341,10 @@ describe("Testing Yearn expectedOutput", () => {
     };
     IYearnVault__factory.connect = () => vaultContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      EthAddress.random(),
+    );
 
     const expectedOutputERC20 = await yearnBridgeData.getExpectedOutput(
       daiAsset,
@@ -362,7 +378,10 @@ describe("Testing Yearn expectedOutput", () => {
     };
     IYearnVault__factory.connect = () => vaultContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      EthAddress.random(),
+    );
 
     const expectedOutputERC20 = await yearnBridgeData.getExpectedOutput(
       yvDaiAsset,
@@ -396,7 +415,10 @@ describe("Testing Yearn expectedOutput", () => {
     };
     IYearnVault__factory.connect = () => vaultContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      EthAddress.random(),
+    );
 
     expect.assertions(3);
     await expect(
@@ -411,7 +433,10 @@ describe("Testing Yearn expectedOutput", () => {
   });
 
   it("should throw with incorrect tokens on the input", async () => {
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      EthAddress.random(),
+    );
 
     await expect(
       yearnBridgeData.getExpectedOutput(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0n, 0n),
@@ -440,7 +465,10 @@ describe("Testing Yearn getAPR", () => {
   });
 
   it("should correctly compute APR", async () => {
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      EthAddress.random(),
+    );
     const expectedAPRDai = await yearnBridgeData.getAPR(yvDaiAsset);
     expect(expectedAPRDai).not.toBeUndefined();
     expect(expectedAPRDai).toBeGreaterThan(0);
@@ -480,11 +508,14 @@ describe("Testing Yearn getMarketSize", () => {
     // Setup mocks
     vaultContract = {
       ...vaultContract,
-      totalAssets: jest.fn().mockResolvedValue(BigNumber.from("97513214188808613008055674")),
+      totalAssets: jest.fn().mockReturnValue(BigNumber.from("97513214188808613008055674")),
     };
     IYearnVault__factory.connect = () => vaultContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      EthAddress.random(),
+    );
     const expectedMarketSize = (
       await yearnBridgeData.getMarketSize(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 0n)
     )[0].value;
@@ -510,7 +541,7 @@ describe("Testing Yearn getUnderlyingAmount", () => {
     // Setup mocks
     vaultContract = {
       ...vaultContract,
-      token: jest.fn().mockResolvedValue("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+      token: jest.fn().mockReturnValue("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
       pricePerShare: jest.fn(() => BigNumber.from("1110200000000000000")),
       decimals: jest.fn(() => 18),
     };
@@ -518,13 +549,16 @@ describe("Testing Yearn getUnderlyingAmount", () => {
 
     erc2MetadataContract = {
       ...erc2MetadataContract,
-      name: jest.fn().mockResolvedValue("Dai Stablecoin"),
-      symbol: jest.fn().mockResolvedValue("DAI"),
-      decimals: jest.fn().mockResolvedValue(18),
+      name: jest.fn().mockReturnValue("Dai Stablecoin"),
+      symbol: jest.fn().mockReturnValue("DAI"),
+      decimals: jest.fn().mockReturnValue(18),
     };
     IERC20Metadata__factory.connect = () => erc2MetadataContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(
+      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      EthAddress.random(),
+    );
     const underlyingAsset = await yearnBridgeData.getUnderlyingAmount(yvDaiAsset, 10n ** 18n);
 
     expect(underlyingAsset.address.toString()).toBe("0x6B175474E89094C44Da98b954EedeAC495271d0F");
