@@ -476,6 +476,11 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             lusdToBuy = debtToRepay;
         }
 
+        // Saving a balance to a local variable to later get a `collateralReturned` value unaffected by a previously
+        // held balance --> This is important because if we set `collateralReturned` to `address(this).balance`
+        // the value might be larger than `collToWithdraw` which could cause underflow when computing `collateralSold`
+        uint256 ethBalanceBeforeSwap = address(this).balance;
+
         (bool success, ) = LUSD_USDC_POOL.call(
             abi.encodeWithSignature(
                 "swap(address,bool,int256,uint160,bytes)",
@@ -489,7 +494,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
 
         if (success) {
             // Note: Debt repayment took place in the `uniswapV3SwapCallback(...)` function
-            collateralReturned = address(this).balance;
+            collateralReturned = address(this).balance - ethBalanceBeforeSwap;
 
             {
                 // Check that at most `maxCost` of ETH collateral was sold for `debtToRepay` worth of LUSD
