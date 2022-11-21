@@ -350,6 +350,38 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         _openTrove();
     }
 
+    // @dev run against a block when the flash swap doesn't fail
+    function testRedistributionUnderflowBug() public {
+        _setUpRedistribution();
+
+        // Mint ETH to the bridge to test whether the underflow bug found in the 2nd audit is still present
+        deal(address(bridge), 100e18);
+
+        // Repay
+        AztecTypes.AztecAsset memory tbAsset = AztecTypes.AztecAsset(
+            2,
+            address(bridge),
+            AztecTypes.AztecAssetType.ERC20
+        );
+        AztecTypes.AztecAsset memory lusdAsset = AztecTypes.AztecAsset(
+            1,
+            tokens["LUSD"].addr,
+            AztecTypes.AztecAssetType.ERC20
+        );
+        AztecTypes.AztecAsset memory ethAsset = AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH);
+
+        // inputValue is equal to rollupProcessor TB balance --> we want to repay the debt in full
+        uint256 inputValue = bridge.balanceOf(rollupProcessor);
+        // Transfer TB to the bridge
+        IERC20(tbAsset.erc20Address).transfer(address(bridge), inputValue);
+
+        // Mint the amount to repay to the bridge
+        deal(lusdAsset.erc20Address, address(bridge), inputValue + bridge.DUST());
+
+        // If the bug is present the following will revert with underflow
+        bridge.convert(tbAsset, lusdAsset, ethAsset, tbAsset, inputValue, 1, _getPrice(-1e20), address(0));
+    }
+
     function testRepayingAfterRedistributionRevertsWhenMaxCostExceeded() public {
         _setUpRedistribution();
 
