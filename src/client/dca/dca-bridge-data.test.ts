@@ -14,19 +14,20 @@ describe("DCA bridge data", () => {
   let dcaBridgeData: DCABridgeData;
   let dcaBridgeContract: Mockify<BiDCABridge>;
 
+  let provider: JsonRpcProvider;
+
   let ethAsset: AztecAsset;
   let daiAsset: AztecAsset;
   let emptyAsset: AztecAsset;
 
   const createDCABridge = (dcaBridge: BiDCABridge = dcaBridgeContract as any) => {
     BiDCABridge__factory.connect = () => dcaBridge as any;
-    return DCABridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-      EthAddress.ZERO,
-    );
+    return DCABridgeData.create(provider, EthAddress.ZERO);
   };
 
   beforeAll(() => {
+    provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+
     ethAsset = {
       id: 0,
       assetType: AztecAssetType.ETH,

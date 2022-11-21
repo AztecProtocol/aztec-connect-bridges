@@ -22,11 +22,15 @@ describe("compound lending bridge data", () => {
   let cerc20Contract: Mockify<ICERC20>;
   let erc20Contract: Mockify<IERC20>;
 
+  let provider: JsonRpcProvider;
+
   let daiAsset: AztecAsset;
   let wcdaiAsset: AztecAsset;
   let emptyAsset: AztecAsset;
 
   beforeAll(() => {
+    provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+
     daiAsset = {
       id: 1,
       assetType: AztecAssetType.ERC20,
@@ -57,9 +61,7 @@ describe("compound lending bridge data", () => {
       supplyRatePerBlock: jest.fn().mockReturnValue(BigNumber.from("338149955")),
     };
     ICERC20__factory.connect = () => cerc20Contract as any;
-    const compoundBridgeData = CompoundBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-    );
+    const compoundBridgeData = CompoundBridgeData.create(provider);
 
     // Test the code using mocked controller
     const APR = await compoundBridgeData.getAPR(wcdaiAsset);
@@ -86,9 +88,7 @@ describe("compound lending bridge data", () => {
     };
     IERC20__factory.connect = () => erc20Contract as any;
 
-    const compoundBridgeData = CompoundBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-    );
+    const compoundBridgeData = CompoundBridgeData.create(provider);
 
     // Test the code using mocked controller
     const marketSizeMint = (

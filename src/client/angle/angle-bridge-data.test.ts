@@ -14,6 +14,8 @@ describe("Testing Angle Bridge", () => {
   let angleBridgeData: AngleBridgeData;
   let stableMasterContract: Mockify<IStableMaster>;
 
+  let provider: JsonRpcProvider;
+
   let ethAsset: AztecAsset;
   let emptyAsset: AztecAsset;
 
@@ -29,13 +31,13 @@ describe("Testing Angle Bridge", () => {
 
   const createBridgeData = (stableMaster = stableMasterContract) => {
     IStableMaster__factory.connect = () => stableMaster as any;
-    return AngleBridgeData.create(new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"));
+    return AngleBridgeData.create(provider);
   };
 
   beforeAll(() => {
-    angleBridgeData = AngleBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-    );
+    provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+
+    angleBridgeData = AngleBridgeData.create(provider);
 
     ethAsset = {
       id: 1,

@@ -23,6 +23,8 @@ describe("lido bridge data", () => {
   let curvePoolContract: Mockify<ICurvePool>;
   let lidoOracleContract: Mockify<ILidoOracle>;
 
+  let provider: JsonRpcProvider;
+
   let ethAsset: AztecAsset;
   let wstETHAsset: AztecAsset;
   let emptyAsset: AztecAsset;
@@ -35,15 +37,12 @@ describe("lido bridge data", () => {
     IWstETH__factory.connect = () => wsteth as any;
     ICurvePool__factory.connect = () => curvePool as any;
     ILidoOracle__factory.connect = () => lidoOracle as any;
-    return LidoBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-      EthAddress.ZERO,
-      EthAddress.ZERO,
-      EthAddress.ZERO,
-    ); // can pass in dummy values here as the above factories do all of the work
+    return LidoBridgeData.create(provider, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO); // can pass in dummy values here as the above factories do all of the work
   };
 
   beforeAll(() => {
+    provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+
     ethAsset = {
       id: 1,
       assetType: AztecAssetType.ETH,

@@ -19,11 +19,15 @@ describe("ERC4626 bridge data", () => {
   let erc4626Contract: Mockify<IERC4626>;
   let erc2MetadataContract: Mockify<IERC20Metadata>;
 
+  let provider: JsonRpcProvider;
+
   let mplAsset: AztecAsset;
   let xmplAsset: AztecAsset;
   let emptyAsset: AztecAsset;
 
   beforeAll(() => {
+    provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+
     mplAsset = {
       id: 10, // Asset has not yet been registered on RollupProcessor so this id is random
       assetType: AztecAssetType.ERC20,
@@ -49,9 +53,7 @@ describe("ERC4626 bridge data", () => {
     };
     IERC4626__factory.connect = () => erc4626Contract as any;
 
-    const erc4626BridgeData = ERC4626BridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-    );
+    const erc4626BridgeData = ERC4626BridgeData.create(provider);
 
     // Test the code using mocked controller
     const auxDataIssue = await erc4626BridgeData.getAuxData(mplAsset, emptyAsset, xmplAsset, emptyAsset);
@@ -66,9 +68,7 @@ describe("ERC4626 bridge data", () => {
     };
     IERC4626__factory.connect = () => erc4626Contract as any;
 
-    const erc4626BridgeData = ERC4626BridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-    );
+    const erc4626BridgeData = ERC4626BridgeData.create(provider);
 
     // Test the code using mocked controller
     const auxDataRedeem = await erc4626BridgeData.getAuxData(xmplAsset, emptyAsset, mplAsset, emptyAsset);
@@ -83,9 +83,7 @@ describe("ERC4626 bridge data", () => {
     };
     IERC4626__factory.connect = () => erc4626Contract as any;
 
-    const erc4626BridgeData = ERC4626BridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-    );
+    const erc4626BridgeData = ERC4626BridgeData.create(provider);
 
     // Test the code using mocked controller
     const expectedOutput = (
@@ -102,9 +100,7 @@ describe("ERC4626 bridge data", () => {
     };
     IERC4626__factory.connect = () => erc4626Contract as any;
 
-    const erc4626BridgeData = ERC4626BridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-    );
+    const erc4626BridgeData = ERC4626BridgeData.create(provider);
 
     // Test the code using mocked controller
     const expectedOutput = (
@@ -121,9 +117,7 @@ describe("ERC4626 bridge data", () => {
     };
     IERC4626__factory.connect = () => erc4626Contract as any;
 
-    const erc4626BridgeData = ERC4626BridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-    );
+    const erc4626BridgeData = ERC4626BridgeData.create(provider);
 
     // Test the code using mocked controller
     const asset = await erc4626BridgeData.getAsset(xmplAsset.erc20Address);
@@ -147,9 +141,7 @@ describe("ERC4626 bridge data", () => {
     };
     IERC20Metadata__factory.connect = () => erc2MetadataContract as any;
 
-    const erc4626BridgeData = ERC4626BridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-    );
+    const erc4626BridgeData = ERC4626BridgeData.create(provider);
     const underlyingAsset = await erc4626BridgeData.getUnderlyingAmount(xmplAsset, 10n ** 18n);
 
     expect(underlyingAsset.address.toString()).toBe(mplAsset.erc20Address.toString());

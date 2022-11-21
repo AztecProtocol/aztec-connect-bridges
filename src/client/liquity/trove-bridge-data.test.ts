@@ -22,12 +22,16 @@ describe("Liquity trove bridge data", () => {
   let troveManager: Mockify<ITroveManager>;
   let priceFeed: Mockify<IPriceFeed>;
 
+  let provider: JsonRpcProvider;
+
   let ethAsset: AztecAsset;
   let lusdAsset: AztecAsset;
   let tbAsset: AztecAsset;
   let emptyAsset: AztecAsset;
 
   beforeAll(() => {
+    provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+
     ethAsset = {
       id: 1,
       assetType: AztecAssetType.ETH,
@@ -58,20 +62,14 @@ describe("Liquity trove bridge data", () => {
 
     ITroveManager__factory.connect = () => troveManager as any;
 
-    const troveBridgeData = TroveBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-      tbAsset.erc20Address,
-    );
+    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
 
     const auxDataBorrow = await troveBridgeData.getAuxData(ethAsset, emptyAsset, tbAsset, lusdAsset);
     expect(auxDataBorrow[0]).toBe(6000000000000000n);
   });
 
   it("should correctly fetch auxData when not borrowing", async () => {
-    const troveBridgeData = TroveBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-      tbAsset.erc20Address,
-    );
+    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
 
     const auxDataBorrow = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, lusdAsset);
     expect(auxDataBorrow[0]).toBe(0n);
@@ -88,10 +86,7 @@ describe("Liquity trove bridge data", () => {
     };
     TroveBridge__factory.connect = () => troveBridge as any;
 
-    const troveBridgeData = TroveBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-      tbAsset.erc20Address,
-    );
+    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
 
     const outputBorrow = await troveBridgeData.getExpectedOutput(
       ethAsset,
@@ -125,10 +120,7 @@ describe("Liquity trove bridge data", () => {
 
     ITroveManager__factory.connect = () => troveManager as any;
 
-    const troveBridgeData = TroveBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-      tbAsset.erc20Address,
-    );
+    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
 
     const inputValue = 10n ** 18n;
     const output = await troveBridgeData.getExpectedOutput(tbAsset, lusdAsset, ethAsset, lusdAsset, 0n, inputValue);
@@ -152,10 +144,7 @@ describe("Liquity trove bridge data", () => {
 
     ITroveManager__factory.connect = () => troveManager as any;
 
-    const troveBridgeData = TroveBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-      tbAsset.erc20Address,
-    );
+    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
 
     const output = await troveBridgeData.getMarketSize(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0n);
     const marketSize = output[0];
@@ -182,10 +171,7 @@ describe("Liquity trove bridge data", () => {
     };
     IPriceFeed__factory.connect = () => priceFeed as any;
 
-    const troveBridgeData = TroveBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-      tbAsset.erc20Address,
-    );
+    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
 
     const borrowAmount = 1000n * 10n ** 18n; // 1000 LUSD
     const borrowingFee = await troveBridgeData.getBorrowingFee(borrowAmount);
@@ -211,10 +197,7 @@ describe("Liquity trove bridge data", () => {
     };
     IPriceFeed__factory.connect = () => priceFeed as any;
 
-    const troveBridgeData = TroveBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-      tbAsset.erc20Address,
-    );
+    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
 
     const borrowAmount = 1000n * 10n ** 18n; // 1000 LUSD
     const borrowingFee = await troveBridgeData.getBorrowingFee(borrowAmount);
@@ -239,10 +222,7 @@ describe("Liquity trove bridge data", () => {
     };
     IPriceFeed__factory.connect = () => priceFeed as any;
 
-    const troveBridgeData = TroveBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-      tbAsset.erc20Address,
-    );
+    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
 
     const currentCR = await troveBridgeData.getCurrentCR();
     expect(currentCR).toBe(250n);
@@ -268,10 +248,7 @@ describe("Liquity trove bridge data", () => {
 
     ITroveManager__factory.connect = () => troveManager as any;
 
-    const troveBridgeData = TroveBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-      tbAsset.erc20Address,
-    );
+    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
 
     const inputValue = 10n ** 18n; // 1 TB
     const output = await troveBridgeData.getUserDebtAndCollateral(inputValue);

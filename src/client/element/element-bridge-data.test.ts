@@ -50,6 +50,8 @@ describe("element bridge data", () => {
   const outputValue = 10n * 10n ** 18n;
   const testAddress = EthAddress.random();
 
+  const provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+
   const defiEvents = [
     {
       encodedBridgeCallData: bridgeCallData1.toBigInt(),
@@ -184,7 +186,7 @@ describe("element bridge data", () => {
     IVault__factory.connect = () => balancer as any;
     RollupProcessor__factory.connect = () => rollup as any;
     return ElementBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
+      provider,
       EthAddress.ZERO,
       EthAddress.ZERO,
       EthAddress.ZERO,

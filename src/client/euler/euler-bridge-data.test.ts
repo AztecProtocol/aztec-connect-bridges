@@ -14,6 +14,8 @@ describe("Euler bridge data", () => {
   let erc4626Contract: Mockify<IERC4626>;
   let lidoOracleContract: Mockify<ILidoOracle>;
 
+  let provider: JsonRpcProvider;
+
   let ethAsset: AztecAsset;
   let weDaiAsset: AztecAsset;
   let daiAsset: AztecAsset;
@@ -22,6 +24,8 @@ describe("Euler bridge data", () => {
   let emptyAsset: AztecAsset;
 
   beforeAll(() => {
+    provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+
     ethAsset = {
       id: 0,
       assetType: AztecAssetType.ETH,
@@ -61,9 +65,7 @@ describe("Euler bridge data", () => {
     };
     IERC4626__factory.connect = () => erc4626Contract as any;
 
-    const eulerBridgeData = EulerBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-    );
+    const eulerBridgeData = EulerBridgeData.create(provider);
     const apr = await eulerBridgeData.getAPR(weDaiAsset);
     expect(apr).toBeGreaterThan(0);
   });
@@ -87,27 +89,20 @@ describe("Euler bridge data", () => {
     };
     ILidoOracle__factory.connect = () => lidoOracleContract as any;
 
-    const eulerBridgeData = EulerBridgeData.createWithLido(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-      {} as any,
-    );
+    const eulerBridgeData = EulerBridgeData.createWithLido(provider, {} as any);
     const combinedEulerLidoAPR = await eulerBridgeData.getAPR(weWstethAsset);
     expect(combinedEulerLidoAPR).toBeGreaterThan(mockedLidoAPR);
   });
 
   it("should correctly fetch market size", async () => {
-    const eulerBridgeData = EulerBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-    );
+    const eulerBridgeData = EulerBridgeData.create(provider);
     const assetValue = (await eulerBridgeData.getMarketSize(daiAsset, emptyAsset, emptyAsset, emptyAsset, 0n))[0];
     expect(assetValue.assetId).toBe(daiAsset.id);
     expect(assetValue.value).toBeGreaterThan(0);
   });
 
   it("should correctly fetch market size for ETH", async () => {
-    const eulerBridgeData = EulerBridgeData.create(
-      new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c"),
-    );
+    const eulerBridgeData = EulerBridgeData.create(provider);
     const assetValue = (await eulerBridgeData.getMarketSize(ethAsset, emptyAsset, emptyAsset, emptyAsset, 0n))[0];
     expect(assetValue.assetId).toBe(ethAsset.id);
     expect(assetValue.value).toBeGreaterThan(0);
