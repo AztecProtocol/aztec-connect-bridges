@@ -214,6 +214,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
 
         if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
+            _inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED &&
             _outputAssetA.erc20Address == address(this) &&
             _outputAssetB.erc20Address == LUSD
         ) {
@@ -248,7 +249,10 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             }
             subsidyCriteria = 1;
         } else if (
-            _inputAssetA.erc20Address == address(this) && _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
+            _inputAssetA.erc20Address == address(this) &&
+            _inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED &&
+            _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
+            _outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED
         ) {
             if (troveStatus == Status.active) {
                 // Repaying debt with collateral (using flash swaps)
