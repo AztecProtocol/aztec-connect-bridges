@@ -186,7 +186,7 @@ describe("element bridge data", () => {
       EthAddress.ZERO,
       EthAddress.ZERO,
       EthAddress.ZERO,
-      "https://api.aztec.network/aztec-connect-prod/falafel/graphql",
+      "https://api.aztec.network/aztec-connect-prod/falafel",
     ); // can pass in dummy values here as the above factories do all of the work
   };
 

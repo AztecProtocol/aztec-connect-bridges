@@ -68,7 +68,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   private constructor(
     private elementBridgeContract: ElementBridge,
     private balancerContract: IVault,
-    private rollupContract: IRollupProcessor,
+    private rollupContract: RollupProcessor,
     private falafelEndpoint: string,
   ) {}
 
@@ -124,8 +124,7 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
     });
 
     const data = await response.json();
-    const txhash = `0x${data["data"]["block"]["ethTxHash"]}`;
-    const tx = await this.elementBridgeContract.provider.getTransactionReceipt(txhash);
+    const tx = await this.elementBridgeContract.provider.getTransactionReceipt(data["ethTxHash"]);
     return tx.blockNumber;
   }
 
