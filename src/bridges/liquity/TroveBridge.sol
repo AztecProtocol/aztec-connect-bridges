@@ -214,6 +214,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
 
         if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
+            _inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED &&
             _outputAssetA.erc20Address == address(this) &&
             _outputAssetB.erc20Address == LUSD
         ) {
@@ -248,7 +249,10 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             }
             subsidyCriteria = 1;
         } else if (
-            _inputAssetA.erc20Address == address(this) && _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
+            _inputAssetA.erc20Address == address(this) &&
+            _inputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED &&
+            _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
+            _outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED
         ) {
             if (troveStatus == Status.active) {
                 // Repaying debt with collateral (using flash swaps)
@@ -471,10 +475,16 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
             // Reverting here because an incorrect flow has been chosen --> there is no reason to be using flash swaps
             // when the amount of LUSD on input is enough to cover the debt
             if (debtToRepay <= _totalInputValue) revert ErrorLib.InvalidOutputB();
-            uint256 lusdToBuy = debtToRepay - _totalInputValue;
+            lusdToBuy = debtToRepay - _totalInputValue;
         } else {
             lusdToBuy = debtToRepay;
         }
+
+        // Saving a balance to a local variable to later get a `collateralReturned` value unaffected by a previously
+        // held balance --> This is important because if we would set `collateralReturned` to `address(this).balance`
+        // the value might be larger than `collToWithdraw` which could cause underflow when computing
+        // `collateralSoldToUniswap`
+        uint256 ethBalanceBeforeSwap = address(this).balance;
 
         (bool success, ) = LUSD_USDC_POOL.call(
             abi.encodeWithSignature(
@@ -489,13 +499,13 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
 
         if (success) {
             // Note: Debt repayment took place in the `uniswapV3SwapCallback(...)` function
-            collateralReturned = address(this).balance;
+            collateralReturned = address(this).balance - ethBalanceBeforeSwap;
 
             {
-                // Check that at most `maxCost` of ETH collateral was sold for `debtToRepay` worth of LUSD
-                uint256 maxCost = (lusdToBuy * _maxPrice) / PRECISION;
-                uint256 collateralSold = collToWithdraw - collateralReturned;
-                if (collateralSold > maxCost) revert MaxCostExceeded();
+                // Check that at most `maxCostInETH` of ETH collateral was sold for `debtToRepay` worth of LUSD
+                uint256 maxCostInETH = (lusdToBuy * _maxPrice) / PRECISION;
+                uint256 collateralSoldToUniswap = collToWithdraw - collateralReturned;
+                if (collateralSoldToUniswap > maxCostInETH) revert MaxCostExceeded();
             }
 
             // Burn all input TB
