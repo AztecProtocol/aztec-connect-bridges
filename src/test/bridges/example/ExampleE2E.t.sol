@@ -7,7 +7,7 @@ import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
 // Example-specific imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ExampleBridgeContract} from "../../../bridges/example/ExampleBridge.sol";
+import {ExampleBridge} from "../../../bridges/example/ExampleBridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
 /**
@@ -19,13 +19,13 @@ contract ExampleE2ETest is BridgeTestBase {
     address private constant BENEFICIARY = address(11);
 
     // The reference to the example bridge
-    ExampleBridgeContract internal bridge;
+    ExampleBridge internal bridge;
     // To store the id of the example bridge after being added
     uint256 private id;
 
     function setUp() public {
         // Deploy a new example bridge
-        bridge = new ExampleBridgeContract(address(ROLLUP_PROCESSOR));
+        bridge = new ExampleBridge(address(ROLLUP_PROCESSOR));
 
         // Use the label cheatcode to mark the address with "Example Bridge" in the traces
         vm.label(address(bridge), "Example Bridge");

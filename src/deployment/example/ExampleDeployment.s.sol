@@ -3,14 +3,14 @@
 pragma solidity >=0.8.4;
 
 import {BaseDeployment} from "../base/BaseDeployment.s.sol";
-import {ExampleBridgeContract} from "../../bridges/example/ExampleBridge.sol";
+import {ExampleBridge} from "../../bridges/example/ExampleBridge.sol";
 
 contract ExampleDeployment is BaseDeployment {
     function deploy() public returns (address) {
         emit log("Deploying example bridge");
 
         vm.broadcast();
-        ExampleBridgeContract bridge = new ExampleBridgeContract(ROLLUP_PROCESSOR);
+        ExampleBridge bridge = new ExampleBridge(ROLLUP_PROCESSOR);
 
         emit log_named_address("Example bridge deployed to", address(bridge));
 

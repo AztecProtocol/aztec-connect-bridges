@@ -7,7 +7,7 @@ import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
 // Example-specific imports
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ExampleBridgeContract} from "../../../bridges/example/ExampleBridge.sol";
+import {ExampleBridge} from "../../../bridges/example/ExampleBridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 
 // @notice The purpose of this test is to directly test convert functionality of the bridge.
@@ -17,7 +17,7 @@ contract ExampleUnitTest is BridgeTestBase {
 
     address private rollupProcessor;
     // The reference to the example bridge
-    ExampleBridgeContract private bridge;
+    ExampleBridge private bridge;
 
     // @dev This method exists on RollupProcessor.sol. It's defined here in order to be able to receive ETH like a real
     //      rollup processor would.
@@ -28,7 +28,7 @@ contract ExampleUnitTest is BridgeTestBase {
         rollupProcessor = address(this);
 
         // Deploy a new example bridge
-        bridge = new ExampleBridgeContract(rollupProcessor);
+        bridge = new ExampleBridge(rollupProcessor);
 
         // Set ETH balance of bridge and BENEFICIARY to 0 for clarity (somebody sent ETH to that address on mainnet)
         vm.deal(address(bridge), 0);
