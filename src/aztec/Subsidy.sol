@@ -60,7 +60,7 @@ contract Subsidy is ISubsidy {
 
     // @dev Using min possible `msg.value` upon subsidizing in order to limit possibility of front running attacks
     // --> e.g. attacker front-running real subsidy tx by sending 1 wei value tx making the real one revert
-    uint256 public constant override (ISubsidy) MIN_SUBSIDY_VALUE = 1e17;
+    uint256 public constant override(ISubsidy) MIN_SUBSIDY_VALUE = 1e17;
 
     // address bridge => uint256 criteria => Subsidy subsidy
     mapping(address => mapping(uint256 => Subsidy)) public subsidies;

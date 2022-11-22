@@ -22,17 +22,22 @@ jobs:
           shell: /bin/bash
           command: |
             yarn config set script-shell /bin/bash
-            yarn
-            yarn install:foundry
+            yarn install:foundryup
             export PATH=/home/circleci/.foundry/bin:$PATH
-            export PATH=/home/circleci/.forge/bin:$PATH
-            yarn setup:foundry
+            yarn install:foundry
+      - run:
+          name: Build Project
+          shell: /bin/bash
+          command: |
+            export PATH=/home/circleci/.foundry/bin:$PATH
+            yarn install:dependencies
             yarn build
       - run:
           name: Check Formatting
           shell: /bin/bash
           command: |
             yarn config set script-shell /bin/bash
+            export PATH=/home/circleci/.foundry/bin:$PATH
             yarn formatting:check
       - run:
           name: Check Linting Errors in Contracts
@@ -52,7 +57,6 @@ jobs:
           command: |
             yarn config set script-shell /bin/bash
             export PATH=/home/circleci/.foundry/bin:$PATH
-            export PATH=/home/circleci/.forge/bin:$PATH
             yarn test:contracts
       - run:
           name: Test Clients
@@ -60,16 +64,7 @@ jobs:
           command: |
             yarn config set script-shell /bin/bash
             export PATH=/home/circleci/.foundry/bin:$PATH
-            export PATH=/home/circleci/.forge/bin:$PATH
             yarn test:clients
-      - run:
-          name: Build
-          shell: /bin/bash
-          command: |
-            yarn config set script-shell /bin/bash
-            export PATH=/home/circleci/.foundry/bin:$PATH
-            export PATH=/home/circleci/.forge/bin:$PATH
-            yarn build
   publish:
     docker:
       - image: "cimg/python:3.10.6"
@@ -89,15 +84,19 @@ jobs:
             export PATH=/home/cicleci/.local/bin:$PATH
             vyper --version
       - run:
-          name: Setup Foundry and Build
+          name: Setup Foundry
           shell: /bin/bash
           command: |
             yarn config set script-shell /bin/bash
-            yarn
-            yarn install:foundry
+            yarn install:foundryup
             export PATH=/home/circleci/.foundry/bin:$PATH
-            export PATH=/home/circleci/.forge/bin:$PATH
-            yarn setup:foundry
+            yarn install:foundry
+      - run:
+          name: Build Project
+          shell: /bin/bash
+          command: |
+            export PATH=/home/circleci/.foundry/bin:$PATH
+            yarn install:dependencies
             yarn build
       - run:
           name: Publish
