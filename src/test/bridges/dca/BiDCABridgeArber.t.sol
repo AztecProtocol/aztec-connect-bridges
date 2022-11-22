@@ -53,16 +53,10 @@ contract BiDCABridgeArberTest is Test {
         assetA = IERC20(address(0x6B175474E89094C44Da98b954EedeAC495271d0F));
         assetB = IERC20(address(WETH));
         bridge = new UniswapDCABridge(address(this), 1 days, 10);
-        aztecAssetA = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(assetA),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-        aztecAssetB = AztecTypes.AztecAsset({
-            id: 2,
-            erc20Address: address(assetB),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        aztecAssetA =
+            AztecTypes.AztecAsset({id: 1, erc20Address: address(assetA), assetType: AztecTypes.AztecAssetType.ERC20});
+        aztecAssetB =
+            AztecTypes.AztecAsset({id: 2, erc20Address: address(assetB), assetType: AztecTypes.AztecAssetType.ERC20});
         vm.label(address(assetA), "DAI");
         vm.label(address(assetB), "WETH");
 
@@ -90,12 +84,12 @@ contract BiDCABridgeArberTest is Test {
         vm.warp(block.timestamp + 3 days); // next tick + 2 days
 
         bridge.rebalanceAndFillUniswap(type(uint256).max);
-        (uint256 acc, ) = bridge.getAccumulated(nonce);
+        (uint256 acc,) = bridge.getAccumulated(nonce);
 
         uint256 balanceBefore = WETH.balanceOf(SEARCHER);
 
         vm.prank(address(this), SEARCHER); // msg.sender = this, tx.origin = SEARCHER
-        (uint256 outA, , ) = bridge.finalise(aztecAssetA, emptyAsset, aztecAssetB, emptyAsset, nonce, 0);
+        (uint256 outA,,) = bridge.finalise(aztecAssetA, emptyAsset, aztecAssetB, emptyAsset, nonce, 0);
 
         assertEq(acc, outA + WETH.balanceOf(SEARCHER), "Bal matches");
 

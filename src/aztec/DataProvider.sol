@@ -75,11 +75,8 @@ contract DataProvider is Ownable {
         address bridgeAddress = ROLLUP_PROCESSOR.getSupportedBridge(_bridgeAddressId);
         bytes32 digest = keccak256(abi.encode(_tag));
         bridges.tagToId[digest] = _bridgeAddressId;
-        bridges.data[_bridgeAddressId] = BridgeData({
-            bridgeAddress: bridgeAddress,
-            bridgeAddressId: _bridgeAddressId,
-            label: _tag
-        });
+        bridges.data[_bridgeAddressId] =
+            BridgeData({bridgeAddress: bridgeAddress, bridgeAddressId: _bridgeAddressId, label: _tag});
     }
 
     /**
@@ -190,15 +187,7 @@ contract DataProvider is Ownable {
      * @return The amount of eth claimed at the current gas prices
      * @return The number of gas units (eth claimed / basefee)
      */
-    function getAccumulatedSubsidyAmount(uint256 _bridgeCallData)
-        public
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function getAccumulatedSubsidyAmount(uint256 _bridgeCallData) public view returns (uint256, uint256, uint256) {
         AccVal memory vars;
 
         vars.bridgeAddressId = _bridgeCallData & MASK_THIRTY_TWO_BITS;
@@ -226,12 +215,7 @@ contract DataProvider is Ownable {
 
         (bool success, bytes memory returnData) = vars.bridgeAddress.staticcall(
             abi.encodeWithSelector(
-                BridgeBase.computeCriteria.selector,
-                inputA,
-                inputB,
-                outputA,
-                outputB,
-                uint64(auxData)
+                BridgeBase.computeCriteria.selector, inputA, inputB, outputA, outputB, uint64(auxData)
             )
         );
 
@@ -247,21 +231,19 @@ contract DataProvider is Ownable {
 
     function _aztecAsset(uint256 _assetId) internal view returns (AztecTypes.AztecAsset memory) {
         if (_assetId >= VIRTUAL_ASSET_ID_FLAG) {
-            return
-                AztecTypes.AztecAsset({
-                    id: _assetId - VIRTUAL_ASSET_ID_FLAG,
-                    erc20Address: address(0),
-                    assetType: AztecTypes.AztecAssetType.VIRTUAL
-                });
+            return AztecTypes.AztecAsset({
+                id: _assetId - VIRTUAL_ASSET_ID_FLAG,
+                erc20Address: address(0),
+                assetType: AztecTypes.AztecAssetType.VIRTUAL
+            });
         }
 
         if (_assetId > 0) {
-            return
-                AztecTypes.AztecAsset({
-                    id: _assetId,
-                    erc20Address: ROLLUP_PROCESSOR.getSupportedAsset(_assetId),
-                    assetType: AztecTypes.AztecAssetType.ERC20
-                });
+            return AztecTypes.AztecAsset({
+                id: _assetId,
+                erc20Address: ROLLUP_PROCESSOR.getSupportedAsset(_assetId),
+                assetType: AztecTypes.AztecAssetType.ERC20
+            });
         }
 
         return AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});

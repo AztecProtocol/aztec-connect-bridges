@@ -36,11 +36,9 @@ contract UniswapDCABridge is BiDCABridge {
 
     IChainlinkOracle public constant ORACLE = IChainlinkOracle(0x773616E4d11A78F511299002da57A0a94577F1f4);
 
-    constructor(
-        address _rollupProcessor,
-        uint256 _tickSize,
-        uint256 _fee
-    ) BiDCABridge(_rollupProcessor, DAI, address(WETH), _tickSize, _fee) {
+    constructor(address _rollupProcessor, uint256 _tickSize, uint256 _fee)
+        BiDCABridge(_rollupProcessor, DAI, address(WETH), _tickSize, _fee)
+    {
         IERC20(DAI).safeApprove(address(UNI_ROUTER), type(uint256).max);
         IERC20(address(WETH)).safeApprove(address(UNI_ROUTER), type(uint256).max);
     }
@@ -82,7 +80,7 @@ contract UniswapDCABridge is BiDCABridge {
             // Rounding DOWN ensures that B received / price >= A available
             uint256 price = (bOffer * 1e18) / a;
 
-            (aFlow, bFlow, , ) = _rebalanceAndFill(0, bOffer, price, _upperTick, true);
+            (aFlow, bFlow,,) = _rebalanceAndFill(0, bOffer, price, _upperTick, true);
         }
 
         if (b > 0) {
@@ -100,7 +98,7 @@ contract UniswapDCABridge is BiDCABridge {
             // Rounding UP to ensure that A received * price >= B available
             uint256 price = (b * 1e18 + aOffer - 1) / aOffer;
 
-            (aFlow, bFlow, , ) = _rebalanceAndFill(aOffer, 0, price, _upperTick, true);
+            (aFlow, bFlow,,) = _rebalanceAndFill(aOffer, 0, price, _upperTick, true);
         }
 
         return (aFlow, bFlow);
@@ -111,8 +109,8 @@ contract UniswapDCABridge is BiDCABridge {
      * @dev Reverts if the price is stale or negative
      * @return Price
      */
-    function getPrice() public virtual override(BiDCABridge) returns (uint256) {
-        (, int256 answer, , , ) = ORACLE.latestRoundData();
+    function getPrice() public virtual override (BiDCABridge) returns (uint256) {
+        (, int256 answer,,,) = ORACLE.latestRoundData();
         if (answer < 0) {
             revert NegativePrice();
         }

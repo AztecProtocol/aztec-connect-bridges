@@ -12,7 +12,7 @@ contract MockPriceFeed is IPriceFeed {
         lastGoodPrice = _price;
     }
 
-    function fetchPrice() external override(IPriceFeed) returns (uint256) {
+    function fetchPrice() external override (IPriceFeed) returns (uint256) {
         return lastGoodPrice;
     }
 }

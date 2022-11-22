@@ -19,8 +19,8 @@
     "test:contracts": "forge test --no-match-contract 'Element' --no-match-test 'testRedistribution' && yarn test:pinned",
     "test:clients": "yarn compile:typechain && jest test",
     "test": "yarn test:contracts && yarn test:clients",
-    "formatting": "yarn prettier --write .",
-    "formatting:check": "prettier --check .",
+    "formatting": "forge fmt && yarn prettier --write ./src/client/**/*.ts",
+    "formatting:check": "forge fmt --check && prettier --check ./src/client/**/*.ts",
     "lint": "yarn lint:contracts && yarn lint:clients",
     "lint:contracts": "solhint --config ./.solhint.json --fix \"src/**/*.sol\"",
     "lint:clients": "eslint \"src/**/*.{ts,tsx}\""

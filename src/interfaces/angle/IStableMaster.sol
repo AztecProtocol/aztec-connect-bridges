@@ -27,18 +27,9 @@ interface IStableMaster {
         uint64 interestsForSLPs;
     }
 
-    function deposit(
-        uint256 amount,
-        address user,
-        address poolManager
-    ) external;
+    function deposit(uint256 amount, address user, address poolManager) external;
 
-    function withdraw(
-        uint256 amount,
-        address burner,
-        address dest,
-        address poolManager
-    ) external;
+    function withdraw(uint256 amount, address burner, address dest, address poolManager) external;
 
     function agToken() external returns (address);
 

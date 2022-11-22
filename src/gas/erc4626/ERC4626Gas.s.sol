@@ -32,7 +32,7 @@ contract ERC4626Measure is ERC4626Deployment {
     AztecTypes.AztecAsset internal wstethAsset;
     AztecTypes.AztecAsset internal wewstethAsset; // ERC4626-Wrapped Euler wstETH (wewstETH)
 
-    function setUp() public override(BaseDeployment) {
+    function setUp() public override (BaseDeployment) {
         super.setUp();
 
         address defiProxy = IRead(ROLLUP_PROCESSOR).defiBridgeProxy();
@@ -47,22 +47,16 @@ contract ERC4626Measure is ERC4626Deployment {
         ROLLUP_PROCESSOR = temp;
 
         ethAsset = AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
-        wethAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(WETH),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        wethAsset =
+            AztecTypes.AztecAsset({id: 1, erc20Address: address(WETH), assetType: AztecTypes.AztecAssetType.ERC20});
         wewethAsset = AztecTypes.AztecAsset({
             id: 3,
             erc20Address: 0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0,
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
-        wstethAsset = AztecTypes.AztecAsset({
-            id: 4,
-            erc20Address: address(WSTETH),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        wstethAsset =
+            AztecTypes.AztecAsset({id: 4, erc20Address: address(WSTETH), assetType: AztecTypes.AztecAssetType.ERC20});
         wewstethAsset = AztecTypes.AztecAsset({
             id: 5,
             erc20Address: 0x60897720AA966452e8706e74296B018990aEc527,
@@ -74,24 +68,16 @@ contract ERC4626Measure is ERC4626Deployment {
         bridge.listVault(wewethAsset.erc20Address);
         bridge.listVault(wewstethAsset.erc20Address);
         SUBSIDY.subsidize{value: 1e17}(
-            address(bridge),
-            bridge.computeCriteria(wethAsset, emptyAsset, wewethAsset, emptyAsset, 0),
-            500
+            address(bridge), bridge.computeCriteria(wethAsset, emptyAsset, wewethAsset, emptyAsset, 0), 500
         );
         SUBSIDY.subsidize{value: 1e17}(
-            address(bridge),
-            bridge.computeCriteria(wewethAsset, emptyAsset, wethAsset, emptyAsset, 0),
-            500
+            address(bridge), bridge.computeCriteria(wewethAsset, emptyAsset, wethAsset, emptyAsset, 0), 500
         );
         SUBSIDY.subsidize{value: 1e17}(
-            address(bridge),
-            bridge.computeCriteria(wstethAsset, emptyAsset, wewstethAsset, emptyAsset, 0),
-            500
+            address(bridge), bridge.computeCriteria(wstethAsset, emptyAsset, wewstethAsset, emptyAsset, 0), 500
         );
         SUBSIDY.subsidize{value: 1e17}(
-            address(bridge),
-            bridge.computeCriteria(wewstethAsset, emptyAsset, wstethAsset, emptyAsset, 0),
-            500
+            address(bridge), bridge.computeCriteria(wewstethAsset, emptyAsset, wstethAsset, emptyAsset, 0), 500
         );
         SUBSIDY.registerBeneficiary(BENEFICIARY);
         vm.stopBroadcast();
@@ -109,16 +95,7 @@ contract ERC4626Measure is ERC4626Deployment {
         {
             vm.broadcast();
             gasBase.convert(
-                address(bridge),
-                ethAsset,
-                emptyAsset,
-                wewethAsset,
-                emptyAsset,
-                1 ether,
-                0,
-                0,
-                BENEFICIARY,
-                280000
+                address(bridge), ethAsset, emptyAsset, wewethAsset, emptyAsset, 1 ether, 0, 0, BENEFICIARY, 280000
             );
         }
 
@@ -147,16 +124,13 @@ contract ERC4626Measure is ERC4626Deployment {
                 260000
             );
             emit log_named_uint(
-                "weweth balance of gasBase",
-                IERC20(wewethAsset.erc20Address).balanceOf(address(gasBase))
-            );
+                "weweth balance of gasBase", IERC20(wewethAsset.erc20Address).balanceOf(address(gasBase))
+                );
         }
 
         uint256 claimableSubsidyAfterWithdrawal = SUBSIDY.claimableAmount(BENEFICIARY);
         assertGt(
-            claimableSubsidyAfterWithdrawal,
-            claimableSubsidyAfterDeposit,
-            "Subsidy was not claimed during withdrawal"
+            claimableSubsidyAfterWithdrawal, claimableSubsidyAfterDeposit, "Subsidy was not claimed during withdrawal"
         );
         emit log_named_uint("Claimable subsidy after withdrawal", claimableSubsidyAfterWithdrawal);
     }
@@ -172,16 +146,7 @@ contract ERC4626Measure is ERC4626Deployment {
         {
             vm.broadcast();
             gasBase.convert(
-                address(bridge),
-                wethAsset,
-                emptyAsset,
-                wewethAsset,
-                emptyAsset,
-                1 ether,
-                0,
-                0,
-                BENEFICIARY,
-                260000
+                address(bridge), wethAsset, emptyAsset, wewethAsset, emptyAsset, 1 ether, 0, 0, BENEFICIARY, 260000
             );
         }
 
@@ -210,16 +175,13 @@ contract ERC4626Measure is ERC4626Deployment {
                 220000
             );
             emit log_named_uint(
-                "weweth balance of gasBase",
-                IERC20(wewethAsset.erc20Address).balanceOf(address(gasBase))
-            );
+                "weweth balance of gasBase", IERC20(wewethAsset.erc20Address).balanceOf(address(gasBase))
+                );
         }
 
         uint256 claimableSubsidyAfterWithdrawal = SUBSIDY.claimableAmount(BENEFICIARY);
         assertGt(
-            claimableSubsidyAfterWithdrawal,
-            claimableSubsidyAfterDeposit,
-            "Subsidy was not claimed during withdrawal"
+            claimableSubsidyAfterWithdrawal, claimableSubsidyAfterDeposit, "Subsidy was not claimed during withdrawal"
         );
         emit log_named_uint("Claimable subsidy after withdrawal", claimableSubsidyAfterWithdrawal);
     }
@@ -273,16 +235,13 @@ contract ERC4626Measure is ERC4626Deployment {
                 240000
             );
             emit log_named_uint(
-                "wewstethBalance balance of gasBase",
-                IERC20(wewstethAsset.erc20Address).balanceOf(address(gasBase))
-            );
+                "wewstethBalance balance of gasBase", IERC20(wewstethAsset.erc20Address).balanceOf(address(gasBase))
+                );
         }
 
         uint256 claimableSubsidyAfterWithdrawal = SUBSIDY.claimableAmount(BENEFICIARY);
         assertGt(
-            claimableSubsidyAfterWithdrawal,
-            claimableSubsidyAfterDeposit,
-            "Subsidy was not claimed during withdrawal"
+            claimableSubsidyAfterWithdrawal, claimableSubsidyAfterDeposit, "Subsidy was not claimed during withdrawal"
         );
         emit log_named_uint("Claimable subsidy after withdrawal", claimableSubsidyAfterWithdrawal);
     }

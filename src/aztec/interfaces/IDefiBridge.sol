@@ -31,7 +31,8 @@ interface IDefiBridge {
      *      `_interactionNonce` it would simply mean that more of the same virtual asset is minted.
      * @dev If this interaction is async the function has to return `(0,0 true)`. Async interaction will be finalised at
      *      a later time and its output assets will be returned in a `IDefiBridge.finalise(...)` call.
-     **/
+     *
+     */
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata _inputAssetB,
@@ -41,14 +42,7 @@ interface IDefiBridge {
         uint256 _interactionNonce,
         uint64 _auxData,
         address _rollupBeneficiary
-    )
-        external
-        payable
-        returns (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool isAsync
-        );
+    ) external payable returns (uint256 outputValueA, uint256 outputValueB, bool isAsync);
 
     /**
      * @notice A function that finalises asynchronous interaction.
@@ -62,7 +56,8 @@ interface IDefiBridge {
      * @return outputValueB An amount of `_outputAssetB` returned from this interaction.
      * @dev This function should use the `BridgeBase.onlyRollup()` modifier to ensure it can only be called from
      *      the `RollupProcessor.processAsyncDefiInteraction(uint256 _interactionNonce)` method.
-     **/
+     *
+     */
     function finalise(
         AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata _inputAssetB,
@@ -70,12 +65,5 @@ interface IDefiBridge {
         AztecTypes.AztecAsset calldata _outputAssetB,
         uint256 _interactionNonce,
         uint64 _auxData
-    )
-        external
-        payable
-        returns (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool interactionComplete
-        );
+    ) external payable returns (uint256 outputValueA, uint256 outputValueB, bool interactionComplete);
 }

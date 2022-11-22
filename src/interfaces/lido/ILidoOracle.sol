@@ -5,9 +5,5 @@ interface ILidoOracle {
     function getLastCompletedReportDelta()
         external
         view
-        returns (
-            uint256 postTotalPooledEther,
-            uint256 preTotalPooledEther,
-            uint256 timeElapsed
-        );
+        returns (uint256 postTotalPooledEther, uint256 preTotalPooledEther, uint256 timeElapsed);
 }

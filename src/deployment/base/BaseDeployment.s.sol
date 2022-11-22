@@ -11,6 +11,7 @@ abstract contract BaseDeployment is Test {
     /**
      * @notice Enum used as part of the configuration, defines what network and addresses to use.
      */
+
     enum Network {
         INVALID,
         MAINNET,

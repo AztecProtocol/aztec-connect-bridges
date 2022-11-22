@@ -31,16 +31,10 @@ contract CurveMeasure is CurveDeployment {
         ROLLUP_PROCESSOR = temp;
 
         AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory eth = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
-        AztecTypes.AztecAsset memory wstEthAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: wstEth,
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        AztecTypes.AztecAsset memory eth =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
+        AztecTypes.AztecAsset memory wstEthAsset =
+            AztecTypes.AztecAsset({id: 1, erc20Address: wstEth, assetType: AztecTypes.AztecAssetType.ERC20});
 
         vm.broadcast();
         address(gasBase).call{value: 2 ether}("");

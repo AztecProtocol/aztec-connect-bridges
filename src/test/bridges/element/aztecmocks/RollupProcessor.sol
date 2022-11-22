@@ -121,13 +121,13 @@ contract RollupProcessor {
 
         (uint256 outputValueA, uint256 outputValueB, bool interactionComplete) = IDefiBridge(interaction.bridgeAddress)
             .finalise(
-                interaction.inputAssetA,
-                interaction.inputAssetB,
-                interaction.outputAssetA,
-                interaction.outputAssetB,
-                interaction.interactionNonce,
-                uint64(interaction.auxInputData)
-            );
+            interaction.inputAssetA,
+            interaction.inputAssetB,
+            interaction.outputAssetA,
+            interaction.outputAssetB,
+            interaction.interactionNonce,
+            uint64(interaction.auxInputData)
+        );
         completed = interactionComplete;
 
         if (outputValueB > 0 && interaction.outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED) {
@@ -144,27 +144,16 @@ contract RollupProcessor {
         } else {
             // transfer output tokens to rollup contract
             transferTokensAsync(
-                address(interaction.bridgeAddress),
-                interaction.outputAssetA,
-                outputValueA,
-                interaction.interactionNonce
+                address(interaction.bridgeAddress), interaction.outputAssetA, outputValueA, interaction.interactionNonce
             );
             transferTokensAsync(
-                address(interaction.bridgeAddress),
-                interaction.outputAssetB,
-                outputValueB,
-                interaction.interactionNonce
+                address(interaction.bridgeAddress), interaction.outputAssetB, outputValueB, interaction.interactionNonce
             );
         }
 
         emit DefiBridgeProcessed(
-            0,
-            interaction.interactionNonce,
-            interaction.totalInputValue,
-            outputValueA,
-            outputValueB,
-            true
-        );
+            0, interaction.interactionNonce, interaction.totalInputValue, outputValueA, outputValueB, true
+            );
         interaction.finalised = true;
         interaction.outputValueA = outputValueA;
         interaction.outputValueB = outputValueB;
@@ -227,13 +216,8 @@ contract RollupProcessor {
             (uint256 outputValueA, uint256 outputValueB, bool isAsync) = abi.decode(result, (uint256, uint256, bool));
             if (!isAsync) {
                 emit DefiBridgeProcessed(
-                    0,
-                    convertArgs.interactionNonce,
-                    convertArgs.totalInputValue,
-                    outputValueA,
-                    outputValueB,
-                    true
-                );
+                    0, convertArgs.interactionNonce, convertArgs.totalInputValue, outputValueA, outputValueB, true
+                    );
             } else {
                 emit AsyncDefiBridgeProcessed(0, convertArgs.interactionNonce, convertArgs.totalInputValue);
             }
@@ -253,14 +237,7 @@ contract RollupProcessor {
         uint256 totalInputValue,
         uint256 interactionNonce,
         uint256 auxInputData // (auxData)
-    )
-        external
-        returns (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool isAsync
-        )
-    {
+    ) external returns (uint256 outputValueA, uint256 outputValueB, bool isAsync) {
         require(defiInteractions[interactionNonce].auxInputData == 0, "Rollup Contract: INTERACTION_ALREADY_EXISTS");
 
         uint256 ethPayments_slot;

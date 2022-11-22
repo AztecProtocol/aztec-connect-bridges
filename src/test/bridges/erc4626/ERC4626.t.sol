@@ -111,39 +111,24 @@ contract ERC4626Test is BridgeTestBase {
 
             bridge.listVault(shares[i].erc20Address);
 
-            uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
-                id,
-                assets[i],
-                emptyAsset,
-                shares[i],
-                emptyAsset,
-                0,
-                assetAmount
-            );
-            (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER
-                .processRollupAndGetBridgeResult();
+            uint256 bridgeCallData =
+                ROLLUP_ENCODER.defiInteractionL2(id, assets[i], emptyAsset, shares[i], emptyAsset, 0, assetAmount);
+            (uint256 outputValueA, uint256 outputValueB, bool isAsync) =
+                ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
             assertEq(outputValueA, expectedAmount, "Received amount of shares differs from the expected one");
             assertEq(outputValueB, 0, "Non-zero outputValueB");
             assertFalse(isAsync, "Bridge is not synchronous");
 
-            uint256 processorShareBalanceBeforeRedeem = IERC20(shares[i].erc20Address).balanceOf(
-                address(ROLLUP_PROCESSOR)
-            );
+            uint256 processorShareBalanceBeforeRedeem =
+                IERC20(shares[i].erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
 
             // Immediately redeem the shares
             uint256 redeemAmount = bound(_shareAmount, 10, outputValueA);
             uint256 expectedAssetAmountReturned = IERC4626(shares[i].erc20Address).previewRedeem(redeemAmount);
 
-            bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
-                id,
-                shares[i],
-                emptyAsset,
-                assets[i],
-                emptyAsset,
-                1,
-                redeemAmount
-            );
+            bridgeCallData =
+                ROLLUP_ENCODER.defiInteractionL2(id, shares[i], emptyAsset, assets[i], emptyAsset, 1, redeemAmount);
             (outputValueA, outputValueB, isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
             assertEq(
@@ -152,9 +137,7 @@ contract ERC4626Test is BridgeTestBase {
                 "Incorrect RollupProcessor share balance after redeem"
             );
             assertEq(
-                outputValueA,
-                expectedAssetAmountReturned,
-                "Received amount of asset differs from the expected one"
+                outputValueA, expectedAssetAmountReturned, "Received amount of asset differs from the expected one"
             );
             assertEq(outputValueB, 0, "Non-zero outputValueB");
             assertFalse(isAsync, "Bridge is not synchronous");
@@ -175,15 +158,8 @@ contract ERC4626Test is BridgeTestBase {
 
         uint256 expectedAmount = IERC4626(shareAsset.erc20Address).previewDeposit(assetAmount);
 
-        uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
-            id,
-            ethAsset,
-            emptyAsset,
-            shareAsset,
-            emptyAsset,
-            0,
-            assetAmount
-        );
+        uint256 bridgeCallData =
+            ROLLUP_ENCODER.defiInteractionL2(id, ethAsset, emptyAsset, shareAsset, emptyAsset, 0, assetAmount);
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         assertEq(outputValueA, expectedAmount, "Received amount of shares differs from the expected one");
@@ -194,15 +170,8 @@ contract ERC4626Test is BridgeTestBase {
         // Immediately redeem the shares
         uint256 redeemAmount = outputValueA;
 
-        bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
-            id,
-            shareAsset,
-            emptyAsset,
-            ethAsset,
-            emptyAsset,
-            1,
-            redeemAmount
-        );
+        bridgeCallData =
+            ROLLUP_ENCODER.defiInteractionL2(id, shareAsset, emptyAsset, ethAsset, emptyAsset, 1, redeemAmount);
         (outputValueA, outputValueB, isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         assertApproxEqAbs(outputValueA, assetAmount, 2, "Received amount of asset differs from the expected one");
@@ -216,11 +185,7 @@ contract ERC4626Test is BridgeTestBase {
         testFullFlowWithYieldAndSubsidy(1e18, 1e18, 1e18);
     }
 
-    function testFullFlowWithYieldAndSubsidy(
-        uint96 _assetAmount,
-        uint96 _shareAmount,
-        uint96 _yield
-    ) public {
+    function testFullFlowWithYieldAndSubsidy(uint96 _assetAmount, uint96 _shareAmount, uint96 _yield) public {
         uint256 assetAmount = bound(_assetAmount, 10, type(uint96).max);
         IERC20 weth = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
@@ -254,15 +219,8 @@ contract ERC4626Test is BridgeTestBase {
 
         uint256 expectedAmount = IERC4626(shareAsset.erc20Address).previewDeposit(assetAmount);
 
-        uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
-            id,
-            ethAsset,
-            emptyAsset,
-            shareAsset,
-            emptyAsset,
-            0,
-            assetAmount
-        );
+        uint256 bridgeCallData =
+            ROLLUP_ENCODER.defiInteractionL2(id, ethAsset, emptyAsset, shareAsset, emptyAsset, 0, assetAmount);
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         assertEq(outputValueA, expectedAmount, "Received amount of shares differs from the expected one");
@@ -272,23 +230,14 @@ contract ERC4626Test is BridgeTestBase {
         uint256 newVaultBalance = bound(_yield, assetAmount, assetAmount + 100 ether);
         deal(address(weth), wethVault, newVaultBalance);
 
-        uint256 processorShareBalanceBeforeRedeem = IERC20(shareAsset.erc20Address).balanceOf(
-            address(ROLLUP_PROCESSOR)
-        );
+        uint256 processorShareBalanceBeforeRedeem = IERC20(shareAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
 
         // Immediately redeem the shares
         uint256 redeemAmount = bound(_shareAmount, 1, outputValueA);
         uint256 expectedAssetAmountReturned = IERC4626(shareAsset.erc20Address).previewRedeem(redeemAmount);
 
-        bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
-            id,
-            shareAsset,
-            emptyAsset,
-            ethAsset,
-            emptyAsset,
-            1,
-            redeemAmount
-        );
+        bridgeCallData =
+            ROLLUP_ENCODER.defiInteractionL2(id, shareAsset, emptyAsset, ethAsset, emptyAsset, 1, redeemAmount);
         (outputValueA, outputValueB, isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         assertEq(

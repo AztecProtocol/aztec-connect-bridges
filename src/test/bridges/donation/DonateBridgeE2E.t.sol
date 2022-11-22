@@ -61,15 +61,8 @@ contract DonationBridgeE2ETest is BridgeTestBase {
 
         uint256 doneeBalanceBefore = DONEE.balance;
 
-        uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
-            bridgeAddressId,
-            ethAsset,
-            emptyAsset,
-            emptyAsset,
-            emptyAsset,
-            1,
-            _amount
-        );
+        uint256 bridgeCallData =
+            ROLLUP_ENCODER.defiInteractionL2(bridgeAddressId, ethAsset, emptyAsset, emptyAsset, emptyAsset, 1, _amount);
 
         ROLLUP_ENCODER.registerEventToBeChecked(bridgeCallData, ROLLUP_ENCODER.getNextNonce(), _amount, 0, 0, true, "");
         ROLLUP_ENCODER.processRollup();
@@ -81,7 +74,7 @@ contract DonationBridgeE2ETest is BridgeTestBase {
         for (uint256 i = 0; i < tokens.length; i++) {
             IERC20Metadata token = IERC20Metadata(tokens[i]);
             uint8 decimals = token.decimals();
-            uint256 amount = bound(_amount, 10**decimals, 1e6 * 10**decimals);
+            uint256 amount = bound(_amount, 10 ** decimals, 1e6 * 10 ** decimals);
 
             if (!ROLLUP_ENCODER.isSupportedAsset(address(token))) {
                 vm.prank(address(MULTI_SIG));
@@ -103,13 +96,7 @@ contract DonationBridgeE2ETest is BridgeTestBase {
             );
 
             ROLLUP_ENCODER.registerEventToBeChecked(
-                bridgeCallData,
-                ROLLUP_ENCODER.getNextNonce(),
-                _amount,
-                0,
-                0,
-                true,
-                ""
+                bridgeCallData, ROLLUP_ENCODER.getNextNonce(), _amount, 0, 0, true, ""
             );
             ROLLUP_ENCODER.processRollup();
 
@@ -121,26 +108,13 @@ contract DonationBridgeE2ETest is BridgeTestBase {
         vm.assume(_amount > 0);
         vm.deal(address(ROLLUP_PROCESSOR), _amount);
 
-        uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
-            bridgeAddressId,
-            ethAsset,
-            emptyAsset,
-            emptyAsset,
-            emptyAsset,
-            2,
-            _amount
-        );
+        uint256 bridgeCallData =
+            ROLLUP_ENCODER.defiInteractionL2(bridgeAddressId, ethAsset, emptyAsset, emptyAsset, emptyAsset, 2, _amount);
 
         bytes memory err = abi.encodePacked(ErrorLib.InvalidAuxData.selector);
 
         ROLLUP_ENCODER.registerEventToBeChecked(
-            bridgeCallData,
-            ROLLUP_ENCODER.getNextNonce(),
-            _amount,
-            0,
-            0,
-            false,
-            err
+            bridgeCallData, ROLLUP_ENCODER.getNextNonce(), _amount, 0, 0, false, err
         );
         ROLLUP_ENCODER.processRollup();
     }
@@ -152,25 +126,13 @@ contract DonationBridgeE2ETest is BridgeTestBase {
         uint256 doneeId = bridge.listDonee(address(this));
 
         uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
-            bridgeAddressId,
-            ethAsset,
-            emptyAsset,
-            emptyAsset,
-            emptyAsset,
-            uint64(doneeId),
-            _amount
+            bridgeAddressId, ethAsset, emptyAsset, emptyAsset, emptyAsset, uint64(doneeId), _amount
         );
 
         bytes memory err = abi.encodePacked(EthTransferFailed.selector);
 
         ROLLUP_ENCODER.registerEventToBeChecked(
-            bridgeCallData,
-            ROLLUP_ENCODER.getNextNonce(),
-            _amount,
-            0,
-            0,
-            false,
-            err
+            bridgeCallData, ROLLUP_ENCODER.getNextNonce(), _amount, 0, 0, false, err
         );
         ROLLUP_ENCODER.processRollup();
     }
@@ -188,23 +150,11 @@ contract DonationBridgeE2ETest is BridgeTestBase {
         });
 
         uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
-            bridgeAddressId,
-            fakeAsset,
-            emptyAsset,
-            emptyAsset,
-            emptyAsset,
-            uint64(doneeId),
-            _amount
+            bridgeAddressId, fakeAsset, emptyAsset, emptyAsset, emptyAsset, uint64(doneeId), _amount
         );
         bytes memory err = abi.encodePacked(ErrorLib.InvalidInputA.selector);
         ROLLUP_ENCODER.registerEventToBeChecked(
-            bridgeCallData,
-            ROLLUP_ENCODER.getNextNonce(),
-            _amount,
-            0,
-            0,
-            false,
-            err
+            bridgeCallData, ROLLUP_ENCODER.getNextNonce(), _amount, 0, 0, false, err
         );
         ROLLUP_ENCODER.processRollup();
     }

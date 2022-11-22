@@ -63,7 +63,7 @@ contract DefiBridgeProxy {
      * @param auxInputData Optional custom data to be sent to the bridge (defined in the L2 SNARK circuits when creating claim notes)
      * @param ethPaymentsSlot The slot value of the `ethPayments` storage mapping in RollupProcessor.sol!
      * @param rollupBeneficiary The address that should be payed any fees / subsidy for executing this bridge.
-
+     *
      * We assume this contract is called from the RollupProcessor via `delegateCall`,
      * if not... this contract behaviour is undefined! So don't do that.
      * The idea here is that, if the defi bridge has returned native ETH, they will do so via calling
@@ -96,14 +96,7 @@ contract DefiBridgeProxy {
         uint256 auxInputData, // (auxData)
         uint256 ethPaymentsSlot,
         address rollupBeneficiary
-    )
-        external
-        returns (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool isAsync
-        )
-    {
+    ) external returns (uint256 outputValueA, uint256 outputValueB, bool isAsync) {
         if (inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
             // Transfer totalInputValue to the bridge contract if erc20. ETH is sent on call to convert.
             TokenTransfers.safeTransferTo(inputAssetA.erc20Address, bridgeAddress, totalInputValue);
@@ -114,10 +107,10 @@ contract DefiBridgeProxy {
         }
         // Call bridge.convert(), which will return output values for the two output assets.
         // If input is ETH, send it along with call to convert.
-        uint256 ethValue = (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH ||
-            inputAssetB.assetType == AztecTypes.AztecAssetType.ETH)
-            ? totalInputValue
-            : 0;
+        uint256 ethValue = (
+            inputAssetA.assetType == AztecTypes.AztecAssetType.ETH
+                || inputAssetB.assetType == AztecTypes.AztecAssetType.ETH
+        ) ? totalInputValue : 0;
         (outputValueA, outputValueB, isAsync) = IDefiBridge(bridgeAddress).convert{value: ethValue}(
             inputAssetA,
             inputAssetB,

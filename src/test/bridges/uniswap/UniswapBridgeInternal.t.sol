@@ -15,8 +15,7 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
 
     bytes private referenceSplitPath1 =
         abi.encodePacked(LUSD, uint24(500), USDC, uint24(3000), WETH, uint24(3000), LQTY);
-    bytes private referenceSplitPath2 =
-        abi.encodePacked(LUSD, uint24(500), DAI, uint24(3000), WETH, uint24(3000), LQTY);
+    bytes private referenceSplitPath2 = abi.encodePacked(LUSD, uint24(500), DAI, uint24(3000), WETH, uint24(3000), LQTY);
 
     function setUp() public {}
 
@@ -35,18 +34,14 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
         // 111101000010010000000 01100 | 1000110 01 010 10 001 10 | 0011110 01 100 10 001 10
         uint64 referenceEncodedPath = 0xF42403232A31E646;
         uint64 encodedPath = this.encodePath(
-            100e18,
-            200e18,
-            LUSD,
-            SplitPath(70, 500, USDC, 3000, WETH, 3000),
-            SplitPath(30, 500, DAI, 3000, WETH, 3000)
+            100e18, 200e18, LUSD, SplitPath(70, 500, USDC, 3000, WETH, 3000), SplitPath(30, 500, DAI, 3000, WETH, 3000)
         );
 
         assertEq(encodedPath, referenceEncodedPath, "Encoded path is not equal to reference");
     }
 
     function testEncodeMinPriceForValuesWithoutPrecisionLoss(uint24 _price) public {
-        uint256 price = bound(_price, 0, 2**21 - 1);
+        uint256 price = bound(_price, 0, 2 ** 21 - 1);
         uint256 encodedMinPrice = _computeEncodedMinPrice(1, price, 0);
         uint256 decodedMinPrice = _decodeMinPrice(encodedMinPrice);
         assertEq(decodedMinPrice, price);
@@ -54,24 +49,22 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
 
     function testMinPriceNever0DueToPrecisionLoss(uint24 _price, uint8 _decimals) public {
         uint256 decimals = bound(_decimals, 0, 24);
-        uint256 price = bound(_price, 1, maxMinPrice / 10**decimals);
+        uint256 price = bound(_price, 1, maxMinPrice / 10 ** decimals);
         uint256 encodedMinPrice = _computeEncodedMinPrice(1, price, decimals);
         uint256 decodedMinPrice = _decodeMinPrice(encodedMinPrice);
         assertGt(decodedMinPrice, 0);
     }
 
-    function testPrecisionLossNeverBiggerThan1Bps(
-        uint80 _totalInputValue,
-        uint24 _price,
-        uint8 _tokenInDecimals
-    ) public {
+    function testPrecisionLossNeverBiggerThan1Bps(uint80 _totalInputValue, uint24 _price, uint8 _tokenInDecimals)
+        public
+    {
         uint256 decimals = bound(_tokenInDecimals, 0, 24);
-        uint256 price = bound(_price, 1, maxMinPrice / 10**decimals);
+        uint256 price = bound(_price, 1, maxMinPrice / 10 ** decimals);
         uint256 quote = _totalInputValue * price;
 
         uint256 encodedMinPrice = _computeEncodedMinPrice(1, price, decimals);
         uint256 decodedMinPrice = _decodeMinPrice(encodedMinPrice);
-        uint256 amountOutMinimum = (_totalInputValue * decodedMinPrice) / 10**decimals;
+        uint256 amountOutMinimum = (_totalInputValue * decodedMinPrice) / 10 ** decimals;
 
         assertApproxEqRel(quote, amountOutMinimum, 1e16);
     }
@@ -81,9 +74,7 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
         assertEq(encoded, maxEncodedMinPrice, "Encoded price doesn't equal max encoded price");
         uint256 decoded = _decodeMinPrice(uint64(encoded));
         assertEq(
-            decoded,
-            maxDecodedMinPriceAfterEncoding,
-            "Decoded max encoded doesn't equal max decoded after encoding"
+            decoded, maxDecodedMinPriceAfterEncoding, "Decoded max encoded doesn't equal max decoded after encoding"
         );
     }
 
@@ -106,7 +97,7 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
         assertEq(string(path.splitPath1), string(referenceSplitPath1), "Split path 1 incorrectly encoded");
         assertEq(path.percentage2, 30, "Incorrect percentage 2");
         assertEq(string(path.splitPath2), string(referenceSplitPath2), "Split path 2 incorrectly encoded");
-        assertEq(path.minPrice, 2031142 * 10**27);
+        assertEq(path.minPrice, 2031142 * 10 ** 27);
     }
 
     function testDecodePathOnly1SplitPath() public {
@@ -120,7 +111,7 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
         assertEq(path.percentage1, 100, "Incorrect percentage 1");
         assertEq(string(path.splitPath1), string(referenceSplitPath1), "Split path 1 incorrectly encoded");
         assertEq(path.percentage2, 0, "Incorrect percentage 2");
-        assertEq(path.minPrice, 2031142 * 10**27);
+        assertEq(path.minPrice, 2031142 * 10 ** 27);
     }
 
     function testDecodePathOnly1SplitPathInPositionOfSplitPath2() public {
@@ -134,7 +125,7 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
         assertEq(path.percentage1, 0, "Incorrect percentage 1");
         assertEq(path.percentage2, 100, "Incorrect percentage 2");
         assertEq(string(path.splitPath2), string(referenceSplitPath2), "Split path 2 incorrectly encoded");
-        assertEq(path.minPrice, 2031142 * 10**27);
+        assertEq(path.minPrice, 2031142 * 10 ** 27);
     }
 
     function testDecodeSplitPathAllMiddleTokensUsed() public {
@@ -173,17 +164,17 @@ contract UniswapBridgeInternalTest is Test, UniswapBridge(address(0)) {
         uint8 exponent = 27;
         // |111101111111000100110| [11011|
         uint64 referenceEncodedMinPrice = 0x3DFC4DB;
-        uint256 referenceDecodedMinPrice = significand * 10**exponent;
+        uint256 referenceDecodedMinPrice = significand * 10 ** exponent;
 
         uint256 decodedMinPrice = _decodeMinPrice(referenceEncodedMinPrice);
         assertEq(decodedMinPrice, referenceDecodedMinPrice, "Incorrect min price");
     }
 
     function testDecodeMinPriceFuzz(uint24 _significand, uint8 _exponent) public {
-        _significand = uint24(bound(_significand, 0, 2**21 - 1));
-        _exponent = uint8(bound(_exponent, 0, 2**5 - 1));
+        _significand = uint24(bound(_significand, 0, 2 ** 21 - 1));
+        _exponent = uint8(bound(_exponent, 0, 2 ** 5 - 1));
         uint64 referenceEncodedMinPrice = (uint64(_significand) << 5) + _exponent;
-        uint256 referenceDecodedMinPrice = _significand * 10**_exponent;
+        uint256 referenceDecodedMinPrice = _significand * 10 ** _exponent;
 
         uint256 decodedMinPrice = _decodeMinPrice(referenceEncodedMinPrice);
         assertEq(decodedMinPrice, referenceDecodedMinPrice, "Incorrect min price");

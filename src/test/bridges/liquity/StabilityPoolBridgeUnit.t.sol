@@ -52,16 +52,10 @@ contract StabilityPoolBridgeUnitTest is TestUtil {
         uint256 depositAmount = bound(_depositAmount, 10, type(uint96).max);
         uint256 spbReceived = _deposit(depositAmount);
 
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
-            2,
-            address(bridge),
-            AztecTypes.AztecAssetType.ERC20
-        );
-        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(
-            1,
-            tokens["LUSD"].addr,
-            AztecTypes.AztecAssetType.ERC20
-        );
+        AztecTypes.AztecAsset memory inputAssetA =
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20);
+        AztecTypes.AztecAsset memory outputAssetA =
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20);
 
         // Transfer StabilityPoolBridge accounting token (SPB) back to the bridge
         IERC20(inputAssetA.erc20Address).transfer(address(bridge), spbReceived);
@@ -73,16 +67,8 @@ contract StabilityPoolBridgeUnitTest is TestUtil {
         // Withdraw LUSD from StabilityPool through the bridge
         uint256 withdrawalAmount = bound(_withdrawalAmount, 10, spbReceived);
 
-        (uint256 outputValueA, , ) = bridge.convert(
-            inputAssetA,
-            emptyAsset,
-            outputAssetA,
-            emptyAsset,
-            withdrawalAmount,
-            1,
-            0,
-            address(0)
-        );
+        (uint256 outputValueA,,) =
+            bridge.convert(inputAssetA, emptyAsset, outputAssetA, emptyAsset, withdrawalAmount, 1, 0, address(0));
 
         // Check the total supply of SPB token is spbReceived - withdrawalAmount
         assertEq(bridge.totalSupply(), spbReceived - withdrawalAmount);
@@ -177,7 +163,7 @@ contract StabilityPoolBridgeUnitTest is TestUtil {
         deal(tokens["LUSD"].addr, address(bridge), _depositAmount);
 
         // 2. Deposit LUSD to the StabilityPool contract through the bridge
-        (uint256 outputValueA, , ) = bridge.convert(
+        (uint256 outputValueA,,) = bridge.convert(
             AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20),
             emptyAsset,
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),

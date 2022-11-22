@@ -145,43 +145,25 @@ contract ElementTest is Test {
         quantities["EURSCRV"] = 1e15;
 
         _addTrancheConfig(
-            "USDC",
-            0x8a2228705ec979961F0e16df311dEbcf097A2766,
-            0x10a2F8bd81Ee2898D7eD18fb8f114034a549FA59,
-            1643382476
+            "USDC", 0x8a2228705ec979961F0e16df311dEbcf097A2766, 0x10a2F8bd81Ee2898D7eD18fb8f114034a549FA59, 1643382476
         );
 
         _addTrancheConfig(
-            "DAI",
-            0x449D7C2e096E9f867339078535b15440d42F78E8,
-            0xA47D1251CF21AD42685Cc6B8B3a186a73Dbd06cf,
-            1643382446
+            "DAI", 0x449D7C2e096E9f867339078535b15440d42F78E8, 0xA47D1251CF21AD42685Cc6B8B3a186a73Dbd06cf, 1643382446
         );
         _addTrancheConfig(
-            "DAI",
-            0x2c72692E94E757679289aC85d3556b2c0f717E0E,
-            0xEdf085f65b4F6c155e13155502Ef925c9a756003,
-            1651275535
+            "DAI", 0x2c72692E94E757679289aC85d3556b2c0f717E0E, 0xEdf085f65b4F6c155e13155502Ef925c9a756003, 1651275535
         );
 
         _addTrancheConfig(
-            "STECRV",
-            0x720465A4AE6547348056885060EEB51F9CAdb571,
-            0x544c823194218f0640daE8291c1f59752d25faE3,
-            1643382514
+            "STECRV", 0x720465A4AE6547348056885060EEB51F9CAdb571, 0x544c823194218f0640daE8291c1f59752d25faE3, 1643382514
         );
         _addTrancheConfig(
-            "STECRV",
-            0x2361102893CCabFb543bc55AC4cC8d6d0824A67E,
-            0xb03C6B351A283bc1Cd26b9cf6d7B0c4556013bDb,
-            1650025565
+            "STECRV", 0x2361102893CCabFb543bc55AC4cC8d6d0824A67E, 0xb03C6B351A283bc1Cd26b9cf6d7B0c4556013bDb, 1650025565
         );
 
         _addTrancheConfig(
-            "WBTC",
-            0x49e9e169f0B661Ea0A883f490564F4CC275123Ed,
-            0x4bd6D86dEBdB9F5413e631Ad386c4427DC9D01B2,
-            1651265241
+            "WBTC", 0x49e9e169f0B661Ea0A883f490564F4CC275123Ed, 0x4bd6D86dEBdB9F5413e631Ad386c4427DC9D01B2, 1651265241
         );
 
         _addTrancheConfig(
@@ -274,27 +256,19 @@ contract ElementTest is Test {
 
         vm.expectEmit(false, false, false, true);
         emit LogPoolAdded(
-            trancheConfigs["USDC"][0].poolAddress,
-            wrappedPositions["USDC"],
-            trancheConfigs["USDC"][0].expiry
+            trancheConfigs["USDC"][0].poolAddress, wrappedPositions["USDC"], trancheConfigs["USDC"][0].expiry
+            );
+
+        elementBridge.registerConvergentPoolAddress(
+            trancheConfigs["USDC"][0].poolAddress, wrappedPositions["USDC"], trancheConfigs["USDC"][0].expiry
         );
 
         elementBridge.registerConvergentPoolAddress(
-            trancheConfigs["USDC"][0].poolAddress,
-            wrappedPositions["USDC"],
-            trancheConfigs["USDC"][0].expiry
+            trancheConfigs["DAI"][0].poolAddress, wrappedPositions["DAI"], trancheConfigs["DAI"][0].expiry
         );
 
         elementBridge.registerConvergentPoolAddress(
-            trancheConfigs["DAI"][0].poolAddress,
-            wrappedPositions["DAI"],
-            trancheConfigs["DAI"][0].expiry
-        );
-
-        elementBridge.registerConvergentPoolAddress(
-            trancheConfigs["DAI"][1].poolAddress,
-            wrappedPositions["DAI"],
-            trancheConfigs["DAI"][1].expiry
+            trancheConfigs["DAI"][1].poolAddress, wrappedPositions["DAI"], trancheConfigs["DAI"][1].expiry
         );
     }
 
@@ -310,27 +284,21 @@ contract ElementTest is Test {
     function testRejectsIncorrectWrappedPositionForPool() public {
         vm.expectRevert(bytes(""));
         elementBridge.registerConvergentPoolAddress(
-            trancheConfigs["DAI"][0].poolAddress,
-            wrappedPositions["USDC"],
-            trancheConfigs["DAI"][0].expiry
+            trancheConfigs["DAI"][0].poolAddress, wrappedPositions["USDC"], trancheConfigs["DAI"][0].expiry
         );
     }
 
     function testRejectsInvalidWrappedPosition() public {
         vm.expectRevert(bytes(""));
         elementBridge.registerConvergentPoolAddress(
-            trancheConfigs["DAI"][0].poolAddress,
-            _randomAddress(),
-            trancheConfigs["DAI"][0].expiry
+            trancheConfigs["DAI"][0].poolAddress, _randomAddress(), trancheConfigs["DAI"][0].expiry
         );
     }
 
     function testRejectsInvalidPoolAddress() public {
         vm.expectRevert(bytes(""));
         elementBridge.registerConvergentPoolAddress(
-            _randomAddress(),
-            wrappedPositions["DAI"],
-            trancheConfigs["DAI"][0].expiry
+            _randomAddress(), wrappedPositions["DAI"], trancheConfigs["DAI"][0].expiry
         );
     }
 
@@ -339,9 +307,7 @@ contract ElementTest is Test {
         elementDeploymentValidator.validateWPAddress(wrappedPositions["DAI"]);
         vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNREGISTERED_POOL.selector));
         elementBridge.registerConvergentPoolAddress(
-            trancheConfigs["DAI"][0].poolAddress,
-            wrappedPositions["DAI"],
-            trancheConfigs["DAI"][0].expiry
+            trancheConfigs["DAI"][0].poolAddress, wrappedPositions["DAI"], trancheConfigs["DAI"][0].expiry
         );
     }
 
@@ -350,9 +316,7 @@ contract ElementTest is Test {
         elementDeploymentValidator.validatePoolAddress(trancheConfigs["DAI"][0].poolAddress);
         vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNREGISTERED_POSITION.selector));
         elementBridge.registerConvergentPoolAddress(
-            trancheConfigs["DAI"][0].poolAddress,
-            wrappedPositions["DAI"],
-            trancheConfigs["DAI"][0].expiry
+            trancheConfigs["DAI"][0].poolAddress, wrappedPositions["DAI"], trancheConfigs["DAI"][0].expiry
         );
     }
 
@@ -360,9 +324,7 @@ contract ElementTest is Test {
         // register neither address, pool is validated first
         vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNREGISTERED_POOL.selector));
         elementBridge.registerConvergentPoolAddress(
-            trancheConfigs["DAI"][0].poolAddress,
-            wrappedPositions["DAI"],
-            trancheConfigs["DAI"][0].expiry
+            trancheConfigs["DAI"][0].poolAddress, wrappedPositions["DAI"], trancheConfigs["DAI"][0].expiry
         );
     }
 
@@ -372,9 +334,7 @@ contract ElementTest is Test {
         elementDeploymentValidator.validateWPAddress(wrappedPositions["DAI"]);
         vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNREGISTERED_PAIR.selector));
         elementBridge.registerConvergentPoolAddress(
-            trancheConfigs["DAI"][0].poolAddress,
-            wrappedPositions["DAI"],
-            trancheConfigs["DAI"][0].expiry
+            trancheConfigs["DAI"][0].poolAddress, wrappedPositions["DAI"], trancheConfigs["DAI"][0].expiry
         );
     }
 
@@ -391,9 +351,7 @@ contract ElementTest is Test {
         // the first DAI pair isn't registered and should revert
         vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNREGISTERED_PAIR.selector));
         elementBridge.registerConvergentPoolAddress(
-            trancheConfigs["DAI"][0].poolAddress,
-            wrappedPositions["DAI"],
-            trancheConfigs["DAI"][0].expiry
+            trancheConfigs["DAI"][0].poolAddress, wrappedPositions["DAI"], trancheConfigs["DAI"][0].expiry
         );
     }
 
@@ -410,9 +368,7 @@ contract ElementTest is Test {
         // the second DAI pair isn't registered and should revert
         vm.expectRevert(abi.encodeWithSelector(ElementBridge.UNREGISTERED_PAIR.selector));
         elementBridge.registerConvergentPoolAddress(
-            trancheConfigs["DAI"][1].poolAddress,
-            wrappedPositions["DAI"],
-            trancheConfigs["DAI"][1].expiry
+            trancheConfigs["DAI"][1].poolAddress, wrappedPositions["DAI"], trancheConfigs["DAI"][1].expiry
         );
     }
 
@@ -849,12 +805,7 @@ contract ElementTest is Test {
         vm.warp(interactionConfig.tranche.expiry + 1);
         vm.prank(address(rollupProcessor));
         elementBridge.finalise(
-            asset,
-            emptyAsset,
-            asset,
-            emptyAsset,
-            interactionConfig.nonce,
-            interactionConfig.tranche.expiry
+            asset, emptyAsset, asset, emptyAsset, interactionConfig.nonce, interactionConfig.tranche.expiry
         );
         _assertZeroBalance(address(elementBridge), interactionConfig.tranche.trancheAddress);
         _assertBalanceGt(address(elementBridge), address(tokens["DAI"]), interactionConfig.depositAmount);
@@ -879,12 +830,7 @@ contract ElementTest is Test {
         vm.warp(interactionConfig.tranche.expiry + 1);
         vm.prank(address(rollupProcessor));
         elementBridge.finalise(
-            asset,
-            emptyAsset,
-            asset,
-            emptyAsset,
-            interactionConfig.nonce,
-            interactionConfig.tranche.expiry
+            asset, emptyAsset, asset, emptyAsset, interactionConfig.nonce, interactionConfig.tranche.expiry
         );
         _assertZeroBalance(address(elementBridge), interactionConfig.tranche.trancheAddress);
         _assertBalanceGt(address(elementBridge), address(tokens["DAI"]), interactionConfig.depositAmount);
@@ -930,18 +876,11 @@ contract ElementTest is Test {
             for (uint256 configIndex = 0; configIndex < configs.length; configIndex++) {
                 for (uint256 interactionCount = 0; interactionCount < numInteractionsPerExpiry; interactionCount++) {
                     TrancheConfig storage config = configs[configIndex];
-                    Interaction memory interaction = Interaction(
-                        config,
-                        depositAmount * depositMultipliers[interactionCount],
-                        nonce,
-                        0
-                    );
+                    Interaction memory interaction =
+                        Interaction(config, depositAmount * depositMultipliers[interactionCount], nonce, 0);
                     interactions[nonce - 1] = interaction;
                     Balances memory balancesBefore = _getBalances(interaction, address(elementBridge));
-                    (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert(
-                        asset,
-                        interaction
-                    );
+                    (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert(asset, interaction);
                     assertEq(isAsync, true);
                     assertEq(outputValueA, 0);
                     assertEq(outputValueB, 0);
@@ -1018,18 +957,11 @@ contract ElementTest is Test {
             for (uint256 configIndex = 0; configIndex < configs.length; configIndex++) {
                 for (uint256 interactionCount = 0; interactionCount < numInteractionsPerExpiry; interactionCount++) {
                     TrancheConfig storage config = configs[configIndex];
-                    Interaction memory interaction = Interaction(
-                        config,
-                        depositAmount * depositMultipliers[interactionCount],
-                        nonce,
-                        0
-                    );
+                    Interaction memory interaction =
+                        Interaction(config, depositAmount * depositMultipliers[interactionCount], nonce, 0);
                     interactions[nonce - 1] = interaction;
                     Balances memory balancesBefore = _getBalances(interaction, address(elementBridge));
-                    (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert(
-                        asset,
-                        interaction
-                    );
+                    (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callElementConvert(asset, interaction);
                     assertEq(isAsync, true);
                     assertEq(outputValueA, 0);
                     assertEq(outputValueB, 0);
@@ -1095,9 +1027,8 @@ contract ElementTest is Test {
                 numInteractions--;
                 // now finalise this interaction
                 Balances memory balancesBefore = _getBalances(currentInteraction, address(elementBridge));
-                (uint256 outputValueA, uint256 outputValueB, bool interactionCompleted) = _callElementFinalise(
-                    currentInteraction
-                );
+                (uint256 outputValueA, uint256 outputValueB, bool interactionCompleted) =
+                    _callElementFinalise(currentInteraction);
                 assertEq(interactionCompleted, true);
                 assertEq(outputValueB, 0);
                 assertGt(outputValueA, currentInteraction.depositAmount);
@@ -1261,23 +1192,19 @@ contract ElementTest is Test {
         uint256 totalReceived = 0;
         for (uint256 i = 0; i < numEurInteractions; i++) {
             Interaction memory interaction = interactions[i];
-            Balances memory balancesRollupBeforeManualFinalise = _getBalances(
-                interactions[i],
-                address(rollupProcessor)
-            );
+            Balances memory balancesRollupBeforeManualFinalise = _getBalances(interactions[i], address(rollupProcessor));
             Balances memory balancesBridgeBeforeManualFinalise = _getBalances(interactions[i], address(elementBridge));
             bool interactionCompleted = rollupProcessor.processAsyncDefiInteraction(interaction.nonce);
             assertEq(interactionCompleted, true);
             Balances memory balancesRollupAfterManualFinalise = _getBalances(interactions[i], address(rollupProcessor));
             Balances memory balancesBridgeAfterManualFinalise = _getBalances(interactions[i], address(elementBridge));
-            uint256 outputValue = balancesRollupAfterManualFinalise.startingAsset -
-                balancesRollupBeforeManualFinalise.startingAsset;
+            uint256 outputValue =
+                balancesRollupAfterManualFinalise.startingAsset - balancesRollupBeforeManualFinalise.startingAsset;
             totalReceived += outputValue;
             assertGt(outputValue, 0);
             assertEq(balancesBridgeAfterManualFinalise.bridgeTranche, 0);
             assertEq(
-                balancesBridgeBeforeManualFinalise.bridgeTranche,
-                i == 0 ? balancesBridgeAfterConvert.bridgeTranche : 0
+                balancesBridgeBeforeManualFinalise.bridgeTranche, i == 0 ? balancesBridgeAfterConvert.bridgeTranche : 0
             );
         }
         assertGt(totalReceived, eurDepositAmount * 15);
@@ -1307,12 +1234,8 @@ contract ElementTest is Test {
                     continue;
                 }
                 for (uint256 interactionCount = 0; interactionCount < numInteractionsPerTranche; interactionCount++) {
-                    Interaction memory interaction = Interaction(
-                        config,
-                        depositAmount * depositMultipliers[interactionCount],
-                        nonce,
-                        0
-                    );
+                    Interaction memory interaction =
+                        Interaction(config, depositAmount * depositMultipliers[interactionCount], nonce, 0);
                     interactions[nonce - 1] = interaction;
                     Balances memory balancesBefore = _getBalances(interaction, address(rollupProcessor));
                     (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, interaction);
@@ -1330,8 +1253,7 @@ contract ElementTest is Test {
                     );
                     // accumulate the tranche tokens collected by the bridge contract
                     bridgeBalanceByTranche[config.trancheAddress] +=
-                        balancesAfter.bridgeTranche -
-                        balancesBefore.bridgeTranche;
+                        balancesAfter.bridgeTranche - balancesBefore.bridgeTranche;
                     nonce++;
                 }
             }
@@ -1408,12 +1330,8 @@ contract ElementTest is Test {
                     continue;
                 }
                 for (uint256 interactionCount = 0; interactionCount < numInteractionsPerTranche; interactionCount++) {
-                    Interaction memory interaction = Interaction(
-                        config,
-                        depositAmount * depositMultipliers[interactionCount],
-                        nonce,
-                        0
-                    );
+                    Interaction memory interaction =
+                        Interaction(config, depositAmount * depositMultipliers[interactionCount], nonce, 0);
                     interactions[nonce - 1] = interaction;
                     Balances memory balancesBefore = _getBalances(interaction, address(rollupProcessor));
                     (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, interaction);
@@ -1431,8 +1349,7 @@ contract ElementTest is Test {
                     );
                     // accumulate the tranche tokens collected by the bridge contract
                     bridgeBalanceByTranche[config.trancheAddress] +=
-                        balancesAfter.bridgeTranche -
-                        balancesBefore.bridgeTranche;
+                        balancesAfter.bridgeTranche - balancesBefore.bridgeTranche;
                     nonce++;
                 }
             }
@@ -1450,18 +1367,14 @@ contract ElementTest is Test {
             for (uint256 configIndex = 0; configIndex < configs.length; configIndex++) {
                 TrancheConfig storage config = configs[configIndex];
                 if (
-                    config.expiry < expiries[numTranchesPerBatch] ||
-                    config.expiry > expiries[numTranchesPerBatch * 2 - 1]
+                    config.expiry < expiries[numTranchesPerBatch]
+                        || config.expiry > expiries[numTranchesPerBatch * 2 - 1]
                 ) {
                     continue;
                 }
                 for (uint256 interactionCount = 0; interactionCount < numInteractionsPerTranche; interactionCount++) {
-                    Interaction memory interaction = Interaction(
-                        config,
-                        depositAmount * depositMultipliers[interactionCount],
-                        nonce,
-                        0
-                    );
+                    Interaction memory interaction =
+                        Interaction(config, depositAmount * depositMultipliers[interactionCount], nonce, 0);
                     interactions[nonce - 1] = interaction;
                     Balances memory balancesBefore = _getBalances(interaction, address(rollupProcessor));
                     (uint256 outputValueA, uint256 outputValueB, bool isAsync) = _callRollupConvert(asset, interaction);
@@ -1475,8 +1388,7 @@ contract ElementTest is Test {
                     );
                     // accumulate the tranche tokens collected by the bridge contract
                     bridgeBalanceByTranche[config.trancheAddress] +=
-                        balancesAfter.bridgeTranche -
-                        balancesBefore.bridgeTranche;
+                        balancesAfter.bridgeTranche - balancesBefore.bridgeTranche;
                     nonce++;
                 }
             }
@@ -1489,8 +1401,8 @@ contract ElementTest is Test {
             Interaction memory interaction = interactions[interactionIndex];
             (bool finalised, uint256 interactionOutputValue) = rollupProcessor.getDefiResult(interaction.nonce);
             if (interactionIndex < numInteractionsInFirstBatch) {
-                uint256 percentOfDeposit = (interaction.depositAmount * 100) /
-                    (15 * quantities[interaction.tranche.asset]);
+                uint256 percentOfDeposit =
+                    (interaction.depositAmount * 100) / (15 * quantities[interaction.tranche.asset]);
                 // this is the amount of tranche tokens collected by the bridge contract. These should have been withdrawn pretty much one for one into the end asset
                 uint256 totalReceipt = bridgeBalanceByTranche[interaction.tranche.trancheAddress];
                 _assertWithinOnePercentagePoint(interactionOutputValue, totalReceipt, percentOfDeposit);
@@ -1613,23 +1525,19 @@ contract ElementTest is Test {
         uint256 totalReceived = 0;
         for (uint256 i = 0; i < numEurInteractions; i++) {
             Interaction memory interaction = interactions[i];
-            Balances memory balancesRollupBeforeManualFinalise = _getBalances(
-                interactions[i],
-                address(rollupProcessor)
-            );
+            Balances memory balancesRollupBeforeManualFinalise = _getBalances(interactions[i], address(rollupProcessor));
             Balances memory balancesBridgeBeforeManualFinalise = _getBalances(interactions[i], address(elementBridge));
             bool interactionCompleted = rollupProcessor.processAsyncDefiInteraction(interaction.nonce);
             assertEq(interactionCompleted, true);
             Balances memory balancesRollupAfterManualFinalise = _getBalances(interactions[i], address(rollupProcessor));
             Balances memory balancesBridgeAfterManualFinalise = _getBalances(interactions[i], address(elementBridge));
-            uint256 outputValue = balancesRollupAfterManualFinalise.startingAsset -
-                balancesRollupBeforeManualFinalise.startingAsset;
+            uint256 outputValue =
+                balancesRollupAfterManualFinalise.startingAsset - balancesRollupBeforeManualFinalise.startingAsset;
             totalReceived += outputValue;
             assertGt(outputValue, 0);
             assertEq(balancesBridgeAfterManualFinalise.bridgeTranche, 0);
             assertEq(
-                balancesBridgeBeforeManualFinalise.bridgeTranche,
-                i == 0 ? balancesBridgeAfterConvert.bridgeTranche : 0
+                balancesBridgeBeforeManualFinalise.bridgeTranche, i == 0 ? balancesBridgeAfterConvert.bridgeTranche : 0
             );
         }
         assertGt(totalReceived, eurDepositAmount * 15);
@@ -1691,9 +1599,7 @@ contract ElementTest is Test {
         assertLt(balancesRollupAfter.startingAsset, usdcDepositAmount * 2);
         // rollup balance of asset should be 20%
         _assertWithinOnePercentagePoint(
-            balancesRollupAfter.startingAsset,
-            balancesRollupAfter.startingAsset + balancesBridgeAfter.startingAsset,
-            20
+            balancesRollupAfter.startingAsset, balancesRollupAfter.startingAsset + balancesBridgeAfter.startingAsset, 20
         );
 
         for (uint256 i = 0; i < numUsdcInteractions; i++) {
@@ -1766,9 +1672,7 @@ contract ElementTest is Test {
             assertEq(finalised, i < numExpectedFinalisedInteractions);
             if (i < numExpectedFinalisedInteractions) {
                 _assertWithinOnePercentagePoint(
-                    outputValueA,
-                    balancesRollupAfter.startingAsset + balancesBridgeAfter.startingAsset,
-                    20
+                    outputValueA, balancesRollupAfter.startingAsset + balancesBridgeAfter.startingAsset, 20
                 );
             } else {
                 assertEq(outputValueA, 0);
@@ -1840,9 +1744,7 @@ contract ElementTest is Test {
             assertEq(finalised, i < numExpectedFinalisedInteractions);
             if (i < numExpectedFinalisedInteractions) {
                 _assertWithinOnePercentagePoint(
-                    outputValueA,
-                    balancesRollupAfter.startingAsset + balancesBridgeAfter.startingAsset,
-                    20
+                    outputValueA, balancesRollupAfter.startingAsset + balancesBridgeAfter.startingAsset, 20
                 );
             } else {
                 assertEq(outputValueA, 0);
@@ -1900,11 +1802,7 @@ contract ElementTest is Test {
 
     function _callElementConvert(string memory _asset, Interaction memory _interaction)
         private
-        returns (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool isAsync
-        )
+        returns (uint256 outputValueA, uint256 outputValueB, bool isAsync)
     {
         AztecTypes.AztecAsset memory assetData = AztecTypes.AztecAsset({
             id: 1,
@@ -1929,11 +1827,7 @@ contract ElementTest is Test {
 
     function _callElementFinalise(Interaction memory _interaction)
         private
-        returns (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool interactionCompleted
-        )
+        returns (uint256 outputValueA, uint256 outputValueB, bool interactionCompleted)
     {
         AztecTypes.AztecAsset memory asset = AztecTypes.AztecAsset({
             id: 1,
@@ -1942,12 +1836,7 @@ contract ElementTest is Test {
         });
         vm.prank(address(rollupProcessor));
         (uint256 outputValueALocal, uint256 outputValueBLocal, bool interactionCompletedLocal) = elementBridge.finalise(
-            asset,
-            emptyAsset,
-            asset,
-            emptyAsset,
-            _interaction.nonce,
-            _interaction.tranche.expiry
+            asset, emptyAsset, asset, emptyAsset, _interaction.nonce, _interaction.tranche.expiry
         );
         outputValueA = outputValueALocal;
         outputValueB = outputValueBLocal;
@@ -1956,11 +1845,7 @@ contract ElementTest is Test {
 
     function _callRollupConvert(string memory _asset, Interaction memory _interaction)
         private
-        returns (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool isAsync
-        )
+        returns (uint256 outputValueA, uint256 outputValueB, bool isAsync)
     {
         AztecTypes.AztecAsset memory assetData = AztecTypes.AztecAsset({
             id: 1,
@@ -1972,14 +1857,7 @@ contract ElementTest is Test {
         uint256 deposit = _interaction.depositAmount;
         vm.prank(address(rollupProcessor));
         (uint256 outputValueALocal, uint256 outputValueBLocal, bool isAsyncLocal) = rollupProcessor.convert(
-            address(elementBridge),
-            assetData,
-            emptyAsset,
-            assetData,
-            emptyAsset,
-            deposit,
-            nonce,
-            expiry
+            address(elementBridge), assetData, emptyAsset, assetData, emptyAsset, deposit, nonce, expiry
         );
         outputValueA = outputValueALocal;
         outputValueB = outputValueBLocal;
@@ -1994,41 +1872,25 @@ contract ElementTest is Test {
         _assertBalanceGt(_owner, _erc20, 0);
     }
 
-    function _assertBalanceGt(
-        address _owner,
-        address _erc20,
-        uint256 _value
-    ) private {
+    function _assertBalanceGt(address _owner, address _erc20, uint256 _value) private {
         assertGt(IERC20(_erc20).balanceOf(_owner), _value);
     }
 
-    function _assertWithinOnePercentagePoint(
-        uint256 _quantity,
-        uint256 _total,
-        uint256 _targetPercent
-    ) private {
+    function _assertWithinOnePercentagePoint(uint256 _quantity, uint256 _total, uint256 _targetPercent) private {
         uint256 percent = (_quantity * 100) / _total;
         int256 diff = int256(percent) - int256(_targetPercent);
         uint256 absDiff = diff >= 0 ? uint256(diff) : uint256(-diff);
         assertLt(absDiff, 2);
     }
 
-    function _setTokenBalance(
-        string memory _asset,
-        address _account,
-        uint256 _balance
-    ) private {
+    function _setTokenBalance(string memory _asset, address _account, uint256 _balance) private {
         address tokenAddress = address(tokens[_asset]);
         deal(tokenAddress, _account, _balance);
 
         assertEq(tokens[_asset].balanceOf(_account), _balance, "wrong balance");
     }
 
-    function _increaseTokenBalance(
-        string memory _asset,
-        address _account,
-        uint256 _additionalBalance
-    ) private {
+    function _increaseTokenBalance(string memory _asset, address _account, uint256 _additionalBalance) private {
         address tokenAddress = address(tokens[_asset]);
         uint256 currentBalance = tokens[_asset].balanceOf(_account);
         uint256 newBalance = currentBalance + _additionalBalance;
@@ -2044,11 +1906,10 @@ contract ElementTest is Test {
         slot = bytes32(foundSlot);
     }
 
-    function _setSpeedbumpSlot(
-        string memory _asset,
-        uint256 _expiry,
-        uint256 _speedbump
-    ) private returns (uint256 newSpeedbump) {
+    function _setSpeedbumpSlot(string memory _asset, uint256 _expiry, uint256 _speedbump)
+        private
+        returns (uint256 newSpeedbump)
+    {
         address trancheAddress = _deriveTranche(_asset, _expiry);
         bytes32 slot = _findSpeedbumpSlot(_asset, _expiry);
         vm.store(trancheAddress, slot, bytes32(_speedbump));
@@ -2088,12 +1949,9 @@ contract ElementTest is Test {
         }
     }
 
-    function _addTrancheConfig(
-        string memory _asset,
-        address _trancheAddress,
-        address _poolAddress,
-        uint64 _expiry
-    ) private {
+    function _addTrancheConfig(string memory _asset, address _trancheAddress, address _poolAddress, uint64 _expiry)
+        private
+    {
         TrancheConfig[] storage configs = trancheConfigs[_asset];
         configs.push(TrancheConfig(_asset, _trancheAddress, _poolAddress, _expiry));
         if (configs.length == 1) {

@@ -161,20 +161,12 @@ contract AngleSLPUnitTest is BridgeTestBase {
         deal(daiAsset.erc20Address, address(bridge), amount + balance);
 
         vm.prank(address(ROLLUP_PROCESSOR));
-        (uint256 outputValueA, , ) = bridge.convert(
-            daiAsset,
-            emptyAsset,
-            sanDaiAsset,
-            emptyAsset,
-            amount,
-            0,
-            0,
-            address(0)
-        );
+        (uint256 outputValueA,,) =
+            bridge.convert(daiAsset, emptyAsset, sanDaiAsset, emptyAsset, amount, 0, 0, address(0));
 
         assertEq(IERC20(daiAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
-        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_DAI());
+        (,,,,, uint256 sanRate,,,) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_DAI());
         assertEq(outputValueA, (amount * 1e18) / sanRate);
     }
 
@@ -184,20 +176,12 @@ contract AngleSLPUnitTest is BridgeTestBase {
         vm.deal(address(bridge), amount);
 
         vm.prank(address(ROLLUP_PROCESSOR));
-        (uint256 outputValueA, , ) = bridge.convert(
-            ethAsset,
-            emptyAsset,
-            sanWethAsset,
-            emptyAsset,
-            amount,
-            0,
-            0,
-            address(0)
-        );
+        (uint256 outputValueA,,) =
+            bridge.convert(ethAsset, emptyAsset, sanWethAsset, emptyAsset, amount, 0, 0, address(0));
 
         assertEq(IERC20(wethAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(IERC20(sanWethAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
-        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_WETH());
+        (,,,,, uint256 sanRate,,,) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_WETH());
         assertEq(outputValueA, (amount * 1e18) / sanRate);
     }
 
@@ -208,20 +192,12 @@ contract AngleSLPUnitTest is BridgeTestBase {
         deal(daiAsset.erc20Address, address(bridge), _amount + balance);
 
         vm.prank(address(ROLLUP_PROCESSOR));
-        (uint256 outputValueA, , ) = bridge.convert(
-            daiAsset,
-            emptyAsset,
-            sanDaiAsset,
-            emptyAsset,
-            uint256(_amount),
-            0,
-            0,
-            address(0)
-        );
+        (uint256 outputValueA,,) =
+            bridge.convert(daiAsset, emptyAsset, sanDaiAsset, emptyAsset, uint256(_amount), 0, 0, address(0));
 
         assertEq(IERC20(daiAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
-        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_DAI());
+        (,,,,, uint256 sanRate,,,) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_DAI());
         assertEq(outputValueA, (uint256(_amount) * 1e18) / sanRate);
     }
 
@@ -234,19 +210,11 @@ contract AngleSLPUnitTest is BridgeTestBase {
         deal(sanDaiAsset.erc20Address, address(bridge), amount + balance);
 
         vm.prank(address(ROLLUP_PROCESSOR));
-        (uint256 outputValueA, , ) = bridge.convert(
-            sanDaiAsset,
-            emptyAsset,
-            daiAsset,
-            emptyAsset,
-            amount,
-            0,
-            1,
-            address(0)
-        );
+        (uint256 outputValueA,,) =
+            bridge.convert(sanDaiAsset, emptyAsset, daiAsset, emptyAsset, amount, 0, 1, address(0));
         assertEq(IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(IERC20(daiAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
-        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_DAI());
+        (,,,,, uint256 sanRate,,,) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_DAI());
         assertApproxEqAbs(outputValueA, (amount * sanRate) / 1e18, 2); // due to the harvest there might be a really small difference
     }
 
@@ -268,19 +236,11 @@ contract AngleSLPUnitTest is BridgeTestBase {
         deal(sanDaiAsset.erc20Address, address(bridge), amount + balance);
 
         vm.prank(address(ROLLUP_PROCESSOR));
-        (uint256 outputValueA, , ) = bridge.convert(
-            sanDaiAsset,
-            emptyAsset,
-            daiAsset,
-            emptyAsset,
-            amount,
-            0,
-            1,
-            address(0)
-        );
+        (uint256 outputValueA,,) =
+            bridge.convert(sanDaiAsset, emptyAsset, daiAsset, emptyAsset, amount, 0, 1, address(0));
         assertEq(IERC20(sanDaiAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(IERC20(daiAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
-        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_DAI());
+        (,,,,, uint256 sanRate,,,) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_DAI());
         assertApproxEqAbs(outputValueA, (amount * sanRate) / 1e18, 2);
     }
 
@@ -291,20 +251,12 @@ contract AngleSLPUnitTest is BridgeTestBase {
         deal(sanWethAsset.erc20Address, address(bridge), amount + balance);
 
         vm.prank(address(ROLLUP_PROCESSOR));
-        (uint256 outputValueA, , ) = bridge.convert(
-            sanWethAsset,
-            emptyAsset,
-            ethAsset,
-            emptyAsset,
-            amount,
-            0,
-            1,
-            address(0)
-        );
+        (uint256 outputValueA,,) =
+            bridge.convert(sanWethAsset, emptyAsset, ethAsset, emptyAsset, amount, 0, 1, address(0));
         assertEq(IERC20(sanWethAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(IERC20(wethAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(address(bridge).balance, 0);
-        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_WETH());
+        (,,,,, uint256 sanRate,,,) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_WETH());
         assertEq(outputValueA, (amount * sanRate) / 1e18);
     }
 
@@ -316,20 +268,12 @@ contract AngleSLPUnitTest is BridgeTestBase {
         deal(usdcAsset.erc20Address, address(bridge), amount + balance);
 
         vm.prank(address(ROLLUP_PROCESSOR));
-        (uint256 outputValueA, , ) = bridge.convert(
-            usdcAsset,
-            emptyAsset,
-            sanUsdcAsset,
-            emptyAsset,
-            amount,
-            0,
-            0,
-            address(0)
-        );
+        (uint256 outputValueA,,) =
+            bridge.convert(usdcAsset, emptyAsset, sanUsdcAsset, emptyAsset, amount, 0, 0, address(0));
 
         assertEq(IERC20(usdcAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(IERC20(sanUsdcAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
-        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_USDC());
+        (,,,,, uint256 sanRate,,,) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_USDC());
         assertEq(outputValueA, (amount * 1e18) / sanRate);
     }
 
@@ -341,19 +285,11 @@ contract AngleSLPUnitTest is BridgeTestBase {
         deal(sanUsdcAsset.erc20Address, address(bridge), amount + balance);
 
         vm.prank(address(ROLLUP_PROCESSOR));
-        (uint256 outputValueA, , ) = bridge.convert(
-            sanUsdcAsset,
-            emptyAsset,
-            usdcAsset,
-            emptyAsset,
-            amount,
-            0,
-            1,
-            address(0)
-        );
+        (uint256 outputValueA,,) =
+            bridge.convert(sanUsdcAsset, emptyAsset, usdcAsset, emptyAsset, amount, 0, 1, address(0));
         assertEq(IERC20(sanUsdcAsset.erc20Address).balanceOf(address(bridge)), DUST);
         assertEq(IERC20(usdcAsset.erc20Address).balanceOf(address(bridge)), outputValueA + DUST);
-        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_USDC());
+        (,,,,, uint256 sanRate,,,) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_USDC());
         assertApproxEqAbs(outputValueA, (amount * sanRate) / 1e18, 2);
     }
 

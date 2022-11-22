@@ -15,23 +15,11 @@ interface IWrappedPosition is IERC20, IERC20Permit {
 
     function deposit(address sender, uint256 amount) external returns (uint256);
 
-    function withdraw(
-        address sender,
-        uint256 _shares,
-        uint256 _minUnderlying
-    ) external returns (uint256);
+    function withdraw(address sender, uint256 _shares, uint256 _minUnderlying) external returns (uint256);
 
-    function withdrawUnderlying(
-        address _destination,
-        uint256 _amount,
-        uint256 _minUnderlying
-    ) external returns (uint256, uint256);
-
-    function prefundedDeposit(address _destination)
+    function withdrawUnderlying(address _destination, uint256 _amount, uint256 _minUnderlying)
         external
-        returns (
-            uint256,
-            uint256,
-            uint256
-        );
+        returns (uint256, uint256);
+
+    function prefundedDeposit(address _destination) external returns (uint256, uint256, uint256);
 }

@@ -56,20 +56,10 @@ contract LidoBridge is BridgeBase {
         uint256 _interactionNonce,
         uint64,
         address
-    )
-        external
-        payable
-        override(BridgeBase)
-        onlyRollup
-        returns (
-            uint256 outputValueA,
-            uint256,
-            bool isAsync
-        )
-    {
+    ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool isAsync) {
         bool isETHInput = _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
-        bool isWstETHInput = _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 &&
-            _inputAssetA.erc20Address == address(WRAPPED_STETH);
+        bool isWstETHInput = _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
+            && _inputAssetA.erc20Address == address(WRAPPED_STETH);
 
         if (!(isETHInput || isWstETHInput)) {
             revert ErrorLib.InvalidInputA();
@@ -82,15 +72,15 @@ contract LidoBridge is BridgeBase {
     }
 
     /**
-        Convert ETH -> wstETH
+     * Convert ETH -> wstETH
      */
     function _wrapETH(uint256 _totalInputValue, AztecTypes.AztecAsset calldata _outputAsset)
         private
         returns (uint256 outputValue)
     {
         if (
-            _outputAsset.assetType != AztecTypes.AztecAssetType.ERC20 ||
-            _outputAsset.erc20Address != address(WRAPPED_STETH)
+            _outputAsset.assetType != AztecTypes.AztecAssetType.ERC20
+                || _outputAsset.erc20Address != address(WRAPPED_STETH)
         ) {
             revert ErrorLib.InvalidOutputA();
         }
@@ -113,7 +103,7 @@ contract LidoBridge is BridgeBase {
     }
 
     /**
-        Convert wstETH to ETH
+     * Convert wstETH to ETH
      */
     function _unwrapETH(
         uint256 _totalInputValue,

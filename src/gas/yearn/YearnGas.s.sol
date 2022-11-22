@@ -33,11 +33,8 @@ contract YearnMeasure is YearnDeployment {
         ROLLUP_PROCESSOR = temp;
 
         AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory eth = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
+        AztecTypes.AztecAsset memory eth =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
         AztecTypes.AztecAsset memory vyAsset = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: YEARN_REGISTRY.latestVault(WETH),
@@ -79,11 +76,8 @@ contract YearnMeasure is YearnDeployment {
         subsidy = ISubsidy(YearnBridge(payable(bridge)).SUBSIDY());
 
         AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory eth = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
+        AztecTypes.AztecAsset memory eth =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
         AztecTypes.AztecAsset memory vyAsset = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: YEARN_REGISTRY.latestVault(WETH),
@@ -143,11 +137,8 @@ contract YearnMeasure is YearnDeployment {
         ROLLUP_PROCESSOR = temp;
 
         AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory wethAsset = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(WETH),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        AztecTypes.AztecAsset memory wethAsset =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(WETH), assetType: AztecTypes.AztecAssetType.ERC20});
         AztecTypes.AztecAsset memory vyAsset = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: YEARN_REGISTRY.latestVault(WETH),

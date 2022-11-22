@@ -31,21 +31,12 @@ contract CurveLpMeasure is CurveStethLpDeployment {
         ROLLUP_PROCESSOR = temp;
 
         AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory eth = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
-        AztecTypes.AztecAsset memory wstEth = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(WSTETH),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-        AztecTypes.AztecAsset memory lpAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: lpToken,
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        AztecTypes.AztecAsset memory eth =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
+        AztecTypes.AztecAsset memory wstEth =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(WSTETH), assetType: AztecTypes.AztecAssetType.ERC20});
+        AztecTypes.AztecAsset memory lpAsset =
+            AztecTypes.AztecAsset({id: 1, erc20Address: lpToken, assetType: AztecTypes.AztecAssetType.ERC20});
 
         // Fund with WSTETH
         vm.startBroadcast();

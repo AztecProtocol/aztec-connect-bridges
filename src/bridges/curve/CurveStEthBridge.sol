@@ -71,20 +71,10 @@ contract CurveStEthBridge is BridgeBase {
         uint256 _interactionNonce,
         uint64 _auxData,
         address
-    )
-        external
-        payable
-        override(BridgeBase)
-        onlyRollup
-        returns (
-            uint256 outputValueA,
-            uint256,
-            bool
-        )
-    {
+    ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
         bool isETHInput = _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
-        bool isWstETHInput = _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20 &&
-            _inputAssetA.erc20Address == address(WRAPPED_STETH);
+        bool isWstETHInput = _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
+            && _inputAssetA.erc20Address == address(WRAPPED_STETH);
 
         if (!(isETHInput || isWstETHInput)) {
             revert ErrorLib.InvalidInputA();
@@ -103,14 +93,13 @@ contract CurveStEthBridge is BridgeBase {
      * @param _minStEthPerEth Smallest acceptable amount of steth for each eth
      * @return outputValue The amount of wstEth received from the interaction
      */
-    function _wrapETH(
-        uint256 _totalInputValue,
-        AztecTypes.AztecAsset calldata _outputAsset,
-        uint256 _minStEthPerEth
-    ) private returns (uint256 outputValue) {
+    function _wrapETH(uint256 _totalInputValue, AztecTypes.AztecAsset calldata _outputAsset, uint256 _minStEthPerEth)
+        private
+        returns (uint256 outputValue)
+    {
         if (
-            _outputAsset.assetType != AztecTypes.AztecAssetType.ERC20 ||
-            _outputAsset.erc20Address != address(WRAPPED_STETH)
+            _outputAsset.assetType != AztecTypes.AztecAssetType.ERC20
+                || _outputAsset.erc20Address != address(WRAPPED_STETH)
         ) {
             revert ErrorLib.InvalidOutputA();
         }
@@ -118,12 +107,8 @@ contract CurveStEthBridge is BridgeBase {
         uint256 minDy = (_totalInputValue * _minStEthPerEth) / PRECISION;
 
         // Swap eth -> stEth on curve
-        uint256 dy = CURVE_POOL.exchange{value: _totalInputValue}(
-            CURVE_ETH_INDEX,
-            CURVE_STETH_INDEX,
-            _totalInputValue,
-            minDy
-        );
+        uint256 dy =
+            CURVE_POOL.exchange{value: _totalInputValue}(CURVE_ETH_INDEX, CURVE_STETH_INDEX, _totalInputValue, minDy);
 
         // wrap stEth
         outputValue = WRAPPED_STETH.wrap(dy);
