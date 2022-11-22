@@ -5,10 +5,10 @@ import {
   IChainlinkOracle__factory,
   UniswapBridge,
   UniswapBridge__factory,
-} from "../../../typechain-types";
-import { JsonRpcProvider } from "../aztec/provider/json_rpc_provider";
-import { AztecAsset, AztecAssetType } from "../bridge-data";
-import { UniswapBridgeData } from "./uniswap-bridge-data";
+} from "../../../typechain-types/index.js";
+import { JsonRpcProvider } from "../aztec/provider/json_rpc_provider.js";
+import { AztecAsset, AztecAssetType } from "../bridge-data.js";
+import { UniswapBridgeData } from "./uniswap-bridge-data.js";
 import { jest } from "@jest/globals";
 import { BridgeCallData } from "@aztec/barretenberg/bridge_call_data";
 

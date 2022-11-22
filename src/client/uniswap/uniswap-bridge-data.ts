@@ -1,4 +1,4 @@
-import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
+import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data.js";
 
 import { EthAddress } from "@aztec/barretenberg/address";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
@@ -10,8 +10,8 @@ import {
   IChainlinkOracle__factory,
   UniswapBridge,
   UniswapBridge__factory,
-} from "../../../typechain-types";
-import { createWeb3Provider } from "../aztec/provider";
+} from "../../../typechain-types/index.js";
+import { createWeb3Provider } from "../aztec/provider/web3_provider.js";
 
 export class UniswapBridgeData implements BridgeDataFieldGetters {
   private readonly WETH = EthAddress.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
