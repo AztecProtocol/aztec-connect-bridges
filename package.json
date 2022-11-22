@@ -13,7 +13,7 @@
     "clean": "rm -rf ./cache ./dest ./out ./typechain-types ./client-dest",
     "compile:typechain": "yarn clean && forge build --skip test --skip script && typechain --target ethers-v5 --out-dir ./typechain-types './out/?(DataProvider|RollupProcessor|*Bridge|I*).sol/*.json'",
     "compile:client-dest": "tsc --project tsconfig.client-dest.json",
-    "build": "forge build && yarn compile:client-dest",
+    "build": "yarn compile:client-dest",
     "test:pinned:14000000": "forge test --fork-block-number 14000000 --match-contract 'Element' --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c",
     "test:pinned:14970000": "forge test --fork-block-number 14970000 -m 'testRedistributionSuccessfulSwap|testRedistributionExitWhenICREqualsMCR' --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c",
     "test:pinned:14972000": "forge test --fork-block-number 14972000 -m 'testRedistributionFailingSwap' --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c",
