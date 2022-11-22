@@ -26,11 +26,6 @@ jobs:
             export PATH=/home/circleci/.foundry/bin:$PATH
             yarn install:foundry
       - run:
-          name: Install Dependencies
-          shell: /bin/bash
-          command: |
-            yarn install:dependencies
-      - run:
           name: Build Project
           shell: /bin/bash
           command: |
