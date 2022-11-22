@@ -35,7 +35,6 @@ import {IQuoter} from "../../interfaces/uniswapv3/IQuoter.sol";
  *
  *      Min price is encoded as a floating point number. First 21 bits are used for significand, last 5 bits for
  *      exponent: |21 bits significand| |5 bits exponent|
- *      To convert minimum price to this format call encodeMinPrice(...) function on this contract.
  *      Minimum amount out is computed with the following formula:
  *          (inputValue * (significand * 10**exponent)) / (10 ** inputAssetDecimals)
  *      Here are 2 examples.
