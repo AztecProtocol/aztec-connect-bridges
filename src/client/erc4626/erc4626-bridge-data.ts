@@ -1,9 +1,9 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
-import { IERC20Metadata__factory, IERC4626__factory } from "../../../typechain-types";
-import { createWeb3Provider } from "../aztec/provider";
-import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType, UnderlyingAsset } from "../bridge-data";
+import { IERC20Metadata__factory, IERC4626__factory } from "../../../typechain-types/index.js";
+import { createWeb3Provider } from "../aztec/provider/web3_provider.js";
+import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType, UnderlyingAsset } from "../bridge-data.js";
 
 export class ERC4626BridgeData implements BridgeDataFieldGetters {
   shareToAssetMap = new Map<EthAddress, EthAddress>();

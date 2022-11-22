@@ -9,10 +9,10 @@ import {
   IVault,
   IVault__factory,
   RollupProcessor__factory,
-} from "../../../typechain-types";
-import { AsyncDefiBridgeProcessedEvent, RollupProcessor } from "../../../typechain-types/RollupProcessor";
-import { createWeb3Provider } from "../aztec/provider";
-import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
+} from "../../../typechain-types/index.js";
+import { AsyncDefiBridgeProcessedEvent, RollupProcessor } from "../../../typechain-types/RollupProcessor.js";
+import { createWeb3Provider } from "../aztec/provider/web3_provider.js";
+import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data.js";
 
 export type BatchSwapStep = {
   poolId: string;

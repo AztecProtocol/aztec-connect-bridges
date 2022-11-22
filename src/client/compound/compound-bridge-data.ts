@@ -3,11 +3,11 @@ import { AssetValue } from "@aztec/barretenberg/asset";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
 import "isomorphic-fetch";
-import { ICERC20__factory, ICompoundERC4626__factory, IERC20__factory } from "../../../typechain-types";
-import { createWeb3Provider } from "../aztec/provider";
-import { AztecAsset } from "../bridge-data";
+import { ICERC20__factory, ICompoundERC4626__factory, IERC20__factory } from "../../../typechain-types/index.js";
+import { createWeb3Provider } from "../aztec/provider/web3_provider.js";
+import { AztecAsset } from "../bridge-data.js";
 
-import { ERC4626BridgeData } from "../erc4626/erc4626-bridge-data";
+import { ERC4626BridgeData } from "../erc4626/erc4626-bridge-data.js";
 
 export class CompoundBridgeData extends ERC4626BridgeData {
   protected constructor(ethersProvider: Web3Provider) {
@@ -57,10 +57,10 @@ export class CompoundBridgeData extends ERC4626BridgeData {
     const underlying = IERC20__factory.connect(underlyingAsset.erc20Address.toString(), this.ethersProvider);
     const cToken = ICERC20__factory.connect(underlyingAsset.erc20Address.toString(), this.ethersProvider);
 
-    const underlyingBalancePromise = underlying.balanceOf(cTokenAddress.toString());
-    const totalBorrowsPromise = cToken.totalBorrows();
+    const underlyingBalance = await underlying.balanceOf(cTokenAddress.toString());
+    const totalBorrows = await cToken.totalBorrows();
 
-    const marketSize = (await underlyingBalancePromise).add(await totalBorrowsPromise).toBigInt();
+    const marketSize = underlyingBalance.add(totalBorrows).toBigInt();
 
     return [
       {

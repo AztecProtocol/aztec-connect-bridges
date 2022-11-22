@@ -8,13 +8,11 @@ import {
   RollupProcessor__factory,
   IVault,
   IVault__factory,
-} from "../../../typechain-types";
-import { AztecAssetType } from "../bridge-data";
-import { ElementBridgeData } from "./element-bridge-data";
-
-jest.mock("../aztec/provider", () => ({
-  createWeb3Provider: jest.fn(),
-}));
+} from "../../../typechain-types/index.js";
+import { AztecAssetType } from "../bridge-data.js";
+import { ElementBridgeData } from "./element-bridge-data.js";
+import { jest } from "@jest/globals";
+import { JsonRpcProvider } from "../aztec/provider/json_rpc_provider.js";
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -47,10 +45,12 @@ describe("element bridge data", () => {
   const expiration1 = BigInt(now + 86400 * 60);
   const expiration2 = BigInt(now + 86400 * 90);
   const startDate = BigInt(now - 86400 * 30);
-  const bridgeCallData1 = new BridgeCallData(1, 4, 4, undefined, undefined, Number(expiration1));
-  const bridgeCallData2 = new BridgeCallData(1, 5, 5, undefined, undefined, Number(expiration2));
+  const bridgeCallData1 = new BridgeCallData(1, 4, 4, undefined, undefined, expiration1);
+  const bridgeCallData2 = new BridgeCallData(1, 5, 5, undefined, undefined, expiration2);
   const outputValue = 10n * 10n ** 18n;
   const testAddress = EthAddress.random();
+
+  const provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
 
   const defiEvents = [
     {
@@ -126,16 +126,18 @@ describe("element bridge data", () => {
   };
 
   elementBridge = {
+    // @ts-ignore
     interactions: jest.fn().mockImplementation(async (nonce: bigint) => {
       return interactions[Number(nonce)];
     }),
+    // @ts-ignore
     getTrancheDeploymentBlockNumber: jest.fn().mockImplementation(async (nonce: bigint) => {
       const promise = Promise.resolve(getTrancheDeploymentBlockNumber(nonce));
       return promise;
     }),
     provider: {
-      getBlockNumber: jest.fn().mockResolvedValue(200),
-      getBlock: jest.fn().mockResolvedValue({ timestamp: +now.toString(), number: 200 }),
+      getBlockNumber: jest.fn().mockReturnValue(200),
+      getBlock: jest.fn().mockReturnValue({ timestamp: +now.toString(), number: 200 }),
     },
   } as any;
 
@@ -145,6 +147,7 @@ describe("element bridge data", () => {
   };
 
   const rollupContract: Mockify<RollupProcessor> = {
+    // @ts-ignore
     queryFilter: jest.fn().mockImplementation((filter: any, from: number, to: number) => {
       const nonce = filter.interactionNonce;
       const [defiEvent] = getDefiEvents(nonce, from, to);
@@ -154,7 +157,7 @@ describe("element bridge data", () => {
       const bridgeCallData = BridgeCallData.fromBigInt(defiEvent.encodedBridgeCallData);
       return [
         {
-          getBlock: jest.fn().mockResolvedValue({ timestamp: +startDate.toString(), number: defiEvent.blockNumber }),
+          getBlock: jest.fn().mockReturnValue({ timestamp: +startDate.toString(), number: defiEvent.blockNumber }),
           args: [
             BigNumber.from(bridgeCallData.toBigInt()),
             BigNumber.from(defiEvent.nonce),
@@ -164,6 +167,7 @@ describe("element bridge data", () => {
       ];
     }),
     filters: {
+      // @ts-ignore
       AsyncDefiBridgeProcessed: jest.fn().mockImplementation((bridgeCallData: any, interactionNonce: number) => {
         return {
           bridgeCallData,
@@ -182,7 +186,7 @@ describe("element bridge data", () => {
     IVault__factory.connect = () => balancer as any;
     RollupProcessor__factory.connect = () => rollup as any;
     return ElementBridgeData.create(
-      {} as any,
+      provider,
       EthAddress.ZERO,
       EthAddress.ZERO,
       EthAddress.ZERO,
@@ -269,8 +273,8 @@ describe("element bridge data", () => {
         };
       }),
       provider: {
-        getBlockNumber: jest.fn().mockResolvedValue(200),
-        getBlock: jest.fn().mockResolvedValue({ timestamp: +now.toString(), number: 200 }),
+        getBlockNumber: jest.fn().mockReturnValue(200),
+        getBlock: jest.fn().mockReturnValue({ timestamp: +now.toString(), number: 200 }),
       },
     } as any;
 
@@ -288,11 +292,11 @@ describe("element bridge data", () => {
     const interest = BigInt(1e16);
     const inputValue = BigInt(10e18),
       elementBridge = {
-        hashAssetAndExpiry: jest.fn().mockResolvedValue("0xa"),
-        pools: jest.fn().mockResolvedValue([trancheAddress, "", poolId]),
+        hashAssetAndExpiry: jest.fn().mockReturnValue("0xa"),
+        pools: jest.fn().mockReturnValue([trancheAddress, "", poolId]),
         provider: {
-          getBlockNumber: jest.fn().mockResolvedValue(200),
-          getBlock: jest.fn().mockResolvedValue({ timestamp: +now.toString(), number: 200 }),
+          getBlockNumber: jest.fn().mockReturnValue(200),
+          getBlock: jest.fn().mockReturnValue({ timestamp: +now.toString(), number: 200 }),
         },
       };
 

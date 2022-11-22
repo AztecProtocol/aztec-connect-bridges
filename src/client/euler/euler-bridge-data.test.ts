@@ -1,12 +1,10 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { BigNumber } from "ethers";
-import { IERC4626, IERC4626__factory, ILidoOracle, ILidoOracle__factory } from "../../../typechain-types";
-import { AztecAsset, AztecAssetType } from "../bridge-data";
-import { EulerBridgeData } from "./euler-bridge-data";
-
-jest.mock("../aztec/provider", () => ({
-  createWeb3Provider: jest.fn(),
-}));
+import { IERC4626, IERC4626__factory, ILidoOracle, ILidoOracle__factory } from "../../../typechain-types/index.js";
+import { AztecAsset, AztecAssetType } from "../bridge-data.js";
+import { EulerBridgeData } from "./euler-bridge-data.js";
+import { jest } from "@jest/globals";
+import { JsonRpcProvider } from "../aztec/provider/json_rpc_provider.js";
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock | any;
@@ -16,6 +14,8 @@ describe("Euler bridge data", () => {
   let erc4626Contract: Mockify<IERC4626>;
   let lidoOracleContract: Mockify<ILidoOracle>;
 
+  let provider: JsonRpcProvider;
+
   let ethAsset: AztecAsset;
   let weDaiAsset: AztecAsset;
   let daiAsset: AztecAsset;
@@ -24,6 +24,8 @@ describe("Euler bridge data", () => {
   let emptyAsset: AztecAsset;
 
   beforeAll(() => {
+    provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+
     ethAsset = {
       id: 0,
       assetType: AztecAssetType.ETH,
@@ -59,11 +61,11 @@ describe("Euler bridge data", () => {
   it("should correctly fetch APR", async () => {
     erc4626Contract = {
       ...erc4626Contract,
-      asset: jest.fn().mockResolvedValue(daiAsset.erc20Address.toString()),
+      asset: jest.fn().mockReturnValue(daiAsset.erc20Address.toString()),
     };
     IERC4626__factory.connect = () => erc4626Contract as any;
 
-    const eulerBridgeData = EulerBridgeData.create({} as any);
+    const eulerBridgeData = EulerBridgeData.create(provider);
     const apr = await eulerBridgeData.getAPR(weDaiAsset);
     expect(apr).toBeGreaterThan(0);
   });
@@ -73,13 +75,13 @@ describe("Euler bridge data", () => {
 
     erc4626Contract = {
       ...erc4626Contract,
-      asset: jest.fn().mockResolvedValue(wstethAsset.erc20Address.toString()),
+      asset: jest.fn().mockReturnValue(wstethAsset.erc20Address.toString()),
     };
     IERC4626__factory.connect = () => erc4626Contract as any;
 
     lidoOracleContract = {
       ...lidoOracleContract,
-      getLastCompletedReportDelta: jest.fn().mockResolvedValue({
+      getLastCompletedReportDelta: jest.fn().mockReturnValue({
         timeElapsed: BigNumber.from(86400n),
         postTotalPooledEther: BigNumber.from(2777258873714679039007057n),
         preTotalPooledEther: BigNumber.from(2776930205843708039007057n),
@@ -87,20 +89,20 @@ describe("Euler bridge data", () => {
     };
     ILidoOracle__factory.connect = () => lidoOracleContract as any;
 
-    const eulerBridgeData = EulerBridgeData.createWithLido({} as any, {} as any);
+    const eulerBridgeData = EulerBridgeData.createWithLido(provider, {} as any);
     const combinedEulerLidoAPR = await eulerBridgeData.getAPR(weWstethAsset);
     expect(combinedEulerLidoAPR).toBeGreaterThan(mockedLidoAPR);
   });
 
   it("should correctly fetch market size", async () => {
-    const eulerBridgeData = EulerBridgeData.create({} as any);
+    const eulerBridgeData = EulerBridgeData.create(provider);
     const assetValue = (await eulerBridgeData.getMarketSize(daiAsset, emptyAsset, emptyAsset, emptyAsset, 0n))[0];
     expect(assetValue.assetId).toBe(daiAsset.id);
     expect(assetValue.value).toBeGreaterThan(0);
   });
 
   it("should correctly fetch market size for ETH", async () => {
-    const eulerBridgeData = EulerBridgeData.create({} as any);
+    const eulerBridgeData = EulerBridgeData.create(provider);
     const assetValue = (await eulerBridgeData.getMarketSize(ethAsset, emptyAsset, emptyAsset, emptyAsset, 0n))[0];
     expect(assetValue.assetId).toBe(ethAsset.id);
     expect(assetValue.value).toBeGreaterThan(0);

@@ -4,21 +4,22 @@
   "description": "This repo contains the solidity files and typescript helper class for all of the Aztec Connect Bridge Contracts",
   "repository": "git@github.com:AztecProtocol/aztec-connect-bridges.git",
   "license": "Apache-2.0",
+  "type": "module",
   "scripts": {
     "install:foundryup": "curl -L https://foundry.paradigm.xyz | bash",
     "install:foundry": "foundryup",
     "install:dependencies": "git submodule update --init --recursive && yarn",
-    "setup": "yarn install:foundryup && yarn install:foundry && yarn",
+    "setup": "yarn install:foundryup && yarn install:foundry && yarn install:dependencies",
     "clean": "rm -rf ./cache ./dest ./out ./typechain-types ./client-dest",
-    "compile:typechain": "forge build && typechain --target ethers-v5 --out-dir ./typechain-types './out/!(test*|Test*|*.t.sol|*.s.sol)/*.json'",
-    "compile:client-dest": "yarn compile:typechain && tsc --project tsconfig.client-dest.json",
-    "build": "forge build && yarn compile:client-dest",
+    "compile:typechain": "yarn clean && forge build --skip test --skip script && typechain --target ethers-v5 --out-dir ./typechain-types './out/?(DataProvider|RollupProcessor|*Bridge|I*).sol/*.json'",
+    "compile:client-dest": "tsc --project tsconfig.client-dest.json",
+    "build": "yarn compile:client-dest",
     "test:pinned:14000000": "forge test --fork-block-number 14000000 --match-contract 'Element' --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c",
     "test:pinned:14970000": "forge test --fork-block-number 14970000 -m 'testRedistributionSuccessfulSwap|testRedistributionExitWhenICREqualsMCR' --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c",
     "test:pinned:14972000": "forge test --fork-block-number 14972000 -m 'testRedistributionFailingSwap' --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c",
     "test:pinned": "yarn test:pinned:14000000 && yarn test:pinned:14970000 && yarn test:pinned:14972000",
     "test:contracts": "forge test --no-match-contract 'Element' --no-match-test 'testRedistribution' && yarn test:pinned",
-    "test:clients": "yarn compile:typechain && jest test",
+    "test:clients": "NODE_OPTIONS=--experimental-vm-modules yarn jest",
     "test": "yarn test:contracts && yarn test:clients",
     "formatting": "forge fmt && yarn prettier --write ./src/client/**/*.ts",
     "formatting:check": "forge fmt --check && prettier --check ./src/client/**/*.ts",
@@ -27,15 +28,15 @@
     "lint:clients": "eslint \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
-    "@aztec/barretenberg": "2.1.45",
-    "@ethersproject/providers": "^5.7.1",
+    "@aztec/barretenberg": "2.1.52",
+    "@ethersproject/providers": "^5.7.2",
     "@openzeppelin/contracts": "^4.7.3",
-    "@typechain/ethers-v5": "^10.1.0",
-    "ethers": "^5.7.1",
+    "@typechain/ethers-v5": "^10.1.1",
+    "ethers": "^5.7.2",
     "isomorphic-fetch": "^3.0.0",
     "ts-node": "^10.9.1",
-    "typechain": "^8.1.0",
-    "typescript": "^4.8.4"
+    "typechain": "^8.1.1",
+    "typescript": "^4.9.3"
   },
   "devDependencies": {
     "@types/jest": "^29.2.3",
@@ -45,14 +46,25 @@
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.2.1",
     "jest": "^29.3.1",
+    "jest-environment-jsdom": "^29.3.1",
     "prettier": "^2.7.1",
     "solhint": "https://github.com/LHerskind/solhint",
     "ts-jest": "^29.0.3"
   },
   "jest": {
+    "preset": "ts-jest/presets/default-esm",
     "transform": {
-      "^.+\\.ts$": "ts-jest"
+      "^.+\\.ts$": [
+        "ts-jest",
+        {
+          "useESM": true
+        }
+      ]
     },
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    },
+    "testEnvironment": "jsdom",
     "testRegex": ".*\\.test\\.ts$",
     "rootDir": "./src"
   },

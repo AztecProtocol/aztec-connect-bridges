@@ -5,7 +5,7 @@ import {
   SolidityType,
   AztecAssetType,
   BridgeDataFieldGetters,
-} from "../../bridge-data";
+} from "../../bridge-data.js";
 
 import {
   IWstETH,
@@ -14,9 +14,9 @@ import {
   IWstETH__factory,
   ILidoOracle__factory,
   ICurvePool__factory,
-} from "../../../../typechain-types";
+} from "../../../../typechain-types/index.js";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
-import { createWeb3Provider } from "../../aztec/provider";
+import { createWeb3Provider } from "../../aztec/provider/web3_provider.js";
 import { EthAddress } from "@aztec/barretenberg/address";
 import { AssetValue } from "@aztec/barretenberg/asset";
 

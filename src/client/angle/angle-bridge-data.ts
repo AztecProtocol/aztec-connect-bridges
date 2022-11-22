@@ -3,9 +3,9 @@ import "isomorphic-fetch";
 import { EthAddress } from "@aztec/barretenberg/address";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { Web3Provider } from "@ethersproject/providers";
-import { IStableMaster, IStableMaster__factory } from "../../../typechain-types";
-import { createWeb3Provider } from "../aztec/provider";
-import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
+import { IStableMaster, IStableMaster__factory } from "../../../typechain-types/index.js";
+import { createWeb3Provider } from "../aztec/provider/web3_provider.js";
+import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from "../bridge-data.js";
 import { AssetValue } from "@aztec/barretenberg/asset";
 
 export class AngleBridgeData implements BridgeDataFieldGetters {

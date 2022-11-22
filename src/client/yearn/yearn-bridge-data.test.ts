@@ -9,13 +9,11 @@ import {
   IYearnRegistry__factory,
   IYearnVault,
   IYearnVault__factory,
-} from "../../../typechain-types";
-import { AztecAsset, AztecAssetType } from "../bridge-data";
-import { YearnBridgeData } from "./yearn-bridge-data";
-
-jest.mock("../aztec/provider", () => ({
-  createWeb3Provider: jest.fn(),
-}));
+} from "../../../typechain-types/index.js";
+import { AztecAsset, AztecAssetType } from "../bridge-data.js";
+import { YearnBridgeData } from "./yearn-bridge-data.js";
+import { jest } from "@jest/globals";
+import { JsonRpcProvider } from "../aztec/provider/json_rpc_provider.js";
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock | any;
@@ -24,6 +22,9 @@ type Mockify<T> = {
 describe("Testing Yearn auxData", () => {
   let registryContract: Mockify<IYearnRegistry>;
   let rollupProcessorContract: Mockify<IRollupProcessor>;
+
+  let provider: JsonRpcProvider;
+
   let ethAsset: AztecAsset;
   let wethAsset: AztecAsset;
   let yvEthAsset: AztecAsset;
@@ -33,6 +34,8 @@ describe("Testing Yearn auxData", () => {
   let emptyAsset: AztecAsset;
 
   beforeAll(() => {
+    provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+
     ethAsset = {
       id: 0,
       assetType: AztecAssetType.ETH,
@@ -104,7 +107,7 @@ describe("Testing Yearn auxData", () => {
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(provider, EthAddress.random());
     const auxDataDepositERC20 = await yearnBridgeData.getAuxData(daiAsset, emptyAsset, yvDaiAsset, emptyAsset);
     expect(auxDataDepositERC20[0]).toBe(0n);
     const auxDataDepositETH = await yearnBridgeData.getAuxData(ethAsset, emptyAsset, yvEthAsset, emptyAsset);
@@ -145,7 +148,7 @@ describe("Testing Yearn auxData", () => {
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(provider, EthAddress.random());
     const auxDataDepositERC20 = await yearnBridgeData.getAuxData(yvDaiAsset, emptyAsset, daiAsset, emptyAsset);
     expect(auxDataDepositERC20[0]).toBe(1n);
     const auxDataDepositETH = await yearnBridgeData.getAuxData(yvEthAsset, emptyAsset, ethAsset, emptyAsset);
@@ -172,11 +175,11 @@ describe("Testing Yearn auxData", () => {
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn().mockResolvedValue(EthAddress.random().toString()),
+      getSupportedAsset: jest.fn().mockReturnValue(EthAddress.random().toString()),
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(provider, EthAddress.random());
 
     expect.assertions(1);
     await expect(yearnBridgeData.getAuxData(yvDaiAsset, emptyAsset, ethAsset, emptyAsset)).rejects.toEqual(
@@ -204,11 +207,11 @@ describe("Testing Yearn auxData", () => {
 
     rollupProcessorContract = {
       ...rollupProcessorContract,
-      getSupportedAsset: jest.fn().mockResolvedValue(EthAddress.random().toString()),
+      getSupportedAsset: jest.fn().mockReturnValue(EthAddress.random().toString()),
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(provider, EthAddress.random());
 
     expect.assertions(1);
     await expect(yearnBridgeData.getAuxData(ethAsset, emptyAsset, yvEthAsset, emptyAsset)).rejects.toEqual(
@@ -252,7 +255,7 @@ describe("Testing Yearn auxData", () => {
     };
     IRollupProcessor__factory.connect = () => rollupProcessorContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(provider, EthAddress.random());
 
     expect.assertions(8);
     await expect(yearnBridgeData.getAuxData(ethAsset, emptyAsset, yvDaiAsset, emptyAsset)).rejects.toEqual(
@@ -285,6 +288,9 @@ describe("Testing Yearn auxData", () => {
 
 describe("Testing Yearn expectedOutput", () => {
   let vaultContract: Mockify<IYearnVault>;
+
+  let provider: JsonRpcProvider;
+
   let ethAsset: AztecAsset;
   let yvEthAsset: AztecAsset;
   let daiAsset: AztecAsset;
@@ -292,6 +298,8 @@ describe("Testing Yearn expectedOutput", () => {
   let emptyAsset: AztecAsset;
 
   beforeAll(() => {
+    provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+
     ethAsset = {
       id: 0,
       assetType: AztecAssetType.ETH,
@@ -328,7 +336,7 @@ describe("Testing Yearn expectedOutput", () => {
     };
     IYearnVault__factory.connect = () => vaultContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(provider, EthAddress.random());
 
     const expectedOutputERC20 = await yearnBridgeData.getExpectedOutput(
       daiAsset,
@@ -362,7 +370,7 @@ describe("Testing Yearn expectedOutput", () => {
     };
     IYearnVault__factory.connect = () => vaultContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(provider, EthAddress.random());
 
     const expectedOutputERC20 = await yearnBridgeData.getExpectedOutput(
       yvDaiAsset,
@@ -396,7 +404,7 @@ describe("Testing Yearn expectedOutput", () => {
     };
     IYearnVault__factory.connect = () => vaultContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(provider, EthAddress.random());
 
     expect.assertions(3);
     await expect(
@@ -411,7 +419,7 @@ describe("Testing Yearn expectedOutput", () => {
   });
 
   it("should throw with incorrect tokens on the input", async () => {
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(provider, EthAddress.random());
 
     await expect(
       yearnBridgeData.getExpectedOutput(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0n, 0n),
@@ -423,10 +431,14 @@ describe("Testing Yearn expectedOutput", () => {
 });
 
 describe("Testing Yearn getAPR", () => {
+  let provider: JsonRpcProvider;
+
   let yvDaiAsset: AztecAsset;
   let yvWethAsset: AztecAsset;
 
   beforeAll(() => {
+    provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+
     yvDaiAsset = {
       id: 2,
       assetType: AztecAssetType.ERC20,
@@ -440,7 +452,7 @@ describe("Testing Yearn getAPR", () => {
   });
 
   it("should correctly compute APR", async () => {
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(provider, EthAddress.random());
     const expectedAPRDai = await yearnBridgeData.getAPR(yvDaiAsset);
     expect(expectedAPRDai).not.toBeUndefined();
     expect(expectedAPRDai).toBeGreaterThan(0);
@@ -454,11 +466,15 @@ describe("Testing Yearn getAPR", () => {
 describe("Testing Yearn getMarketSize", () => {
   let vaultContract: Mockify<IYearnVault>;
 
+  let provider: JsonRpcProvider;
+
   let daiAsset: AztecAsset;
   let yvDaiAsset: AztecAsset;
   let emptyAsset: AztecAsset;
 
   beforeAll(() => {
+    provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+
     daiAsset = {
       id: 1,
       assetType: AztecAssetType.ERC20,
@@ -480,11 +496,11 @@ describe("Testing Yearn getMarketSize", () => {
     // Setup mocks
     vaultContract = {
       ...vaultContract,
-      totalAssets: jest.fn().mockResolvedValue(BigNumber.from("97513214188808613008055674")),
+      totalAssets: jest.fn().mockReturnValue(BigNumber.from("97513214188808613008055674")),
     };
     IYearnVault__factory.connect = () => vaultContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(provider, EthAddress.random());
     const expectedMarketSize = (
       await yearnBridgeData.getMarketSize(daiAsset, emptyAsset, yvDaiAsset, emptyAsset, 0n)
     )[0].value;
@@ -496,9 +512,13 @@ describe("Testing Yearn getUnderlyingAmount", () => {
   let vaultContract: Mockify<IYearnVault>;
   let erc2MetadataContract: Mockify<IERC20Metadata>;
 
+  let provider: JsonRpcProvider;
+
   let yvDaiAsset: AztecAsset;
 
   beforeAll(() => {
+    provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+
     yvDaiAsset = {
       id: 2,
       assetType: AztecAssetType.ERC20,
@@ -510,7 +530,7 @@ describe("Testing Yearn getUnderlyingAmount", () => {
     // Setup mocks
     vaultContract = {
       ...vaultContract,
-      token: jest.fn().mockResolvedValue("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+      token: jest.fn().mockReturnValue("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
       pricePerShare: jest.fn(() => BigNumber.from("1110200000000000000")),
       decimals: jest.fn(() => 18),
     };
@@ -518,13 +538,13 @@ describe("Testing Yearn getUnderlyingAmount", () => {
 
     erc2MetadataContract = {
       ...erc2MetadataContract,
-      name: jest.fn().mockResolvedValue("Dai Stablecoin"),
-      symbol: jest.fn().mockResolvedValue("DAI"),
-      decimals: jest.fn().mockResolvedValue(18),
+      name: jest.fn().mockReturnValue("Dai Stablecoin"),
+      symbol: jest.fn().mockReturnValue("DAI"),
+      decimals: jest.fn().mockReturnValue(18),
     };
     IERC20Metadata__factory.connect = () => erc2MetadataContract as any;
 
-    const yearnBridgeData = YearnBridgeData.create({} as any, EthAddress.random());
+    const yearnBridgeData = YearnBridgeData.create(provider, EthAddress.random());
     const underlyingAsset = await yearnBridgeData.getUnderlyingAmount(yvDaiAsset, 10n ** 18n);
 
     expect(underlyingAsset.address.toString()).toBe("0x6B175474E89094C44Da98b954EedeAC495271d0F");

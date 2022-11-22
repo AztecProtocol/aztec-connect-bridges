@@ -1,4 +1,4 @@
-import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data";
+import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from "../bridge-data.js";
 import { AssetValue } from "@aztec/barretenberg/asset";
 
 export class ExampleBridgeData implements BridgeDataFieldGetters {

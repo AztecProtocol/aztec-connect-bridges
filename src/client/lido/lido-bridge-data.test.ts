@@ -1,4 +1,4 @@
-import { LidoBridgeData } from "./lido-bridge-data";
+import { LidoBridgeData } from "./lido-bridge-data.js";
 import {
   IWstETH,
   ICurvePool,
@@ -6,14 +6,12 @@ import {
   IWstETH__factory,
   ICurvePool__factory,
   ILidoOracle__factory,
-} from "../../../typechain-types";
-import { AztecAsset, AztecAssetType } from "../bridge-data";
+} from "../../../typechain-types/index.js";
+import { AztecAsset, AztecAssetType } from "../bridge-data.js";
 import { BigNumber } from "ethers";
 import { EthAddress } from "@aztec/barretenberg/address";
-
-jest.mock("../aztec/provider", () => ({
-  createWeb3Provider: jest.fn(),
-}));
+import { jest } from "@jest/globals";
+import { JsonRpcProvider } from "../aztec/provider/json_rpc_provider.js";
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock | any;
@@ -24,6 +22,8 @@ describe("lido bridge data", () => {
   let wstethContract: Mockify<IWstETH>;
   let curvePoolContract: Mockify<ICurvePool>;
   let lidoOracleContract: Mockify<ILidoOracle>;
+
+  let provider: JsonRpcProvider;
 
   let ethAsset: AztecAsset;
   let wstETHAsset: AztecAsset;
@@ -37,10 +37,12 @@ describe("lido bridge data", () => {
     IWstETH__factory.connect = () => wsteth as any;
     ICurvePool__factory.connect = () => curvePool as any;
     ILidoOracle__factory.connect = () => lidoOracle as any;
-    return LidoBridgeData.create({} as any, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO); // can pass in dummy values here as the above factories do all of the work
+    return LidoBridgeData.create(provider, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO); // can pass in dummy values here as the above factories do all of the work
   };
 
   beforeAll(() => {
+    provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
+
     ethAsset = {
       id: 1,
       assetType: AztecAssetType.ETH,
@@ -65,7 +67,7 @@ describe("lido bridge data", () => {
 
     wstethContract = {
       ...wstethContract,
-      getWstETHByStETH: jest.fn().mockResolvedValue(BigNumber.from(wstEthAmount)),
+      getWstETHByStETH: jest.fn().mockReturnValue(BigNumber.from(wstEthAmount)),
     };
 
     lidoBridgeData = createLidoBridgeData(wstethContract as any, curvePoolContract as any, lidoOracleContract as any);
@@ -87,8 +89,8 @@ describe("lido bridge data", () => {
 
     wstethContract = {
       ...wstethContract,
-      getWstETHByStETH: jest.fn().mockResolvedValue(BigNumber.from(wstEthAmount)),
-      getStETHByWstETH: jest.fn().mockResolvedValue(BigNumber.from(depositAmount)),
+      getWstETHByStETH: jest.fn().mockReturnValue(BigNumber.from(wstEthAmount)),
+      getStETHByWstETH: jest.fn().mockReturnValue(BigNumber.from(depositAmount)),
     };
 
     lidoBridgeData = createLidoBridgeData(wstethContract as any, curvePoolContract as any, lidoOracleContract as any);
@@ -112,12 +114,12 @@ describe("lido bridge data", () => {
 
     wstethContract = {
       ...wstethContract,
-      getStETHByWstETH: jest.fn().mockResolvedValue(BigNumber.from(stethOutputAmount)),
+      getStETHByWstETH: jest.fn().mockReturnValue(BigNumber.from(stethOutputAmount)),
     };
 
     curvePoolContract = {
       ...curvePoolContract,
-      get_dy: jest.fn().mockResolvedValue(BigNumber.from(expectedOutput)),
+      get_dy: jest.fn().mockReturnValue(BigNumber.from(expectedOutput)),
     };
 
     lidoBridgeData = createLidoBridgeData(wstethContract as any, curvePoolContract as any, lidoOracleContract as any);
@@ -141,6 +143,7 @@ describe("lido bridge data", () => {
       ...wstethContract,
       getStETHByWstETH: jest.fn().mockImplementation(async input => {
         // force WSTETH and STETH to have the same value
+        // @ts-ignore
         return BigNumber.from((BigInt(input) * 100n) / 100n);
       }),
     };
@@ -149,13 +152,14 @@ describe("lido bridge data", () => {
       ...curvePoolContract,
       get_dy: jest.fn().mockImplementation(async (x, y, input) => {
         // force ETH and STETH to have the same value
+        // @ts-ignore
         return BigNumber.from((BigInt(input) * 100n) / 100n);
       }),
     };
 
     lidoOracleContract = {
       ...lidoOracleContract,
-      getLastCompletedReportDelta: jest.fn().mockResolvedValue({
+      getLastCompletedReportDelta: jest.fn().mockReturnValue({
         timeElapsed: BigNumber.from(86400n),
         postTotalPooledEther: BigNumber.from(2777258873714679039007057n),
         preTotalPooledEther: BigNumber.from(2776930205843708039007057n),
