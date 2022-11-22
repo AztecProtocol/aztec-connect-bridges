@@ -21,7 +21,7 @@ import type {
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "./common.js";
+} from "./common";
 
 export interface ICurvePoolInterface extends utils.Interface {
   functions: {

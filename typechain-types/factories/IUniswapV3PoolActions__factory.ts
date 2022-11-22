@@ -7,7 +7,7 @@ import type { Provider } from "@ethersproject/providers";
 import type {
   IUniswapV3PoolActions,
   IUniswapV3PoolActionsInterface,
-} from "../IUniswapV3PoolActions.js";
+} from "../IUniswapV3PoolActions";
 
 const _abi = [
   {

@@ -21,7 +21,7 @@ import type {
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "./common.js";
+} from "./common";
 
 export interface IUniswapV3PoolActionsInterface extends utils.Interface {
   functions: {

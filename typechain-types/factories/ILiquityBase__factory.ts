@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { ILiquityBase, ILiquityBaseInterface } from "../ILiquityBase.js";
+import type { ILiquityBase, ILiquityBaseInterface } from "../ILiquityBase";
 
 const _abi = [
   {

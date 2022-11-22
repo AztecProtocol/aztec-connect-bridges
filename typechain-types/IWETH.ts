@@ -26,7 +26,7 @@ import type {
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "./common.js";
+} from "./common";
 
 export interface IWETHInterface extends utils.Interface {
   functions: {

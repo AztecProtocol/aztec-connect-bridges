@@ -25,7 +25,7 @@ import type {
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "./common.js";
+} from "./common";
 
 export interface IERC4626Interface extends utils.Interface {
   functions: {
@@ -268,7 +268,7 @@ export type ApprovalEvent = TypedEvent<
 export type ApprovalEventFilter = TypedEventFilter<ApprovalEvent>;
 
 export interface DepositEventObject {
-  caller: string;
+  sender: string;
   owner: string;
   assets: BigNumber;
   shares: BigNumber;
@@ -293,7 +293,7 @@ export type TransferEvent = TypedEvent<
 export type TransferEventFilter = TypedEventFilter<TransferEvent>;
 
 export interface WithdrawEventObject {
-  caller: string;
+  sender: string;
   receiver: string;
   owner: string;
   assets: BigNumber;
@@ -707,13 +707,13 @@ export interface IERC4626 extends BaseContract {
     ): ApprovalEventFilter;
 
     "Deposit(address,address,uint256,uint256)"(
-      caller?: PromiseOrValue<string> | null,
+      sender?: PromiseOrValue<string> | null,
       owner?: PromiseOrValue<string> | null,
       assets?: null,
       shares?: null
     ): DepositEventFilter;
     Deposit(
-      caller?: PromiseOrValue<string> | null,
+      sender?: PromiseOrValue<string> | null,
       owner?: PromiseOrValue<string> | null,
       assets?: null,
       shares?: null
@@ -731,14 +731,14 @@ export interface IERC4626 extends BaseContract {
     ): TransferEventFilter;
 
     "Withdraw(address,address,address,uint256,uint256)"(
-      caller?: PromiseOrValue<string> | null,
+      sender?: PromiseOrValue<string> | null,
       receiver?: PromiseOrValue<string> | null,
       owner?: PromiseOrValue<string> | null,
       assets?: null,
       shares?: null
     ): WithdrawEventFilter;
     Withdraw(
-      caller?: PromiseOrValue<string> | null,
+      sender?: PromiseOrValue<string> | null,
       receiver?: PromiseOrValue<string> | null,
       owner?: PromiseOrValue<string> | null,
       assets?: null,

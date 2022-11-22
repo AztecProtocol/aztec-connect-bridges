@@ -7,7 +7,7 @@ import type { Provider } from "@ethersproject/providers";
 import type {
   IWrappedPosition,
   IWrappedPositionInterface,
-} from "../IWrappedPosition.js";
+} from "../IWrappedPosition";
 
 const _abi = [
   {

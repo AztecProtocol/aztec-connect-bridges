@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { ILQTYStaking, ILQTYStakingInterface } from "../ILQTYStaking.js";
+import type { ILQTYStaking, ILQTYStakingInterface } from "../ILQTYStaking";
 
 const _abi = [
   {

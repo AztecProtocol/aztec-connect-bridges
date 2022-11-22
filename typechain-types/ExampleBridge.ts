@@ -21,7 +21,7 @@ import type {
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "../common.js";
+} from "./common";
 
 export declare namespace AztecTypes {
   export type AztecAssetStruct = {
@@ -37,7 +37,7 @@ export declare namespace AztecTypes {
   };
 }
 
-export interface ExampleBridgeContractInterface extends utils.Interface {
+export interface ExampleBridgeInterface extends utils.Interface {
   functions: {
     "ROLLUP_PROCESSOR()": FunctionFragment;
     "SUBSIDY()": FunctionFragment;
@@ -110,12 +110,12 @@ export interface ExampleBridgeContractInterface extends utils.Interface {
   events: {};
 }
 
-export interface ExampleBridgeContract extends BaseContract {
+export interface ExampleBridge extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
 
-  interface: ExampleBridgeContractInterface;
+  interface: ExampleBridgeInterface;
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,

@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { IPriceFeed, IPriceFeedInterface } from "../IPriceFeed.js";
+import type { IPriceFeed, IPriceFeedInterface } from "../IPriceFeed";
 
 const _abi = [
   {

@@ -7,7 +7,7 @@ import type { Provider } from "@ethersproject/providers";
 import type {
   IPoolManager,
   IPoolManagerInterface,
-} from "../../IPoolManager.sol/IPoolManager.js";
+} from "../../IPoolManager.sol/IPoolManager";
 
 const _abi = [
   {

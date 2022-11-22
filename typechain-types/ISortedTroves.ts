@@ -19,7 +19,7 @@ import type {
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "./common.js";
+} from "./common";
 
 export interface ISortedTrovesInterface extends utils.Interface {
   functions: {

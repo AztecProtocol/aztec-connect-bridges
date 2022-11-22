@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { ICurvePool, ICurvePoolInterface } from "../ICurvePool.js";
+import type { ICurvePool, ICurvePoolInterface } from "../ICurvePool";
 
 const _abi = [
   {

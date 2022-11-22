@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { IVault, IVaultInterface } from "../IVault.js";
+import type { IVault, IVaultInterface } from "../IVault";
 
 const _abi = [
   {

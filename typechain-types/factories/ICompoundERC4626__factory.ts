@@ -7,7 +7,7 @@ import type { Provider } from "@ethersproject/providers";
 import type {
   ICompoundERC4626,
   ICompoundERC4626Interface,
-} from "../ICompoundERC4626.js";
+} from "../ICompoundERC4626";
 
 const _abi = [
   {

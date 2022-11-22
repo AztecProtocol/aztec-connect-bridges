@@ -7,7 +7,7 @@ import type { Provider } from "@ethersproject/providers";
 import type {
   IChainlinkOracle,
   IChainlinkOracleInterface,
-} from "../IChainlinkOracle.js";
+} from "../IChainlinkOracle";
 
 const _abi = [
   {

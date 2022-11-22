@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { IERC4626, IERC4626Interface } from "../IERC4626.js";
+import type { IERC4626, IERC4626Interface } from "../IERC4626";
 
 const _abi = [
   {
@@ -38,7 +38,7 @@ const _abi = [
       {
         indexed: true,
         internalType: "address",
-        name: "caller",
+        name: "sender",
         type: "address",
       },
       {
@@ -94,7 +94,7 @@ const _abi = [
       {
         indexed: true,
         internalType: "address",
-        name: "caller",
+        name: "sender",
         type: "address",
       },
       {

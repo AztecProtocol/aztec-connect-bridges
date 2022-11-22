@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { ISetToken, ISetTokenInterface } from "../ISetToken.js";
+import type { ISetToken, ISetTokenInterface } from "../ISetToken";
 
 const _abi = [
   {
