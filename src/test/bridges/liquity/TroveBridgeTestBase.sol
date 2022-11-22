@@ -80,7 +80,7 @@ contract TroveBridgeTestBase is TestUtil {
         // The following is Solidity implementation of https://github.com/liquity/dev#opening-a-trove
         uint256 numTrials = 15;
         uint256 randomSeed = 42;
-        (address approxHint, , ) = HINT_HELPERS.getApproxHint(nicr, numTrials, randomSeed);
+        (address approxHint,,) = HINT_HELPERS.getApproxHint(nicr, numTrials, randomSeed);
         (address upperHint, address lowerHint) = SORTED_TROVES.findInsertPosition(nicr, approxHint, approxHint);
 
         // Open the trove
@@ -90,9 +90,7 @@ contract TroveBridgeTestBase is TestUtil {
         uint256 icr = TROVE_MANAGER.getCurrentICR(address(bridge), price);
         assertEq(icr, bridge.INITIAL_ICR(), "ICR doesn't equal initial ICR");
 
-        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
-            address(bridge)
-        );
+        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         assertEq(bridge.totalSupply(), debtAfterBorrowing, "TB total supply doesn't equal totalDebt");
         assertEq(collAfterBorrowing, OWNER_ETH_BALANCE, "Trove's collateral doesn't equal deposit amount");
 
@@ -143,7 +141,7 @@ contract TroveBridgeTestBase is TestUtil {
         // Set msg.sender to OWNER
         vm.startPrank(OWNER);
 
-        (uint256 debtBeforeClosure, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+        (uint256 debtBeforeClosure,,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         uint256 amountToRepay = debtBeforeClosure - 200e18;
 

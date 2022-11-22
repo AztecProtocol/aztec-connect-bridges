@@ -109,11 +109,7 @@ contract CurveLpE2ETest is BridgeTestBase {
         }
     }
 
-    function testDepositAndWithdrawal(
-        bool _isEth,
-        uint72 _depositAmount,
-        uint72 _withdrawAmount
-    ) public {
+    function testDepositAndWithdrawal(bool _isEth, uint72 _depositAmount, uint72 _withdrawAmount) public {
         testDeposit(_isEth, _depositAmount);
 
         uint256 lpBalance = LP_TOKEN.balanceOf(address(ROLLUP_PROCESSOR));
@@ -126,18 +122,11 @@ contract CurveLpE2ETest is BridgeTestBase {
         bool isEth = _inputAsset.assetType == AztecTypes.AztecAssetType.ETH;
 
         uint256 rollupLpBalance = LP_TOKEN.balanceOf(address(ROLLUP_PROCESSOR));
-        uint256 rollupInputBalance = isEth
-            ? address(ROLLUP_PROCESSOR).balance
-            : WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
+        uint256 rollupInputBalance =
+            isEth ? address(ROLLUP_PROCESSOR).balance : WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
 
         ROLLUP_ENCODER.defiInteractionL2(
-            bridgeAddressId,
-            _inputAsset,
-            emptyAsset,
-            lpAsset,
-            emptyAsset,
-            0,
-            _depositAmount
+            bridgeAddressId, _inputAsset, emptyAsset, lpAsset, emptyAsset, 0, _depositAmount
         );
 
         uint256 claimableBefore = SUBSIDY.claimableAmount(BENEFICIARY);
@@ -147,9 +136,8 @@ contract CurveLpE2ETest is BridgeTestBase {
         assertGt(SUBSIDY.claimableAmount(BENEFICIARY), claimableBefore, "No subsidy accumulated");
 
         uint256 rollupLpBalanceAfter = LP_TOKEN.balanceOf(address(ROLLUP_PROCESSOR));
-        uint256 rollupInputBalanceAfter = isEth
-            ? address(ROLLUP_PROCESSOR).balance
-            : WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
+        uint256 rollupInputBalanceAfter =
+            isEth ? address(ROLLUP_PROCESSOR).balance : WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
 
         assertEq(rollupLpBalanceAfter, rollupLpBalance + outputValueA, "Did not receive sufficient lptokens");
         assertEq(rollupInputBalanceAfter, rollupInputBalance - _depositAmount, "Did not pay sufficient input");

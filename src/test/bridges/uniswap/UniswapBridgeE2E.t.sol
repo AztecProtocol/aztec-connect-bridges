@@ -97,24 +97,11 @@ contract UniswapBridgeE2ETest is BridgeTestBase {
         quote += QUOTER.quoteExactInput(referenceSplitPath2, swapAmount - swapAmountSplitPath1);
 
         // Computes the encoded data for the specific bridge interaction
-        uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
-            id,
-            lusdAsset,
-            emptyAsset,
-            lqtyAsset,
-            emptyAsset,
-            encodedPath,
-            swapAmount
-        );
+        uint256 bridgeCallData =
+            ROLLUP_ENCODER.defiInteractionL2(id, lusdAsset, emptyAsset, lqtyAsset, emptyAsset, encodedPath, swapAmount);
 
         ROLLUP_ENCODER.registerEventToBeChecked(
-            bridgeCallData,
-            ROLLUP_ENCODER.getNextNonce(),
-            swapAmount,
-            quote,
-            0,
-            true,
-            ""
+            bridgeCallData, ROLLUP_ENCODER.getNextNonce(), swapAmount, quote, 0, true, ""
         );
         ROLLUP_ENCODER.processRollup();
     }

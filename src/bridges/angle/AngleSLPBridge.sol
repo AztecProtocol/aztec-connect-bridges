@@ -89,17 +89,7 @@ contract AngleSLPBridge is BridgeBase {
         uint256 _interactionNonce,
         uint64 _auxData,
         address _rollupBeneficiary
-    )
-        external
-        payable
-        override(BridgeBase)
-        onlyRollup
-        returns (
-            uint256 outputValueA,
-            uint256,
-            bool
-        )
-    {
+    ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
         address inputAssetA;
         address outputAssetA;
 
@@ -154,7 +144,7 @@ contract AngleSLPBridge is BridgeBase {
         AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata,
         uint64 _auxData
-    ) public pure override(BridgeBase) returns (uint256) {
+    ) public pure override (BridgeBase) returns (uint256) {
         if (_auxData > 1) {
             revert ErrorLib.InvalidAuxData();
         }
@@ -193,13 +183,9 @@ contract AngleSLPBridge is BridgeBase {
      * @param _amount Amount of sanToken to withdraw
      * @param _outputAssetA Address of the underlying ERC20
      */
-    function _withdraw(
-        address _poolManager,
-        uint256 _amount,
-        address _outputAssetA
-    ) internal {
+    function _withdraw(address _poolManager, uint256 _amount, address _outputAssetA) internal {
         // we check if we need to harvest or not
-        (, , , , , uint256 sanRate, , , ) = STABLE_MASTER.collateralMap(_poolManager);
+        (,,,,, uint256 sanRate,,,) = STABLE_MASTER.collateralMap(_poolManager);
         uint256 estimatedOutputValue = (_amount * sanRate) / 1e18;
         uint256 currentBalance = IERC20(_outputAssetA).balanceOf(address(_poolManager));
 
@@ -223,7 +209,7 @@ contract AngleSLPBridge is BridgeBase {
      * @param _poolManager Address of the poolManager
      */
     function _preApprove(address _poolManager) private {
-        (IERC20 token, address sanToken, , , , , , , ) = STABLE_MASTER.collateralMap(_poolManager);
+        (IERC20 token, address sanToken,,,,,,,) = STABLE_MASTER.collateralMap(_poolManager);
 
         uint256 allowance = token.allowance(address(this), ROLLUP_PROCESSOR);
         if (allowance != type(uint256).max) {

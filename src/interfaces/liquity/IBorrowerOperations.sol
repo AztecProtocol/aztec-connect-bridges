@@ -2,12 +2,7 @@
 pragma solidity >=0.8.4;
 
 interface IBorrowerOperations {
-    function openTrove(
-        uint256 _maxFee,
-        uint256 _LUSDAmount,
-        address _upperHint,
-        address _lowerHint
-    ) external payable;
+    function openTrove(uint256 _maxFee, uint256 _LUSDAmount, address _upperHint, address _lowerHint) external payable;
 
     function closeTrove() external;
 
@@ -20,11 +15,7 @@ interface IBorrowerOperations {
         address _lowerHint
     ) external payable;
 
-    function withdrawColl(
-        uint256 _amount,
-        address _upperHint,
-        address _lowerHint
-    ) external;
+    function withdrawColl(uint256 _amount, address _upperHint, address _lowerHint) external;
 
     function claimCollateral() external;
 }

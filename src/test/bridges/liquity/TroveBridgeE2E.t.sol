@@ -75,15 +75,12 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         // Compute borrow calldata
         ROLLUP_ENCODER.defiInteractionL2(id, ethAsset, emptyAsset, tbAsset, lusdAsset, MAX_FEE, _collateral);
 
-        (uint256 debtBeforeBorrowing, uint256 collBeforeBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
-            address(bridge)
-        );
+        (uint256 debtBeforeBorrowing, uint256 collBeforeBorrowing,,) =
+            TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
-        (uint256 outputValueA, uint256 outputValueB, ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
+        (uint256 outputValueA, uint256 outputValueB,) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
-        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
-            address(bridge)
-        );
+        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         assertEq(
             collAfterBorrowing - collBeforeBorrowing,
             _collateral,
@@ -97,9 +94,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         );
         assertEq(outputValueA, tbBalanceAfterBorrowing, "Debt amount doesn't equal outputValueA");
         assertEq(
-            outputValueB,
-            bridge.computeAmtToBorrow(_collateral),
-            "Borrowed amount doesn't equal expected borrow amount"
+            outputValueB, bridge.computeAmtToBorrow(_collateral), "Borrowed amount doesn't equal expected borrow amount"
         );
     }
 
@@ -113,7 +108,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         // Compute repay calldata
         ROLLUP_ENCODER.defiInteractionL2(id, tbAsset, lusdAsset, ethAsset, lusdAsset, 0, tbBalance);
 
-        (uint256 outputValueA, uint256 outputValueB, ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
+        (uint256 outputValueA, uint256 outputValueB,) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         assertApproxEqAbs(outputValueA, _collateral, 1, "output value differs from collateral by more than 1 wei");
         assertEq(outputValueB, 0, "Non-zero LUSD amount returned");
@@ -129,7 +124,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         // Compute repay calldata
         ROLLUP_ENCODER.defiInteractionL2(id, tbAsset, emptyAsset, ethAsset, emptyAsset, _getPrice(-1e20), tbBalance);
 
-        (uint256 outputValueA, , ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
+        (uint256 outputValueA,,) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         // Given that ICR was set to 160% and the debt has been repaid with collateral, received collateral should be
         // approx. equal to (deposit collateral amount) * (100/160). Given that borrowing fee and fee for the flash

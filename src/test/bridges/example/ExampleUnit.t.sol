@@ -60,11 +60,8 @@ contract ExampleUnitTest is BridgeTestBase {
     }
 
     function testInvalidOutputAssetType() public {
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: DAI,
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        AztecTypes.AztecAsset memory inputAssetA =
+            AztecTypes.AztecAsset({id: 1, erc20Address: DAI, assetType: AztecTypes.AztecAssetType.ERC20});
         vm.expectRevert(ErrorLib.InvalidOutputA.selector);
         bridge.convert(inputAssetA, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
     }
@@ -79,11 +76,8 @@ contract ExampleUnitTest is BridgeTestBase {
         vm.warp(block.timestamp + 1 days);
 
         // Define input and output assets
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: DAI,
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        AztecTypes.AztecAsset memory inputAssetA =
+            AztecTypes.AztecAsset({id: 1, erc20Address: DAI, assetType: AztecTypes.AztecAssetType.ERC20});
 
         AztecTypes.AztecAsset memory outputAssetA = inputAssetA;
 

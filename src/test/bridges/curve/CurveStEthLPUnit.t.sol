@@ -142,11 +142,7 @@ contract CurveLpUnitTest is BridgeTestBase {
         }
     }
 
-    function testDepositAndWithdrawal(
-        bool _isEth,
-        uint72 _depositAmount,
-        uint72 _withdrawAmount
-    ) public {
+    function testDepositAndWithdrawal(bool _isEth, uint72 _depositAmount, uint72 _withdrawAmount) public {
         testDeposit(_isEth, _depositAmount);
 
         uint256 lpBalance = LP_TOKEN.balanceOf(address(ROLLUP_PROCESSOR));
@@ -156,14 +152,14 @@ contract CurveLpUnitTest is BridgeTestBase {
     }
 
     function testReceiveTooLittleLpFromEth() public {
-        uint64 minReceived = 2**32 - 1; // Want to receive ~4K tokens for every input token
+        uint64 minReceived = 2 ** 32 - 1; // Want to receive ~4K tokens for every input token
         vm.prank(address(ROLLUP_PROCESSOR));
         vm.expectRevert("Slippage screwed you");
         bridge.convert{value: 1 ether}(ethAsset, emptyAsset, lpAsset, emptyAsset, 1 ether, 0, minReceived, BENEFICIARY);
     }
 
     function testReceiveTooLittleLpFromWstEth() public {
-        uint64 minReceived = 2**32 - 1; // Want to receive ~4K tokens for every input token
+        uint64 minReceived = 2 ** 32 - 1; // Want to receive ~4K tokens for every input token
         deal(address(WRAPPED_STETH), address(bridge), 1 ether);
         vm.prank(address(ROLLUP_PROCESSOR));
         vm.expectRevert("Slippage screwed you");
@@ -171,7 +167,7 @@ contract CurveLpUnitTest is BridgeTestBase {
     }
 
     function testReceiveTooLittleEthFromLp() public {
-        uint64 minEthReceived = 2**31 - 1;
+        uint64 minEthReceived = 2 ** 31 - 1;
         uint64 minWstReceived = 0;
 
         uint64 minReceived = minEthReceived + (minWstReceived << 32);
@@ -184,7 +180,7 @@ contract CurveLpUnitTest is BridgeTestBase {
 
     function testReceiveTooLittleWstEthFromLp() public {
         uint64 minEthReceived = 0;
-        uint64 minWstReceived = 2**31 - 1;
+        uint64 minWstReceived = 2 ** 31 - 1;
 
         uint64 minReceived = minEthReceived + (minWstReceived << 32);
 
@@ -194,17 +190,14 @@ contract CurveLpUnitTest is BridgeTestBase {
         bridge.convert(lpAsset, emptyAsset, ethAsset, wstETHAsset, 1 ether, 0, minReceived, BENEFICIARY);
     }
 
-    function _deposit(
-        AztecTypes.AztecAsset memory _inputAsset,
-        uint256 _depositAmount,
-        uint256 _interactionNonce
-    ) internal {
+    function _deposit(AztecTypes.AztecAsset memory _inputAsset, uint256 _depositAmount, uint256 _interactionNonce)
+        internal
+    {
         bool isEth = _inputAsset.assetType == AztecTypes.AztecAssetType.ETH;
 
         uint256 rollupLpBalance = LP_TOKEN.balanceOf(address(ROLLUP_PROCESSOR));
-        uint256 rollupInputBalance = isEth
-            ? address(ROLLUP_PROCESSOR).balance
-            : WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
+        uint256 rollupInputBalance =
+            isEth ? address(ROLLUP_PROCESSOR).balance : WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
 
         vm.startPrank(address(ROLLUP_PROCESSOR));
 
@@ -213,14 +206,7 @@ contract CurveLpUnitTest is BridgeTestBase {
         }
 
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert{value: isEth ? _depositAmount : 0}(
-            _inputAsset,
-            emptyAsset,
-            lpAsset,
-            emptyAsset,
-            _depositAmount,
-            _interactionNonce,
-            0,
-            BENEFICIARY
+            _inputAsset, emptyAsset, lpAsset, emptyAsset, _depositAmount, _interactionNonce, 0, BENEFICIARY
         );
 
         LP_TOKEN.transferFrom(address(bridge), address(ROLLUP_PROCESSOR), outputValueA);
@@ -228,9 +214,8 @@ contract CurveLpUnitTest is BridgeTestBase {
         vm.stopPrank();
 
         uint256 rollupLpBalanceAfter = LP_TOKEN.balanceOf(address(ROLLUP_PROCESSOR));
-        uint256 rollupInputBalanceAfter = isEth
-            ? address(ROLLUP_PROCESSOR).balance
-            : WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
+        uint256 rollupInputBalanceAfter =
+            isEth ? address(ROLLUP_PROCESSOR).balance : WRAPPED_STETH.balanceOf(address(ROLLUP_PROCESSOR));
 
         assertEq(rollupLpBalanceAfter, rollupLpBalance + outputValueA, "Did not receive sufficient lptokens");
         assertEq(rollupInputBalanceAfter, rollupInputBalance - _depositAmount, "Did not pay sufficient input");
@@ -247,16 +232,8 @@ contract CurveLpUnitTest is BridgeTestBase {
 
         LP_TOKEN.transfer(address(bridge), _inputAmount);
 
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
-            lpAsset,
-            emptyAsset,
-            ethAsset,
-            wstETHAsset,
-            _inputAmount,
-            _interactionNonce,
-            0,
-            BENEFICIARY
-        );
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) =
+            bridge.convert(lpAsset, emptyAsset, ethAsset, wstETHAsset, _inputAmount, _interactionNonce, 0, BENEFICIARY);
 
         WRAPPED_STETH.transferFrom(address(bridge), address(ROLLUP_PROCESSOR), outputValueB);
 

@@ -53,7 +53,7 @@ contract LiquityTroveDeployment is BaseDeployment {
         // The following is Solidity implementation of https://github.com/liquity/dev#opening-a-trove
         uint256 numTrials = 15;
         uint256 randomSeed = 42;
-        (address approxHint, , ) = HINT_HELPERS.getApproxHint(nicr, numTrials, randomSeed);
+        (address approxHint,,) = HINT_HELPERS.getApproxHint(nicr, numTrials, randomSeed);
         (address upperHint, address lowerHint) = SORTED_TROVES.findInsertPosition(nicr, approxHint, approxHint);
 
         // Open the trove

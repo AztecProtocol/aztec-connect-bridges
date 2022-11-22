@@ -57,17 +57,7 @@ contract DonationBridge is BridgeBase {
         uint256,
         uint64 _auxData,
         address
-    )
-        external
-        payable
-        override(BridgeBase)
-        onlyRollup
-        returns (
-            uint256,
-            uint256,
-            bool
-        )
-    {
+    ) external payable override (BridgeBase) onlyRollup returns (uint256, uint256, bool) {
         address receiver = donees[_auxData];
 
         if (receiver == address(0)) {
@@ -76,7 +66,7 @@ contract DonationBridge is BridgeBase {
 
         if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
             //solhint-disable-next-line
-            (bool success, ) = payable(receiver).call{gas: 30000, value: _totalInputValue}("");
+            (bool success,) = payable(receiver).call{gas: 30000, value: _totalInputValue}("");
             if (!success) revert EthTransferFailed();
         } else if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20) {
             IERC20(_inputAssetA.erc20Address).safeTransfer(receiver, _totalInputValue);

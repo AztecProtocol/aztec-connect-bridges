@@ -61,7 +61,7 @@ contract DataProviderDeployment is BaseDeployment {
                             " gas)"
                         )
                     )
-                );
+                    );
             }
         }
         emit log(" - Bridges");
@@ -84,7 +84,7 @@ contract DataProviderDeployment is BaseDeployment {
                             " gas)"
                         )
                     )
-                );
+                    );
             }
         }
     }
@@ -141,21 +141,13 @@ contract DataProviderDeployment is BaseDeployment {
         readProvider(_provider);
     }
 
-    function _listBridge(
-        address _provider,
-        uint256 _bridgeAddressId,
-        string memory _tag
-    ) internal {
+    function _listBridge(address _provider, uint256 _bridgeAddressId, string memory _tag) internal {
         vm.broadcast();
         DataProvider(_provider).addBridge(_bridgeAddressId, _tag);
         emit log_named_uint(string(abi.encodePacked("[Bridge] Listed ", _tag, " at")), _bridgeAddressId);
     }
 
-    function _listAsset(
-        address _provider,
-        uint256 _assetId,
-        string memory _tag
-    ) internal {
+    function _listAsset(address _provider, uint256 _assetId, string memory _tag) internal {
         vm.broadcast();
         DataProvider(_provider).addAsset(_assetId, _tag);
         emit log_named_uint(string(abi.encodePacked("[Asset]  Listed ", _tag, " at")), _assetId);

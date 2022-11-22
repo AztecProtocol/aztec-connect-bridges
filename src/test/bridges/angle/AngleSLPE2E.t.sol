@@ -91,9 +91,9 @@ contract AngleSLPE2ETest is BridgeTestBase {
         uint256 balanceRollupBeforeSanWETH = IERC20(sanWethAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
 
         ROLLUP_ENCODER.defiInteractionL2(id, ethAsset, emptyAsset, sanWethAsset, emptyAsset, 0, amount);
-        (uint256 outputValueA, , ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
+        (uint256 outputValueA,,) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
-        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_WETH());
+        (,,,,, uint256 sanRate,,,) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_WETH());
 
         assertEq(outputValueA, (amount * 1e18) / sanRate);
         assertEq(address(bridge).balance, 0);
@@ -125,9 +125,9 @@ contract AngleSLPE2ETest is BridgeTestBase {
         uint256 balanceRollupBeforeETH = address(ROLLUP_PROCESSOR).balance;
 
         ROLLUP_ENCODER.defiInteractionL2(id, sanWethAsset, emptyAsset, ethAsset, emptyAsset, 1, amount);
-        (uint256 outputValueA, , ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
+        (uint256 outputValueA,,) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
-        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_WETH());
+        (,,,,, uint256 sanRate,,,) = bridge.STABLE_MASTER().collateralMap(bridge.POOLMANAGER_WETH());
 
         assertEq(outputValueA, (amount * sanRate) / 1e18);
         assertEq(address(bridge).balance, 0);
@@ -167,9 +167,9 @@ contract AngleSLPE2ETest is BridgeTestBase {
         uint256 balanceRollupBeforeOutput = IERC20(_outputAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
 
         ROLLUP_ENCODER.defiInteractionL2(id, _inputAsset, emptyAsset, _outputAsset, emptyAsset, 0, amount);
-        (uint256 outputValueA, , ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
+        (uint256 outputValueA,,) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
-        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(_poolManager);
+        (,,,,, uint256 sanRate,,,) = bridge.STABLE_MASTER().collateralMap(_poolManager);
 
         assertEq(outputValueA, (amount * 1e18) / sanRate);
         assertEq(IERC20(_inputAsset.erc20Address).balanceOf(address(bridge)), DUST);
@@ -194,9 +194,9 @@ contract AngleSLPE2ETest is BridgeTestBase {
         uint256 balanceRollupBeforeInput = IERC20(_inputAsset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
 
         ROLLUP_ENCODER.defiInteractionL2(id, _inputAsset, emptyAsset, _outputAsset, emptyAsset, 1, _amount);
-        (uint256 outputValueA, , ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
+        (uint256 outputValueA,,) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
-        (, , , , , uint256 sanRate, , , ) = bridge.STABLE_MASTER().collateralMap(_poolManager);
+        (,,,,, uint256 sanRate,,,) = bridge.STABLE_MASTER().collateralMap(_poolManager);
 
         assertApproxEqAbs(outputValueA, (_amount * sanRate) / 1e18, 2);
         assertEq(IERC20(_outputAsset.erc20Address).balanceOf(address(bridge)), DUST);

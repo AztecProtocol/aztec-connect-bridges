@@ -26,7 +26,7 @@ contract TroveBridgeMeasure is LiquityTroveDeployment {
     AztecTypes.AztecAsset internal lusdAsset;
     AztecTypes.AztecAsset internal tbAsset; // Accounting token
 
-    function setUp() public override(BaseDeployment) {
+    function setUp() public override (BaseDeployment) {
         super.setUp();
 
         address defiProxy = IRead(ROLLUP_PROCESSOR).defiBridgeProxy();
@@ -46,11 +46,8 @@ contract TroveBridgeMeasure is LiquityTroveDeployment {
             erc20Address: 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0,
             assetType: AztecTypes.AztecAssetType.ERC20
         });
-        tbAsset = AztecTypes.AztecAsset({
-            id: 2,
-            erc20Address: address(bridge),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        tbAsset =
+            AztecTypes.AztecAsset({id: 2, erc20Address: address(bridge), assetType: AztecTypes.AztecAssetType.ERC20});
 
         vm.label(lusdAsset.erc20Address, "LUSD");
         vm.label(tbAsset.erc20Address, "TB");
@@ -77,16 +74,7 @@ contract TroveBridgeMeasure is LiquityTroveDeployment {
         {
             vm.broadcast();
             gasBase.convert(
-                address(bridge),
-                ethAsset,
-                emptyAsset,
-                tbAsset,
-                lusdAsset,
-                1 ether,
-                0,
-                MAX_FEE,
-                BENEFICIARY,
-                520000
+                address(bridge), ethAsset, emptyAsset, tbAsset, lusdAsset, 1 ether, 0, MAX_FEE, BENEFICIARY, 520000
             );
         }
 
@@ -104,24 +92,13 @@ contract TroveBridgeMeasure is LiquityTroveDeployment {
 
             vm.broadcast();
             gasBase.convert(
-                address(bridge),
-                tbAsset,
-                lusdAsset,
-                ethAsset,
-                lusdAsset,
-                lusdBalance / 2,
-                0,
-                0,
-                BENEFICIARY,
-                410000
+                address(bridge), tbAsset, lusdAsset, ethAsset, lusdAsset, lusdBalance / 2, 0, 0, BENEFICIARY, 410000
             );
         }
 
         uint256 claimableSubsidyAfterRepayment = SUBSIDY.claimableAmount(BENEFICIARY);
         assertGt(
-            claimableSubsidyAfterRepayment,
-            claimableSubsidyAfterDeposit,
-            "Subsidy was not claimed during repayment"
+            claimableSubsidyAfterRepayment, claimableSubsidyAfterDeposit, "Subsidy was not claimed during repayment"
         );
         emit log_named_uint("Claimable subsidy after repayment", claimableSubsidyAfterRepayment);
     }

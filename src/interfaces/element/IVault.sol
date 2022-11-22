@@ -4,7 +4,7 @@ pragma solidity >=0.8.4;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IAsset {
-    // solhint-disable-previous-line no-empty-blocks
+// solhint-disable-previous-line no-empty-blocks
 }
 
 enum PoolSpecialization {
@@ -32,12 +32,10 @@ interface IVault {
      *
      * Emits a `Swap` event.
      */
-    function swap(
-        SingleSwap memory singleSwap,
-        FundManagement memory funds,
-        uint256 limit,
-        uint256 deadline
-    ) external payable returns (uint256);
+    function swap(SingleSwap memory singleSwap, FundManagement memory funds, uint256 limit, uint256 deadline)
+        external
+        payable
+        returns (uint256);
 
     /**
      * @dev Data for a single swap executed by `swap`. `amount` is either `amountIn` or `amountOut` depending on
@@ -133,9 +131,5 @@ interface IVault {
     function getPoolTokens(bytes32 poolId)
         external
         view
-        returns (
-            IERC20[] memory tokens,
-            uint256[] memory balances,
-            uint256 lastChangeBlock
-        );
+        returns (IERC20[] memory tokens, uint256[] memory balances, uint256 lastChangeBlock);
 }

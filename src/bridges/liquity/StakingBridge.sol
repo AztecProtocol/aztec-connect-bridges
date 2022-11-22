@@ -104,17 +104,7 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
         uint256,
         uint64 _auxData,
         address
-    )
-        external
-        payable
-        override(BridgeBase)
-        onlyRollup
-        returns (
-            uint256 outputValueA,
-            uint256,
-            bool
-        )
-    {
+    ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
         if (_inputAssetA.erc20Address == LQTY && _outputAssetA.erc20Address == address(this)) {
             // Deposit
             // Stake and claim rewards
@@ -151,7 +141,7 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
     /**
      * @dev See {IERC20-totalSupply}.
      */
-    function totalSupply() public view override(ERC20) returns (uint256) {
+    function totalSupply() public view override (ERC20) returns (uint256) {
         return super.totalSupply() - DUST;
     }
 
@@ -165,17 +155,15 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
     function _swapRewardsToLQTYAndStake(bool _isUrgentWithdrawalMode) internal {
         uint256 lusdBalance = IERC20(LUSD).balanceOf(address(this));
         if (lusdBalance > MIN_LUSD_SWAP_AMT) {
-            try
-                UNI_ROUTER.exactInput(
-                    ISwapRouter.ExactInputParams({
-                        path: abi.encodePacked(LUSD, uint24(500), USDC, uint24(500), WETH),
-                        recipient: address(this),
-                        deadline: block.timestamp,
-                        amountIn: lusdBalance - DUST,
-                        amountOutMinimum: 0
-                    })
-                )
-            {} catch (bytes memory) {
+            try UNI_ROUTER.exactInput(
+                ISwapRouter.ExactInputParams({
+                    path: abi.encodePacked(LUSD, uint24(500), USDC, uint24(500), WETH),
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: lusdBalance - DUST,
+                    amountOutMinimum: 0
+                })
+            ) {} catch (bytes memory) {
                 if (!_isUrgentWithdrawalMode) {
                     revert SwapFailed();
                 }
@@ -190,20 +178,11 @@ contract StakingBridge is BridgeBase, ERC20("StakingBridge", "SB") {
 
         uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
         if (wethBalance > MIN_ETH_SWAP_AMT) {
-            try
-                UNI_ROUTER.exactInputSingle(
-                    ISwapRouter.ExactInputSingleParams(
-                        WETH,
-                        LQTY,
-                        3000,
-                        address(this),
-                        block.timestamp,
-                        wethBalance - DUST,
-                        0,
-                        0
-                    )
+            try UNI_ROUTER.exactInputSingle(
+                ISwapRouter.ExactInputSingleParams(
+                    WETH, LQTY, 3000, address(this), block.timestamp, wethBalance - DUST, 0, 0
                 )
-            returns (uint256 amountLQTYOut) {
+            ) returns (uint256 amountLQTYOut) {
                 if (amountLQTYOut != 0) {
                     STAKING_CONTRACT.stake(amountLQTYOut);
                 }

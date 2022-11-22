@@ -39,9 +39,7 @@ interface IExchangeIssuance {
 
     // Redeems an exact amount of SetTokens for ETH.
     // The SetToken must be approved by the sender to this contract.
-    function redeemExactSetForETH(
-        ISetToken _setToken,
-        uint256 _amountSetToken,
-        uint256 _minEthOut
-    ) external returns (uint256);
+    function redeemExactSetForETH(ISetToken _setToken, uint256 _amountSetToken, uint256 _minEthOut)
+        external
+        returns (uint256);
 }

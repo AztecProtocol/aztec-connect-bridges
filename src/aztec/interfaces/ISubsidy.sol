@@ -20,11 +20,7 @@ interface ISubsidy {
         uint32 lastUpdated;
     }
 
-    function setGasUsageAndMinGasPerMinute(
-        uint256 _criteria,
-        uint32 _gasUsage,
-        uint32 _minGasPerMinute
-    ) external;
+    function setGasUsageAndMinGasPerMinute(uint256 _criteria, uint32 _gasUsage, uint32 _minGasPerMinute) external;
 
     function setGasUsageAndMinGasPerMinute(
         uint256[] calldata _criteria,
@@ -34,11 +30,7 @@ interface ISubsidy {
 
     function registerBeneficiary(address _beneficiary) external;
 
-    function subsidize(
-        address _bridge,
-        uint256 _criteria,
-        uint32 _gasPerMinute
-    ) external payable;
+    function subsidize(address _bridge, uint256 _criteria, uint32 _gasPerMinute) external payable;
 
     function topUp(address _bridge, uint256 _criteria) external payable;
 

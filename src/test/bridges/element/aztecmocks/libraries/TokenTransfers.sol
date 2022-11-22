@@ -17,11 +17,7 @@ library TokenTransfers {
      * @param to Who are we sending tokens to?
      * @param amount How many tokens are we transferring?
      */
-    function safeTransferTo(
-        address tokenAddress,
-        address to,
-        uint256 amount
-    ) internal {
+    function safeTransferTo(address tokenAddress, address to, uint256 amount) internal {
         // The ERC20 token standard states that:
         // 1. failed transfers must throw
         // 2. the result of the transfer (success/fail) is returned as a boolean
@@ -62,12 +58,7 @@ library TokenTransfers {
      * @param target Who are we transferring tokens to?
      * @param amount How many tokens are being transferred?
      */
-    function safeTransferFrom(
-        address tokenAddress,
-        address source,
-        address target,
-        uint256 amount
-    ) internal {
+    function safeTransferFrom(address tokenAddress, address source, address target, uint256 amount) internal {
         assembly {
             // call tokenAddress.transferFrom(source, target, value)
             let mPtr := mload(0x40)
@@ -91,17 +82,12 @@ library TokenTransfers {
      * @param amount How many tokens are being transferred?
      * @param gasToSend Amount of gas to send the contract. If value is 0, function uses gas() instead
      */
-    function transferToDoNotBubbleErrors(
-        address tokenAddress,
-        address to,
-        uint256 amount,
-        uint256 gasToSend
-    ) internal {
+    function transferToDoNotBubbleErrors(address tokenAddress, address to, uint256 amount, uint256 gasToSend)
+        internal
+    {
         assembly {
             let callGas := gas()
-            if gasToSend {
-                callGas := gasToSend
-            }
+            if gasToSend { callGas := gasToSend }
             let ptr := mload(0x40)
             mstore(ptr, TRANSFER_SELECTOR)
             mstore(add(ptr, 0x4), to)
@@ -127,9 +113,7 @@ library TokenTransfers {
     ) internal {
         assembly {
             let callGas := gas()
-            if gasToSend {
-                callGas := gasToSend
-            }
+            if gasToSend { callGas := gasToSend }
             let mPtr := mload(0x40)
             mstore(mPtr, TRANSFER_FROM_SELECTOR)
             mstore(add(mPtr, 0x04), source)

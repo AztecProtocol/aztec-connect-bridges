@@ -31,11 +31,8 @@ contract DCAMeasure is DCADeployment {
         ROLLUP_PROCESSOR = temp;
 
         AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory eth = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
+        AztecTypes.AztecAsset memory eth =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
         AztecTypes.AztecAsset memory daiAsset = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: 0x6B175474E89094C44Da98b954EedeAC495271d0F,

@@ -182,9 +182,8 @@ contract DataProviderTest is BridgeTestBase {
     function testHappySubsidyHelper() public {
         AztecTypes.AztecAsset memory empty;
         AztecTypes.AztecAsset memory eth = ROLLUP_ENCODER.getRealAztecAsset(address(0));
-        AztecTypes.AztecAsset memory vyvault = ROLLUP_ENCODER.getRealAztecAsset(
-            0xa258C4606Ca8206D8aA700cE2143D7db854D168c
-        );
+        AztecTypes.AztecAsset memory vyvault =
+            ROLLUP_ENCODER.getRealAztecAsset(0xa258C4606Ca8206D8aA700cE2143D7db854D168c);
 
         vm.warp(block.timestamp + 1 days);
 
@@ -197,9 +196,7 @@ contract DataProviderTest is BridgeTestBase {
 
         {
             uint256 bridgeCallData = ROLLUP_ENCODER.encodeBridgeCallData(7, vyvault, empty, eth, empty, 1);
-            (uint256 criteria, uint256 subsidy, uint256 gasUnits) = provider.getAccumulatedSubsidyAmount(
-                bridgeCallData
-            );
+            (uint256 criteria, uint256 subsidy, uint256 gasUnits) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
             assertEq(criteria, 1, "Wrong criteria");
             assertGe(subsidy, 0, "Subsidy accrued");
             assertGe(subsidy, gasUnits * block.basefee, "Invalid gas units accrued");
@@ -220,11 +217,8 @@ contract DataProviderTest is BridgeTestBase {
 
     function testHappySubsidyHelperVirtual() public {
         AztecTypes.AztecAsset memory eth = ROLLUP_ENCODER.getRealAztecAsset(address(0));
-        AztecTypes.AztecAsset memory virtualAsset = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.VIRTUAL
-        });
+        AztecTypes.AztecAsset memory virtualAsset =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
 
         uint256 bridgeCallData = ROLLUP_ENCODER.encodeBridgeCallData(7, virtualAsset, eth, virtualAsset, eth, 0);
         (uint256 criteria, uint256 subsidy, uint256 gasUnits) = provider.getAccumulatedSubsidyAmount(bridgeCallData);

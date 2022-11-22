@@ -24,12 +24,7 @@ interface ITroveManager is ILiquityBase {
     function getEntireDebtAndColl(address _borrower)
         external
         view
-        returns (
-            uint256 debt,
-            uint256 coll,
-            uint256 pendingLUSDDebtReward,
-            uint256 pendingETHReward
-        );
+        returns (uint256 debt, uint256 coll, uint256 pendingLUSDDebtReward, uint256 pendingETHReward);
 
     function closeTrove(address _borrower) external;
 

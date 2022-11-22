@@ -109,11 +109,11 @@ contract LidoTest is BridgeTestBase {
     }
 
     /**
-        Testing flow:
-        1. Send ETH to bridge
-        2. Get back wstETH
-        3. Send wstETH to bridge
-        4. Get back ETH
+     * Testing flow:
+     *     1. Send ETH to bridge
+     *     2. Get back wstETH
+     *     3. Send wstETH to bridge
+     *     4. Get back ETH
      */
     function validateLidoBridge(uint256 _balance, uint256 _depositAmount) public {
         // Send ETH to bridge
@@ -133,24 +133,11 @@ contract LidoTest is BridgeTestBase {
 
         uint256 wstEthIncrease = _computeEthToWST(_depositAmount);
 
-        uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
-            idIn,
-            ethAsset,
-            emptyAsset,
-            wstETHAsset,
-            emptyAsset,
-            0,
-            _depositAmount
-        );
+        uint256 bridgeCallData =
+            ROLLUP_ENCODER.defiInteractionL2(idIn, ethAsset, emptyAsset, wstETHAsset, emptyAsset, 0, _depositAmount);
 
         ROLLUP_ENCODER.registerEventToBeChecked(
-            bridgeCallData,
-            ROLLUP_ENCODER.getNextNonce(),
-            _depositAmount,
-            wstEthIncrease,
-            0,
-            true,
-            ""
+            bridgeCallData, ROLLUP_ENCODER.getNextNonce(), _depositAmount, wstEthIncrease, 0, true, ""
         );
         ROLLUP_ENCODER.processRollup();
 
@@ -170,24 +157,11 @@ contract LidoTest is BridgeTestBase {
 
         uint256 expectedEth = _computeWSTHToEth(_depositAmount);
 
-        uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
-            idOut,
-            wstETHAsset,
-            emptyAsset,
-            ethAsset,
-            emptyAsset,
-            0,
-            _depositAmount
-        );
+        uint256 bridgeCallData =
+            ROLLUP_ENCODER.defiInteractionL2(idOut, wstETHAsset, emptyAsset, ethAsset, emptyAsset, 0, _depositAmount);
 
         ROLLUP_ENCODER.registerEventToBeChecked(
-            bridgeCallData,
-            ROLLUP_ENCODER.getNextNonce(),
-            _depositAmount,
-            expectedEth,
-            0,
-            true,
-            ""
+            bridgeCallData, ROLLUP_ENCODER.getNextNonce(), _depositAmount, expectedEth, 0, true, ""
         );
         ROLLUP_ENCODER.processRollup();
 

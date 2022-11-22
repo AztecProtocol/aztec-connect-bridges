@@ -272,7 +272,7 @@ contract BiDCATestE2E is BridgeTestBase {
             uint256 unaccountedB = assetB.balanceOf(address(bridge)) - availableB;
             {
                 if (bridge.getDCA(0).start != 0) {
-                    (uint256 acc, ) = bridge.getAccumulated(0);
+                    (uint256 acc,) = bridge.getAccumulated(0);
                     if (_aFirst) {
                         unaccountedB -= acc;
                     } else {
@@ -280,7 +280,7 @@ contract BiDCATestE2E is BridgeTestBase {
                     }
                 }
                 if (bridge.getDCA(32).start != 0) {
-                    (uint256 acc, ) = bridge.getAccumulated(32);
+                    (uint256 acc,) = bridge.getAccumulated(32);
                     if (_aFirst) {
                         unaccountedA -= acc;
                     } else {
@@ -296,7 +296,7 @@ contract BiDCATestE2E is BridgeTestBase {
     }
 
     function refreshTs() public {
-        (, int256 answer, , , ) = bridge.ORACLE().latestRoundData();
+        (, int256 answer,,,) = bridge.ORACLE().latestRoundData();
         bytes memory returnValue = abi.encode(uint80(0), answer, uint256(0), block.timestamp, uint80(0));
         vm.mockCall(ORACLE, "", returnValue);
     }

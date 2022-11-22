@@ -28,7 +28,7 @@ contract AngleMeasure is AngleSLPDeployment {
     AztecTypes.AztecAsset internal wethAsset;
     AztecTypes.AztecAsset internal sanWethAsset;
 
-    function setUp() public override(BaseDeployment) {
+    function setUp() public override (BaseDeployment) {
         super.setUp();
 
         address defiProxy = IRead(ROLLUP_PROCESSOR).defiBridgeProxy();
@@ -45,16 +45,10 @@ contract AngleMeasure is AngleSLPDeployment {
         weth = bridge.WETH();
 
         ethAsset = AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
-        wethAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(weth),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-        sanWethAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: bridge.SANWETH(),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        wethAsset =
+            AztecTypes.AztecAsset({id: 1, erc20Address: address(weth), assetType: AztecTypes.AztecAssetType.ERC20});
+        sanWethAsset =
+            AztecTypes.AztecAsset({id: 1, erc20Address: bridge.SANWETH(), assetType: AztecTypes.AztecAssetType.ERC20});
 
         // Fund subsidy
         vm.startBroadcast();
@@ -76,16 +70,7 @@ contract AngleMeasure is AngleSLPDeployment {
         {
             vm.broadcast();
             gasBase.convert(
-                address(bridge),
-                ethAsset,
-                emptyAsset,
-                sanWethAsset,
-                emptyAsset,
-                1 ether,
-                0,
-                0,
-                BENEFICIARY,
-                200000
+                address(bridge), ethAsset, emptyAsset, sanWethAsset, emptyAsset, 1 ether, 0, 0, BENEFICIARY, 200000
             );
         }
 
@@ -114,16 +99,13 @@ contract AngleMeasure is AngleSLPDeployment {
                 210000
             );
             emit log_named_uint(
-                "sanWeth balance of gasBase",
-                IERC20(sanWethAsset.erc20Address).balanceOf(address(gasBase))
-            );
+                "sanWeth balance of gasBase", IERC20(sanWethAsset.erc20Address).balanceOf(address(gasBase))
+                );
         }
 
         uint256 claimableSubsidyAfterWithdrawal = SUBSIDY.claimableAmount(BENEFICIARY);
         assertGt(
-            claimableSubsidyAfterWithdrawal,
-            claimableSubsidyAfterDeposit,
-            "Subsidy was not claimed during withdrawal"
+            claimableSubsidyAfterWithdrawal, claimableSubsidyAfterDeposit, "Subsidy was not claimed during withdrawal"
         );
         emit log_named_uint("Claimable subsidy after withdrawal", claimableSubsidyAfterWithdrawal);
     }
@@ -139,16 +121,7 @@ contract AngleMeasure is AngleSLPDeployment {
         {
             vm.broadcast();
             gasBase.convert(
-                address(bridge),
-                wethAsset,
-                emptyAsset,
-                sanWethAsset,
-                emptyAsset,
-                1 ether,
-                0,
-                0,
-                BENEFICIARY,
-                170000
+                address(bridge), wethAsset, emptyAsset, sanWethAsset, emptyAsset, 1 ether, 0, 0, BENEFICIARY, 170000
             );
         }
 
@@ -177,16 +150,13 @@ contract AngleMeasure is AngleSLPDeployment {
                 180000
             );
             emit log_named_uint(
-                "sanWeth balance of gasBase",
-                IERC20(sanWethAsset.erc20Address).balanceOf(address(gasBase))
-            );
+                "sanWeth balance of gasBase", IERC20(sanWethAsset.erc20Address).balanceOf(address(gasBase))
+                );
         }
 
         uint256 claimableSubsidyAfterWithdrawal = SUBSIDY.claimableAmount(BENEFICIARY);
         assertGt(
-            claimableSubsidyAfterWithdrawal,
-            claimableSubsidyAfterDeposit,
-            "Subsidy was not claimed during withdrawal"
+            claimableSubsidyAfterWithdrawal, claimableSubsidyAfterDeposit, "Subsidy was not claimed during withdrawal"
         );
         emit log_named_uint("Claimable subsidy after withdrawal", claimableSubsidyAfterWithdrawal);
     }

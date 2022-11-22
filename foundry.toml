@@ -11,4 +11,7 @@ ffi = true
 optimizer = true
 optimizer_runs = 100000
 
+[fmt]
+variable_override_spacing=false
+
 # See more config options https://github.com/gakonst/foundry/tree/master/config

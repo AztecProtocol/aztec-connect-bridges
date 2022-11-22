@@ -45,31 +45,17 @@ contract StakingBridgeUnitTest is TestUtil {
         uint256 inputValue = 1e24;
         _deposit(inputValue);
 
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
-            2,
-            address(bridge),
-            AztecTypes.AztecAssetType.ERC20
-        );
-        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(
-            1,
-            tokens["LQTY"].addr,
-            AztecTypes.AztecAssetType.ERC20
-        );
+        AztecTypes.AztecAsset memory inputAssetA =
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20);
+        AztecTypes.AztecAsset memory outputAssetA =
+            AztecTypes.AztecAsset(1, tokens["LQTY"].addr, AztecTypes.AztecAssetType.ERC20);
 
         // Transfer SB back to the bridge
         IERC20(inputAssetA.erc20Address).transfer(address(bridge), inputValue);
 
         // Withdraw LQTY from the staking contract through the bridge
-        (uint256 outputValueA, , ) = bridge.convert(
-            inputAssetA,
-            emptyAsset,
-            outputAssetA,
-            emptyAsset,
-            inputValue,
-            1,
-            0,
-            address(0)
-        );
+        (uint256 outputValueA,,) =
+            bridge.convert(inputAssetA, emptyAsset, outputAssetA, emptyAsset, inputValue, 1, 0, address(0));
 
         // Check the total supply of StakingBridge accounting token (SB) token is 0
         assertEq(bridge.totalSupply(), 0);
@@ -86,16 +72,10 @@ contract StakingBridgeUnitTest is TestUtil {
         uint256 numIters = 2;
         uint256[] memory sbBalances = new uint256[](numIters);
 
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
-            1,
-            tokens["LQTY"].addr,
-            AztecTypes.AztecAssetType.ERC20
-        );
-        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(
-            2,
-            address(bridge),
-            AztecTypes.AztecAssetType.ERC20
-        );
+        AztecTypes.AztecAsset memory inputAssetA =
+            AztecTypes.AztecAsset(1, tokens["LQTY"].addr, AztecTypes.AztecAssetType.ERC20);
+        AztecTypes.AztecAsset memory outputAssetA =
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20);
 
         while (i < numIters) {
             uint256 depositAmount = bound(_depositAmounts[i], 1e18, 1e25);
@@ -106,16 +86,8 @@ contract StakingBridgeUnitTest is TestUtil {
             deal(tokens["WETH"].addr, address(bridge), 1e18);
 
             // 3. Deposit LQTY to the staking contract through the bridge
-            (uint256 outputValueA, , ) = bridge.convert(
-                inputAssetA,
-                emptyAsset,
-                outputAssetA,
-                emptyAsset,
-                depositAmount,
-                i,
-                0,
-                address(0)
-            );
+            (uint256 outputValueA,,) =
+                bridge.convert(inputAssetA, emptyAsset, outputAssetA, emptyAsset, depositAmount, i, 0, address(0));
 
             // 4. Transfer SB back to RollupProcessor
             IERC20(outputAssetA.erc20Address).transferFrom(address(bridge), rollupProcessor, outputValueA);
@@ -135,15 +107,8 @@ contract StakingBridgeUnitTest is TestUtil {
             IERC20(inputAssetA.erc20Address).transfer(address(bridge), inputValue);
 
             // 7. Withdraw LQTY from staking contract through the bridge
-            (uint256 outputValueA, , ) = bridge.convert(
-                inputAssetA,
-                emptyAsset,
-                outputAssetA,
-                emptyAsset,
-                sbBalances[i],
-                numIters + i,
-                0,
-                address(0)
+            (uint256 outputValueA,,) = bridge.convert(
+                inputAssetA, emptyAsset, outputAssetA, emptyAsset, sbBalances[i], numIters + i, 0, address(0)
             );
 
             // 8. Transfer LQTY back to RollupProcessor
@@ -239,7 +204,7 @@ contract StakingBridgeUnitTest is TestUtil {
         deal(tokens["LQTY"].addr, address(bridge), _depositAmount);
 
         // 2. Deposit LQTY to the staking contract through the bridge
-        (uint256 outputValueA, , ) = bridge.convert(
+        (uint256 outputValueA,,) = bridge.convert(
             AztecTypes.AztecAsset(1, tokens["LQTY"].addr, AztecTypes.AztecAssetType.ERC20),
             emptyAsset,
             AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20),

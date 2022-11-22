@@ -93,11 +93,8 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
 
         // Try repaying debt while setting too high minPrice
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
-            2,
-            address(bridge),
-            AztecTypes.AztecAssetType.ERC20
-        );
+        AztecTypes.AztecAsset memory inputAssetA =
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20);
         AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH);
 
         // inputValue is equal to rollupProcessor TB balance --> we want to repay the debt in full
@@ -164,11 +161,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         vm.prank(OWNER);
         bridge.closeTrove();
         uint256 ownerEthBalanceAfter = OWNER.balance;
-        assertGt(
-            ownerEthBalanceAfter,
-            ownerEthBalanceBefore,
-            "Owner's ETH balance didn't rise after closing the trove"
-        );
+        assertGt(ownerEthBalanceAfter, ownerEthBalanceBefore, "Owner's ETH balance didn't rise after closing the trove");
 
         // Try reopening the trove
         deal(tokens["LUSD"].addr, OWNER, 0); // delete user's LUSD balance to make accounting easier in _openTrove(...)
@@ -185,15 +178,15 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         address lowestIcrTrove = SORTED_TROVES.getLast();
         assertEq(lowestIcrTrove, address(bridge), "Bridge's trove is not the first one to redeem.");
 
-        (uint256 debtBefore, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+        (uint256 debtBefore,,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         uint256 amountToRedeem = debtBefore * 2;
 
         uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
 
-        (, uint256 partialRedemptionHintNICR, ) = HINT_HELPERS.getRedemptionHints(amountToRedeem, price, 0);
+        (, uint256 partialRedemptionHintNICR,) = HINT_HELPERS.getRedemptionHints(amountToRedeem, price, 0);
 
-        (address approxPartialRedemptionHint, , ) = HINT_HELPERS.getApproxHint(partialRedemptionHintNICR, 50, 42);
+        (address approxPartialRedemptionHint,,) = HINT_HELPERS.getApproxHint(partialRedemptionHintNICR, 50, 42);
 
         (address exactUpperPartialRedemptionHint, address exactLowerPartialRedemptionHint) = SORTED_TROVES
             .findInsertPosition(partialRedemptionHintNICR, approxPartialRedemptionHint, approxPartialRedemptionHint);
@@ -230,15 +223,15 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         address lowestIcrTrove = SORTED_TROVES.getLast();
         assertEq(lowestIcrTrove, address(bridge), "Bridge's trove is not the first one to redeem.");
 
-        (uint256 debtBefore, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+        (uint256 debtBefore,,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         uint256 amountToRedeem = debtBefore / 2;
 
         uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
 
-        (, uint256 partialRedemptionHintNICR, ) = HINT_HELPERS.getRedemptionHints(amountToRedeem, price, 0);
+        (, uint256 partialRedemptionHintNICR,) = HINT_HELPERS.getRedemptionHints(amountToRedeem, price, 0);
 
-        (address approxPartialRedemptionHint, , ) = HINT_HELPERS.getApproxHint(partialRedemptionHintNICR, 50, 42);
+        (address approxPartialRedemptionHint,,) = HINT_HELPERS.getApproxHint(partialRedemptionHintNICR, 50, 42);
 
         (address exactUpperPartialRedemptionHint, address exactLowerPartialRedemptionHint) = SORTED_TROVES
             .findInsertPosition(partialRedemptionHintNICR, approxPartialRedemptionHint, approxPartialRedemptionHint);
@@ -256,7 +249,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
 
         // Check the trove was partially redeemed by checking that the trove's debt amount dropped but the trove
         // stayed active - not closed by redemption
-        (uint256 debtAfterRedemption, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+        (uint256 debtAfterRedemption,,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         assertEq(
             debtAfterRedemption,
             debtBefore - amountToRedeem,
@@ -266,22 +259,13 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         uint256 status = TROVE_MANAGER.getTroveStatus(address(bridge));
         assertEq(status, uint256(Status.active), "Status is not active");
 
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
-            2,
-            address(bridge),
-            AztecTypes.AztecAssetType.ERC20
-        );
-        AztecTypes.AztecAsset memory inputAssetB = AztecTypes.AztecAsset(
-            1,
-            tokens["LUSD"].addr,
-            AztecTypes.AztecAssetType.ERC20
-        );
+        AztecTypes.AztecAsset memory inputAssetA =
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20);
+        AztecTypes.AztecAsset memory inputAssetB =
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20);
         AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH);
-        AztecTypes.AztecAsset memory outputAssetB = AztecTypes.AztecAsset(
-            1,
-            tokens["LUSD"].addr,
-            AztecTypes.AztecAssetType.ERC20
-        );
+        AztecTypes.AztecAsset memory outputAssetB =
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20);
 
         // inputValue is equal to rollupProcessor's TroveBridge accounting token (TB) balance --> we want to repay
         // the debt in full
@@ -292,21 +276,13 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         // Mint the debt amount of LUSD to the bridge
         deal(inputAssetB.erc20Address, address(bridge), inputValue + bridge.DUST());
 
-        (, uint256 outputValueB, ) = bridge.convert(
-            inputAssetA,
-            inputAssetB,
-            outputAssetA,
-            outputAssetB,
-            inputValue,
-            1,
-            0,
-            address(0)
-        );
+        (, uint256 outputValueB,) =
+            bridge.convert(inputAssetA, inputAssetB, outputAssetA, outputAssetB, inputValue, 1, 0, address(0));
 
         // Transfer LUSD back to the rollupProcessor
         IERC20(outputAssetB.erc20Address).transferFrom(address(bridge), rollupProcessor, outputValueB);
 
-        (uint256 debtAfterRepaying, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+        (uint256 debtAfterRepaying,,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         uint256 expectedAmtLusdReturned = inputValue - (debtAfterRedemption - debtAfterRepaying);
 
         // Check the bridge doesn't hold any ETH or LUSD
@@ -316,7 +292,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         assertEq(outputValueB, expectedAmtLusdReturned, "Amount of LUSD returned doesn't equal expected amount");
 
         // Close the trove
-        (uint256 remainingDebt, , , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+        (uint256 remainingDebt,,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         uint256 ownerEthBalanceBefore = OWNER.balance;
 
         vm.startPrank(OWNER);
@@ -325,11 +301,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         vm.stopPrank();
 
         uint256 ownerEthBalanceAfter = OWNER.balance;
-        assertGt(
-            ownerEthBalanceAfter,
-            ownerEthBalanceBefore,
-            "Owner's ETH balance didn't rise after closing the trove"
-        );
+        assertGt(ownerEthBalanceAfter, ownerEthBalanceBefore, "Owner's ETH balance didn't rise after closing the trove");
 
         // Try reopening the trove
         deal(tokens["LUSD"].addr, OWNER, 0); // delete user's LUSD balance to make accounting easier in _openTrove(...)
@@ -358,16 +330,10 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         deal(address(bridge), 100e18);
 
         // Repay
-        AztecTypes.AztecAsset memory tbAsset = AztecTypes.AztecAsset(
-            2,
-            address(bridge),
-            AztecTypes.AztecAssetType.ERC20
-        );
-        AztecTypes.AztecAsset memory lusdAsset = AztecTypes.AztecAsset(
-            1,
-            tokens["LUSD"].addr,
-            AztecTypes.AztecAssetType.ERC20
-        );
+        AztecTypes.AztecAsset memory tbAsset =
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20);
+        AztecTypes.AztecAsset memory lusdAsset =
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20);
         AztecTypes.AztecAsset memory ethAsset = AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH);
 
         // inputValue is equal to rollupProcessor TB balance --> we want to repay the debt in full
@@ -385,22 +351,13 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
     function testRepayingAfterRedistributionRevertsWhenMaxCostExceeded() public {
         _setUpRedistribution();
 
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
-            2,
-            address(bridge),
-            AztecTypes.AztecAssetType.ERC20
-        );
-        AztecTypes.AztecAsset memory inputAssetB = AztecTypes.AztecAsset(
-            1,
-            tokens["LUSD"].addr,
-            AztecTypes.AztecAssetType.ERC20
-        );
+        AztecTypes.AztecAsset memory inputAssetA =
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20);
+        AztecTypes.AztecAsset memory inputAssetB =
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20);
         AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH);
-        AztecTypes.AztecAsset memory outputAssetB = AztecTypes.AztecAsset(
-            2,
-            address(bridge),
-            AztecTypes.AztecAssetType.ERC20
-        );
+        AztecTypes.AztecAsset memory outputAssetB =
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20);
 
         // inputValue is equal to rollupProcessor TB balance --> we want to repay the debt in full
         uint256 inputValue = bridge.balanceOf(rollupProcessor);
@@ -439,7 +396,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         _setLiquityPrice(priceBeforeDrop);
 
         // Drop Trove's CR to MCR by impersonating the bridge and directly withdrawing collateral
-        (uint256 debt, uint256 coll, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+        (uint256 debt, uint256 coll,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         uint256 icrAfterRedistribution = (coll * priceBeforeDrop) / debt;
 
@@ -454,7 +411,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         // Erase withdrawn collateral from the bridge
         vm.deal(address(bridge), 0);
 
-        (debt, coll, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+        (debt, coll,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         uint256 icrAfterWithdrawal = (coll * priceBeforeDrop) / debt;
 
         assertEq(icrAfterWithdrawal, MCR, "ICR after withdrawal doesn't equal MCR");
@@ -463,7 +420,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         uint256 expectedBalance = (coll * bridge.balanceOf(rollupProcessor)) / bridge.totalSupply();
         _repay(expectedBalance, 5e16, true, 1);
 
-        (, coll, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+        (, coll,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         uint256 expectedOwnerBalance = (coll * bridge.balanceOf(OWNER)) / bridge.totalSupply();
         _closeTroveAfterRedistribution(expectedOwnerBalance);
 
@@ -509,39 +466,23 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
         uint256 icrBeforeBorrowing = TROVE_MANAGER.getCurrentICR(address(bridge), price);
 
-        (, uint256 collBeforeBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+        (, uint256 collBeforeBorrowing,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH);
-        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(
-            2,
-            address(bridge),
-            AztecTypes.AztecAssetType.ERC20
-        );
-        AztecTypes.AztecAsset memory outputAssetB = AztecTypes.AztecAsset(
-            1,
-            tokens["LUSD"].addr,
-            AztecTypes.AztecAssetType.ERC20
-        );
+        AztecTypes.AztecAsset memory outputAssetA =
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20);
+        AztecTypes.AztecAsset memory outputAssetB =
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20);
 
         // Borrow against collateral
-        (uint256 outputValueA, uint256 outputValueB, ) = bridge.convert(
-            inputAssetA,
-            emptyAsset,
-            outputAssetA,
-            outputAssetB,
-            _collateral,
-            0,
-            MAX_FEE,
-            address(0)
-        );
+        (uint256 outputValueA, uint256 outputValueB,) =
+            bridge.convert(inputAssetA, emptyAsset, outputAssetA, outputAssetB, _collateral, 0, MAX_FEE, address(0));
 
         // Transfer TB and LUSD back to the rollupProcessor
         IERC20(outputAssetA.erc20Address).transferFrom(address(bridge), rollupProcessor, outputValueA);
         IERC20(outputAssetB.erc20Address).transferFrom(address(bridge), rollupProcessor, outputValueB);
 
-        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
-            address(bridge)
-        );
+        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         assertEq(
             collAfterBorrowing - collBeforeBorrowing,
             _collateral,
@@ -568,7 +509,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         _openTrove();
         _borrow(ROLLUP_PROCESSOR_ETH_BALANCE);
 
-        (uint256 debtBefore, uint256 collBefore, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+        (uint256 debtBefore, uint256 collBefore,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         // Erase stability pool's LUSD balance in order to force redistribution
         deal(tokens["LUSD"].addr, STABILITY_POOL, 0);
@@ -578,7 +519,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         _setLiquityPrice(LIQUITY_PRICE_FEED.fetchPrice() / 2);
         TROVE_MANAGER.liquidateTroves(10);
 
-        (uint256 debtAfter, uint256 collAfter, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+        (uint256 debtAfter, uint256 collAfter,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         assertGt(debtAfter, debtBefore, "Debt hasn't increased after liquidations");
         assertGt(collAfter, collBefore, "Collateral hasn't increased after liquidations");
@@ -595,16 +536,10 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         bool _afterRedistribution,
         uint256 _interactionNonce
     ) private {
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
-            2,
-            address(bridge),
-            AztecTypes.AztecAssetType.ERC20
-        );
-        AztecTypes.AztecAsset memory inputAssetB = AztecTypes.AztecAsset(
-            1,
-            tokens["LUSD"].addr,
-            AztecTypes.AztecAssetType.ERC20
-        );
+        AztecTypes.AztecAsset memory inputAssetA =
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20);
+        AztecTypes.AztecAsset memory inputAssetB =
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20);
         AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH);
         AztecTypes.AztecAsset memory outputAssetB = _afterRedistribution
             ? AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20)
@@ -620,7 +555,7 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
 
         uint256 rollupProcessorEthBalanceBefore = rollupProcessor.balance;
 
-        (uint256 outputValueA, uint256 outputValueB, ) = bridge.convert(
+        (uint256 outputValueA, uint256 outputValueB,) = bridge.convert(
             inputAssetA,
             inputAssetB,
             outputAssetA,
@@ -650,11 +585,8 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
     }
 
     function _repayWithCollateral() private {
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
-            2,
-            address(bridge),
-            AztecTypes.AztecAssetType.ERC20
-        );
+        AztecTypes.AztecAsset memory inputAssetA =
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20);
         AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH);
 
         // inputValue is equal to rollupProcessor TB balance --> we want to repay the debt in full
@@ -664,15 +596,8 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
 
         uint256 rollupProcessorEthBalanceBefore = rollupProcessor.balance;
 
-        (uint256 outputValueA, uint256 outputValueB, ) = bridge.convert(
-            inputAssetA,
-            emptyAsset,
-            outputAssetA,
-            emptyAsset,
-            inputValue,
-            1,
-            _getPrice(-1e20),
-            address(0)
+        (uint256 outputValueA, uint256 outputValueB,) = bridge.convert(
+            inputAssetA, emptyAsset, outputAssetA, emptyAsset, inputValue, 1, _getPrice(-1e20), address(0)
         );
 
         uint256 rollupProcessorEthBalanceDiff = rollupProcessor.balance - rollupProcessorEthBalanceBefore;
@@ -694,11 +619,8 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
     }
 
     function _redeem() private {
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(
-            2,
-            address(bridge),
-            AztecTypes.AztecAssetType.ERC20
-        );
+        AztecTypes.AztecAsset memory inputAssetA =
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20);
         AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH);
 
         // inputValue is equal to rollupProcessor TB balance --> we want to redeem remaining collateral in full
@@ -718,43 +640,26 @@ contract TroveBridgeUnitTest is TroveBridgeTestBase {
         uint256 price = TROVE_MANAGER.priceFeed().fetchPrice();
         uint256 icrBeforeBorrowing = TROVE_MANAGER.getCurrentICR(address(bridge), price);
 
-        (, uint256 collBeforeBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
+        (, uint256 collBeforeBorrowing,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
 
         AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset(3, address(0), AztecTypes.AztecAssetType.ETH);
-        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset(
-            2,
-            address(bridge),
-            AztecTypes.AztecAssetType.ERC20
-        );
-        AztecTypes.AztecAsset memory outputAssetB = AztecTypes.AztecAsset(
-            1,
-            tokens["LUSD"].addr,
-            AztecTypes.AztecAssetType.ERC20
-        );
+        AztecTypes.AztecAsset memory outputAssetA =
+            AztecTypes.AztecAsset(2, address(bridge), AztecTypes.AztecAssetType.ERC20);
+        AztecTypes.AztecAsset memory outputAssetB =
+            AztecTypes.AztecAsset(1, tokens["LUSD"].addr, AztecTypes.AztecAssetType.ERC20);
 
         // Borrow against ROLLUP_PROCESSOR_ETH_BALANCE
-        (uint256 outputValueA, uint256 outputValueB, ) = bridge.convert{value: depositAmount}(
-            inputAssetA,
-            emptyAsset,
-            outputAssetA,
-            outputAssetB,
-            depositAmount,
-            2,
-            MAX_FEE,
-            address(0)
+        (uint256 outputValueA, uint256 outputValueB,) = bridge.convert{value: depositAmount}(
+            inputAssetA, emptyAsset, outputAssetA, outputAssetB, depositAmount, 2, MAX_FEE, address(0)
         );
 
         // Transfer TB and LUSD back to the rollupProcessor
         IERC20(outputAssetA.erc20Address).transferFrom(address(bridge), rollupProcessor, outputValueA);
         IERC20(outputAssetB.erc20Address).transferFrom(address(bridge), rollupProcessor, outputValueB);
 
-        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing, , ) = TROVE_MANAGER.getEntireDebtAndColl(
-            address(bridge)
-        );
+        (uint256 debtAfterBorrowing, uint256 collAfterBorrowing,,) = TROVE_MANAGER.getEntireDebtAndColl(address(bridge));
         assertEq(
-            collAfterBorrowing - collBeforeBorrowing,
-            depositAmount,
-            "Collateral increase differs from depositAmount"
+            collAfterBorrowing - collBeforeBorrowing, depositAmount, "Collateral increase differs from depositAmount"
         );
 
         uint256 icrAfterBorrowing = TROVE_MANAGER.getCurrentICR(address(bridge), price);

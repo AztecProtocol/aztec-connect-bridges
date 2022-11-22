@@ -63,26 +63,13 @@ contract StabilityPoolBridgeE2ETest is BridgeTestBase {
         deal(address(LUSD), address(ROLLUP_PROCESSOR), _depositAmount);
 
         // Compute deposit calldata
-        uint256 bridgeCallData = ROLLUP_ENCODER.defiInteractionL2(
-            id,
-            lusdAsset,
-            emptyAsset,
-            spbAsset,
-            emptyAsset,
-            0,
-            _depositAmount
-        );
+        uint256 bridgeCallData =
+            ROLLUP_ENCODER.defiInteractionL2(id, lusdAsset, emptyAsset, spbAsset, emptyAsset, 0, _depositAmount);
 
         uint256 stabilityPoolBalanceBefore = LUSD.balanceOf(stabilityPool);
 
         ROLLUP_ENCODER.registerEventToBeChecked(
-            bridgeCallData,
-            ROLLUP_ENCODER.getNextNonce(),
-            _depositAmount,
-            _depositAmount,
-            0,
-            true,
-            ""
+            bridgeCallData, ROLLUP_ENCODER.getNextNonce(), _depositAmount, _depositAmount, 0, true, ""
         );
         ROLLUP_ENCODER.processRollup();
 
@@ -92,9 +79,7 @@ contract StabilityPoolBridgeE2ETest is BridgeTestBase {
             "Stability pool balance didn't rise enough"
         );
         assertEq(
-            bridge.balanceOf(address(ROLLUP_PROCESSOR)),
-            _depositAmount,
-            "Incorrect SPB balance of rollup processor"
+            bridge.balanceOf(address(ROLLUP_PROCESSOR)), _depositAmount, "Incorrect SPB balance of rollup processor"
         );
 
         // WITHDRAWAL
@@ -103,7 +88,7 @@ contract StabilityPoolBridgeE2ETest is BridgeTestBase {
 
         uint256 processorBalanceBefore = LUSD.balanceOf(address(ROLLUP_PROCESSOR));
 
-        (uint256 outputValueA, uint256 outputValueB, ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
+        (uint256 outputValueA, uint256 outputValueB,) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         assertGe(outputValueA, _depositAmount, "Output value not bigger than deposit");
         assertEq(outputValueB, 0, "Output value B is not 0");

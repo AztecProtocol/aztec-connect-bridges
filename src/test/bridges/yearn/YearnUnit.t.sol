@@ -61,16 +61,10 @@ contract YearnBridgeUnitTest is Test {
     }
 
     function testInvalidNoValueETH() public {
-        AztecTypes.AztecAsset memory depositInputAssetA = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
-        AztecTypes.AztecAsset memory depositOutputAssetA = AztecTypes.AztecAsset({
-            id: 100,
-            erc20Address: address(YVETH),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        AztecTypes.AztecAsset memory depositInputAssetA =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
+        AztecTypes.AztecAsset memory depositOutputAssetA =
+            AztecTypes.AztecAsset({id: 100, erc20Address: address(YVETH), assetType: AztecTypes.AztecAssetType.ERC20});
 
         vm.prank(rollupProcessor);
         vm.expectRevert();
@@ -90,27 +84,14 @@ contract YearnBridgeUnitTest is Test {
         deal(address(DAI), address(bridge), _depositAmount);
         uint256 daiBalanceBefore = DAI.balanceOf(address(bridge));
 
-        AztecTypes.AztecAsset memory depositInputAssetA = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(DAI),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
-        AztecTypes.AztecAsset memory depositOutputAssetA = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(vault),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        AztecTypes.AztecAsset memory depositInputAssetA =
+            AztecTypes.AztecAsset({id: 1, erc20Address: address(DAI), assetType: AztecTypes.AztecAssetType.ERC20});
+        AztecTypes.AztecAsset memory depositOutputAssetA =
+            AztecTypes.AztecAsset({id: 1, erc20Address: address(vault), assetType: AztecTypes.AztecAssetType.ERC20});
 
         // Deposit
-        (uint256 outputValueA, , ) = bridge.convert(
-            depositInputAssetA,
-            emptyAsset,
-            depositOutputAssetA,
-            emptyAsset,
-            _depositAmount,
-            0,
-            0,
-            address(0)
+        (uint256 outputValueA,,) = bridge.convert(
+            depositInputAssetA, emptyAsset, depositOutputAssetA, emptyAsset, _depositAmount, 0, 0, address(0)
         );
         uint256 daiBalanceMid = DAI.balanceOf(address(bridge));
         uint256 shareAmountMid = IERC20(address(vault)).balanceOf(address(bridge));
@@ -120,15 +101,8 @@ contract YearnBridgeUnitTest is Test {
 
         // Withdraw
         _withdrawAmount = bound(_withdrawAmount, 1, outputValueA);
-        (uint256 outputValueA2, , ) = bridge.convert(
-            depositOutputAssetA,
-            emptyAsset,
-            depositInputAssetA,
-            emptyAsset,
-            _withdrawAmount,
-            0,
-            1,
-            address(0)
+        (uint256 outputValueA2,,) = bridge.convert(
+            depositOutputAssetA, emptyAsset, depositInputAssetA, emptyAsset, _withdrawAmount, 0, 1, address(0)
         );
         uint256 daiBalanceAfter = DAI.balanceOf(address(bridge));
         uint256 shareAmountAfter = IERC20(address(vault)).balanceOf(address(bridge));
@@ -144,27 +118,14 @@ contract YearnBridgeUnitTest is Test {
         vm.deal(address(rollupProcessor), _depositAmount);
         uint256 ethBalanceBefore = address(rollupProcessor).balance;
 
-        AztecTypes.AztecAsset memory depositInputAssetA = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
-        AztecTypes.AztecAsset memory depositOutputAssetA = AztecTypes.AztecAsset({
-            id: 2,
-            erc20Address: address(vault),
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        AztecTypes.AztecAsset memory depositInputAssetA =
+            AztecTypes.AztecAsset({id: 1, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
+        AztecTypes.AztecAsset memory depositOutputAssetA =
+            AztecTypes.AztecAsset({id: 2, erc20Address: address(vault), assetType: AztecTypes.AztecAssetType.ERC20});
 
         // Deposit
-        (uint256 outputValueA, , ) = bridge.convert{value: _depositAmount}(
-            depositInputAssetA,
-            emptyAsset,
-            depositOutputAssetA,
-            emptyAsset,
-            _depositAmount,
-            0,
-            0,
-            address(0)
+        (uint256 outputValueA,,) = bridge.convert{value: _depositAmount}(
+            depositInputAssetA, emptyAsset, depositOutputAssetA, emptyAsset, _depositAmount, 0, 0, address(0)
         );
         uint256 ethBalanceMid = address(rollupProcessor).balance;
         uint256 shareAmountMid = IERC20(address(vault)).balanceOf(address(bridge));
@@ -174,15 +135,8 @@ contract YearnBridgeUnitTest is Test {
 
         // Withdraw
         _withdrawAmount = bound(_withdrawAmount, 1, outputValueA);
-        (uint256 outputValueA2, , ) = bridge.convert(
-            depositOutputAssetA,
-            emptyAsset,
-            depositInputAssetA,
-            emptyAsset,
-            _withdrawAmount,
-            0,
-            1,
-            address(0)
+        (uint256 outputValueA2,,) = bridge.convert(
+            depositOutputAssetA, emptyAsset, depositInputAssetA, emptyAsset, _withdrawAmount, 0, 1, address(0)
         );
         assertGt(outputValueA2, 0, "ETH receive should not be 0");
         assertLt(IERC20(address(vault)).balanceOf(address(bridge)), shareAmountMid, "Invalid share amount");
