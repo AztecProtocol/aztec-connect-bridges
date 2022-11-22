@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { ISwapRouter, ISwapRouterInterface } from "../ISwapRouter";
+import type { ISwapRouter, ISwapRouterInterface } from "../ISwapRouter.js";
 
 const _abi = [
   {

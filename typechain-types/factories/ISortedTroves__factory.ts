@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { ISortedTroves, ISortedTrovesInterface } from "../ISortedTroves";
+import type { ISortedTroves, ISortedTrovesInterface } from "../ISortedTroves.js";
 
 const _abi = [
   {

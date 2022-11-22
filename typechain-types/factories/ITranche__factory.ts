@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { ITranche, ITrancheInterface } from "../ITranche";
+import type { ITranche, ITrancheInterface } from "../ITranche.js";
 
 const _abi = [
   {

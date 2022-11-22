@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { ITroveManager, ITroveManagerInterface } from "../ITroveManager";
+import type { ITroveManager, ITroveManagerInterface } from "../ITroveManager.js";
 
 const _abi = [
   {

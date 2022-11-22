@@ -7,7 +7,7 @@ import type { Provider } from "@ethersproject/providers";
 import type {
   IDeploymentValidator,
   IDeploymentValidatorInterface,
-} from "../IDeploymentValidator";
+} from "../IDeploymentValidator.js";
 
 const _abi = [
   {

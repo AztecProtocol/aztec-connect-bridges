@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { IYearnVault, IYearnVaultInterface } from "../IYearnVault";
+import type { IYearnVault, IYearnVaultInterface } from "../IYearnVault.js";
 
 const _abi = [
   {

@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { IDefiBridge, IDefiBridgeInterface } from "../IDefiBridge";
+import type { IDefiBridge, IDefiBridgeInterface } from "../IDefiBridge.js";
 
 const _abi = [
   {

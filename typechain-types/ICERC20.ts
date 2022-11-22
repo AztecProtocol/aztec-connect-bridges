@@ -25,7 +25,7 @@ import type {
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "./common";
+} from "./common.js";
 
 export interface ICERC20Interface extends utils.Interface {
   functions: {

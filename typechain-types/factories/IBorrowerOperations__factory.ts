@@ -7,7 +7,7 @@ import type { Provider } from "@ethersproject/providers";
 import type {
   IBorrowerOperations,
   IBorrowerOperationsInterface,
-} from "../IBorrowerOperations";
+} from "../IBorrowerOperations.js";
 
 const _abi = [
   {

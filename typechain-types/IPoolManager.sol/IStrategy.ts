@@ -20,7 +20,7 @@ import type {
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "../common";
+} from "../common.js";
 
 export interface IStrategyInterface extends utils.Interface {
   functions: {

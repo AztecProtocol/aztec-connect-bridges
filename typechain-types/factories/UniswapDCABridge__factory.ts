@@ -10,11 +10,11 @@ import {
   Overrides,
 } from "ethers";
 import type { Provider, TransactionRequest } from "@ethersproject/providers";
-import type { PromiseOrValue } from "../common";
+import type { PromiseOrValue } from "../common.js";
 import type {
   UniswapDCABridge,
   UniswapDCABridgeInterface,
-} from "../UniswapDCABridge";
+} from "../UniswapDCABridge.js";
 
 const _abi = [
   {

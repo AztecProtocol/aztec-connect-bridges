@@ -10,8 +10,8 @@ import {
   Overrides,
 } from "ethers";
 import type { Provider, TransactionRequest } from "@ethersproject/providers";
-import type { PromiseOrValue } from "../common";
-import type { TroveBridge, TroveBridgeInterface } from "../TroveBridge";
+import type { PromiseOrValue } from "../common.js";
+import type { TroveBridge, TroveBridgeInterface } from "../TroveBridge.js";
 
 const _abi = [
   {

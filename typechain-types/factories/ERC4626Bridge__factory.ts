@@ -3,8 +3,8 @@
 /* eslint-disable */
 import { Signer, utils, Contract, ContractFactory, Overrides } from "ethers";
 import type { Provider, TransactionRequest } from "@ethersproject/providers";
-import type { PromiseOrValue } from "../common";
-import type { ERC4626Bridge, ERC4626BridgeInterface } from "../ERC4626Bridge";
+import type { PromiseOrValue } from "../common.js";
+import type { ERC4626Bridge, ERC4626BridgeInterface } from "../ERC4626Bridge.js";
 
 const _abi = [
   {

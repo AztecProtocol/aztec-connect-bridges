@@ -7,7 +7,7 @@ import type { Provider } from "@ethersproject/providers";
 import type {
   IYearnRegistry,
   IYearnRegistryInterface,
-} from "../IYearnRegistry";
+} from "../IYearnRegistry.js";
 
 const _abi = [
   {

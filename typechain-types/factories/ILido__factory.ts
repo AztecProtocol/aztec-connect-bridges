@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { ILido, ILidoInterface } from "../ILido";
+import type { ILido, ILidoInterface } from "../ILido.js";
 
 const _abi = [
   {

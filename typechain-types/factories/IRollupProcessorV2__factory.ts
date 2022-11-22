@@ -7,7 +7,7 @@ import type { Provider } from "@ethersproject/providers";
 import type {
   IRollupProcessorV2,
   IRollupProcessorV2Interface,
-} from "../IRollupProcessorV2";
+} from "../IRollupProcessorV2.js";
 
 const _abi = [
   {

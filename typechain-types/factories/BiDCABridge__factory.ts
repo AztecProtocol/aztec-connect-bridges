@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { BiDCABridge, BiDCABridgeInterface } from "../BiDCABridge";
+import type { BiDCABridge, BiDCABridgeInterface } from "../BiDCABridge.js";
 
 const _abi = [
   {

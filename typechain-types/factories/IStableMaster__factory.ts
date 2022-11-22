@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { IStableMaster, IStableMasterInterface } from "../IStableMaster";
+import type { IStableMaster, IStableMasterInterface } from "../IStableMaster.js";
 
 const _abi = [
   {

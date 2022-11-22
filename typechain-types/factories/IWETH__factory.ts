@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { IWETH, IWETHInterface } from "../IWETH";
+import type { IWETH, IWETHInterface } from "../IWETH.js";
 
 const _abi = [
   {

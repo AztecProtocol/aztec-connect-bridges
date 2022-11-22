@@ -10,8 +10,8 @@ import {
   Overrides,
 } from "ethers";
 import type { Provider, TransactionRequest } from "@ethersproject/providers";
-import type { PromiseOrValue } from "../common";
-import type { ElementBridge, ElementBridgeInterface } from "../ElementBridge";
+import type { PromiseOrValue } from "../common.js";
+import type { ElementBridge, ElementBridgeInterface } from "../ElementBridge.js";
 
 const _abi = [
   {

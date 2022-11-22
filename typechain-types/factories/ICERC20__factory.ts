@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { ICERC20, ICERC20Interface } from "../ICERC20";
+import type { ICERC20, ICERC20Interface } from "../ICERC20.js";
 
 const _abi = [
   {

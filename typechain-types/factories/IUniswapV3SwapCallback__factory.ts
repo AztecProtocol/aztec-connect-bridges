@@ -7,7 +7,7 @@ import type { Provider } from "@ethersproject/providers";
 import type {
   IUniswapV3SwapCallback,
   IUniswapV3SwapCallbackInterface,
-} from "../IUniswapV3SwapCallback";
+} from "../IUniswapV3SwapCallback.js";
 
 const _abi = [
   {

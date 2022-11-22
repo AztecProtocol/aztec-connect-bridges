@@ -3,8 +3,8 @@
 /* eslint-disable */
 import { Signer, utils, Contract, ContractFactory, Overrides } from "ethers";
 import type { Provider, TransactionRequest } from "@ethersproject/providers";
-import type { PromiseOrValue } from "../common";
-import type { YearnBridge, YearnBridgeInterface } from "../YearnBridge";
+import type { PromiseOrValue } from "../common.js";
+import type { YearnBridge, YearnBridgeInterface } from "../YearnBridge.js";
 
 const _abi = [
   {

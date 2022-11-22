@@ -7,7 +7,7 @@ import type { Provider } from "@ethersproject/providers";
 import type {
   IUniswapV3PoolDerivedState,
   IUniswapV3PoolDerivedStateInterface,
-} from "../IUniswapV3PoolDerivedState";
+} from "../IUniswapV3PoolDerivedState.js";
 
 const _abi = [
   {

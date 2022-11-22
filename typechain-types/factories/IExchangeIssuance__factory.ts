@@ -7,7 +7,7 @@ import type { Provider } from "@ethersproject/providers";
 import type {
   IExchangeIssuance,
   IExchangeIssuanceInterface,
-} from "../IExchangeIssuance";
+} from "../IExchangeIssuance.js";
 
 const _abi = [
   {
