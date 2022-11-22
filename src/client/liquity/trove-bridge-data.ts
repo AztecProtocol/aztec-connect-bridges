@@ -1,9 +1,12 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { AssetValue } from "@aztec/barretenberg/asset";
 import { EthereumProvider } from "@aztec/barretenberg/blockchain";
+import { BridgeCallData } from "@aztec/barretenberg/bridge_call_data";
 import { Web3Provider } from "@ethersproject/providers";
 import { BigNumber } from "ethers";
 import {
+  IChainlinkOracle,
+  IChainlinkOracle__factory,
   IPriceFeed__factory,
   ITroveManager,
   ITroveManager__factory,
@@ -19,19 +22,32 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
 
   protected constructor(
     protected ethersProvider: Web3Provider,
+    protected bridgeAddressId: number,
     protected bridge: TroveBridge,
     protected troveManager: ITroveManager,
+    protected ethUsdOracle: IChainlinkOracle,
+    protected lusdUsdOracle: IChainlinkOracle,
   ) {}
 
   /**
    * @param provider Ethereum provider
    * @param bridgeAddress Address of the bridge address (and the corresponding accounting token)
    */
-  static create(provider: EthereumProvider, bridgeAddress: EthAddress) {
+  static create(provider: EthereumProvider, bridgeAddressId: number, bridgeAddress: EthAddress) {
     const ethersProvider = createWeb3Provider(provider);
     const troveManager = ITroveManager__factory.connect("0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2", ethersProvider);
     const bridge = TroveBridge__factory.connect(bridgeAddress.toString(), ethersProvider);
-    return new TroveBridgeData(ethersProvider, bridge, troveManager);
+
+    const ethUsdOracle = IChainlinkOracle__factory.connect(
+      "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+      ethersProvider,
+    );
+    const lusdUsdOracle = IChainlinkOracle__factory.connect(
+      "0x3D7aE7E594f2f2091Ad8798313450130d0Aba3a0",
+      ethersProvider,
+    );
+
+    return new TroveBridgeData(ethersProvider, bridgeAddressId, bridge, troveManager, ethUsdOracle, lusdUsdOracle);
   }
 
   auxDataConfig: AuxDataConfig[] = [
@@ -65,6 +81,16 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
       // so I will set the irrelevant decimals to 0 and increase the acceptable fee by 0.1 %
       const borrowingRate = (currentBorrowingRate.toBigInt() / 10n ** 15n) * 10n ** 15n + 10n ** 15n;
       return [borrowingRate];
+    } else if (
+      inputAssetA.erc20Address.equals(EthAddress.fromString(this.bridge.address)) &&
+      inputAssetB.erc20Address.equals(this.LUSD) &&
+      outputAssetA.assetType === AztecAssetType.ETH &&
+      (outputAssetB.assetType === AztecAssetType.NOT_USED ||
+        outputAssetB.erc20Address.equals(EthAddress.fromString(this.bridge.address)))
+    ) {
+      // Repayment with collateral or with a combination of collateral and LUSD --> `auxData` contains maximum price
+      // of LUSD
+      return [await this.getMaxPrice(inputAssetA.id, inputAssetB.id, outputAssetA.id, outputAssetB.id)];
     }
     return [0n];
   }
@@ -192,5 +218,63 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
     }
 
     return this.price;
+  }
+
+  private async getMaxPrice(
+    inputAssetIdA: number,
+    inputAssetIdB: number,
+    outputAssetIdA: number,
+    outputAssetIdB: number,
+  ): Promise<bigint> {
+    const relevantAuxDatas = await this.fetchRelevantAuxDataFromFalafel(
+      inputAssetIdA,
+      inputAssetIdB,
+      outputAssetIdA,
+      outputAssetIdB,
+    );
+
+    const [, ethPrice, , ,] = await this.ethUsdOracle.latestRoundData();
+    const [, lusdPrice, , ,] = await this.lusdUsdOracle.latestRoundData();
+
+    console.log(ethPrice);
+    console.log(lusdPrice);
+
+    return 0n;
+  }
+
+  private async fetchRelevantAuxDataFromFalafel(
+    inputAssetIdA: number,
+    inputAssetIdB: number,
+    outputAssetIdA: number,
+    outputAssetIdB: number,
+  ): Promise<bigint[]> {
+    const result = await (
+      await fetch("https://api.aztec.network/aztec-connect-prod/falafel/status", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+    ).json();
+
+    const bridgeCallDatas: BridgeCallData[] = result.bridgeStatus.map((status: any) =>
+      BridgeCallData.fromString(status.bridgeCallData),
+    );
+
+    const auxDatas: bigint[] = [];
+
+    for (const bridgeCallData of bridgeCallDatas) {
+      if (
+        bridgeCallData.bridgeAddressId === this.bridgeAddressId &&
+        bridgeCallData.inputAssetIdA === inputAssetIdA &&
+        bridgeCallData.inputAssetIdB === inputAssetIdB &&
+        bridgeCallData.outputAssetIdA === outputAssetIdA &&
+        bridgeCallData.outputAssetIdB === outputAssetIdB
+      ) {
+        auxDatas.push(bridgeCallData.auxData);
+      }
+    }
+
+    return auxDatas;
   }
 }
