@@ -124,7 +124,7 @@ export class UniswapBridgeData implements BridgeDataFieldGetters {
       )
     ).toBigInt();
 
-    const relevantBridgeCallDatas = await this.fetchRelevantBridgeCallData(
+    const relevantAuxData = await this.fetchRelevantAuxDataFromFalafel(
       this.bridgeAddressId,
       inputAssetA.id,
       outputAssetA.id,
@@ -133,10 +133,10 @@ export class UniswapBridgeData implements BridgeDataFieldGetters {
 
     // 1. Check if there is an interaction with acceptable minPrice --> acceptable minPrice is defined as a price
     //    which is smaller than current oracle price  and bigger than current oracle price with max slippage
-    for (const data of relevantBridgeCallDatas) {
-      const existingBatchPrice = this.decodePrice(data.auxData);
+    for (const auxData of relevantAuxData) {
+      const existingBatchPrice = this.decodePrice(auxData);
       if (priceMaxSlippage < existingBatchPrice && existingBatchPrice < oraclePrice) {
-        return [data.auxData];
+        return [auxData];
       }
     }
 
@@ -174,12 +174,12 @@ export class UniswapBridgeData implements BridgeDataFieldGetters {
     return [quote.toBigInt()];
   }
 
-  private async fetchRelevantBridgeCallData(
+  private async fetchRelevantAuxDataFromFalafel(
     bridgeAddressId: number,
     inputAssetIdA: number,
     outputAssetIdA: number,
     encodedPath: bigint,
-  ): Promise<BridgeCallData[]> {
+  ): Promise<bigint[]> {
     const result = await (
       await fetch("https://api.aztec.network/aztec-connect-prod/falafel/status", {
         method: "GET",
@@ -193,13 +193,19 @@ export class UniswapBridgeData implements BridgeDataFieldGetters {
       BridgeCallData.fromString(status.bridgeCallData),
     );
 
-    return bridgeCallDatas.filter(
-      (data: BridgeCallData) =>
-        data.bridgeAddressId === bridgeAddressId &&
-        data.inputAssetIdA === inputAssetIdA &&
-        data.outputAssetIdA === outputAssetIdA &&
-        (data.auxData & this.PATH_MASK) === encodedPath,
-    );
+    const auxDatas: bigint[] = [];
+    for (const bridgeCallData of bridgeCallDatas) {
+      if (
+        bridgeCallData.bridgeAddressId === bridgeAddressId &&
+        bridgeCallData.inputAssetIdA === inputAssetIdA &&
+        bridgeCallData.outputAssetIdA === outputAssetIdA &&
+        (bridgeCallData.auxData & this.PATH_MASK) === encodedPath
+      ) {
+        auxDatas.push(bridgeCallData.auxData);
+      }
+    }
+
+    return auxDatas;
   }
 
   public decodePrice(auxData: bigint): bigint {
