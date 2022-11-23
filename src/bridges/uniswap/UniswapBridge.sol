@@ -155,6 +155,11 @@ contract UniswapBridge is BridgeBase {
         }
     }
 
+    /**
+     * @notice Registers subsidy criteria for a given token pair.
+     * @param _tokenIn - Input token to swap
+     * @param _tokenOut - Output token to swap
+     */
     function registerSubsidyCriteria(address _tokenIn, address _tokenOut) external {
         SUBSIDY.setGasUsageAndMinGasPerMinute({
             _criteria: _computeCriteria(_tokenIn, _tokenOut),
