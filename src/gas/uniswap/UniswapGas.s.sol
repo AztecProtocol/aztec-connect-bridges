@@ -80,11 +80,35 @@ contract UniswapMeasure is UniswapDeployment {
         address(gasBase).call{value: 2 ether}("");
         emit log_named_uint("ETH balance of gasBase", address(gasBase).balance);
 
-        // Deposit
         {
             vm.broadcast();
             gasBase.convert(
                 address(bridge), ethAsset, emptyAsset, daiAsset, emptyAsset, 1 ether, 0, path, BENEFICIARY, 300000
+            );
+        }
+
+        uint256 claimableSubsidyAfterDeposit = SUBSIDY.claimableAmount(BENEFICIARY);
+        assertGt(claimableSubsidyAfterDeposit, 0, "Subsidy was not claimed during deposit");
+        emit log_named_uint("Claimable subsidy after deposit", claimableSubsidyAfterDeposit);
+    }
+
+    function measure2SplitPathsSwap() public {
+        uint64 path = bridge.encodePath(
+            1 ether,
+            1e20,
+            WETH,
+            UniswapBridge.SplitPath(50, 500, USDC, 100, address(0), 100),
+            UniswapBridge.SplitPath(50, 500, USDC, 100, address(0), 100)
+        );
+
+        vm.broadcast();
+        address(gasBase).call{value: 2 ether}("");
+        emit log_named_uint("ETH balance of gasBase", address(gasBase).balance);
+
+        {
+            vm.broadcast();
+            gasBase.convert(
+                address(bridge), ethAsset, emptyAsset, daiAsset, emptyAsset, 1 ether, 0, path, BENEFICIARY, 430000
             );
         }
 
