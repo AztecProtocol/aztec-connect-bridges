@@ -70,11 +70,25 @@ describe("Liquity trove bridge data", () => {
     expect(auxDataBorrow[0]).toBe(6000000000000000n);
   });
 
-  it("should correctly fetch auxData when not borrowing", async () => {
+  it("should correctly fetch auxData when repaying", async () => {
     const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
 
     const auxDataBorrow = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, lusdAsset);
     expect(auxDataBorrow[0]).toBe(0n);
+  });
+
+  it("should correctly set auxData from Falafel when repaying with collateral and there is a batch with acceptable price", async () => {
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
+
+    const auxData = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, emptyAsset);
+    // TODO setup mocks and check the auxData was selected as expected
+  });
+
+  it("should correctly set custom auxData when repaying with collateral and there is not a batch with acceptable price", async () => {
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
+
+    const auxData = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, emptyAsset);
+    // TODO setup mocks and check the auxData was selected as expected
   });
 
   it("should correctly get expected output when borrowing", async () => {

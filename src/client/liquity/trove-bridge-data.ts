@@ -4,6 +4,7 @@ import { EthereumProvider } from "@aztec/barretenberg/blockchain";
 import { BridgeCallData } from "@aztec/barretenberg/bridge_call_data";
 import { Web3Provider } from "@ethersproject/providers";
 import { BigNumber } from "ethers";
+import "isomorphic-fetch";
 import {
   IChainlinkOracle,
   IChainlinkOracle__factory,
@@ -18,6 +19,12 @@ import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, Soli
 
 export class TroveBridgeData implements BridgeDataFieldGetters {
   public readonly LUSD = EthAddress.fromString("0x5f98805A4E8be255a32880FDeC7F6728C6568bA0");
+  // Price precision
+  public readonly PRECISION = 10n ** 18n;
+
+  public readonly MAX_ACCEPTABLE_SLIPPAGE = 500n; // Denominated in basis points
+  public readonly IDEAL_SLIPPAGE = 200n; // Denominated in basis points
+
   private price?: BigNumber;
 
   protected constructor(
@@ -233,13 +240,20 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
       outputAssetIdB,
     );
 
+    // Both feeds use 8 decimals
     const [, ethPrice, , ,] = await this.ethUsdOracle.latestRoundData();
     const [, lusdPrice, , ,] = await this.lusdUsdOracle.latestRoundData();
 
-    console.log(ethPrice);
-    console.log(lusdPrice);
+    const lusdPriceInEth = lusdPrice.mul(this.PRECISION).div(ethPrice).toBigInt();
+    const maxPrice = (lusdPriceInEth * (10000n + this.MAX_ACCEPTABLE_SLIPPAGE)) / 10000n;
 
-    return 0n;
+    for (const existingBatchPrice of relevantAuxDatas) {
+      if (lusdPriceInEth < existingBatchPrice && existingBatchPrice < maxPrice) {
+        return existingBatchPrice;
+      }
+    }
+
+    return (lusdPriceInEth * (10000n + this.IDEAL_SLIPPAGE)) / 10000n;
   }
 
   private async fetchRelevantAuxDataFromFalafel(
