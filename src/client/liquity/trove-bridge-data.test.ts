@@ -13,6 +13,7 @@ import {
 import { AztecAsset, AztecAssetType } from "../bridge-data.js";
 import { TroveBridgeData } from "./trove-bridge-data.js";
 import { jest } from "@jest/globals";
+import { BridgeCallData } from "@aztec/barretenberg/bridge_call_data";
 import { JsonRpcProvider } from "../aztec/provider/json_rpc_provider.js";
 
 type Mockify<T> = {
@@ -38,7 +39,7 @@ describe("Liquity trove bridge data", () => {
     provider = new JsonRpcProvider("https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c");
 
     ethAsset = {
-      id: 1,
+      id: 0,
       assetType: AztecAssetType.ETH,
       erc20Address: EthAddress.ZERO,
     };
@@ -81,10 +82,27 @@ describe("Liquity trove bridge data", () => {
   });
 
   it("should correctly set auxData from Falafel when repaying with collateral and there is a batch with acceptable price", async () => {
+    const referenceBridgeCallData = "00000348050BA148140000000000000000000000000000000000000B00000011";
     const ethUsdOraclePrice = BigNumber.from("115833302141");
     const lusdUsdOraclePrice = BigNumber.from("103848731");
 
     // Setup mocks
+    const falafelResponse = {
+      bridgeStatus: [
+        {
+          bridgeCallData: referenceBridgeCallData,
+        },
+        {
+          bridgeCallData: "000000000000000001000000000000000000000020000000000000060000000a",
+        },
+      ],
+    };
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        json: () => Promise.resolve(falafelResponse),
+      }),
+    ) as any;
+
     chainlinkOracle = {
       ...chainlinkOracle,
       latestRoundData: jest
@@ -96,8 +114,10 @@ describe("Liquity trove bridge data", () => {
 
     const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
 
-    const auxData = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, emptyAsset);
-    // TODO setup mocks and check the auxData was selected as expected
+    const auxData = await troveBridgeData.getAuxData(tbAsset, emptyAsset, ethAsset, emptyAsset);
+
+    // The price in Falafel is acceptable so check that it was chosen
+    expect(auxData[0]).toBe(BridgeCallData.fromString(referenceBridgeCallData).auxData);
   });
 
   // it("should correctly set custom auxData when repaying with collateral and there is not a batch with acceptable price", async () => {
