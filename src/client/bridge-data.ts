@@ -153,6 +153,6 @@ export interface BridgeDataFieldGetters {
   getCurrentCR?(): Promise<bigint>;
   getUserDebtAndCollateral?(tbAmount: bigint): Promise<[bigint, bigint]>;
 
-  // User in TroveBridge client
+  // Used in TroveBridge client
   getCustomMaxPrice?(slippage: bigint): Promise<bigint>;
 }
