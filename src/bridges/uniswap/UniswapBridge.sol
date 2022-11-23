@@ -156,11 +156,10 @@ contract UniswapBridge is BridgeBase {
     }
 
     function registerSubsidyCriteria(address _tokenIn, address _tokenOut) external {
-        // TODO: gas measurements and updating these values
         SUBSIDY.setGasUsageAndMinGasPerMinute({
             _criteria: _computeCriteria(_tokenIn, _tokenOut),
-            _gasUsage: uint32(100000),
-            _minGasPerMinute: uint32(170)
+            _gasUsage: uint32(300000), // 300k gas (Note: this is a gas usage when only 1 split path is used)
+            _minGasPerMinute: uint32(100) // 1 fully subsidized call per 2 days (300k / (24 * 60) / 2)
         });
     }
 
