@@ -155,6 +155,15 @@ contract UniswapBridge is BridgeBase {
         }
     }
 
+    function registerSubsidyCriteria(address _tokenIn, address _tokenOut) external {
+        // TODO: gas measurements and updating these values
+        SUBSIDY.setGasUsageAndMinGasPerMinute({
+            _criteria: _computeCriteria(_tokenIn, _tokenOut),
+            _gasUsage: uint32(100000),
+            _minGasPerMinute: uint32(170)
+        });
+    }
+
     /**
      * @notice A function which swaps input token for output token along the path encoded in _auxData.
      * @param _inputAssetA - Input ERC20 token
@@ -162,6 +171,7 @@ contract UniswapBridge is BridgeBase {
      * @param _totalInputValue - Amount of input token to swap
      * @param _interactionNonce - Interaction nonce
      * @param _auxData - Encoded path (gets decoded to Path struct)
+     * @param _rollupBeneficiary - Address which receives subsidy if the call is eligible for it
      * @return outputValueA - The amount of output token received
      */
     function convert(
@@ -172,8 +182,13 @@ contract UniswapBridge is BridgeBase {
         uint256 _totalInputValue,
         uint256 _interactionNonce,
         uint64 _auxData,
-        address
+        address _rollupBeneficiary
     ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
+        // Accumulate subsidy to _rollupBeneficiary
+        SUBSIDY.claimSubsidy(
+            _computeCriteria(_inputAssetA.erc20Address, _outputAssetA.erc20Address), _rollupBeneficiary
+        );
+
         bool inputIsEth = _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
         bool outputIsEth = _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
 
@@ -286,6 +301,26 @@ contract UniswapBridge is BridgeBase {
             // Swap using the second swap path
             amountOut += QUOTER.quoteExactInput(path.splitPath2, _amountIn - inputValueSplitPath1);
         }
+    }
+
+    /**
+     * @notice Computes the criteria that is passed when claiming subsidy.
+     * @param _inputAssetA The input asset
+     * @param _outputAssetA The output asset
+     * @return The criteria
+     */
+    function computeCriteria(
+        AztecTypes.AztecAsset calldata _inputAssetA,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata _outputAssetA,
+        AztecTypes.AztecAsset calldata,
+        uint64
+    ) public pure override (BridgeBase) returns (uint256) {
+        return _computeCriteria(_inputAssetA.erc20Address, _outputAssetA.erc20Address);
+    }
+
+    function _computeCriteria(address _inputToken, address _outputToken) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(_inputToken, _outputToken)));
     }
 
     /**
