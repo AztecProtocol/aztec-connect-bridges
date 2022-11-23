@@ -120,12 +120,44 @@ describe("Liquity trove bridge data", () => {
     expect(auxData[0]).toBe(BridgeCallData.fromString(referenceBridgeCallData).auxData);
   });
 
-  // it("should correctly set custom auxData when repaying with collateral and there is not a batch with acceptable price", async () => {
-  //   const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
+  it("should correctly set custom auxData when repaying with LUSD and collateral there is not a batch with acceptable price", async () => {
+    const referenceBridgeCallData = "00000380EF2BFA1665000000030000002C000000000000028000000B00000011";
+    const ethUsdOraclePrice = BigNumber.from("115833302141");
+    const lusdUsdOraclePrice = BigNumber.from("103848731");
 
-  //   const auxData = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, emptyAsset);
-  //   // TODO setup mocks and check the auxData was selected as expected
-  // });
+    // Setup mocks
+    const falafelResponse = {
+      bridgeStatus: [
+        {
+          bridgeCallData: referenceBridgeCallData,
+        },
+        {
+          bridgeCallData: "000000000000000001000000000000000000000020000000000000060000000a",
+        },
+      ],
+    };
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        json: () => Promise.resolve(falafelResponse),
+      }),
+    ) as any;
+
+    chainlinkOracle = {
+      ...chainlinkOracle,
+      latestRoundData: jest
+        .fn()
+        .mockReturnValueOnce([BigNumber.from(0), ethUsdOraclePrice, BigNumber.from(0), BigNumber.from(0)])
+        .mockReturnValueOnce([BigNumber.from(0), lusdUsdOraclePrice, BigNumber.from(0), BigNumber.from(0)]),
+    };
+    IChainlinkOracle__factory.connect = () => chainlinkOracle as any;
+
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
+
+    const auxData = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, tbAsset);
+
+    // The price in Falafel is not acceptable so check that it was not chosen
+    expect(auxData[0] === BridgeCallData.fromString(referenceBridgeCallData).auxData).toBeFalsy();
+  });
 
   it("should correctly get expected output when borrowing", async () => {
     // Setup mocks
