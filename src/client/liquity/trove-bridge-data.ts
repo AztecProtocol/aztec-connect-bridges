@@ -92,12 +92,18 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
       inputAssetA.erc20Address.equals(EthAddress.fromString(this.bridge.address)) &&
       inputAssetB.erc20Address.equals(this.LUSD) &&
       outputAssetA.assetType === AztecAssetType.ETH &&
-      (outputAssetB.assetType === AztecAssetType.NOT_USED ||
-        outputAssetB.erc20Address.equals(EthAddress.fromString(this.bridge.address)))
+      outputAssetB.erc20Address.equals(EthAddress.fromString(this.bridge.address))
     ) {
-      // Repayment with collateral or with a combination of collateral and LUSD --> `auxData` contains maximum price
-      // of LUSD
-      return [await this.getMaxPrice(inputAssetA.id, inputAssetB.id, outputAssetA.id, outputAssetB.id)];
+      // Repayment witha combination of collateral and LUSD --> `auxData` contains maximum price of LUSD
+      return [await this.getMaxPrice(inputAssetA.id, outputAssetA.id, inputAssetB.id, outputAssetB.id)];
+    } else if (
+      inputAssetA.erc20Address.equals(EthAddress.fromString(this.bridge.address)) &&
+      inputAssetB.assetType === AztecAssetType.NOT_USED &&
+      outputAssetA.assetType === AztecAssetType.ETH &&
+      outputAssetB.assetType === AztecAssetType.NOT_USED
+    ) {
+      // Repayment with collateral --> `auxData` contains maximum price of LUSD
+      return [await this.getMaxPrice(inputAssetA.id, outputAssetA.id, undefined, undefined)];
     }
     return [0n];
   }
@@ -229,14 +235,14 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
 
   private async getMaxPrice(
     inputAssetIdA: number,
-    inputAssetIdB: number,
     outputAssetIdA: number,
-    outputAssetIdB: number,
+    inputAssetIdB?: number,
+    outputAssetIdB?: number,
   ): Promise<bigint> {
     const relevantAuxDatas = await this.fetchRelevantAuxDataFromFalafel(
       inputAssetIdA,
-      inputAssetIdB,
       outputAssetIdA,
+      inputAssetIdB,
       outputAssetIdB,
     );
 
@@ -258,9 +264,9 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
 
   private async fetchRelevantAuxDataFromFalafel(
     inputAssetIdA: number,
-    inputAssetIdB: number,
     outputAssetIdA: number,
-    outputAssetIdB: number,
+    inputAssetIdB?: number,
+    outputAssetIdB?: number,
   ): Promise<bigint[]> {
     const result = await (
       await fetch("https://api.aztec.network/aztec-connect-prod/falafel/status", {
