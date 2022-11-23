@@ -1,6 +1,8 @@
 import { EthAddress } from "@aztec/barretenberg/address";
 import { BigNumber } from "ethers";
 import {
+  IChainlinkOracle,
+  IChainlinkOracle__factory,
   IPriceFeed,
   IPriceFeed__factory,
   ITroveManager,
@@ -23,6 +25,7 @@ describe("Liquity trove bridge data", () => {
   let troveBridge: Mockify<TroveBridge>;
   let troveManager: Mockify<ITroveManager>;
   let priceFeed: Mockify<IPriceFeed>;
+  let chainlinkOracle: Mockify<IChainlinkOracle>;
 
   let provider: JsonRpcProvider;
 
@@ -78,18 +81,31 @@ describe("Liquity trove bridge data", () => {
   });
 
   it("should correctly set auxData from Falafel when repaying with collateral and there is a batch with acceptable price", async () => {
+    const ethUsdOraclePrice = BigNumber.from("115833302141");
+    const lusdUsdOraclePrice = BigNumber.from("103848731");
+
+    // Setup mocks
+    chainlinkOracle = {
+      ...chainlinkOracle,
+      latestRoundData: jest
+        .fn()
+        .mockReturnValueOnce([BigNumber.from(0), ethUsdOraclePrice, BigNumber.from(0), BigNumber.from(0)])
+        .mockReturnValueOnce([BigNumber.from(0), lusdUsdOraclePrice, BigNumber.from(0), BigNumber.from(0)]),
+    };
+    IChainlinkOracle__factory.connect = () => chainlinkOracle as any;
+
     const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
 
     const auxData = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, emptyAsset);
     // TODO setup mocks and check the auxData was selected as expected
   });
 
-  it("should correctly set custom auxData when repaying with collateral and there is not a batch with acceptable price", async () => {
-    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
+  // it("should correctly set custom auxData when repaying with collateral and there is not a batch with acceptable price", async () => {
+  //   const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
 
-    const auxData = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, emptyAsset);
-    // TODO setup mocks and check the auxData was selected as expected
-  });
+  //   const auxData = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, emptyAsset);
+  //   // TODO setup mocks and check the auxData was selected as expected
+  // });
 
   it("should correctly get expected output when borrowing", async () => {
     // Setup mocks
