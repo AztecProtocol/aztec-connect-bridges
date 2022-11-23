@@ -223,6 +223,17 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
     return [userDebt, userCollateral];
   }
 
+  /**
+   * @notice Returns LUSD price with applied slippage
+   * @param slippage Slippage denominated in basis points
+   * @return Maximum acceptable price of LUSD
+   */
+  async getCustomMaxPrice(slippage: bigint): Promise<bigint> {
+    const lusdPriceInEth = await this.getLusdPrice();
+
+    return (lusdPriceInEth * (10000n + slippage)) / 10000n;
+  }
+
   private async fetchPrice(): Promise<BigNumber> {
     if (this.price === undefined) {
       const priceFeedAddress = await this.troveManager.priceFeed();
@@ -246,11 +257,7 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
       outputAssetIdB,
     );
 
-    // Both feeds use 8 decimals
-    const [, ethPrice, , ,] = await this.ethUsdOracle.latestRoundData();
-    const [, lusdPrice, , ,] = await this.lusdUsdOracle.latestRoundData();
-
-    const lusdPriceInEth = lusdPrice.mul(this.PRECISION).div(ethPrice).toBigInt();
+    const lusdPriceInEth = await this.getLusdPrice();
     const maxPrice = (lusdPriceInEth * (10000n + this.MAX_ACCEPTABLE_SLIPPAGE)) / 10000n;
 
     for (const existingBatchPrice of relevantAuxDatas) {
@@ -296,5 +303,13 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
     }
 
     return auxDatas;
+  }
+
+  private async getLusdPrice(): Promise<bigint> {
+    // Both feeds use 8 decimals
+    const [, ethPrice, , ,] = await this.ethUsdOracle.latestRoundData();
+    const [, lusdPrice, , ,] = await this.lusdUsdOracle.latestRoundData();
+
+    return lusdPrice.mul(this.PRECISION).div(ethPrice).toBigInt();
   }
 }

@@ -342,4 +342,30 @@ describe("Liquity trove bridge data", () => {
     expect(output[0]).toBe(expectedCollateral);
     expect(output[1]).toBe(expectedDebt);
   });
+
+  it("should correctly get custom max price", async () => {
+    const slippage = 3000n;
+
+    const ethUsdOraclePrice = BigNumber.from("115833302141");
+    const lusdUsdOraclePrice = BigNumber.from("103848731");
+
+    // Setup mocks
+    chainlinkOracle = {
+      ...chainlinkOracle,
+      latestRoundData: jest
+        .fn()
+        .mockReturnValueOnce([BigNumber.from(0), ethUsdOraclePrice, BigNumber.from(0), BigNumber.from(0)])
+        .mockReturnValueOnce([BigNumber.from(0), lusdUsdOraclePrice, BigNumber.from(0), BigNumber.from(0)]),
+    };
+    IChainlinkOracle__factory.connect = () => chainlinkOracle as any;
+
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
+
+    const customMaxPrice = await troveBridgeData.getCustomMaxPrice(slippage);
+    const expectedMaxPrice =
+      (lusdUsdOraclePrice.mul(troveBridgeData.PRECISION).div(ethUsdOraclePrice).toBigInt() * (10000n + slippage)) /
+      10000n;
+
+    expect(customMaxPrice).toEqual(expectedMaxPrice);
+  });
 });

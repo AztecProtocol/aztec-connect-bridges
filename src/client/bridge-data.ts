@@ -152,4 +152,7 @@ export interface BridgeDataFieldGetters {
   getBorrowingFee?(borrowAmount: bigint): Promise<bigint>;
   getCurrentCR?(): Promise<bigint>;
   getUserDebtAndCollateral?(tbAmount: bigint): Promise<[bigint, bigint]>;
+
+  // User in TroveBridge client
+  getCustomMaxPrice?(slippage: bigint): Promise<bigint>;
 }
