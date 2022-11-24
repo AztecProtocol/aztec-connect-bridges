@@ -20,6 +20,8 @@ contract UniswapMeasure is UniswapDeployment {
     address private constant BENEFICIARY = address(uint160(uint256(keccak256(abi.encodePacked("_BENEFICIARY")))));
 
     address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    address public constant FRAX = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
 
     GasBase internal gasBase;
     UniswapBridge internal bridge;
@@ -92,13 +94,13 @@ contract UniswapMeasure is UniswapDeployment {
         emit log_named_uint("Claimable subsidy after deposit", claimableSubsidyAfterDeposit);
     }
 
-    function measure2SplitPathsSwap() public {
+    function measureMaxComplexPath() public {
         uint64 path = bridge.encodePath(
             1 ether,
             1e20,
             WETH,
-            UniswapBridge.SplitPath(50, 500, USDC, 100, address(0), 100),
-            UniswapBridge.SplitPath(50, 500, USDC, 100, address(0), 100)
+            UniswapBridge.SplitPath(50, 500, USDC, 100, FRAX, 500),
+            UniswapBridge.SplitPath(50, 3000, USDT, 100, USDC, 500)
         );
 
         vm.broadcast();
@@ -108,7 +110,7 @@ contract UniswapMeasure is UniswapDeployment {
         {
             vm.broadcast();
             gasBase.convert(
-                address(bridge), ethAsset, emptyAsset, daiAsset, emptyAsset, 1 ether, 0, path, BENEFICIARY, 430000
+                address(bridge), ethAsset, emptyAsset, daiAsset, emptyAsset, 1 ether, 0, path, BENEFICIARY, 660000
             );
         }
 
