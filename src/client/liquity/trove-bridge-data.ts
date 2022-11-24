@@ -22,8 +22,8 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
   // Price precision
   public readonly PRECISION = 10n ** 18n;
 
-  public readonly MAX_ACCEPTABLE_SLIPPAGE = 500n; // Denominated in basis points
-  public readonly IDEAL_SLIPPAGE = 200n; // Denominated in basis points
+  public readonly IDEAL_SLIPPAGE_SETTING = 200n; // Denominated in basis points
+  public readonly MAX_ACCEPTABLE_BATCH_SLIPPAGE_SETTING = 500n; // Denominated in basis points
 
   private price?: BigNumber;
 
@@ -45,6 +45,7 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
     const troveManager = ITroveManager__factory.connect("0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2", ethersProvider);
     const bridge = TroveBridge__factory.connect(bridgeAddress.toString(), ethersProvider);
 
+    // Precision of the feeds is 1e8
     const ethUsdOracle = IChainlinkOracle__factory.connect(
       "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
       ethersProvider,
@@ -229,7 +230,7 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
    * @return Maximum acceptable price of LUSD
    */
   async getCustomMaxPrice(slippage: bigint): Promise<bigint> {
-    const lusdPriceInEth = await this.getLusdPrice();
+    const lusdPriceInEth = await this.getLusdPriceInEth();
 
     return (lusdPriceInEth * (10000n + slippage)) / 10000n;
   }
@@ -257,8 +258,8 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
       outputAssetIdB,
     );
 
-    const lusdPriceInEth = await this.getLusdPrice();
-    const maxPrice = (lusdPriceInEth * (10000n + this.MAX_ACCEPTABLE_SLIPPAGE)) / 10000n;
+    const lusdPriceInEth = await this.getLusdPriceInEth();
+    const maxPrice = (lusdPriceInEth * (10000n + this.MAX_ACCEPTABLE_BATCH_SLIPPAGE_SETTING)) / 10000n;
 
     for (const existingBatchPrice of relevantAuxDatas) {
       if (lusdPriceInEth < existingBatchPrice && existingBatchPrice < maxPrice) {
@@ -266,7 +267,7 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
       }
     }
 
-    return (lusdPriceInEth * (10000n + this.IDEAL_SLIPPAGE)) / 10000n;
+    return (lusdPriceInEth * (10000n + this.IDEAL_SLIPPAGE_SETTING)) / 10000n;
   }
 
   private async fetchRelevantAuxDataFromFalafel(
@@ -305,7 +306,10 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
     return auxDatas;
   }
 
-  private async getLusdPrice(): Promise<bigint> {
+  /**
+   * @return LUSD price denominated in ETH using a 1e18 precision
+   */
+  private async getLusdPriceInEth(): Promise<bigint> {
     // Both feeds use 8 decimals
     const [, ethPrice, , ,] = await this.ethUsdOracle.latestRoundData();
     const [, lusdPrice, , ,] = await this.lusdUsdOracle.latestRoundData();
