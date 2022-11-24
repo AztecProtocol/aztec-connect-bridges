@@ -39,6 +39,7 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
 
   /**
    * @param provider Ethereum provider
+   * @param bridgeAddressId An id representing bridge address in the RollupProcessor contract
    * @param bridgeAddress Address of the bridge address (and the corresponding accounting token)
    */
   static create(provider: EthereumProvider, bridgeAddressId: number, bridgeAddress: EthAddress) {
