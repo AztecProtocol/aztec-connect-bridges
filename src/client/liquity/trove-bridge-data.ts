@@ -22,6 +22,7 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
   // Price precision
   public readonly PRECISION = 10n ** 18n;
 
+  // Note: max setting has to be set significantly higher than the ideal setting in order for the aggregation to work
   public readonly IDEAL_SLIPPAGE_SETTING = 200n; // Denominated in basis points
   public readonly MAX_ACCEPTABLE_BATCH_SLIPPAGE_SETTING = 500n; // Denominated in basis points
 
