@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { IQuoter, IQuoterInterface } from "../IQuoter.js";
+import type { IQuoter, IQuoterInterface } from "../IQuoter";
 
 const _abi = [
   {

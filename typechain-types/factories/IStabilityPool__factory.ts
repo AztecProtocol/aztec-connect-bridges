@@ -7,7 +7,7 @@ import type { Provider } from "@ethersproject/providers";
 import type {
   IStabilityPool,
   IStabilityPoolInterface,
-} from "../IStabilityPool.js";
+} from "../IStabilityPool";
 
 const _abi = [
   {

@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { IHintHelpers, IHintHelpersInterface } from "../IHintHelpers.js";
+import type { IHintHelpers, IHintHelpersInterface } from "../IHintHelpers";
 
 const _abi = [
   {

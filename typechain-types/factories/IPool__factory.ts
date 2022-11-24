@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { IPool, IPoolInterface } from "../IPool.js";
+import type { IPool, IPoolInterface } from "../IPool";
 
 const _abi = [
   {

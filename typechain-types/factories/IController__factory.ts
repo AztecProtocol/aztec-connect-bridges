@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { IController, IControllerInterface } from "../IController.js";
+import type { IController, IControllerInterface } from "../IController";
 
 const _abi = [
   {

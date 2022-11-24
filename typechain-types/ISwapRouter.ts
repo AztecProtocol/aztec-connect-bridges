@@ -21,7 +21,7 @@ import type {
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "./common.js";
+} from "./common";
 
 export declare namespace ISwapRouter {
   export type ExactInputParamsStruct = {

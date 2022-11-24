@@ -22,7 +22,7 @@ import type {
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "./common.js";
+} from "./common";
 
 export interface IBorrowerOperationsInterface extends utils.Interface {
   functions: {

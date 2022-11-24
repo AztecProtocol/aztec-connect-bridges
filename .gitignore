@@ -2,6 +2,5 @@ cache/
 out/
 node_modules/
 yarn-error.log
-client-dest/
-# typechain-types/
-broadcast/
+typechain-types/
+broadcast/ 

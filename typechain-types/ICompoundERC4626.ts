@@ -18,7 +18,7 @@ import type {
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "./common.js";
+} from "./common";
 
 export interface ICompoundERC4626Interface extends utils.Interface {
   functions: {

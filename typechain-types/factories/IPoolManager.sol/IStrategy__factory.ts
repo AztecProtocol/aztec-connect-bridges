@@ -7,7 +7,7 @@ import type { Provider } from "@ethersproject/providers";
 import type {
   IStrategy,
   IStrategyInterface,
-} from "../../IPoolManager.sol/IStrategy.js";
+} from "../../IPoolManager.sol/IStrategy";
 
 const _abi = [
   {
