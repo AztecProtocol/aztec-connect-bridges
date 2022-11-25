@@ -36,7 +36,6 @@ To get started follow the steps below:
    ```
    src/bridges/example
    src/test/example
-   src/client/example
    src/specs/example
    src/deployment/example
    ```

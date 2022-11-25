@@ -29,12 +29,8 @@ You can view an example spec [here](#add-link).
 
 5. How can the accounting of the bridge be impacted by interactions performed by other parties than the bridge? Example, if borrowing, how does it handle liquidations etc.
 
-6. What functions are available in [/src/client](./client)?
+6. Is this contract upgradable? If so, what are the restrictions on upgradability?
 
-   - How should they be used?
+7. Does this bridge maintain state? If so, what is stored and why?
 
-7. Is this contract upgradable? If so, what are the restrictions on upgradability?
-
-8. Does this bridge maintain state? If so, what is stored and why?
-
-9. Any other relevant information
+8. Any other relevant information
