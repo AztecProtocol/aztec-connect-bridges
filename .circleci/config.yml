@@ -44,27 +44,14 @@ jobs:
           shell: /bin/bash
           command: |
             yarn config set script-shell /bin/bash
-            yarn lint:contracts
-      - run:
-          name: Check Linting Errors in Clients
-          shell: /bin/bash
-          command: |
-            yarn config set script-shell /bin/bash
-            yarn lint:clients
+            yarn lint
       - run:
           name: Test Contracts
           shell: /bin/bash
           command: |
             yarn config set script-shell /bin/bash
             export PATH=/home/circleci/.foundry/bin:$PATH
-            yarn test:contracts
-      - run:
-          name: Test Clients
-          shell: /bin/bash
-          command: |
-            yarn config set script-shell /bin/bash
-            export PATH=/home/circleci/.foundry/bin:$PATH
-            yarn test:clients
+            yarn test
   publish:
     docker:
       - image: "cimg/python:3.10.6"
@@ -76,28 +63,6 @@ jobs:
       - run:
           name: Authenticate with registry
           command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc
-      - run:
-          name: Setup Vyper
-          shell: /bin/bash
-          command: |
-            pip install vyper
-            export PATH=/home/cicleci/.local/bin:$PATH
-            vyper --version
-      - run:
-          name: Setup Foundry
-          shell: /bin/bash
-          command: |
-            yarn config set script-shell /bin/bash
-            yarn install:foundryup
-            export PATH=/home/circleci/.foundry/bin:$PATH
-            yarn install:foundry
-      - run:
-          name: Build Project
-          shell: /bin/bash
-          command: |
-            export PATH=/home/circleci/.foundry/bin:$PATH
-            yarn install:dependencies
-            yarn build
       - run:
           name: Publish
           shell: /bin/bash
