@@ -76,11 +76,10 @@ To receive a grant payment we expect the following work to be done:
 1. A solidity bridge that interfaces with the protocol you are bridging to (e.g AAVE),
 2. tests in Solidity that test the bridge with production values and the deployed protocol that is currently on mainnet (you should test a range of assets, edge cases and use [Forge's fuzzing abilities](https://book.getfoundry.sh/forge/fuzz-testing.html)),
 3. tests cover the full contract, there are no untested functions or lines.
-4. implementation of the Typescript `bridge-data.ts` class that tells a frontend developer how to use your bridge.
-5. an explanation of the flows your bridge supports should be included as `spec.md`,
-6. [NatSpec](https://docs.soliditylang.org/en/develop/natspec-format.html) documentation of all the functions in all the contracts which are to be deployed on mainnet,
-7. a deployment script to deploy the bridge with proper configuration,
-8. Subsidy contract has been integrated (see the [Subsidy integration section](#subsidy-integration) for details).
+4. an explanation of the flows your bridge supports should be included as `spec.md`,
+5. [NatSpec](https://docs.soliditylang.org/en/develop/natspec-format.html) documentation of all the functions in all the contracts which are to be deployed on mainnet,
+6. a deployment script to deploy the bridge with proper configuration,
+7. Subsidy contract has been integrated (see the [Subsidy integration section](#subsidy-integration) for details).
 
 Before submitting a PR for a review make sure that the following is true:
 
@@ -175,13 +174,6 @@ In unit tests it is expected that you transfer these tokens on your own.
 
 ETH is returned to the rollup from a bridge by calling the payable function with a `msg.value` `rollupContract.receiveETH(uint256 interactionNonce)`.
 You must also set the `outputValue` of the corresponding `outputAsset` (A or B) to be the amount of ETH sent.
-
-This repo supports TypeChain so all Typescript bindings will be auto generated and added to the `typechain-types` folder.
-
-### bridge-data.ts
-
-This is a Typescript class designed to help a developer on the frontend use your bridge.
-You should implement the functions to fetch data from your bridge / L1.
 
 ## Aztec Connect Background
 
