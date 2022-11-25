@@ -3,7 +3,7 @@
 ## What does it do?
 
 It is a contract we use as a source of truth when it comes to configuration of bridges and assets.
-It is mainly used by our frontend to get a bridge or asset information by a tag, but the information can be used by one.
+It is mainly used by our frontend to get a bridge or asset information by a tag, but the information can be used by anyone.
 
 ## Usage
 
@@ -17,10 +17,19 @@ function getAsset(string memory _tag) public view returns (AssetData memory);
 function getAssets() public view returns (AssetData[] memory);
 
 function getBridges() public view returns (BridgeData[] memory);
+```
 
+The easiest way to access it, if already using this repository is to execute the `read()` script in the DataProviderDeployment solidity file. It holds addresses for mainnet, testnet and devnet. 
+
+```bash
+export network=<mainnet|testnet|devnet> && export simulateAdmin=false
+export ETH_RPC_URL=<INSERT_URL>
+forge script DataProviderDeployment --rpc-url $ETH_RPC_URL --sig "read()"
 ```
 
 ## Usage by owner
+
+Updating values stored in the data provider is only possible by the owner of the contract. 
 
 Before running the commands bellow export relevant environment variables:
 
