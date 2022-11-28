@@ -21,11 +21,13 @@ contract DataProviderDeployment is BaseDeployment {
     }
 
     function read() public {
-        readProvider(0x9092E8E72000AAE776E4785662582e8f49a19258);
-    }
-
-    function readBogota() public {
-        readProvider(0x3457D3CC919D01FC41dB41c9Ce3A5C29cbD57d37);
+        address provider = 0x8B2E54fa4398C8f7502f30aC94Cb1f354390c8ab;
+        if (block.chainid == 3567) {
+            provider = 0x1C6182E3CEaf416B10963731E8283722e274964E;
+        } else if (block.chainid == 0xa57ec) {
+            provider = 0xA33B20Ba45cA9C265bbF7b35a75717590EDfc868;
+        }
+        readProvider(provider);
     }
 
     function readProvider(address _provider) public {

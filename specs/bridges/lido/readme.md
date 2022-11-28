@@ -18,7 +18,7 @@ The bridge interacts with two protocols, namely Lido and Curve.
 
 There are two flows of Lido Bridge, namely deposits and withdraws.
 
-![Lido flows](./LidoBridge.svg)
+![Lido flows](LidoBridge.svg)
 
 ### Deposit
 

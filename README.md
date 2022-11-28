@@ -31,12 +31,12 @@ To get started follow the steps below:
    cd aztec-connect-bridges
    yarn setup
    ```
-3. Copy and rename the following folders (e.g. rename example to uniswap):
+3. Create the following folders for your bridge (e.g. replace example with uniswap):
 
    ```
+   specs/bridges/example
    src/bridges/example
-   src/test/example
-   src/specs/example
+   src/test/bridges/example
    src/deployment/example
    ```
 
