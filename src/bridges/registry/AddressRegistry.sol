@@ -45,7 +45,7 @@ contract AddressRegistry is BridgeBase {
         returns (uint256 outputValueA, uint256, bool)
     {
         if (
-            _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH ||
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED ||
             _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
         ) revert ErrorLib.InvalidInputA();
         if (_outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL)
@@ -53,9 +53,10 @@ contract AddressRegistry is BridgeBase {
 
         // get virtual assets
         if (
-            _inputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED &&
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
             _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
         ) {
+            require(_totalInputValue == 1, "send only 1 wei");
             return (maxInt, 0, false);
         }
         // register address with virtual asset

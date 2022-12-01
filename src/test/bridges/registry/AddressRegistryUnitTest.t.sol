@@ -15,6 +15,7 @@ contract AddressRegistryUnitTest is BridgeTestBase {
     address private rollupProcessor;
     AddressRegistry private bridge;
     uint256 public maxInt = type(uint160).max;
+    AztecTypes.AztecAsset private ethAsset;
 
     // @dev This method exists on RollupProcessor.sol. It's defined here in order to be able to receive ETH like a real
     //      rollup processor would.
@@ -72,6 +73,11 @@ contract AddressRegistryUnitTest is BridgeTestBase {
     }
 
     function testInvalidOutputAssetType() public {
+        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
+            id: 0,
+            erc20Address: address(0),
+            assetType: AztecTypes.AztecAssetType.ETH
+        });
         AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: DAI,
@@ -79,7 +85,7 @@ contract AddressRegistryUnitTest is BridgeTestBase {
         });
         vm.expectRevert(ErrorLib.InvalidOutputA.selector);
         bridge.convert(
-            emptyAsset,
+            inputAsset,
             emptyAsset,
             outputAsset,
             emptyAsset,
@@ -94,6 +100,12 @@ contract AddressRegistryUnitTest is BridgeTestBase {
     function testGetBackMaxVirtualAssets() public {
         vm.warp(block.timestamp + 1 days);
 
+        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
+            id: 0,
+            erc20Address: address(0),
+            assetType: AztecTypes.AztecAssetType.ETH
+        });
+
         AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset({
             id: 0,
             erc20Address: address(0),
@@ -102,11 +114,11 @@ contract AddressRegistryUnitTest is BridgeTestBase {
 
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge
             .convert(
-                emptyAsset,
+                inputAssetA,
                 emptyAsset,
                 outputAssetA,
                 emptyAsset,
-                0, // _totalInputValue - an amount of input asset A sent to the bridge
+                1, // _totalInputValue - an amount of input asset A sent to the bridge
                 0, // _interactionNonce
                 0, // _auxData - not used in the example bridge
                 address(0x0)
@@ -133,7 +145,9 @@ contract AddressRegistryUnitTest is BridgeTestBase {
             assetType: AztecTypes.AztecAssetType.VIRTUAL
         });
 
-        uint160 inputAmount = uint160(0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA);
+        uint160 inputAmount = uint160(
+            0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA
+        );
 
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge
             .convert(
