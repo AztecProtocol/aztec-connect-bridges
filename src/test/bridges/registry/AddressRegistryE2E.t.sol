@@ -21,8 +21,7 @@ contract AddressRegistryE2ETest is BridgeTestBase {
     // To store the id of the example bridge after being added
     uint256 private id;
 
-    uint256 public maxInt =
-        0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+    uint256 public maxInt = type(uint160).max;
 
     function setUp() public {
         // Deploy a new example bridge
@@ -106,7 +105,7 @@ contract AddressRegistryE2ETest is BridgeTestBase {
 
         // Check the output values are as expected
         assertEq(
-            inputAmount,
+            address(inputAmount),
             newlyRegistered,
             "input amount doesn't equal newly registered address"
         );

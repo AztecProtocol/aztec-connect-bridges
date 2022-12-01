@@ -15,8 +15,7 @@ import {BridgeBase} from "../base/BridgeBase.sol";
 contract AddressRegistry is BridgeBase {
     uint64 public id;
     mapping(uint64 => address) public addresses;
-    uint256 public maxInt =
-        0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+    uint256 public maxInt = type(uint160).max;
 
     event AddressRegistered(
         uint64 indexed id,
