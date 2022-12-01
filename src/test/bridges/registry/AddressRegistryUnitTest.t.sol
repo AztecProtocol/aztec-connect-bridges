@@ -14,7 +14,7 @@ contract AddressRegistryUnitTest is BridgeTestBase {
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address private rollupProcessor;
     AddressRegistry private bridge;
-    uint256 MAX_INT =
+    uint256 public maxInt =
         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     // @dev This method exists on RollupProcessor.sol. It's defined here in order to be able to receive ETH like a real
@@ -113,7 +113,7 @@ contract AddressRegistryUnitTest is BridgeTestBase {
                 address(0x0)
             );
 
-        assertEq(outputValueA, MAX_INT, "Output value A doesn't equal MAX_INT");
+        assertEq(outputValueA, maxInt, "Output value A doesn't equal maxInt");
         assertEq(outputValueB, 0, "Output value B is not 0");
         assertTrue(!isAsync, "Bridge is incorrectly in an async mode");
     }

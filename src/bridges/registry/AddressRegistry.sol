@@ -15,7 +15,7 @@ import {BridgeBase} from "../base/BridgeBase.sol";
 contract AddressRegistry is BridgeBase {
     uint64 public id;
     mapping(uint64 => address) public addresses;
-    uint256 public MAX_INT =
+    uint256 public maxInt =
         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     event AddressRegistered(
@@ -57,7 +57,7 @@ contract AddressRegistry is BridgeBase {
             _inputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED &&
             _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
         ) {
-            return (MAX_INT, 0, false);
+            return (maxInt, 0, false);
         }
         // register address with virtual asset
         else if (
