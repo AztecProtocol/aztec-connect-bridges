@@ -36,7 +36,7 @@ contract AddressRegistryE2ETest is BridgeTestBase {
         // List the example-bridge with a gasLimit of 120k
         // WARNING: If you set this value too low the interaction will fail for seemingly no reason!
         // OTOH if you se it too high bridge users will pay too much
-        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 120000);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 1200000);
 
         vm.stopPrank();
 
