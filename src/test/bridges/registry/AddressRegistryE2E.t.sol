@@ -44,9 +44,7 @@ contract AddressRegistryE2ETest is BridgeTestBase {
         id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
     }
 
-    // @dev In order to avoid overflows we set _depositAmount to be uint96 instead of uint256.
-    function testAddressRegistryE2ETest(uint96 _depositAmount) public {
-        vm.assume(_depositAmount > 1);
+    function testAddressRegistryE2ETest() public {
         vm.warp(block.timestamp + 1 days);
 
         // Define input and output assets
