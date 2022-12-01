@@ -13,7 +13,6 @@ import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 contract AddressRegistryUnitTest is BridgeTestBase {
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address private rollupProcessor;
-    // The reference to the example bridge
     AddressRegistry private bridge;
     uint256 MAX_INT =
         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
@@ -30,9 +29,9 @@ contract AddressRegistryUnitTest is BridgeTestBase {
         bridge = new AddressRegistry(rollupProcessor);
 
         // Set ETH balance of bridge and BENEFICIARY to 0 for clarity (somebody sent ETH to that address on mainnet)
-        vm.deal(address(bridge), 0);
+        // vm.deal(address(bridge), 0);
 
-        // Use the label cheatcode to mark the address with "Example Bridge" in the traces
+        // Use the label cheatcode to mark the address with "AddressRegistry Bridge" in the traces
         vm.label(address(bridge), "AddressRegistry Bridge");
     }
 
@@ -54,9 +53,15 @@ contract AddressRegistryUnitTest is BridgeTestBase {
     }
 
     function testInvalidInputAssetType() public {
+        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
+            id: 1,
+            erc20Address: DAI,
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+
         vm.expectRevert(ErrorLib.InvalidInputA.selector);
         bridge.convert(
-            emptyAsset,
+            inputAsset,
             emptyAsset,
             emptyAsset,
             emptyAsset,
@@ -68,16 +73,16 @@ contract AddressRegistryUnitTest is BridgeTestBase {
     }
 
     function testInvalidOutputAssetType() public {
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
+        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
             id: 1,
             erc20Address: DAI,
             assetType: AztecTypes.AztecAssetType.ERC20
         });
         vm.expectRevert(ErrorLib.InvalidOutputA.selector);
         bridge.convert(
-            inputAssetA,
             emptyAsset,
             emptyAsset,
+            outputAsset,
             emptyAsset,
             0,
             0,
@@ -123,13 +128,19 @@ contract AddressRegistryUnitTest is BridgeTestBase {
             assetType: AztecTypes.AztecAssetType.VIRTUAL
         });
 
+        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset({
+            id: 0,
+            erc20Address: address(0),
+            assetType: AztecTypes.AztecAssetType.VIRTUAL
+        });
+
         uint160 inputAmount = uint160(0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA);
 
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge
             .convert(
                 inputAssetA,
                 emptyAsset,
-                emptyAsset,
+                outputAssetA,
                 emptyAsset,
                 inputAmount, // _totalInputValue - an amount of input asset A sent to the bridge
                 0, // _interactionNonce

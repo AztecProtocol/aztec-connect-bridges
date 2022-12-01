@@ -44,7 +44,7 @@ contract NftVault is BridgeBase {
             BridgeBase
         )
         onlyRollup
-        returns (uint256 outputValueA, uint256, bool)
+        returns (uint256 outputValueA, uint256 outputValueB, bool isAsync)
     {
         // DEPOSIT
         // return virutal asset id, will not actually match to NFT until matchDeposit is called from ethereum

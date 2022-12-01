@@ -46,8 +46,8 @@ contract AddressRegistry is BridgeBase {
         returns (uint256 outputValueA, uint256, bool)
     {
         if (
-            _inputAssetA.assetType != AztecTypes.AztecAssetType.NOT_USED ||
-            _inputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH ||
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
         ) revert ErrorLib.InvalidInputA();
         if (_outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL)
             revert ErrorLib.InvalidOutputA();
