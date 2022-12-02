@@ -126,6 +126,7 @@ contract AddressRegistryE2ETest is BridgeTestBase {
             newlyRegistered,
             "input amount doesn't equal newly registered address"
         );
+        assertEq(outputValueA, 0, "Non-zero outputValueA");
         assertEq(outputValueB, 0, "Non-zero outputValueB");
         assertFalse(isAsync, "Bridge is not synchronous");
     }
