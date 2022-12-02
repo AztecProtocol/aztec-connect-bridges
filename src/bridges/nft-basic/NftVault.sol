@@ -22,9 +22,11 @@ contract NftVault is BridgeBase {
     }
     mapping(uint256 => NftAsset) public tokens;
 
-    AddressRegistry public registry = AddressRegistry(address(0x0));
+    AddressRegistry public registry;
 
-    constructor(address _rollupProcessor) BridgeBase(_rollupProcessor) {}
+    constructor(address _rollupProcessor, address _registry) BridgeBase(_rollupProcessor) {
+        registry = AddressRegistry(_registry);
+    }
 
     function convert(
         AztecTypes.AztecAsset calldata _inputAssetA,
@@ -46,6 +48,12 @@ contract NftVault is BridgeBase {
         onlyRollup
         returns (uint256 outputValueA, uint256 outputValueB, bool isAsync)
     {
+        if (
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED ||
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
+        ) revert ErrorLib.InvalidInputA();
+        if (_outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL)
+            revert ErrorLib.InvalidOutputA();
         // DEPOSIT
         // return virutal asset id, will not actually match to NFT until matchDeposit is called from ethereum
         if (
@@ -70,7 +78,11 @@ contract NftVault is BridgeBase {
             address _to = registry.addresses(_auxData);
             require(_to != address(0x0), "unregistered withdraw address");
 
-            IERC721(token.collection).transferFrom(address(this), _to, token.id);
+            IERC721(token.collection).transferFrom(
+                address(this),
+                _to,
+                token.id
+            );
             delete tokens[_inputAssetA.id];
             return (0, 0, false);
         }
