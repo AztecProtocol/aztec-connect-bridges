@@ -14,11 +14,8 @@ import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
  *         as possible without spinning up all the rollup infrastructure (sequencer, proof generator etc.).
  */
 contract AddressRegistryE2ETest is BridgeTestBase {
-    // address private constant BENEFICIARY = address(11);
 
-    // The reference to the example bridge
     AddressRegistry internal bridge;
-    // To store the id of the example bridge after being added
     uint256 private id;
     AztecTypes.AztecAsset private ethAsset;
     AztecTypes.AztecAsset private virtualAsset1;
@@ -27,17 +24,14 @@ contract AddressRegistryE2ETest is BridgeTestBase {
     event logAddress(address);
 
     function setUp() public {
-        // Deploy a new example bridge
         bridge = new AddressRegistry(address(ROLLUP_PROCESSOR));
         ethAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
-        // Define input and output assets
         virtualAsset1 = AztecTypes.AztecAsset({
             id: 0,
             erc20Address: address(0),
             assetType: AztecTypes.AztecAssetType.VIRTUAL
         });
 
-        // Use the label cheatcode to mark the address with "Example Bridge" in the traces
         vm.label(address(bridge), "Address Registry Bridge");
 
         // Impersonate the multi-sig to add a new bridge
@@ -46,7 +40,7 @@ contract AddressRegistryE2ETest is BridgeTestBase {
         // List the example-bridge with a gasLimit of 120k
         // WARNING: If you set this value too low the interaction will fail for seemingly no reason!
         // OTOH if you se it too high bridge users will pay too much
-        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 1200000);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 120000);
 
         vm.stopPrank();
 
@@ -57,8 +51,6 @@ contract AddressRegistryE2ETest is BridgeTestBase {
     function testGetVirtualAssets() public {
         vm.warp(block.timestamp + 1 days);
 
-        // Computes the encoded data for the specific bridge interaction
-        // uint256 bridgeCallData =
         ROLLUP_ENCODER.defiInteractionL2(
             id,
             ethAsset,
@@ -68,19 +60,7 @@ contract AddressRegistryE2ETest is BridgeTestBase {
             0,
             1
         );
-
-        // bytes memory err = abi.encodePacked(ErrorLib.InvalidAuxData.selector);
-
-        // ROLLUP_ENCODER.registerEventToBeChecked(
-        //     bridgeCallData,
-        //     ROLLUP_ENCODER.getNextNonce(),
-        //     0,
-        //     maxInt,
-        //     0,
-        //     true,
-        //     err
-        // );
-
+        
         // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
         (
             uint256 outputValueA,

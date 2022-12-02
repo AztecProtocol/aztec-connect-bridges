@@ -25,11 +25,7 @@ contract AddressRegistryUnitTest is BridgeTestBase {
         // In unit tests we set address of rollupProcessor to the address of this test contract
         rollupProcessor = address(this);
 
-        // Deploy a new example bridge
         bridge = new AddressRegistry(rollupProcessor);
-
-        // Set ETH balance of bridge and BENEFICIARY to 0 for clarity (somebody sent ETH to that address on mainnet)
-        // vm.deal(address(bridge), 0);
 
         // Use the label cheatcode to mark the address with "AddressRegistry Bridge" in the traces
         vm.label(address(bridge), "AddressRegistry Bridge");
