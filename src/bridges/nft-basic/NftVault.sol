@@ -9,11 +9,10 @@ import {BridgeBase} from "../base/BridgeBase.sol";
 import {AddressRegistry} from "../registry/AddressRegistry.sol";
 
 /**
- * @title An example bridge contract.
+ * @title Basic NFT Vault for Aztec.
  * @author Aztec Team
- * @notice You can use this contract to immediately get back what you've deposited.
- * @dev This bridge demonstrates the flow of assets in the convert function. This bridge simply returns what has been
- *      sent to it.
+ * @notice You can use this contract to hold your NFTs on Aztec. Whoever holds the corresponding virutal asset note can withdraw the NFT.
+ * @dev This bridge demonstrates basic functionality for an NFT bridge. This may be extended to support more features.  
  */
 contract NftVault is BridgeBase {
     struct NftAsset {
@@ -24,7 +23,10 @@ contract NftVault is BridgeBase {
 
     AddressRegistry public registry;
 
-    constructor(address _rollupProcessor, address _registry) BridgeBase(_rollupProcessor) {
+    constructor(
+        address _rollupProcessor,
+        address _registry
+    ) BridgeBase(_rollupProcessor) {
         registry = AddressRegistry(_registry);
     }
 
@@ -52,8 +54,10 @@ contract NftVault is BridgeBase {
             _inputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED ||
             _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
         ) revert ErrorLib.InvalidInputA();
-        if (_outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL)
-            revert ErrorLib.InvalidOutputA();
+        if (
+            _outputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED ||
+            _outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
+        ) revert ErrorLib.InvalidOutputA();
         // DEPOSIT
         // return virutal asset id, will not actually match to NFT until matchDeposit is called from ethereum
         if (
@@ -61,16 +65,16 @@ contract NftVault is BridgeBase {
             _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
         ) {
             require(_totalInputValue == 1, "send only 1 wei");
-            tokens[_interactionNonce] = NftAsset({
-                collection: address(0x0),
-                id: 0
-            });
+            // tokens[_interactionNonce] = NftAsset({
+            //     collection: address(0x0),
+            //     id: 0
+            // });
             return (1, 0, false);
         }
         // WITHDRAW
         else if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL &&
-            _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
+            _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
             NftAsset memory token = tokens[_inputAssetA.id];
             require(token.collection != address(0x0), "NFT doesn't exist");
@@ -88,6 +92,7 @@ contract NftVault is BridgeBase {
         }
     }
 
+    // user must approve their NFT to be transferred by this contract before calling this function
     function matchDeposit(
         uint256 _virtualAssetId,
         address _collection,

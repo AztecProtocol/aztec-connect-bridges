@@ -7,12 +7,14 @@ import {ErrorLib} from "../base/ErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 
 /**
- * @title
- * @author
- * @notice
- * @dev
+ * @title Aztec Address Registry.
+ * @author Aztec Team
+ * @notice This contract can be used to anonymously register an ethereum address with an id.
+ *         This is useful for reducing the amount of data required to pass an ethereum address through auxData.
+ * @dev Use this contract to lookup ethereum addresses by id.
  */
 contract AddressRegistry is BridgeBase {
+
     uint64 public id;
     mapping(uint64 => address) public addresses;
     uint256 public maxInt = type(uint160).max;
