@@ -68,8 +68,8 @@ contract AddressRegistry is BridgeBase {
     }
 
     function registerWithdrawAddress(address _to) external returns (uint256) {
-        id++;
         addresses[id] = _to;
+        id++;
         emit AddressRegistered(id, _to);
         return id;
     }
