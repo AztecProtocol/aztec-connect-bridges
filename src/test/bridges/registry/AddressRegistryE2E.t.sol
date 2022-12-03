@@ -14,23 +14,20 @@ import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
  *         as possible without spinning up all the rollup infrastructure (sequencer, proof generator etc.).
  */
 contract AddressRegistryE2ETest is BridgeTestBase {
-
     AddressRegistry internal bridge;
     uint256 private id;
     AztecTypes.AztecAsset private ethAsset;
     AztecTypes.AztecAsset private virtualAsset1;
     uint256 public maxInt = type(uint160).max;
-    event log(string, uint);
+
+    event log(string, uint256);
     event logAddress(address);
 
     function setUp() public {
         bridge = new AddressRegistry(address(ROLLUP_PROCESSOR));
         ethAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
-        virtualAsset1 = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.VIRTUAL
-        });
+        virtualAsset1 =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
 
         vm.label(address(bridge), "Address Registry Bridge");
 
@@ -51,22 +48,10 @@ contract AddressRegistryE2ETest is BridgeTestBase {
     function testGetVirtualAssets() public {
         vm.warp(block.timestamp + 1 days);
 
-        ROLLUP_ENCODER.defiInteractionL2(
-            id,
-            ethAsset,
-            emptyAsset,
-            virtualAsset1,
-            emptyAsset,
-            0,
-            1
-        );
-        
+        ROLLUP_ENCODER.defiInteractionL2(id, ethAsset, emptyAsset, virtualAsset1, emptyAsset, 0, 1);
+
         // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
-        (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool isAsync
-        ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         // Check the output values are as expected
         assertEq(outputValueA, maxInt, "outputValueA doesn't equal maxInt");
@@ -75,37 +60,19 @@ contract AddressRegistryE2ETest is BridgeTestBase {
     }
 
     function testRegistration() public {
-        uint160 inputAmount = uint160(
-            0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA
-        );
+        uint160 inputAmount = uint160(0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA);
 
-        ROLLUP_ENCODER.defiInteractionL2(
-            id,
-            virtualAsset1,
-            emptyAsset,
-            virtualAsset1,
-            emptyAsset,
-            0,
-            inputAmount
-        );
+        ROLLUP_ENCODER.defiInteractionL2(id, virtualAsset1, emptyAsset, virtualAsset1, emptyAsset, 0, inputAmount);
 
         // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
-        (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool isAsync
-        ) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         uint64 addressId = bridge.id();
         uint64 registeredId = addressId - 1;
         address newlyRegistered = bridge.addresses(registeredId);
 
         // Check the output values are as expected
-        assertEq(
-            address(inputAmount),
-            newlyRegistered,
-            "input amount doesn't equal newly registered address"
-        );
+        assertEq(address(inputAmount), newlyRegistered, "input amount doesn't equal newly registered address");
         assertEq(outputValueA, 0, "Non-zero outputValueA");
         assertEq(outputValueB, 0, "Non-zero outputValueB");
         assertFalse(isAsync, "Bridge is not synchronous");

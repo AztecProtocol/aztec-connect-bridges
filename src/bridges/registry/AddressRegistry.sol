@@ -14,15 +14,11 @@ import {BridgeBase} from "../base/BridgeBase.sol";
  * @dev Use this contract to lookup ethereum addresses by id.
  */
 contract AddressRegistry is BridgeBase {
-
     uint64 public id;
     mapping(uint64 => address) public addresses;
     uint256 public maxInt = type(uint160).max;
 
-    event AddressRegistered(
-        uint64 indexed id,
-        address indexed registeredAddress
-    );
+    event AddressRegistered(uint64 indexed id, address indexed registeredAddress);
 
     /**
      * @notice Set address of rollup processor
@@ -39,32 +35,27 @@ contract AddressRegistry is BridgeBase {
         uint256,
         uint64,
         address
-    )
-        external
-        payable
-        override(BridgeBase)
-        onlyRollup
-        returns (uint256 outputValueA, uint256, bool)
-    {
+    ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
         if (
-            _inputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED ||
-            _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED
+                || _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
         ) revert ErrorLib.InvalidInputA();
-        if (_outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL)
+        if (_outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL) {
             revert ErrorLib.InvalidOutputA();
+        }
 
         // get virtual assets
         if (
-            _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
-            _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH
+                && _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
         ) {
             require(_totalInputValue == 1, "send only 1 wei");
             return (maxInt, 0, false);
         }
         // register address with virtual asset
         else if (
-            _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL &&
-            _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
+                && _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
         ) {
             address toRegister = address(uint160(_totalInputValue));
             addresses[id] = toRegister;

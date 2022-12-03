@@ -6,7 +6,8 @@ import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
 import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
 // Example-specific imports
-import {ERC721PresetMinterPauserAutoId} from "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol";
+import {ERC721PresetMinterPauserAutoId} from
+    "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol";
 import {NftVault} from "../../../bridges/nft-basic/NftVault.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {AddressRegistry} from "../../../bridges/registry/AddressRegistry.sol";
@@ -24,34 +25,17 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
     ERC721PresetMinterPauserAutoId private nftContract;
     uint256 private tokenIdToDeposit = 1;
     AddressRegistry private registry;
-    address private constant registeredAddress =
-        0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA;
+    address private constant registeredAddress = 0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA;
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 
     AztecTypes.AztecAsset private ethAsset =
-        AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
+        AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
     AztecTypes.AztecAsset private virtualAsset1 =
-        AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.VIRTUAL
-        });
+        AztecTypes.AztecAsset({id: 1, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
     AztecTypes.AztecAsset private virtualAsset100 =
-        AztecTypes.AztecAsset({
-            id: 100,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.VIRTUAL
-        });
+        AztecTypes.AztecAsset({id: 100, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
     AztecTypes.AztecAsset private erc20InputAsset =
-        AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: DAI,
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        AztecTypes.AztecAsset({id: 1, erc20Address: DAI, assetType: AztecTypes.AztecAssetType.ERC20});
 
     event log(string, address);
 
@@ -111,61 +95,33 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
         // Use HEVM cheatcode to call from a different address than is address(this)
         vm.prank(_callerAddress);
         vm.expectRevert(ErrorLib.InvalidCaller.selector);
-        bridge.convert(
-            emptyAsset,
-            emptyAsset,
-            emptyAsset,
-            emptyAsset,
-            0,
-            0,
-            0,
-            address(0)
-        );
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
     function testInvalidInputAssetType() public {
         vm.expectRevert(ErrorLib.InvalidInputA.selector);
-        bridge.convert(
-            emptyAsset,
-            emptyAsset,
-            emptyAsset,
-            emptyAsset,
-            0,
-            0,
-            0,
-            address(0)
-        );
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
     function testInvalidOutputAssetType() public {
         vm.expectRevert(ErrorLib.InvalidOutputA.selector);
-        bridge.convert(
-            ethAsset,
-            emptyAsset,
-            erc20InputAsset,
-            emptyAsset,
-            0,
-            0,
-            0,
-            address(0)
-        );
+        bridge.convert(ethAsset, emptyAsset, erc20InputAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
     // @notice The purpose of this test is to directly test convert functionality of the bridge.
     function testGetVirtualAssetUnitTest() public {
         vm.warp(block.timestamp + 1 days);
 
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge
-            .convert(
-                ethAsset, // _inputAssetA - definition of an input asset
-                emptyAsset, // _inputAssetB - not used so can be left empty
-                virtualAsset100, // _outputAssetA 
-                emptyAsset, // _outputAssetB - not used so can be left empty
-                1, // _totalInputValue - an amount of input asset A sent to the bridge
-                0, // _interactionNonce
-                0, // _auxData 
-                address(0) // _rollupBeneficiary - address, the subsidy will be sent to
-            );
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
+            ethAsset, // _inputAssetA - definition of an input asset
+            emptyAsset, // _inputAssetB - not used so can be left empty
+            virtualAsset100, // _outputAssetA
+            emptyAsset, // _outputAssetB - not used so can be left empty
+            1, // _totalInputValue - an amount of input asset A sent to the bridge
+            0, // _interactionNonce
+            0, // _auxData
+            address(0) // _rollupBeneficiary - address, the subsidy will be sent to
+        );
 
         assertEq(outputValueA, 1, "Output value A doesn't equal 1");
         assertEq(outputValueB, 0, "Output value B is not 0");
@@ -194,25 +150,10 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
 
         address collection = address(nftContract);
         address from = address(this);
-        bridge.matchDeposit(
-            virtualAsset100.id,
-            collection,
-            from,
-            tokenIdToDeposit
-        );
-        (address returnedCollection, uint256 returnedId) = bridge.tokens(
-            virtualAsset100.id
-        );
-        assertEq(
-            returnedId,
-            tokenIdToDeposit,
-            "nft token id does not match input"
-        );
-        assertEq(
-            returnedCollection,
-            collection,
-            "collection data does not match"
-        );
+        bridge.matchDeposit(virtualAsset100.id, collection, from, tokenIdToDeposit);
+        (address returnedCollection, uint256 returnedId) = bridge.tokens(virtualAsset100.id);
+        assertEq(returnedId, tokenIdToDeposit, "nft token id does not match input");
+        assertEq(returnedCollection, collection, "collection data does not match");
     }
 
     function testDepositFailWithDuplicateNft() public {
@@ -224,34 +165,24 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
 
         vm.expectRevert();
         // should fail because an NFT with this id has already been deposited
-        bridge.matchDeposit(
-            virtualAsset100.id,
-            collection,
-            from,
-            tokenIdToDeposit
-        );
+        bridge.matchDeposit(virtualAsset100.id, collection, from, tokenIdToDeposit);
     }
 
     function testWithdraw() public {
         testDeposit();
         uint64 auxData = registry.id() - 1;
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge
-            .convert(
-                virtualAsset100, // _inputAssetA - definition of an input asset
-                emptyAsset, // _inputAssetB - not used so can be left empty
-                ethAsset, // _outputAssetA 
-                emptyAsset, // _outputAssetB - not used so can be left empty
-                1, // _totalInputValue - an amount of input asset A sent to the bridge
-                0, // _interactionNonce
-                auxData, // _auxData - the id of the eth address to withdraw to from the registry
-                address(0) 
-            );
-        address owner = nftContract.ownerOf(tokenIdToDeposit);
-        assertEq(
-            registeredAddress,
-            owner,
-            "registered address is not the owner"
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
+            virtualAsset100, // _inputAssetA - definition of an input asset
+            emptyAsset, // _inputAssetB - not used so can be left empty
+            ethAsset, // _outputAssetA
+            emptyAsset, // _outputAssetB - not used so can be left empty
+            1, // _totalInputValue - an amount of input asset A sent to the bridge
+            0, // _interactionNonce
+            auxData, // _auxData - the id of the eth address to withdraw to from the registry
+            address(0)
         );
+        address owner = nftContract.ownerOf(tokenIdToDeposit);
+        assertEq(registeredAddress, owner, "registered address is not the owner");
         assertEq(outputValueA, 0, "Output value A is not 0");
         assertEq(outputValueB, 0, "Output value B is not 0");
         assertTrue(!isAsync, "Bridge is incorrectly in an async mode");
@@ -269,12 +200,12 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
         bridge.convert(
             virtualAsset1, // _inputAssetA - definition of an input asset
             emptyAsset, // _inputAssetB - not used so can be left empty
-            ethAsset, // _outputAssetA 
+            ethAsset, // _outputAssetA
             emptyAsset, // _outputAssetB - not used so can be left empty
             1, // _totalInputValue - an amount of input asset A sent to the bridge
             0, // _interactionNonce
             auxData,
-            address(0) 
+            address(0)
         );
     }
 
@@ -286,12 +217,12 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
         bridge.convert(
             virtualAsset1, // _inputAssetA - definition of an input asset
             emptyAsset, // _inputAssetB - not used so can be left empty
-            ethAsset, // _outputAssetA 
+            ethAsset, // _outputAssetA
             emptyAsset, // _outputAssetB - not used so can be left empty
             1, // _totalInputValue - an amount of input asset A sent to the bridge
             0, // _interactionNonce
             auxData,
-            address(0) 
+            address(0)
         );
     }
 }

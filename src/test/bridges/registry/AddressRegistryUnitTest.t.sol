@@ -36,89 +36,46 @@ contract AddressRegistryUnitTest is BridgeTestBase {
         // Use HEVM cheatcode to call from a different address than is address(this)
         vm.prank(_callerAddress);
         vm.expectRevert(ErrorLib.InvalidCaller.selector);
-        bridge.convert(
-            emptyAsset,
-            emptyAsset,
-            emptyAsset,
-            emptyAsset,
-            0,
-            0,
-            0,
-            address(0)
-        );
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
     function testInvalidInputAssetType() public {
-        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: DAI,
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        AztecTypes.AztecAsset memory inputAsset =
+            AztecTypes.AztecAsset({id: 1, erc20Address: DAI, assetType: AztecTypes.AztecAssetType.ERC20});
 
         vm.expectRevert(ErrorLib.InvalidInputA.selector);
-        bridge.convert(
-            inputAsset,
-            emptyAsset,
-            emptyAsset,
-            emptyAsset,
-            0,
-            0,
-            0,
-            address(0)
-        );
+        bridge.convert(inputAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
     function testInvalidOutputAssetType() public {
-        AztecTypes.AztecAsset memory inputAsset = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
-        AztecTypes.AztecAsset memory outputAsset = AztecTypes.AztecAsset({
-            id: 1,
-            erc20Address: DAI,
-            assetType: AztecTypes.AztecAssetType.ERC20
-        });
+        AztecTypes.AztecAsset memory inputAsset =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
+        AztecTypes.AztecAsset memory outputAsset =
+            AztecTypes.AztecAsset({id: 1, erc20Address: DAI, assetType: AztecTypes.AztecAssetType.ERC20});
         vm.expectRevert(ErrorLib.InvalidOutputA.selector);
-        bridge.convert(
-            inputAsset,
-            emptyAsset,
-            outputAsset,
-            emptyAsset,
-            0,
-            0,
-            0,
-            address(0)
-        );
+        bridge.convert(inputAsset, emptyAsset, outputAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
     // @notice The purpose of this test is to directly test convert functionality of the bridge.
     function testGetBackMaxVirtualAssets() public {
         vm.warp(block.timestamp + 1 days);
 
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.ETH
-        });
+        AztecTypes.AztecAsset memory inputAssetA =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
 
-        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.VIRTUAL
-        });
+        AztecTypes.AztecAsset memory outputAssetA =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
 
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge
-            .convert(
-                inputAssetA,
-                emptyAsset,
-                outputAssetA,
-                emptyAsset,
-                1, // _totalInputValue - an amount of input asset A sent to the bridge
-                0, // _interactionNonce
-                0, // _auxData - not used in the example bridge
-                address(0x0)
-            );
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
+            inputAssetA,
+            emptyAsset,
+            outputAssetA,
+            emptyAsset,
+            1, // _totalInputValue - an amount of input asset A sent to the bridge
+            0, // _interactionNonce
+            0, // _auxData - not used in the example bridge
+            address(0x0)
+        );
 
         assertEq(outputValueA, maxInt, "Output value A doesn't equal maxInt");
         assertEq(outputValueB, 0, "Output value B is not 0");
@@ -129,41 +86,28 @@ contract AddressRegistryUnitTest is BridgeTestBase {
         vm.warp(block.timestamp + 1 days);
 
         // Define input and output assets
-        AztecTypes.AztecAsset memory inputAssetA = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.VIRTUAL
-        });
+        AztecTypes.AztecAsset memory inputAssetA =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
 
-        AztecTypes.AztecAsset memory outputAssetA = AztecTypes.AztecAsset({
-            id: 0,
-            erc20Address: address(0),
-            assetType: AztecTypes.AztecAssetType.VIRTUAL
-        });
+        AztecTypes.AztecAsset memory outputAssetA =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
 
-        uint160 inputAmount = uint160(
-            0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA
+        uint160 inputAmount = uint160(0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA);
+
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
+            inputAssetA,
+            emptyAsset,
+            outputAssetA,
+            emptyAsset,
+            inputAmount, // _totalInputValue - an amount of input asset A sent to the bridge
+            0, // _interactionNonce
+            0, // _auxData - not used in the example bridge
+            address(0x0)
         );
-
-        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge
-            .convert(
-                inputAssetA,
-                emptyAsset,
-                outputAssetA,
-                emptyAsset,
-                inputAmount, // _totalInputValue - an amount of input asset A sent to the bridge
-                0, // _interactionNonce
-                0, // _auxData - not used in the example bridge
-                address(0x0)
-            );
 
         address newlyRegistered = bridge.addresses(0);
 
-        assertEq(
-            address(inputAmount),
-            newlyRegistered,
-            "Address not registered"
-        );
+        assertEq(address(inputAmount), newlyRegistered, "Address not registered");
         assertEq(outputValueA, 0, "Output value is not 0");
         assertEq(outputValueB, 0, "Output value B is not 0");
         assertTrue(!isAsync, "Bridge is incorrectly in an async mode");
