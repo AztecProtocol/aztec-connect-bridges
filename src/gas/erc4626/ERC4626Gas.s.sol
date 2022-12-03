@@ -19,6 +19,7 @@ contract ERC4626Measure is ERC4626Deployment {
     ISubsidy private constant SUBSIDY = ISubsidy(0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA);
     IWETH private constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     IERC20 private constant WSTETH = IERC20(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+    IERC20 private constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     address private constant BENEFICIARY = address(uint160(uint256(keccak256(abi.encodePacked("_BENEFICIARY")))));
 
     GasBase internal gasBase;
@@ -31,6 +32,9 @@ contract ERC4626Measure is ERC4626Deployment {
 
     AztecTypes.AztecAsset internal wstethAsset;
     AztecTypes.AztecAsset internal wewstethAsset; // ERC4626-Wrapped Euler wstETH (wewstETH)
+
+    AztecTypes.AztecAsset internal daiAsset;
+    AztecTypes.AztecAsset internal wcDaiAsset; // ERC4626-Wrapped Compound Dai
 
     function setUp() public override (BaseDeployment) {
         super.setUp();
@@ -63,10 +67,19 @@ contract ERC4626Measure is ERC4626Deployment {
             assetType: AztecTypes.AztecAssetType.ERC20
         });
 
+        daiAsset =
+            AztecTypes.AztecAsset({id: 6, erc20Address: address(DAI), assetType: AztecTypes.AztecAssetType.ERC20});
+        wcDaiAsset = AztecTypes.AztecAsset({
+            id: 7,
+            erc20Address: 0x6D088fe2500Da41D7fA7ab39c76a506D7c91f53b,
+            assetType: AztecTypes.AztecAssetType.ERC20
+        });
+
         // List vaults and fund subsidy
         vm.startBroadcast();
         bridge.listVault(wewethAsset.erc20Address);
         bridge.listVault(wewstethAsset.erc20Address);
+        bridge.listVault(wcDaiAsset.erc20Address);
         SUBSIDY.subsidize{value: 1e17}(
             address(bridge), bridge.computeCriteria(wethAsset, emptyAsset, wewethAsset, emptyAsset, 0), 500
         );
@@ -78,6 +91,12 @@ contract ERC4626Measure is ERC4626Deployment {
         );
         SUBSIDY.subsidize{value: 1e17}(
             address(bridge), bridge.computeCriteria(wewstethAsset, emptyAsset, wstethAsset, emptyAsset, 0), 500
+        );
+        SUBSIDY.subsidize{value: 1e17}(
+            address(bridge), bridge.computeCriteria(daiAsset, emptyAsset, wcDaiAsset, emptyAsset, 0), 500
+        );
+        SUBSIDY.subsidize{value: 1e17}(
+            address(bridge), bridge.computeCriteria(wcDaiAsset, emptyAsset, daiAsset, emptyAsset, 0), 500
         );
         SUBSIDY.registerBeneficiary(BENEFICIARY);
         vm.stopBroadcast();
@@ -237,6 +256,53 @@ contract ERC4626Measure is ERC4626Deployment {
             emit log_named_uint(
                 "wewstethBalance balance of gasBase", IERC20(wewstethAsset.erc20Address).balanceOf(address(gasBase))
                 );
+        }
+
+        uint256 claimableSubsidyAfterWithdrawal = SUBSIDY.claimableAmount(BENEFICIARY);
+        assertGt(
+            claimableSubsidyAfterWithdrawal, claimableSubsidyAfterDeposit, "Subsidy was not claimed during withdrawal"
+        );
+        emit log_named_uint("Claimable subsidy after withdrawal", claimableSubsidyAfterWithdrawal);
+    }
+
+    function measureCDAI() public {
+        uint256 daiBalance = DAI.balanceOf(tx.origin);
+        vm.broadcast();
+        DAI.transfer(address(gasBase), daiBalance);
+        emit log_named_uint("DAI balance of gasBase", DAI.balanceOf(address(gasBase)));
+
+        // Deposit
+        {
+            vm.broadcast();
+            gasBase.convert(
+                address(bridge), daiAsset, emptyAsset, wcDaiAsset, emptyAsset, daiBalance, 0, 0, BENEFICIARY, 340000
+            );
+        }
+
+        uint256 claimableSubsidyAfterDeposit = SUBSIDY.claimableAmount(BENEFICIARY);
+        assertGt(claimableSubsidyAfterDeposit, 0, "Subsidy was not claimed during deposit");
+        emit log_named_uint("Claimable subsidy after deposit", claimableSubsidyAfterDeposit);
+
+        uint256 wcDaiBalance = IERC20(wcDaiAsset.erc20Address).balanceOf(address(gasBase));
+
+        // No need to warp time here because withdrawal has different subsidy criteria
+        {
+            emit log_named_uint("wcDai balance of gasBase", wcDaiBalance);
+
+            vm.broadcast();
+            gasBase.convert(
+                address(bridge),
+                wcDaiAsset,
+                emptyAsset,
+                daiAsset,
+                emptyAsset,
+                wcDaiBalance / 2,
+                1,
+                1,
+                BENEFICIARY,
+                250000
+            );
+            emit log_named_uint("wcDai balance of gasBase", IERC20(wcDaiAsset.erc20Address).balanceOf(address(gasBase)));
         }
 
         uint256 claimableSubsidyAfterWithdrawal = SUBSIDY.claimableAmount(BENEFICIARY);

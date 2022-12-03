@@ -28,6 +28,10 @@ contract AggregateDeployment is BaseDeployment {
     address internal erc4626Bridge;
 
     function deployAndListAll() public {
+        DataProviderDeployment dataProviderDeploy = new DataProviderDeployment();
+        dataProviderDeploy.setUp();
+        address dataProvider = dataProviderDeploy.deploy();
+
         emit log("--- Curve ---");
         {
             CurveDeployment curveDeployment = new CurveDeployment();
@@ -120,85 +124,30 @@ contract AggregateDeployment is BaseDeployment {
             liquityTroveDeployment.deployAndList(400);
         }
 
-        readStats();
-    }
-
-    function bogota() public {
-        deployAndListAll();
-
-        emit log("--- Donation ---");
+        emit log("--- Compound ---");
         {
-            DonationDeployment deploy = new DonationDeployment();
-            deploy.setUp();
-            deploy.deployAndList();
+            ERC4626Lister lister = new ERC4626Lister();
+            lister.setUp();
+
+            address erc4626CompoundDai = 0x6D088fe2500Da41D7fA7ab39c76a506D7c91f53b;
+            lister.listVault(erc4626Bridge, erc4626CompoundDai);
+            uint256 erc4626CDaiId = listAsset(erc4626CompoundDai, 55000);
+            emit log_named_uint("ERC4626 compound dai id", erc4626CDaiId);
         }
 
-        emit log("--- Angle ---");
+        emit log("--- Let anyone deploy ---");
         {
-            AngleSLPDeployment deploy = new AngleSLPDeployment();
-            deploy.setUp();
-            deploy.deployAndList();
+            IRollupProcessor rp = IRollupProcessor(ROLLUP_PROCESSOR);
+            if (!rp.allowThirdPartyContracts()) {
+                vm.broadcast();
+                rp.setAllowThirdPartyContracts(true);
+            }
         }
 
-        emit log("--- Uniswap --");
+        emit log("--- Data Provider ---");
         {
-            UniswapDeployment deploy = new UniswapDeployment();
-            deploy.setUp();
-            deploy.deployAndList();
+            dataProviderDeploy.updateNames(dataProvider);
         }
-
-        emit log("--- Curve steth lp ---");
-        {
-            CurveStethLpDeployment deploy = new CurveStethLpDeployment();
-            deploy.setUp();
-            deploy.deployAndList();
-        }
-
-        IRollupProcessor rp = IRollupProcessor(ROLLUP_PROCESSOR);
-        vm.broadcast();
-        rp.setAllowThirdPartyContracts(true);
-
-        emit log("--- data provider ---");
-        {
-            DataProviderDeployment deploy = new DataProviderDeployment();
-            deploy.setUp();
-            address provider = deploy.deployAndListMany();
-
-            uint256[] memory assetIds = new uint256[](4);
-            string[] memory assetTags = new string[](4);
-
-            assetIds[0] = 8;
-            assetIds[1] = 9;
-            assetIds[2] = 10;
-            assetIds[3] = 11;
-            assetTags[0] = "sandai_eur";
-            assetTags[1] = "sanweth_eur";
-            assetTags[2] = "lusd";
-            assetTags[3] = "stecrv";
-
-            uint256[] memory bridgeAddressIds = new uint256[](7);
-            string[] memory bridgeTags = new string[](7);
-            bridgeAddressIds[0] = 12;
-            bridgeTags[0] = "DonationBridge";
-            bridgeAddressIds[1] = 13;
-            bridgeTags[1] = "AngleSLPBridgeDeposit";
-            bridgeAddressIds[2] = 14;
-            bridgeTags[2] = "AngleSLPBridgeWithdraw";
-            bridgeAddressIds[3] = 15;
-            bridgeTags[3] = "UniswapBridge500K";
-            bridgeAddressIds[4] = 16;
-            bridgeTags[4] = "UniswapBridge800K";
-            bridgeAddressIds[5] = 17;
-            bridgeTags[5] = "LiquityTroveBridge";
-            bridgeAddressIds[6] = 18;
-            bridgeTags[6] = "CurveStEthLpBridge";
-
-            vm.broadcast();
-            DataProvider(provider).addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);
-            deploy.readProvider(provider);
-        }
-
-        // readStats();
     }
 
     function readStats() public {

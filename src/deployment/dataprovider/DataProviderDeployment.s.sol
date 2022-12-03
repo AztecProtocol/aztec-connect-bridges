@@ -23,7 +23,7 @@ contract DataProviderDeployment is BaseDeployment {
     function read() public {
         address provider = 0x8B2E54fa4398C8f7502f30aC94Cb1f354390c8ab;
         if (block.chainid == 3567) {
-            provider = 0x1C6182E3CEaf416B10963731E8283722e274964E;
+            provider = 0x1fD1c41a895565dB55a72a873eBA83A39FF01CD2;
         } else if (block.chainid == 0xa57ec) {
             provider = 0xA33B20Ba45cA9C265bbF7b35a75717590EDfc868;
         }
@@ -94,7 +94,6 @@ contract DataProviderDeployment is BaseDeployment {
     function deployAndListMany() public returns (address) {
         address provider = deploy();
         updateNames(provider);
-        readProvider(provider);
         return provider;
     }
 
@@ -102,7 +101,7 @@ contract DataProviderDeployment is BaseDeployment {
         DataProvider provider = DataProvider(_provider);
         IRollupProcessor rp = provider.ROLLUP_PROCESSOR();
 
-        uint256 supportedAssetLength = rp.getSupportedAssetsLength();
+        uint256 supportedAssetLength = rp.getSupportedAssetsLength() + 1;
         uint256[] memory assetIds = new uint256[](supportedAssetLength);
         string[] memory assetTags = new string[](supportedAssetLength);
         for (uint256 i = 0; i < supportedAssetLength; i++) {
