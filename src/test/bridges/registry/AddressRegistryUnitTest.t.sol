@@ -58,7 +58,6 @@ contract AddressRegistryUnitTest is BridgeTestBase {
         bridge.convert(inputAsset, emptyAsset, outputAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
-    // @notice The purpose of this test is to directly test convert functionality of the bridge.
     function testGetBackMaxVirtualAssets() public {
         vm.warp(block.timestamp + 1 days);
 
@@ -73,9 +72,9 @@ contract AddressRegistryUnitTest is BridgeTestBase {
             emptyAsset,
             outputAssetA,
             emptyAsset,
-            1, // _totalInputValue - an amount of input asset A sent to the bridge
+            1, // _totalInputValue
             0, // _interactionNonce
-            0, // _auxData - not used in the example bridge
+            0, // _auxData
             address(0x0)
         );
 
@@ -87,7 +86,6 @@ contract AddressRegistryUnitTest is BridgeTestBase {
     function testRegistringAnAddress() public {
         vm.warp(block.timestamp + 1 days);
 
-        // Define input and output assets
         AztecTypes.AztecAsset memory inputAssetA =
             AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
 
@@ -104,9 +102,9 @@ contract AddressRegistryUnitTest is BridgeTestBase {
             emptyAsset,
             outputAssetA,
             emptyAsset,
-            inputAmount, // _totalInputValue - an amount of input asset A sent to the bridge
+            inputAmount, // _totalInputValue
             0, // _interactionNonce
-            0, // _auxData - not used in the example bridge
+            0, // _auxData
             address(0x0)
         );
 
