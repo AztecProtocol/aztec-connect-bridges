@@ -8,8 +8,10 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
 contract SubsidyFunding is Test {
     ISubsidy public constant SUBSIDY = ISubsidy(0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA);
+    // @dev A time period denominated in hours indicating after what time a call is fully subsidized
+    uint256 public fullSubsidyTime = 36;
 
-    address[] private shareAddresses = [
+    address[] private erc4626Shares = [
         0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0, // ERC4626-Wrapped Euler WETH (weWETH)
         0x4169Df1B7820702f566cc10938DA51F6F597d264, //  ERC4626-Wrapped Euler DAI (weDAI)
         0x60897720AA966452e8706e74296B018990aEc527, //  ERC4626-Wrapped Euler wstETH (wewstETH)
@@ -19,11 +21,15 @@ contract SubsidyFunding is Test {
 
     AztecTypes.AztecAsset internal emptyAsset;
 
-    function listSubsidies() public {
+    function listEmptySubsidies() public {
+        listEmptyERC4626Subsidies();
+    }
+
+    function listEmptyERC4626Subsidies() public {
         // bridge address asset combination gas usage subsidy
         BridgeBase erc4626Bridge = BridgeBase(0x3578D6D5e1B4F07A48bb1c958CBfEc135bef7d98);
-        for (uint256 i = 0; i < shareAddresses.length; i++) {
-            address share = shareAddresses[i];
+        for (uint256 i = 0; i < erc4626Shares.length; i++) {
+            address share = erc4626Shares[i];
             address asset = IERC4626(share).asset();
 
             AztecTypes.AztecAsset memory shareAsset = AztecTypes.AztecAsset({
@@ -43,12 +49,23 @@ contract SubsidyFunding is Test {
             ISubsidy.Subsidy memory enterSubsidy = SUBSIDY.getSubsidy(address(erc4626Bridge), enterCriteria);
             ISubsidy.Subsidy memory exitSubsidy = SUBSIDY.getSubsidy(address(erc4626Bridge), exitCriteria);
 
-            emit log_string("========================");
-            emit log_named_address("share", share);
-            emit log_named_uint("enterCriteria", enterCriteria);
-            emit log_named_uint("enterCriteria available aubsidy", enterSubsidy.available);
-            emit log_named_uint("exitCriteria", exitCriteria);
-            emit log_named_uint("exitCriteria available aubsidy", exitSubsidy.available);
+            if (enterSubsidy.available == 0) {
+                uint256 gasPerMinute = enterSubsidy.gasUsage / (fullSubsidyTime * 60);
+                emit log_string("========================");
+                emit log_named_address("share", share);
+                emit log_named_uint("enterCriteria", enterCriteria);
+                emit log_named_uint("enterCriteria gasUsage", enterSubsidy.gasUsage);
+                emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
+            }
+
+            if (exitSubsidy.available == 0) {
+                uint256 gasPerMinute = exitSubsidy.gasUsage / (fullSubsidyTime * 60);
+                emit log_string("========================");
+                emit log_named_address("share", share);
+                emit log_named_uint("exitCriteria", exitCriteria);
+                emit log_named_uint("exitCriteria gasUsage", exitSubsidy.gasUsage);
+                emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
+            }
         }
     }
 }
