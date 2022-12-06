@@ -20,7 +20,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
     }
 
     address private rollupProcessor;
-    // The reference to the example bridge
+
     NftVault private bridge;
     ERC721PresetMinterPauserAutoId private nftContract;
     uint256 private tokenIdToDeposit = 1;
@@ -46,11 +46,9 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
     function setUp() public {
         // In unit tests we set address of rollupProcessor to the address of this test contract
         rollupProcessor = address(this);
-        // deploy address registry
+
         registry = new AddressRegistry(rollupProcessor);
-        // Deploy a new nft vault bridge
         bridge = new NftVault(rollupProcessor, address(registry));
-        // deploy new nft contract
         nftContract = new ERC721PresetMinterPauserAutoId("test", "NFT", "");
         nftContract.mint(address(this));
         nftContract.mint(address(this));
@@ -66,9 +64,9 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
             emptyAsset,
             virtualAsset1,
             emptyAsset,
-            1, // _totalInputValue - an amount of input asset A sent to the bridge
+            1, // _totalInputValue
             0, // _interactionNonce
-            0, // _auxData - not used
+            0, // _auxData
             address(0x0)
         );
         uint256 inputAmount = uint160(address(registeredAddress));
@@ -78,15 +76,14 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
             emptyAsset,
             virtualAsset1,
             emptyAsset,
-            inputAmount, // _totalInputValue - an amount of input asset A sent to the bridge
+            inputAmount,
             0, // _interactionNonce
-            0, // _auxData - not used in the example bridge
+            0, // _auxData
             address(0x0)
         );
 
-        // Set ETH balance of bridge and BENEFICIARY to 0 for clarity (somebody sent ETH to that address on mainnet)
+        // Set ETH balance of bridge to 0 for clarity (somebody sent ETH to that address on mainnet)
         vm.deal(address(bridge), 0);
-
         vm.label(address(bridge), "Basic NFT Vault Bridge");
     }
 
@@ -108,19 +105,18 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
         bridge.convert(ethAsset, emptyAsset, erc20InputAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
-    // @notice The purpose of this test is to directly test convert functionality of the bridge.
     function testGetVirtualAssetUnitTest() public {
         vm.warp(block.timestamp + 1 days);
 
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
-            ethAsset, // _inputAssetA - definition of an input asset
-            emptyAsset, // _inputAssetB - not used so can be left empty
+            ethAsset, // _inputAssetA
+            emptyAsset, // _inputAssetB
             virtualAsset100, // _outputAssetA
-            emptyAsset, // _outputAssetB - not used so can be left empty
-            1, // _totalInputValue - an amount of input asset A sent to the bridge
+            emptyAsset, // _outputAssetB
+            1, // _totalInputValue
             0, // _interactionNonce
             0, // _auxData
-            address(0) // _rollupBeneficiary - address, the subsidy will be sent to
+            address(0) // _rollupBeneficiary
         );
 
         assertEq(outputValueA, 1, "Output value A doesn't equal 1");
@@ -128,20 +124,20 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
         assertTrue(!isAsync, "Bridge is incorrectly in an async mode");
     }
 
+    // should fail because sending more than 1 wei
     function testGetVirtualAssetShouldFail() public {
         vm.warp(block.timestamp + 1 days);
 
         vm.expectRevert();
-        // should fail because sending more than 1 wei
         bridge.convert(
-            ethAsset, // _inputAssetA - definition of an input asset
-            emptyAsset, // _inputAssetB - not used so can be left empty
+            ethAsset, // _inputAssetA 
+            emptyAsset, // _inputAssetB
             virtualAsset100, // _outputAssetA
-            emptyAsset, // _outputAssetB - not used so can be left empty
-            2, // _totalInputValue - an amount of input asset A sent to the bridge
+            emptyAsset, // _outputAssetB
+            2, // _totalInputValue
             0, // _interactionNonce
-            0, // _auxData - not used in this call
-            address(0) // _rollupBeneficiary - address, the subsidy will be sent to
+            0, // _auxData
+            address(0) // _rollupBeneficiary
         );
     }
 
@@ -155,14 +151,13 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
         assertEq(returnedCollection, collection, "collection data does not match");
     }
 
+    // should fail because an NFT with this id has already been deposited
     function testDepositFailWithDuplicateNft() public {
         testDeposit();
         vm.warp(block.timestamp + 1 days);
 
         address collection = address(nftContract);
-
         vm.expectRevert();
-        // should fail because an NFT with this id has already been deposited
         bridge.matchDeposit(virtualAsset100.id, collection, tokenIdToDeposit);
     }
 
@@ -170,13 +165,13 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
         testDeposit();
         uint64 auxData = registry.addressCount();
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
-            virtualAsset100, // _inputAssetA - definition of an input asset
-            emptyAsset, // _inputAssetB - not used so can be left empty
+            virtualAsset100, // _inputAssetA 
+            emptyAsset, // _inputAssetB
             ethAsset, // _outputAssetA
-            emptyAsset, // _outputAssetB - not used so can be left empty
-            1, // _totalInputValue - an amount of input asset A sent to the bridge
+            emptyAsset, // _outputAssetB
+            1, // _totalInputValue
             0, // _interactionNonce
-            auxData, // _auxData - the id of the eth address to withdraw to from the registry
+            auxData, // _auxData
             address(0)
         );
         address owner = nftContract.ownerOf(tokenIdToDeposit);
@@ -190,34 +185,34 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
         assertEq(_id, 0, "token id is not 0");
     }
 
+    // should fail because no NFT has been registered with this virtual asset
     function testWithdrawUnregisteredNft() public {
         testDeposit();
         uint64 auxData = registry.addressCount();
         vm.expectRevert();
-        // should fail because no NFT has been registered with this virtual asset
         bridge.convert(
-            virtualAsset1, // _inputAssetA - definition of an input asset
-            emptyAsset, // _inputAssetB - not used so can be left empty
+            virtualAsset1, // _inputAssetA
+            emptyAsset, // _inputAssetB
             ethAsset, // _outputAssetA
-            emptyAsset, // _outputAssetB - not used so can be left empty
-            1, // _totalInputValue - an amount of input asset A sent to the bridge
+            emptyAsset, // _outputAssetB
+            1, // _totalInputValue
             0, // _interactionNonce
             auxData,
             address(0)
         );
     }
 
+    // should fail because no withdraw address has been registered with this id
     function testWithdrawUnregisteredWithdrawAddress() public {
         testDeposit();
         uint64 auxData = 1000;
         vm.expectRevert();
-        // should fail because no withdraw address has been registered with this id
         bridge.convert(
-            virtualAsset1, // _inputAssetA - definition of an input asset
-            emptyAsset, // _inputAssetB - not used so can be left empty
+            virtualAsset1, // _inputAssetA
+            emptyAsset, // _inputAssetB
             ethAsset, // _outputAssetA
-            emptyAsset, // _outputAssetB - not used so can be left empty
-            1, // _totalInputValue - an amount of input asset A sent to the bridge
+            emptyAsset, // _outputAssetB
+            1, // _totalInputValue
             0, // _interactionNonce
             auxData,
             address(0)
