@@ -111,20 +111,9 @@ contract DataProviderDeployment is BaseDeployment {
 
         uint256[] memory bridgeAddressIds = new uint256[](13);
         string[] memory bridgeTags = new string[](13);
-
-        bridgeAddressIds[0] = 1;
-        bridgeAddressIds[1] = 2;
-        bridgeAddressIds[2] = 3;
-        bridgeAddressIds[3] = 4;
-        bridgeAddressIds[4] = 5;
-        bridgeAddressIds[5] = 6;
-        bridgeAddressIds[6] = 7;
-        bridgeAddressIds[7] = 8;
-        bridgeAddressIds[8] = 9;
-        bridgeAddressIds[9] = 10;
-        bridgeAddressIds[10] = 11;
-        bridgeAddressIds[11] = 12;
-        bridgeAddressIds[12] = 13;
+        for(uint256 i = 0 ; i < bridgeAddressIds.length; i++){
+            bridgeAddressIds[i] = i+1;
+        }
 
         bridgeTags[0] = "ElementBridge_800K";
         bridgeTags[1] = "CurveStEthBridge_250K";
