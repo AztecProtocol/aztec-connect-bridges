@@ -6,7 +6,7 @@ import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {ISubsidy} from "../aztec/interfaces/ISubsidy.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
-contract SubsidyFunding is Test {
+contract SubsidyLister is Test {
     ISubsidy public constant SUBSIDY = ISubsidy(0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA);
     // @dev A time period denominated in hours indicating after what time a call is fully subsidized
     uint256 public constant FULL_SUBSIDY_TIME = 36;
