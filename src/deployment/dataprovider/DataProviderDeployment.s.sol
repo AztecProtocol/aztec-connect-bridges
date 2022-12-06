@@ -113,18 +113,18 @@ contract DataProviderDeployment is BaseDeployment {
         string[] memory bridgeTags = new string[](13);
 
         bridgeAddressIds[0] = 1;
-        bridgeAddressIds[1] = 5;
-        bridgeAddressIds[2] = 6;
-        bridgeAddressIds[3] = 7;
-        bridgeAddressIds[4] = 8;
-        bridgeAddressIds[5] = 9;
-        bridgeAddressIds[6] = 10;
-        bridgeAddressIds[7] = 11;
-        bridgeAddressIds[8] = 12;
-        bridgeAddressIds[9] = 13;
-        bridgeAddressIds[10] = 14;
-        bridgeAddressIds[11] = 15;
-        bridgeAddressIds[12] = 16;
+        bridgeAddressIds[1] = 2;
+        bridgeAddressIds[2] = 3;
+        bridgeAddressIds[3] = 4;
+        bridgeAddressIds[4] = 5;
+        bridgeAddressIds[5] = 6;
+        bridgeAddressIds[6] = 7;
+        bridgeAddressIds[7] = 8;
+        bridgeAddressIds[8] = 9;
+        bridgeAddressIds[9] = 10;
+        bridgeAddressIds[10] = 11;
+        bridgeAddressIds[11] = 12;
+        bridgeAddressIds[12] = 13;
 
         bridgeTags[0] = "ElementBridge_800K";
         bridgeTags[1] = "CurveStEthBridge_250K";
