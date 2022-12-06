@@ -14,11 +14,10 @@ import {BridgeBase} from "../base/BridgeBase.sol";
  * @dev Use this contract to lookup ethereum addresses by id.
  */
 contract AddressRegistry is BridgeBase {
-    uint64 public id;
-    mapping(uint64 => address) public addresses;
-    uint256 public maxInt = type(uint160).max;
+    uint64 public addressCount;
+    mapping(uint256 => address) public addresses;
 
-    event AddressRegistered(uint64 indexed id, address indexed registeredAddress);
+    event AddressRegistered(uint256 indexed addressCount, address indexed registeredAddress);
 
     /**
      * @notice Set address of rollup processor
@@ -43,24 +42,21 @@ contract AddressRegistry is BridgeBase {
         if (_outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL) {
             revert ErrorLib.InvalidOutputA();
         }
-
-        // get virtual assets
         if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH
                 && _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
         ) {
             require(_totalInputValue == 1, "send only 1 wei");
-            return (maxInt, 0, false);
+            return (type(uint160).max, 0, false);
         }
-        // register address with virtual asset
         else if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
                 && _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
         ) {
+            addressCount++;
             address toRegister = address(uint160(_totalInputValue));
-            addresses[id] = toRegister;
-            emit AddressRegistered(id, toRegister);
-            id++;
+            addresses[addressCount] = toRegister;
+            emit AddressRegistered(addressCount, toRegister);
             return (0, 0, false);
         } else {
             revert();
@@ -68,9 +64,9 @@ contract AddressRegistry is BridgeBase {
     }
 
     function registerWithdrawAddress(address _to) external returns (uint256) {
-        addresses[id] = _to;
-        id++;
-        emit AddressRegistered(id, _to);
-        return id;
+        addressCount++;
+        addresses[addressCount] = _to;
+        emit AddressRegistered(addressCount, _to);
+        return addressCount;
     }
 }
