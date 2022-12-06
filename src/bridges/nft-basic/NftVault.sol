@@ -21,8 +21,7 @@ contract NftVault is BridgeBase {
     }
 
     mapping(uint256 => NftAsset) public tokens;
-
-    AddressRegistry public registry;
+    AddressRegistry public immutable registry;
 
     constructor(address _rollupProcessor, address _registry) BridgeBase(_rollupProcessor) {
         registry = AddressRegistry(_registry);
@@ -34,7 +33,7 @@ contract NftVault is BridgeBase {
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
         uint256 _totalInputValue,
-        uint256 _interactionNonce,
+        uint256,
         uint64 _auxData,
         address
     )
@@ -56,21 +55,13 @@ contract NftVault is BridgeBase {
             _outputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED
                 || _outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
         ) revert ErrorLib.InvalidOutputA();
-        // DEPOSIT
-        // return virutal asset id, will not actually match to NFT until matchDeposit is called from ethereum
         if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH
                 && _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
         ) {
             require(_totalInputValue == 1, "send only 1 wei");
-            // tokens[_interactionNonce] = NftAsset({
-            //     collection: address(0x0),
-            //     id: 0
-            // });
             return (1, 0, false);
-        }
-        // WITHDRAW
-        else if (
+        } else if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
                 && _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
@@ -86,11 +77,9 @@ contract NftVault is BridgeBase {
         }
     }
 
-    // user must approve their NFT to be transferred by this contract before calling this function
-    function matchDeposit(uint256 _virtualAssetId, address _collection, address _from, uint256 _tokenId) external {
-        NftAsset memory asset = tokens[_virtualAssetId];
-        require(asset.collection == address(0x0), "Asset registered");
-        IERC721(_collection).transferFrom(_from, address(this), _tokenId);
+    function matchDeposit(uint256 _virtualAssetId, address _collection, uint256 _tokenId) external {
+        require(tokens[_virtualAssetId].collection == address(0x0), "Asset registered");
         tokens[_virtualAssetId] = NftAsset({collection: _collection, id: _tokenId});
+        IERC721(_collection).transferFrom(msg.sender, address(this), _tokenId);
     }
 }
