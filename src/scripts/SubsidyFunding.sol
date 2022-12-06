@@ -9,7 +9,8 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 contract SubsidyFunding is Test {
     ISubsidy public constant SUBSIDY = ISubsidy(0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA);
     // @dev A time period denominated in hours indicating after what time a call is fully subsidized
-    uint256 public fullSubsidyTime = 36;
+    uint256 public constant FULL_SUBSIDY_TIME = 36;
+    bool public constant LIST_ALL = true;
 
     address[] private erc4626Shares = [
         0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0, // ERC4626-Wrapped Euler WETH (weWETH)
@@ -21,13 +22,18 @@ contract SubsidyFunding is Test {
 
     AztecTypes.AztecAsset internal emptyAsset;
 
-    function listEmptySubsidies() public {
-        listEmptyERC4626Subsidies();
+    function listSubsidies() public {
+        listERC4626Subsidies();
+        listYearnSubsidies();
     }
 
-    function listEmptyERC4626Subsidies() public {
-        // bridge address asset combination gas usage subsidy
-        BridgeBase erc4626Bridge = BridgeBase(0x3578D6D5e1B4F07A48bb1c958CBfEc135bef7d98);
+    function listERC4626Subsidies() public {
+        BridgeBase bridge = BridgeBase(0x3578D6D5e1B4F07A48bb1c958CBfEc135bef7d98);
+
+        emit log_string("\n");
+        emit log_string("=========== ERC4626 Bridge =============");
+        emit log_named_address("Bridge address", address(bridge));
+
         for (uint256 i = 0; i < erc4626Shares.length; i++) {
             address share = erc4626Shares[i];
             address asset = IERC4626(share).asset();
@@ -43,29 +49,68 @@ contract SubsidyFunding is Test {
                 assetType: AztecTypes.AztecAssetType.ERC20
             });
 
-            uint256 enterCriteria = erc4626Bridge.computeCriteria(assetAsset, emptyAsset, shareAsset, emptyAsset, 0);
-            uint256 exitCriteria = erc4626Bridge.computeCriteria(shareAsset, emptyAsset, assetAsset, emptyAsset, 0);
+            uint256 enterCriteria = bridge.computeCriteria(assetAsset, emptyAsset, shareAsset, emptyAsset, 0);
+            uint256 exitCriteria = bridge.computeCriteria(shareAsset, emptyAsset, assetAsset, emptyAsset, 0);
 
-            ISubsidy.Subsidy memory enterSubsidy = SUBSIDY.getSubsidy(address(erc4626Bridge), enterCriteria);
-            ISubsidy.Subsidy memory exitSubsidy = SUBSIDY.getSubsidy(address(erc4626Bridge), exitCriteria);
+            ISubsidy.Subsidy memory enterSubsidy = SUBSIDY.getSubsidy(address(bridge), enterCriteria);
+            ISubsidy.Subsidy memory exitSubsidy = SUBSIDY.getSubsidy(address(bridge), exitCriteria);
 
-            if (enterSubsidy.available == 0) {
-                uint256 gasPerMinute = enterSubsidy.gasUsage / (fullSubsidyTime * 60);
+            if (enterSubsidy.available == 0 || LIST_ALL) {
+                uint256 gasPerMinute = enterSubsidy.gasUsage / (FULL_SUBSIDY_TIME * 60);
                 emit log_string("========================");
                 emit log_named_address("share", share);
                 emit log_named_uint("enterCriteria", enterCriteria);
+                emit log_named_uint("enterCriteria available", enterSubsidy.available);
                 emit log_named_uint("enterCriteria gasUsage", enterSubsidy.gasUsage);
                 emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
             }
 
-            if (exitSubsidy.available == 0) {
-                uint256 gasPerMinute = exitSubsidy.gasUsage / (fullSubsidyTime * 60);
+            if (exitSubsidy.available == 0 || LIST_ALL) {
+                uint256 gasPerMinute = exitSubsidy.gasUsage / (FULL_SUBSIDY_TIME * 60);
                 emit log_string("========================");
                 emit log_named_address("share", share);
                 emit log_named_uint("exitCriteria", exitCriteria);
+                emit log_named_uint("exitCriteria available", exitSubsidy.available);
                 emit log_named_uint("exitCriteria gasUsage", exitSubsidy.gasUsage);
                 emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
             }
         }
+
+        emit log_string("========================");
+    }
+
+    function listYearnSubsidies() public {
+        // bridge address asset combination gas usage subsidy
+        BridgeBase bridge = BridgeBase(0xE71A50a78CcCff7e20D8349EED295F12f0C8C9eF);
+
+        emit log_string("\n");
+        emit log_string("=========== Yearn Bridge =============");
+        emit log_named_address("Bridge address", address(bridge));
+
+        uint256 enterCriteria = 0;
+        uint256 exitCriteria = 1;
+
+        ISubsidy.Subsidy memory enterSubsidy = SUBSIDY.getSubsidy(address(bridge), enterCriteria);
+        ISubsidy.Subsidy memory exitSubsidy = SUBSIDY.getSubsidy(address(bridge), exitCriteria);
+
+        if (enterSubsidy.available == 0 || LIST_ALL) {
+            uint256 gasPerMinute = enterSubsidy.gasUsage / (FULL_SUBSIDY_TIME * 60);
+            emit log_string("========================");
+            emit log_named_uint("enterCriteria", enterCriteria);
+            emit log_named_uint("enterCriteria available", enterSubsidy.available);
+            emit log_named_uint("enterCriteria gasUsage", enterSubsidy.gasUsage);
+            emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
+        }
+
+        if (exitSubsidy.available == 0 || LIST_ALL) {
+            uint256 gasPerMinute = exitSubsidy.gasUsage / (FULL_SUBSIDY_TIME * 60);
+            emit log_string("========================");
+            emit log_named_uint("exitCriteria", exitCriteria);
+            emit log_named_uint("exitCriteria available", exitSubsidy.available);
+            emit log_named_uint("exitCriteria gasUsage", exitSubsidy.gasUsage);
+            emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
+        }
+
+        emit log_string("========================");
     }
 }
