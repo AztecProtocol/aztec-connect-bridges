@@ -36,9 +36,7 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
         AztecTypes.AztecAsset({id: 1, erc20Address: DAI, assetType: AztecTypes.AztecAssetType.ERC20});
 
     function setUp() public {
-        // deploy address registry
         registry = new AddressRegistry(address(ROLLUP_PROCESSOR));
-        // Deploy a new nft vault bridge
         bridge = new NftVault(address(ROLLUP_PROCESSOR), address(registry));
         nftContract = new ERC721PresetMinterPauserAutoId("test", "NFT", "");
         nftContract.mint(address(this));
@@ -57,7 +55,6 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
         // Impersonate the multi-sig to add a new bridge
         vm.startPrank(MULTI_SIG);
 
-        // List the example-bridge with a gasLimit of 120k
         // WARNING: If you set this value too low the interaction will fail for seemingly no reason!
         // OTOH if you se it too high bridge users will pay too much
         ROLLUP_PROCESSOR.setSupportedBridge(address(registry), 120000);
@@ -91,9 +88,7 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
         assertEq(outputValueB, 0, "Output value B is not 0");
         assertTrue(!isAsync, "Bridge is incorrectly in an async mode");
 
-        // match deposit
         address collection = address(nftContract);
-
         bridge.matchDeposit(virtualAsset100.id, collection, tokenIdToDeposit);
         (address returnedCollection, uint256 returnedId) = bridge.tokens(virtualAsset100.id);
         assertEq(returnedId, tokenIdToDeposit, "nft token id does not match input");
