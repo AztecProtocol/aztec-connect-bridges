@@ -34,6 +34,7 @@ abstract contract BaseDeployment is Test {
     address private constant TESTNET_MS = 0x7095057A08879e09DC1c0a85520e3160A0F67C96;
 
     /* solhint-disable var-name-mixedcase */
+    /* solhint-disable custom-error-over-require */
 
     Network private NETWORK;
     Mode private MODE;
