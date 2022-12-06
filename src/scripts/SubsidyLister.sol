@@ -6,12 +6,16 @@ import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {ISubsidy} from "../aztec/interfaces/ISubsidy.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
+/**
+ * @title Script which list either all subsidies or subsidies which need ot be funded
+ * @author Aztec team
+ * @dev execute with: ONLY_EMPTY=true && forge script src/scripts/SubsidyLister.sol:SubsidyLister --fork-url $RPC --ffi --private-key $PRIV  --sig "listSubsidies()"
+ */
 contract SubsidyLister is Test {
     ISubsidy public constant SUBSIDY = ISubsidy(0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA);
     // @dev A time period denominated in hours indicating after what time a call is fully subsidized
     uint256 public constant FULL_SUBSIDY_TIME = 36;
     uint256 public constant ESTIMATION_BASE_FEE = 2e10; // 20 gwei
-    bool public constant LIST_ALL = false;
 
     address[] private erc4626Shares = [
         0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0, // ERC4626-Wrapped Euler WETH (weWETH)
@@ -30,6 +34,12 @@ contract SubsidyLister is Test {
     ];
 
     AztecTypes.AztecAsset internal emptyAsset;
+    // @dev if set to true only subsidies which need to be funded get displayed
+    bool public onlyEmpty = false;
+
+    function setUp() public {
+        onlyEmpty = vm.envBool("ONLY_EMPTY");
+    }
 
     function listSubsidies() public {
         listERC4626Subsidies();
@@ -64,7 +74,7 @@ contract SubsidyLister is Test {
             ISubsidy.Subsidy memory enterSubsidy = SUBSIDY.getSubsidy(address(bridge), enterCriteria);
             ISubsidy.Subsidy memory exitSubsidy = SUBSIDY.getSubsidy(address(bridge), exitCriteria);
 
-            if (enterSubsidy.available == 0 || LIST_ALL) {
+            if (enterSubsidy.available == 0 || !onlyEmpty) {
                 uint256 gasPerMinute = enterSubsidy.gasUsage / (FULL_SUBSIDY_TIME * 60);
                 emit log_string("========================");
                 emit log_string(erc4626Tags[i]);
@@ -77,7 +87,7 @@ contract SubsidyLister is Test {
                 emit log_named_uint("cost of fully subsidizing for a month", costOfMonth);
             }
 
-            if (exitSubsidy.available == 0 || LIST_ALL) {
+            if (exitSubsidy.available == 0 || !onlyEmpty) {
                 uint256 gasPerMinute = exitSubsidy.gasUsage / (FULL_SUBSIDY_TIME * 60);
                 emit log_string("========================");
                 emit log_string(erc4626Tags[i]);
@@ -108,7 +118,7 @@ contract SubsidyLister is Test {
         ISubsidy.Subsidy memory enterSubsidy = SUBSIDY.getSubsidy(address(bridge), enterCriteria);
         ISubsidy.Subsidy memory exitSubsidy = SUBSIDY.getSubsidy(address(bridge), exitCriteria);
 
-        if (enterSubsidy.available == 0 || LIST_ALL) {
+        if (enterSubsidy.available == 0 || !onlyEmpty) {
             uint256 gasPerMinute = enterSubsidy.gasUsage / (FULL_SUBSIDY_TIME * 60);
             emit log_string("========================");
             emit log_named_uint("enterCriteria", enterCriteria);
@@ -119,7 +129,7 @@ contract SubsidyLister is Test {
             emit log_named_uint("cost of fully subsidizing for a month", costOfMonth);
         }
 
-        if (exitSubsidy.available == 0 || LIST_ALL) {
+        if (exitSubsidy.available == 0 || !onlyEmpty) {
             uint256 gasPerMinute = exitSubsidy.gasUsage / (FULL_SUBSIDY_TIME * 60);
             emit log_string("========================");
             emit log_named_uint("exitCriteria", exitCriteria);
