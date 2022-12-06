@@ -10,6 +10,7 @@ contract SubsidyFunding is Test {
     ISubsidy public constant SUBSIDY = ISubsidy(0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA);
     // @dev A time period denominated in hours indicating after what time a call is fully subsidized
     uint256 public constant FULL_SUBSIDY_TIME = 36;
+    uint256 public constant ESTIMATION_BASE_FEE = 2e10; // 20 gwei
     bool public constant LIST_ALL = false;
 
     address[] private erc4626Shares = [
@@ -72,6 +73,8 @@ contract SubsidyFunding is Test {
                 emit log_named_uint("enterCriteria available", enterSubsidy.available);
                 emit log_named_uint("enterCriteria gasUsage", enterSubsidy.gasUsage);
                 emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
+                uint256 costOfMonth = enterSubsidy.gasUsage * (24 * 30) * ESTIMATION_BASE_FEE / FULL_SUBSIDY_TIME;
+                emit log_named_uint("cost of fully subsidizing for a month", costOfMonth);
             }
 
             if (exitSubsidy.available == 0 || LIST_ALL) {
@@ -83,6 +86,8 @@ contract SubsidyFunding is Test {
                 emit log_named_uint("exitCriteria available", exitSubsidy.available);
                 emit log_named_uint("exitCriteria gasUsage", exitSubsidy.gasUsage);
                 emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
+                uint256 costOfMonth = exitSubsidy.gasUsage * (24 * 30) * ESTIMATION_BASE_FEE / FULL_SUBSIDY_TIME;
+                emit log_named_uint("cost of fully subsidizing for a month", costOfMonth);
             }
         }
 
@@ -110,6 +115,8 @@ contract SubsidyFunding is Test {
             emit log_named_uint("enterCriteria available", enterSubsidy.available);
             emit log_named_uint("enterCriteria gasUsage", enterSubsidy.gasUsage);
             emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
+            uint256 costOfMonth = enterSubsidy.gasUsage * (24 * 30) * ESTIMATION_BASE_FEE / FULL_SUBSIDY_TIME;
+            emit log_named_uint("cost of fully subsidizing for a month", costOfMonth);
         }
 
         if (exitSubsidy.available == 0 || LIST_ALL) {
@@ -119,6 +126,8 @@ contract SubsidyFunding is Test {
             emit log_named_uint("exitCriteria available", exitSubsidy.available);
             emit log_named_uint("exitCriteria gasUsage", exitSubsidy.gasUsage);
             emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
+            uint256 costOfMonth = exitSubsidy.gasUsage * (24 * 30) * ESTIMATION_BASE_FEE / FULL_SUBSIDY_TIME;
+            emit log_named_uint("cost of fully subsidizing for a month", costOfMonth);
         }
 
         emit log_string("========================");
