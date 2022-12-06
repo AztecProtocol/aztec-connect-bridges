@@ -16,7 +16,8 @@ abstract contract BaseDeployment is Test {
         INVALID,
         MAINNET,
         TESTNET,
-        DEVNET
+        DEVNET,
+        DONT_CARE
     }
 
     /**
@@ -37,17 +38,21 @@ abstract contract BaseDeployment is Test {
     Network private NETWORK;
     Mode private MODE;
     address internal ROLLUP_PROCESSOR;
-    address internal TO_IMPERSONATE;
+    address internal LISTER;
+
+    function setRollupProcessor(address _rollupProcessor) public {
+        ROLLUP_PROCESSOR = _rollupProcessor;
+    }
+
+    function setLister(address _lister) public {
+        LISTER = _lister;
+    }
 
     /* solhint-enable var-name-mixedcase */
 
     function setUp() public virtual {
         // Read from the .env
         string memory networkKey = "network";
-        string memory modeKey = "simulateAdmin";
-
-        bool envMode = vm.envBool(modeKey);
-        MODE = envMode ? Mode.SIMULATE_ADMIN : Mode.BROADCAST;
 
         string memory envNetwork = vm.envString(networkKey);
         bytes32 envNetworkHash = keccak256(abi.encodePacked(envNetwork));
@@ -58,7 +63,19 @@ abstract contract BaseDeployment is Test {
             NETWORK = Network.DEVNET;
         } else if (envNetworkHash == keccak256(abi.encodePacked("testnet"))) {
             NETWORK = Network.TESTNET;
+        } else {
+            NETWORK = Network.DONT_CARE;
+            MODE = Mode.BROADCAST;
+            require(ROLLUP_PROCESSOR != address(0), "RollupProcessor address resolved to 0");
+            require(LISTER != address(0), "Lister address resolved to 0");
+            emit log_named_address("Rollup at", ROLLUP_PROCESSOR);
+            emit log_named_address("Lister at", LISTER);
+            return;
         }
+
+        string memory modeKey = "simulateAdmin";
+        bool envMode = vm.envBool(modeKey);
+        MODE = envMode ? Mode.SIMULATE_ADMIN : Mode.BROADCAST;
 
         if (MODE == Mode.BROADCAST) {
             emit log_named_string("broadcasting", envNetwork);
@@ -66,10 +83,12 @@ abstract contract BaseDeployment is Test {
             emit log_named_string("simulating", envNetwork);
         }
 
-        (ROLLUP_PROCESSOR, TO_IMPERSONATE) = getRollupProcessorAndLister();
+        (ROLLUP_PROCESSOR, LISTER) = getRollupProcessorAndLister();
         /* solhint-disable custom-error-over-require */
         require(ROLLUP_PROCESSOR != address(0), "RollupProcessor address resolved to 0");
+        require(LISTER != address(0), "Lister address resolved to 0");
         emit log_named_address("Rollup at", ROLLUP_PROCESSOR);
+        emit log_named_address("Lister at", LISTER);
     }
 
     /**
@@ -150,7 +169,7 @@ abstract contract BaseDeployment is Test {
      */
     function listBridge(address _bridge, uint256 _gasLimit) public returns (uint256) {
         if (MODE == Mode.SIMULATE_ADMIN) {
-            vm.prank(TO_IMPERSONATE);
+            vm.prank(LISTER);
         } else {
             vm.broadcast();
         }
@@ -173,7 +192,7 @@ abstract contract BaseDeployment is Test {
             return id;
         } else {
             if (MODE == Mode.SIMULATE_ADMIN) {
-                vm.prank(TO_IMPERSONATE);
+                vm.prank(LISTER);
             } else {
                 vm.broadcast();
             }
