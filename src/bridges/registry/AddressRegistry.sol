@@ -48,8 +48,7 @@ contract AddressRegistry is BridgeBase {
         ) {
             require(_totalInputValue == 1, "send only 1 wei");
             return (type(uint160).max, 0, false);
-        }
-        else if (
+        } else if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
                 && _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
         ) {
