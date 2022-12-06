@@ -3,7 +3,7 @@
 pragma solidity >=0.8.4;
 
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
-import {AztecTypes} from "../../../../lib/rollup-encoder/src/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
 // Example-specific imports
 import {NftVault} from "../../../bridges/nft-basic/NftVault.sol";
@@ -93,8 +93,8 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
 
         // match deposit
         address collection = address(nftContract);
-        address from = address(this);
-        bridge.matchDeposit(virtualAsset100.id, collection, from, tokenIdToDeposit);
+
+        bridge.matchDeposit(virtualAsset100.id, collection, tokenIdToDeposit);
         (address returnedCollection, uint256 returnedId) = bridge.tokens(virtualAsset100.id);
         assertEq(returnedId, tokenIdToDeposit, "nft token id does not match input");
         assertEq(returnedCollection, collection, "collection data does not match");
@@ -102,7 +102,7 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
 
     function testWithdraw() public {
         testDeposit();
-        uint64 auxData = registry.id() - 1;
+        uint64 auxData = registry.addressCount();
         ROLLUP_ENCODER.defiInteractionL2(id, virtualAsset100, emptyAsset, ethAsset, emptyAsset, auxData, 1);
 
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
