@@ -3,7 +3,7 @@
 pragma solidity >=0.8.4;
 
 import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
-import {AztecTypes} from "../../../../lib/rollup-encoder/src/libraries/AztecTypes.sol";
+import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
 // Example-specific imports
 import {AddressRegistry} from "../../../bridges/registry/AddressRegistry.sol";
@@ -16,6 +16,8 @@ contract AddressRegistryUnitTest is BridgeTestBase {
     AddressRegistry private bridge;
     uint256 public maxInt = type(uint160).max;
     AztecTypes.AztecAsset private ethAsset;
+
+    event AddressRegistered(uint256 indexed addressCount, address indexed registeredAddress);
 
     // @dev This method exists on RollupProcessor.sol. It's defined here in order to be able to receive ETH like a real
     //      rollup processor would.
@@ -94,6 +96,9 @@ contract AddressRegistryUnitTest is BridgeTestBase {
 
         uint160 inputAmount = uint160(0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA);
 
+        vm.expectEmit(true, true, false, false);
+        emit AddressRegistered(1, address(inputAmount));
+
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
             inputAssetA,
             emptyAsset,
@@ -105,7 +110,8 @@ contract AddressRegistryUnitTest is BridgeTestBase {
             address(0x0)
         );
 
-        address newlyRegistered = bridge.addresses(0);
+        uint256 id = bridge.addressCount();
+        address newlyRegistered = bridge.addresses(id);
 
         assertEq(address(inputAmount), newlyRegistered, "Address not registered");
         assertEq(outputValueA, 0, "Output value is not 0");

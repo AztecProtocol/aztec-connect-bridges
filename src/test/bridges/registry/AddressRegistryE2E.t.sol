@@ -20,8 +20,7 @@ contract AddressRegistryE2ETest is BridgeTestBase {
     AztecTypes.AztecAsset private virtualAsset1;
     uint256 public maxInt = type(uint160).max;
 
-    event log(string, uint256);
-    event logAddress(address);
+    event AddressRegistered(uint256 indexed addressCount, address indexed registeredAddress);
 
     function setUp() public {
         bridge = new AddressRegistry(address(ROLLUP_PROCESSOR));
@@ -61,14 +60,17 @@ contract AddressRegistryE2ETest is BridgeTestBase {
 
     function testRegistration() public {
         uint160 inputAmount = uint160(0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA);
-
+        
+        vm.expectEmit(true, true, false, false);
+        emit AddressRegistered(1, address(inputAmount));
+        
         ROLLUP_ENCODER.defiInteractionL2(id, virtualAsset1, emptyAsset, virtualAsset1, emptyAsset, 0, inputAmount);
 
         // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
-        uint64 addressId = bridge.id();
-        uint64 registeredId = addressId - 1;
+        uint64 addressId = bridge.addressCount();
+        uint64 registeredId = addressId;
         address newlyRegistered = bridge.addresses(registeredId);
 
         // Check the output values are as expected
