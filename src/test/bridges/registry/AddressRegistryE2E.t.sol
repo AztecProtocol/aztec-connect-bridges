@@ -33,7 +33,6 @@ contract AddressRegistryE2ETest is BridgeTestBase {
         // Impersonate the multi-sig to add a new bridge
         vm.startPrank(MULTI_SIG);
 
-        // List the example-bridge with a gasLimit of 120k
         // WARNING: If you set this value too low the interaction will fail for seemingly no reason!
         // OTOH if you se it too high bridge users will pay too much
         ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 120000);
@@ -49,10 +48,8 @@ contract AddressRegistryE2ETest is BridgeTestBase {
 
         ROLLUP_ENCODER.defiInteractionL2(id, ethAsset, emptyAsset, virtualAsset1, emptyAsset, 0, 1);
 
-        // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
-        // Check the output values are as expected
         assertEq(outputValueA, maxInt, "outputValueA doesn't equal maxInt");
         assertEq(outputValueB, 0, "Non-zero outputValueB");
         assertFalse(isAsync, "Bridge is not synchronous");
@@ -60,20 +57,18 @@ contract AddressRegistryE2ETest is BridgeTestBase {
 
     function testRegistration() public {
         uint160 inputAmount = uint160(0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA);
-        
+
         vm.expectEmit(true, true, false, false);
         emit AddressRegistered(1, address(inputAmount));
-        
+
         ROLLUP_ENCODER.defiInteractionL2(id, virtualAsset1, emptyAsset, virtualAsset1, emptyAsset, 0, inputAmount);
 
-        // Execute the rollup with the bridge interaction. Ensure that event as seen above is emitted.
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         uint64 addressId = bridge.addressCount();
         uint64 registeredId = addressId;
         address newlyRegistered = bridge.addresses(registeredId);
 
-        // Check the output values are as expected
         assertEq(address(inputAmount), newlyRegistered, "input amount doesn't equal newly registered address");
         assertEq(outputValueA, 0, "Non-zero outputValueA");
         assertEq(outputValueB, 0, "Non-zero outputValueB");
