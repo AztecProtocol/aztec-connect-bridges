@@ -10,7 +10,7 @@ contract SubsidyFunding is Test {
     ISubsidy public constant SUBSIDY = ISubsidy(0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA);
     // @dev A time period denominated in hours indicating after what time a call is fully subsidized
     uint256 public constant FULL_SUBSIDY_TIME = 36;
-    bool public constant LIST_ALL = true;
+    bool public constant LIST_ALL = false;
 
     address[] private erc4626Shares = [
         0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0, // ERC4626-Wrapped Euler WETH (weWETH)
@@ -18,6 +18,14 @@ contract SubsidyFunding is Test {
         0x60897720AA966452e8706e74296B018990aEc527, //  ERC4626-Wrapped Euler wstETH (wewstETH)
         0xbcb91e0B4Ad56b0d41e0C168E3090361c0039abC, //  ERC4626-Wrapped AAVE V2 DAI (wa2DAI)
         0xc21F107933612eCF5677894d45fc060767479A9b //  ERC4626-Wrapped AAVE V2 WETH (wa2WETH)
+    ];
+
+    string[] private erc4626Tags = [
+        "ERC4626-Wrapped Euler WETH (weWETH)",
+        "ERC4626-Wrapped Euler DAI (weDAI)",
+        "ERC4626-Wrapped Euler wstETH (wewstETH)",
+        "ERC4626-Wrapped AAVE V2 DAI (wa2DAI)",
+        "ERC4626-Wrapped AAVE V2 WETH (wa2WETH)"
     ];
 
     AztecTypes.AztecAsset internal emptyAsset;
@@ -58,6 +66,7 @@ contract SubsidyFunding is Test {
             if (enterSubsidy.available == 0 || LIST_ALL) {
                 uint256 gasPerMinute = enterSubsidy.gasUsage / (FULL_SUBSIDY_TIME * 60);
                 emit log_string("========================");
+                emit log_string(erc4626Tags[i]);
                 emit log_named_address("share", share);
                 emit log_named_uint("enterCriteria", enterCriteria);
                 emit log_named_uint("enterCriteria available", enterSubsidy.available);
@@ -68,6 +77,7 @@ contract SubsidyFunding is Test {
             if (exitSubsidy.available == 0 || LIST_ALL) {
                 uint256 gasPerMinute = exitSubsidy.gasUsage / (FULL_SUBSIDY_TIME * 60);
                 emit log_string("========================");
+                emit log_string(erc4626Tags[i]);
                 emit log_named_address("share", share);
                 emit log_named_uint("exitCriteria", exitCriteria);
                 emit log_named_uint("exitCriteria available", exitSubsidy.available);
