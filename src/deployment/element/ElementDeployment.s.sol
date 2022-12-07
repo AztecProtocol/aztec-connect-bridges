@@ -40,7 +40,7 @@ contract ElementDeployment is BaseDeployment {
         string memory s = string(abi.encodePacked("Registering ", symbol, " pool with expiry at "));
 
         emit log_named_uint(s, _expiry);
-        
+
         vm.broadcast();
         ElementBridge(_bridge).registerConvergentPoolAddress(_pool, _position, _expiry);
     }
