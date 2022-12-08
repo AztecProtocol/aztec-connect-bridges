@@ -53,8 +53,8 @@ contract ERC4626Test is BridgeTestBase {
             vm.label(asset, IERC20Metadata(asset).symbol());
 
             vm.startPrank(MULTI_SIG);
-            ROLLUP_PROCESSOR.setSupportedAsset(share, 30000);
-            ROLLUP_PROCESSOR.setSupportedAsset(asset, 30000);
+            ROLLUP_PROCESSOR.setSupportedAsset(share, 55000);
+            ROLLUP_PROCESSOR.setSupportedAsset(asset, 55000);
             vm.stopPrank();
 
             shares.push(ROLLUP_ENCODER.getRealAztecAsset(share));
