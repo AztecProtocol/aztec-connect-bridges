@@ -34,7 +34,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         vm.startPrank(MULTI_SIG);
 
         // List trove bridge with a gasLimit of 500k
-        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 500_000);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 550_000);
 
         // List the assets with a gasLimit of 100k
         ROLLUP_PROCESSOR.setSupportedAsset(tokens["LUSD"].addr, 100000);
@@ -54,7 +54,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
     }
 
     function testFullFlow(uint96 _collateral) public {
-        uint256 collateral = bound(_collateral, 1e17, 1e21);
+        uint256 collateral = bound(_collateral, 1e18, 1e21);
 
         _borrow(collateral);
         _repay(collateral);
@@ -62,7 +62,7 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
 
     function testFullFlowRepayingWithColl(uint96 _collateral) public {
         // Setting maximum only to 100 ETH because liquidity in the UNI pools is not sufficient for higher amounts
-        uint256 collateral = bound(_collateral, 1e17, 1e20);
+        uint256 collateral = bound(_collateral, 1e18, 1e20);
 
         _borrow(collateral);
         _repayWithCollateral(collateral);
