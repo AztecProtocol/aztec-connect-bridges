@@ -58,7 +58,7 @@ contract AddressRegistry is BridgeBase {
             emit AddressRegistered(addressCount, toRegister);
             return (0, 0, false);
         } else {
-            revert();
+            revert("invalid input/output types");
         }
     }
 
