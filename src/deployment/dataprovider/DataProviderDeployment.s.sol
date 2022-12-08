@@ -23,7 +23,7 @@ contract DataProviderDeployment is BaseDeployment {
     function read() public {
         address provider = 0x8B2E54fa4398C8f7502f30aC94Cb1f354390c8ab;
         if (block.chainid == 3567) {
-            provider = 0x1fD1c41a895565dB55a72a873eBA83A39FF01CD2;
+            provider = 0xD25B8B044CE58eaBF41288E223609726A6c98e44;
         } else if (block.chainid == 0xa57ec) {
             provider = 0xA33B20Ba45cA9C265bbF7b35a75717590EDfc868;
         }
@@ -109,20 +109,22 @@ contract DataProviderDeployment is BaseDeployment {
             assetTags[i] = i == 0 ? "Eth" : IERC20Metadata(rp.getSupportedAsset(i)).symbol();
         }
 
-        uint256[] memory bridgeAddressIds = new uint256[](11);
-        string[] memory bridgeTags = new string[](11);
+        uint256[] memory bridgeAddressIds = new uint256[](13);
+        string[] memory bridgeTags = new string[](13);
 
         bridgeAddressIds[0] = 1;
-        bridgeAddressIds[1] = 6;
-        bridgeAddressIds[2] = 7;
-        bridgeAddressIds[3] = 8;
-        bridgeAddressIds[4] = 9;
-        bridgeAddressIds[5] = 10;
-        bridgeAddressIds[6] = 11;
-        bridgeAddressIds[7] = 12;
-        bridgeAddressIds[8] = 13;
-        bridgeAddressIds[9] = 14;
-        bridgeAddressIds[10] = 15;
+        bridgeAddressIds[1] = 5;
+        bridgeAddressIds[2] = 6;
+        bridgeAddressIds[3] = 7;
+        bridgeAddressIds[4] = 8;
+        bridgeAddressIds[5] = 9;
+        bridgeAddressIds[6] = 10;
+        bridgeAddressIds[7] = 11;
+        bridgeAddressIds[8] = 12;
+        bridgeAddressIds[9] = 13;
+        bridgeAddressIds[10] = 14;
+        bridgeAddressIds[11] = 15;
+        bridgeAddressIds[12] = 16;
 
         bridgeTags[0] = "ElementBridge_800K";
         bridgeTags[1] = "CurveStEthBridge_250K";
@@ -135,6 +137,8 @@ contract DataProviderDeployment is BaseDeployment {
         bridgeTags[8] = "ERC4626_400K";
         bridgeTags[9] = "Liquity275_550K";
         bridgeTags[10] = "Liquity400_550K";
+        bridgeTags[11] = "Uniswap_500K";
+        bridgeTags[12] = "Uniswap_800K";
 
         vm.broadcast();
         DataProvider(_provider).addAssetsAndBridges(assetIds, assetTags, bridgeAddressIds, bridgeTags);

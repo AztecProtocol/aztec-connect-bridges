@@ -135,6 +135,20 @@ contract AggregateDeployment is BaseDeployment {
             emit log_named_uint("ERC4626 compound dai id", erc4626CDaiId);
         }
 
+        emit log("--- Uniswap ---");
+        {
+            UniswapDeployment uniswapDeployment = new UniswapDeployment();
+            uniswapDeployment.setUp();
+            uniswapDeployment.deployAndList();
+        }
+
+        emit log("--- Set ---");
+        {
+            address iceth = 0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84;
+            uint256 icethId = listAsset(iceth, 55000);
+            emit log_named_uint("Set protocol icEth id", icethId);
+        }
+
         emit log("--- Let anyone deploy ---");
         {
             IRollupProcessor rp = IRollupProcessor(ROLLUP_PROCESSOR);
