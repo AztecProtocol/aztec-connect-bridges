@@ -25,7 +25,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
     ERC721PresetMinterPauserAutoId private nftContract;
     uint256 private tokenIdToDeposit = 1;
     AddressRegistry private registry;
-    address private constant registeredAddress = 0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA;
+    address private constant REGISTER_ADDRESS = 0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA;
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 
     AztecTypes.AztecAsset private ethAsset =
@@ -36,8 +36,6 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
         AztecTypes.AztecAsset({id: 100, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
     AztecTypes.AztecAsset private erc20InputAsset =
         AztecTypes.AztecAsset({id: 1, erc20Address: DAI, assetType: AztecTypes.AztecAssetType.ERC20});
-
-    event log(string, address);
 
     // @dev This method exists on RollupProcessor.sol. It's defined here in order to be able to receive ETH like a real
     //      rollup processor would.
@@ -69,7 +67,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
             0, // _auxData
             address(0x0)
         );
-        uint256 inputAmount = uint160(address(registeredAddress));
+        uint256 inputAmount = uint160(address(REGISTER_ADDRESS));
         // register an address
         registry.convert(
             virtualAsset1,
@@ -175,7 +173,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
             address(0)
         );
         address owner = nftContract.ownerOf(tokenIdToDeposit);
-        assertEq(registeredAddress, owner, "registered address is not the owner");
+        assertEq(REGISTER_ADDRESS, owner, "registered address is not the owner");
         assertEq(outputValueA, 0, "Output value A is not 0");
         assertEq(outputValueB, 0, "Output value B is not 0");
         assertTrue(!isAsync, "Bridge is incorrectly in an async mode");

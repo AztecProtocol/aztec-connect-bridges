@@ -60,7 +60,8 @@ contract AddressRegistry is BridgeBase {
             _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH
                 && _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
         ) {
-            require(_totalInputValue == 1, "send only 1 wei");
+            if(_totalInputValue != 1 wei)
+                revert ErrorLib.InvalidInputAmount();
             return (type(uint160).max, 0, false);
         } else if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
@@ -72,7 +73,7 @@ contract AddressRegistry is BridgeBase {
             emit AddressRegistered(addressCount, toRegister);
             return (0, 0, false);
         } else {
-            revert("invalid input/output types");
+            revert ErrorLib.InvalidInput();
         }
     }
 

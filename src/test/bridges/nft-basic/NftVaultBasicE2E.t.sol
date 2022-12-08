@@ -25,7 +25,7 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
     uint256 private id;
     uint256 private registryBridgeId;
     uint256 private tokenIdToDeposit = 1;
-    address private constant registeredAddress = 0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA;
+    address private constant REGISTER_ADDRESS = 0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA;
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     AztecTypes.AztecAsset private ethAsset;
     AztecTypes.AztecAsset private virtualAsset1 =
@@ -74,7 +74,7 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
         ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         // register an address
-        uint160 inputAmount = uint160(registeredAddress);
+        uint160 inputAmount = uint160(REGISTER_ADDRESS);
         ROLLUP_ENCODER.defiInteractionL2(
             registryBridgeId, virtualAsset1, emptyAsset, virtualAsset1, emptyAsset, 0, inputAmount
         );
@@ -111,7 +111,7 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
 
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
         address owner = nftContract.ownerOf(tokenIdToDeposit);
-        assertEq(registeredAddress, owner, "registered address is not the owner");
+        assertEq(REGISTER_ADDRESS, owner, "registered address is not the owner");
         assertEq(outputValueA, 0, "Output value A is not 0");
         assertEq(outputValueB, 0, "Output value B is not 0");
         assertTrue(!isAsync, "Bridge is incorrectly in an async mode");
