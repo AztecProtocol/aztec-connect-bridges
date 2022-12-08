@@ -17,7 +17,7 @@ contract AddressRegistry is BridgeBase {
     uint256 public addressCount;
     mapping(uint256 => address) public addresses;
 
-    event AddressRegistered(uint256 indexed addressCount, address indexed registeredAddress);
+    event AddressRegistered(uint256 indexed index, address indexed entity);
 
     /**
      * @notice Set address of rollup processor
@@ -27,9 +27,9 @@ contract AddressRegistry is BridgeBase {
 
     /**
      * @notice Function for getting VIRTUAL assets (step 1) to register an address and registering an address (step 2).
-     * @dev This method can only be called from the RollupProcessor.sol. The first step to register an address is for a user to
+     * @dev This method can only be called from the RollupProcessor. The first step to register an address is for a user to
      * get the type(uint160).max value of VIRTUAL assets back from the bridge. The second step is for the user
-     * to send an amount of VIRTUAL assets back to the bridge. The amount that is sent back is equal to number of the
+     * to send an amount of VIRTUAL assets back to the bridge. The amount that is sent back is equal to the number of the
      * ethereum address that is being registered (e.g. uint160(0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEB)).
      *
      * @param _inputAssetA - ETH (step 1) or VIRTUAL (step 2)
@@ -56,22 +56,14 @@ contract AddressRegistry is BridgeBase {
         if (_outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL) {
             revert ErrorLib.InvalidOutputA();
         }
-        if (
-            _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH
-                && _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
-        ) {
-            if (_totalInputValue != 1 wei) {
+        if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
+            if (_totalInputValue != 1) {
                 revert ErrorLib.InvalidInputAmount();
             }
             return (type(uint160).max, 0, false);
-        } else if (
-            _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
-                && _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
-        ) {
-            addressCount++;
+        } else if (_inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL) {
             address toRegister = address(uint160(_totalInputValue));
-            addresses[addressCount] = toRegister;
-            emit AddressRegistered(addressCount, toRegister);
+            registerAddress(toRegister);
             return (0, 0, false);
         } else {
             revert ErrorLib.InvalidInput();
@@ -79,18 +71,19 @@ contract AddressRegistry is BridgeBase {
     }
 
     /**
-     * @notice Function for registering an address from Ethereum.
+     * @notice Register an address at the registry
      * @dev This function can be called directly from another Ethereum account. This can be done in
      * one step, in one transaction. Coming from Ethereum directly, this method is not as privacy
      * preserving as registering an address through the bridge.
      *
-     * @param _to - ETH (step 1) or VIRTUAL (step 2)
+     * @param _to - The address to register
+     * @return addressCount - the index of address that has been registered
      */
 
-    function registerWithdrawAddress(address _to) external returns (uint256) {
-        addressCount++;
-        addresses[addressCount] = _to;
-        emit AddressRegistered(addressCount, _to);
-        return addressCount;
+    function registerAddress(address _to) public returns (uint256) {
+        uint256 userIndex = addressCount++;
+        addresses[userIndex] = _to;
+        emit AddressRegistered(userIndex, _to);
+        return userIndex;
     }
 }

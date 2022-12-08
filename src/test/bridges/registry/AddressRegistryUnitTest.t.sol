@@ -95,7 +95,7 @@ contract AddressRegistryUnitTest is BridgeTestBase {
         uint160 inputAmount = uint160(0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA);
 
         vm.expectEmit(true, true, false, false);
-        emit AddressRegistered(1, address(inputAmount));
+        emit AddressRegistered(0, address(inputAmount));
 
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
             inputAssetA,
@@ -108,7 +108,7 @@ contract AddressRegistryUnitTest is BridgeTestBase {
             address(0x0)
         );
 
-        uint256 id = bridge.addressCount();
+        uint256 id = bridge.addressCount() - 1;
         address newlyRegistered = bridge.addresses(id);
 
         assertEq(address(inputAmount), newlyRegistered, "Address not registered");
@@ -119,7 +119,7 @@ contract AddressRegistryUnitTest is BridgeTestBase {
 
     function testRegisterFromEth() public {
         address to = address(0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA);
-        uint256 count = bridge.registerWithdrawAddress(to);
+        uint256 count = bridge.registerAddress(to);
         address registered = bridge.addresses(count);
         assertEq(to, registered, "Address not registered");
     }

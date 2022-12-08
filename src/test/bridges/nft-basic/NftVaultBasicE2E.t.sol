@@ -96,14 +96,14 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
         vm.expectEmit(true, true, false, false);
         emit NftDeposit(virtualAsset100.id, collection, tokenIdToDeposit);
         bridge.matchDeposit(virtualAsset100.id, collection, tokenIdToDeposit);
-        (address returnedCollection, uint256 returnedId) = bridge.tokens(virtualAsset100.id);
+        (address returnedCollection, uint256 returnedId) = bridge.nftAssets(virtualAsset100.id);
         assertEq(returnedId, tokenIdToDeposit, "nft token id does not match input");
         assertEq(returnedCollection, collection, "collection data does not match");
     }
 
     function testWithdraw() public {
         testDeposit();
-        uint64 auxData = registry.addressCount();
+        uint64 auxData = uint64(registry.addressCount());
 
         vm.expectEmit(true, true, false, false);
         emit NftWithdraw(virtualAsset100.id, address(nftContract), tokenIdToDeposit);
@@ -116,7 +116,7 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
         assertEq(outputValueB, 0, "Output value B is not 0");
         assertTrue(!isAsync, "Bridge is incorrectly in an async mode");
 
-        (address _a, uint256 _id) = bridge.tokens(virtualAsset100.id);
+        (address _a, uint256 _id) = bridge.nftAssets(virtualAsset100.id);
         assertEq(_a, address(0), "collection address is not 0");
         assertEq(_id, 0, "token id is not 0");
     }

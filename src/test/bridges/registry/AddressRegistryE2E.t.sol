@@ -59,15 +59,14 @@ contract AddressRegistryE2ETest is BridgeTestBase {
         uint160 inputAmount = uint160(0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA);
 
         vm.expectEmit(true, true, false, false);
-        emit AddressRegistered(1, address(inputAmount));
+        emit AddressRegistered(0, address(inputAmount));
 
         ROLLUP_ENCODER.defiInteractionL2(id, virtualAsset1, emptyAsset, virtualAsset1, emptyAsset, 0, inputAmount);
 
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
-        uint64 addressId = bridge.addressCount();
-        uint64 registeredId = addressId;
-        address newlyRegistered = bridge.addresses(registeredId);
+        uint64 addressId = uint64(bridge.addressCount()) - 1;
+        address newlyRegistered = bridge.addresses(addressId);
 
         assertEq(address(inputAmount), newlyRegistered, "input amount doesn't equal newly registered address");
         assertEq(outputValueA, 0, "Non-zero outputValueA");

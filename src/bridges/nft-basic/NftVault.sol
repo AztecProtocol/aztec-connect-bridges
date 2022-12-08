@@ -17,19 +17,22 @@ import {AddressRegistry} from "../registry/AddressRegistry.sol";
 contract NftVault is BridgeBase {
     struct NftAsset {
         address collection;
-        uint256 id;
+        uint256 tokenId;
     }
 
-    mapping(uint256 => NftAsset) public tokens;
     AddressRegistry public immutable REGISTRY;
+
+    mapping(uint256 => NftAsset) public nftAssets;
+
+    error InvalidVirtualAssetId();
 
     event NftDeposit(uint256 indexed virtualAssetId, address indexed collection, uint256 indexed tokenId);
     event NftWithdraw(uint256 indexed virtualAssetId, address indexed collection, uint256 indexed tokenId);
 
     /**
-     * @notice Set the addresses of RollupProcessor.sol and AddressRegistry.sol
-     * @param _rollupProcessor Address of the RollupProcessor.sol
-     * @param _registry Address of the AddressRegistry.sol
+     * @notice Set the addresses of RollupProcessor and AddressRegistry
+     * @param _rollupProcessor Address of the RollupProcessor
+     * @param _registry Address of the AddressRegistry
      */
     constructor(address _rollupProcessor, address _registry) BridgeBase(_rollupProcessor) {
         REGISTRY = AddressRegistry(_registry);
@@ -37,11 +40,11 @@ contract NftVault is BridgeBase {
 
     /**
      * @notice Function for the first step of a NFT deposit, or a NFT withdrawal.
-     * @dev This method can only be called from the RollupProcessor.sol. The first step of the
+     * @dev This method can only be called from the RollupProcessor. The first step of the
      * deposit flow returns a virutal asset note that will represent the NFT on Aztec. After the
      * virutal asset note is received on Aztec, the user calls matchDeposit which deposits the NFT
      * into Aztec and matches it with the virtual asset. When the virutal asset is sent to this function
-     * it is burned and the NFT is sent to the user (withdraw).
+     * it is burned and the NFT is sent to the recipient passed in _auxData.
      *
      * @param _inputAssetA - ETH (Deposit) or VIRTUAL (Withdrawal)
      * @param _outputAssetA - VIRTUAL (Deposit) or 0 ETH (Withdrawal)
@@ -63,11 +66,7 @@ contract NftVault is BridgeBase {
     )
         external
         payable
-        override (
-            // uint64 _auxData,
-            // address _rollupBeneficiary
-            BridgeBase
-        )
+        override (BridgeBase)
         onlyRollup
         returns (uint256 outputValueA, uint256 outputValueB, bool isAsync)
     {
@@ -79,31 +78,30 @@ contract NftVault is BridgeBase {
             _outputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED
                 || _outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
         ) revert ErrorLib.InvalidOutputA();
+        if (_totalInputValue != 1) {
+            revert ErrorLib.InvalidInputAmount();
+        }
         if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH
                 && _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
         ) {
-            if (_totalInputValue != 1 wei) {
-                revert ErrorLib.InvalidInputAmount();
-            }
             return (1, 0, false);
         } else if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
                 && _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
-            NftAsset memory token = tokens[_inputAssetA.id];
+            NftAsset memory token = nftAssets[_inputAssetA.id];
             if (token.collection == address(0x0)) {
                 revert ErrorLib.InvalidInputA();
             }
 
-            address _to = REGISTRY.addresses(_auxData);
-            if (_to == address(0x0)) {
+            address to = REGISTRY.addresses(_auxData);
+            if (to == address(0x0)) {
                 revert ErrorLib.InvalidAuxData();
             }
-
-            IERC721(token.collection).transferFrom(address(this), _to, token.id);
-            emit NftWithdraw(_inputAssetA.id, token.collection, token.id);
-            delete tokens[_inputAssetA.id];
+            delete nftAssets[_inputAssetA.id];
+            IERC721(token.collection).transferFrom(address(this), to, token.tokenId);
+            emit NftWithdraw(_inputAssetA.id, token.collection, token.tokenId);
             return (0, 0, false);
         }
     }
@@ -120,10 +118,10 @@ contract NftVault is BridgeBase {
      */
 
     function matchDeposit(uint256 _virtualAssetId, address _collection, uint256 _tokenId) external {
-        if (tokens[_virtualAssetId].collection != address(0x0)) {
-            revert ErrorLib.InvalidVirtualAsset();
+        if (nftAssets[_virtualAssetId].collection != address(0x0)) {
+            revert InvalidVirtualAssetId();
         }
-        tokens[_virtualAssetId] = NftAsset({collection: _collection, id: _tokenId});
+        nftAssets[_virtualAssetId] = NftAsset({collection: _collection, tokenId: _tokenId});
         IERC721(_collection).transferFrom(msg.sender, address(this), _tokenId);
         emit NftDeposit(_virtualAssetId, _collection, _tokenId);
     }

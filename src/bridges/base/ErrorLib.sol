@@ -18,6 +18,4 @@ library ErrorLib {
 
     error InvalidNonce();
     error AsyncDisabled();
-
-    error InvalidVirtualAsset();
 }

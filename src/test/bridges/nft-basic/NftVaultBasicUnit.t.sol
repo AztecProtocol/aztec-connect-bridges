@@ -144,7 +144,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
 
         address collection = address(nftContract);
         bridge.matchDeposit(virtualAsset100.id, collection, tokenIdToDeposit);
-        (address returnedCollection, uint256 returnedId) = bridge.tokens(virtualAsset100.id);
+        (address returnedCollection, uint256 returnedId) = bridge.nftAssets(virtualAsset100.id);
         assertEq(returnedId, tokenIdToDeposit, "nft token id does not match input");
         assertEq(returnedCollection, collection, "collection data does not match");
     }
@@ -161,7 +161,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
 
     function testWithdraw() public {
         testDeposit();
-        uint64 auxData = registry.addressCount();
+        uint64 auxData = uint64(registry.addressCount()-1);
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
             virtualAsset100, // _inputAssetA
             emptyAsset, // _inputAssetB
@@ -178,7 +178,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
         assertEq(outputValueB, 0, "Output value B is not 0");
         assertTrue(!isAsync, "Bridge is incorrectly in an async mode");
 
-        (address _a, uint256 _id) = bridge.tokens(virtualAsset100.id);
+        (address _a, uint256 _id) = bridge.nftAssets(virtualAsset100.id);
         assertEq(_a, address(0), "collection address is not 0");
         assertEq(_id, 0, "token id is not 0");
     }
@@ -186,7 +186,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
     // should fail because no NFT has been registered with this virtual asset
     function testWithdrawUnregisteredNft() public {
         testDeposit();
-        uint64 auxData = registry.addressCount();
+        uint64 auxData = uint64(registry.addressCount());
         vm.expectRevert();
         bridge.convert(
             virtualAsset1, // _inputAssetA
