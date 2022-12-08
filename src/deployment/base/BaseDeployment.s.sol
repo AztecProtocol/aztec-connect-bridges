@@ -29,7 +29,7 @@ abstract contract BaseDeployment is Test {
         BROADCAST
     }
 
-    address private constant MAINNET_MS = 0xE298a76986336686CC3566469e3520d23D1a8aaD;
+    address private constant MAINNET_MS = 0x68A36Aa8E309d5010ab4F9D6c5F1246b854D0b9e;
     address private constant DEVNET_MS = 0x7095057A08879e09DC1c0a85520e3160A0F67C96;
     address private constant TESTNET_MS = 0x7095057A08879e09DC1c0a85520e3160A0F67C96;
 
