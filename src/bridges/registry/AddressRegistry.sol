@@ -14,7 +14,7 @@ import {BridgeBase} from "../base/BridgeBase.sol";
  * @dev Use this contract to lookup ethereum addresses by id.
  */
 contract AddressRegistry is BridgeBase {
-    uint64 public addressCount;
+    uint256 public addressCount;
     mapping(uint256 => address) public addresses;
 
     event AddressRegistered(uint256 indexed addressCount, address indexed registeredAddress);
