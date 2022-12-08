@@ -23,6 +23,9 @@ contract NftVault is BridgeBase {
     mapping(uint256 => NftAsset) public tokens;
     AddressRegistry public immutable registry;
 
+    event NftDeposit(uint256 indexed virtualAssetId, address indexed collection, uint256 indexed tokenId);
+    event NftWithdraw(uint256 indexed virtualAssetId, address indexed collection, uint256 indexed tokenId);
+
     constructor(address _rollupProcessor, address _registry) BridgeBase(_rollupProcessor) {
         registry = AddressRegistry(_registry);
     }
@@ -72,6 +75,7 @@ contract NftVault is BridgeBase {
             require(_to != address(0x0), "unregistered withdraw address");
 
             IERC721(token.collection).transferFrom(address(this), _to, token.id);
+            emit NftWithdraw(_inputAssetA.id, token.collection, token.id);
             delete tokens[_inputAssetA.id];
             return (0, 0, false);
         }
@@ -81,5 +85,6 @@ contract NftVault is BridgeBase {
         require(tokens[_virtualAssetId].collection == address(0x0), "Asset registered");
         tokens[_virtualAssetId] = NftAsset({collection: _collection, id: _tokenId});
         IERC721(_collection).transferFrom(msg.sender, address(this), _tokenId);
+        emit NftDeposit(_virtualAssetId, _collection, _tokenId);
     }
 }
