@@ -23,26 +23,15 @@ contract NftVault is BridgeBase {
     mapping(uint256 => NftAsset) public tokens;
     AddressRegistry public immutable REGISTRY;
 
-    event NftDeposit(
-        uint256 indexed virtualAssetId,
-        address indexed collection,
-        uint256 indexed tokenId
-    );
-    event NftWithdraw(
-        uint256 indexed virtualAssetId,
-        address indexed collection,
-        uint256 indexed tokenId
-    );
+    event NftDeposit(uint256 indexed virtualAssetId, address indexed collection, uint256 indexed tokenId);
+    event NftWithdraw(uint256 indexed virtualAssetId, address indexed collection, uint256 indexed tokenId);
 
     /**
      * @notice Set the addresses of RollupProcessor.sol and AddressRegistry.sol
      * @param _rollupProcessor Address of the RollupProcessor.sol
      * @param _registry Address of the AddressRegistry.sol
      */
-    constructor(
-        address _rollupProcessor,
-        address _registry
-    ) BridgeBase(_rollupProcessor) {
+    constructor(address _rollupProcessor, address _registry) BridgeBase(_rollupProcessor) {
         REGISTRY = AddressRegistry(_registry);
     }
 
@@ -74,7 +63,7 @@ contract NftVault is BridgeBase {
     )
         external
         payable
-        override(
+        override (
             // uint64 _auxData,
             // address _rollupBeneficiary
             BridgeBase
@@ -83,37 +72,36 @@ contract NftVault is BridgeBase {
         returns (uint256 outputValueA, uint256 outputValueB, bool isAsync)
     {
         if (
-            _inputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED ||
-            _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED
+                || _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
         ) revert ErrorLib.InvalidInputA();
         if (
-            _outputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED ||
-            _outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
+            _outputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED
+                || _outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
         ) revert ErrorLib.InvalidOutputA();
         if (
-            _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
-            _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH
+                && _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
         ) {
-            if(_totalInputValue != 1 wei)
+            if (_totalInputValue != 1 wei) {
                 revert ErrorLib.InvalidInputAmount();
+            }
             return (1, 0, false);
         } else if (
-            _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL &&
-            _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
+                && _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
         ) {
             NftAsset memory token = tokens[_inputAssetA.id];
-            if (token.collection == address(0x0))
+            if (token.collection == address(0x0)) {
                 revert ErrorLib.InvalidInputA();
+            }
 
             address _to = REGISTRY.addresses(_auxData);
-            if(_to == address(0x0))
+            if (_to == address(0x0)) {
                 revert ErrorLib.InvalidAuxData();
+            }
 
-            IERC721(token.collection).transferFrom(
-                address(this),
-                _to,
-                token.id
-            );
+            IERC721(token.collection).transferFrom(address(this), _to, token.id);
             emit NftWithdraw(_inputAssetA.id, token.collection, token.id);
             delete tokens[_inputAssetA.id];
             return (0, 0, false);
@@ -131,17 +119,11 @@ contract NftVault is BridgeBase {
      * @param _tokenId - the token id of the NFT
      */
 
-    function matchDeposit(
-        uint256 _virtualAssetId,
-        address _collection,
-        uint256 _tokenId
-    ) external {
-        if(tokens[_virtualAssetId].collection != address(0x0))
+    function matchDeposit(uint256 _virtualAssetId, address _collection, uint256 _tokenId) external {
+        if (tokens[_virtualAssetId].collection != address(0x0)) {
             revert ErrorLib.InvalidVirtualAsset();
-        tokens[_virtualAssetId] = NftAsset({
-            collection: _collection,
-            id: _tokenId
-        });
+        }
+        tokens[_virtualAssetId] = NftAsset({collection: _collection, id: _tokenId});
         IERC721(_collection).transferFrom(msg.sender, address(this), _tokenId);
         emit NftDeposit(_virtualAssetId, _collection, _tokenId);
     }

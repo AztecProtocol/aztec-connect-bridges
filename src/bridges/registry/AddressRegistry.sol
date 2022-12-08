@@ -60,8 +60,9 @@ contract AddressRegistry is BridgeBase {
             _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH
                 && _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
         ) {
-            if(_totalInputValue != 1 wei)
+            if (_totalInputValue != 1 wei) {
                 revert ErrorLib.InvalidInputAmount();
+            }
             return (type(uint160).max, 0, false);
         } else if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
