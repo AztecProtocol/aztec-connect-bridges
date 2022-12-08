@@ -29,12 +29,8 @@ abstract contract BridgeTestBase is Test {
 
         // Granting multi-sig admin role rather than switching to the lister to not break fixed block tests.
         vm.prank(0xE298a76986336686CC3566469e3520d23D1a8aaD);
-        (bool success, ) = address(ROLLUP_PROCESSOR).call(
-            abi.encodeWithSignature(
-                "grantRole(bytes32,address)",
-                LISTER_ROLE,
-                MULTI_SIG
-            )
+        (bool success,) = address(ROLLUP_PROCESSOR).call(
+            abi.encodeWithSignature("grantRole(bytes32,address)", LISTER_ROLE, MULTI_SIG)
         );
         if (!success) {
             revert("Failed to give multisig lister role");
