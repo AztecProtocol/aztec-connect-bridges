@@ -13,7 +13,6 @@ import {GasBase} from "../base/GasBase.sol";
 import {ERC721PresetMinterPauserAutoId} from
     "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol";
 
-
 interface IRead {
     function defiBridgeProxy() external view returns (address);
 }
@@ -56,7 +55,18 @@ contract NftVaultGas is NftVaultDeployment, AddressRegistryDeployment {
         // get registry virtual asset
         gasBase.convert(address(registry), eth, empty, virtualAsset, empty, 1, 0, 0, address(0), 400000);
         // register address
-        gasBase.convert(address(registry), virtualAsset, empty, virtualAsset, empty, uint256(uint160(addr1)), 0, 0, address(0), 400000);
+        gasBase.convert(
+            address(registry),
+            virtualAsset,
+            empty,
+            virtualAsset,
+            empty,
+            uint256(uint160(addr1)),
+            0,
+            0,
+            address(0),
+            400000
+        );
         nftContract.approve(address(bridge), 0);
         vm.stopBroadcast();
 

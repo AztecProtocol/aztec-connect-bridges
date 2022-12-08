@@ -130,7 +130,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
 
         vm.expectRevert();
         bridge.convert(
-            ethAsset, // _inputAssetA 
+            ethAsset, // _inputAssetA
             emptyAsset, // _inputAssetB
             virtualAsset100, // _outputAssetA
             emptyAsset, // _outputAssetB
@@ -165,7 +165,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
         testDeposit();
         uint64 auxData = registry.addressCount();
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
-            virtualAsset100, // _inputAssetA 
+            virtualAsset100, // _inputAssetA
             emptyAsset, // _inputAssetB
             ethAsset, // _outputAssetA
             emptyAsset, // _outputAssetB
