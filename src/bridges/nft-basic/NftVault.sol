@@ -37,8 +37,8 @@ contract NftVault is BridgeBase {
 
     /**
      * @notice Function for the first step of a NFT deposit, or a NFT withdrawal.
-     * @dev This method can only be called from the RollupProcessor.sol. The first step of the 
-     * deposit flow returns a virutal asset note that will represent the NFT on Aztec. After the 
+     * @dev This method can only be called from the RollupProcessor.sol. The first step of the
+     * deposit flow returns a virutal asset note that will represent the NFT on Aztec. After the
      * virutal asset note is received on Aztec, the user calls matchDeposit which deposits the NFT
      * into Aztec and matches it with the virtual asset. When the virutal asset is sent to this function
      * it is burned and the NFT is sent to the user (withdraw).
@@ -104,7 +104,7 @@ contract NftVault is BridgeBase {
 
     /**
      * @notice Function for the second step of a NFT deposit.
-     * @dev This method is called by an Ethereum L1 account that owns the NFT to deposit. 
+     * @dev This method is called by an Ethereum L1 account that owns the NFT to deposit.
      * The user must approve this bridge contract to transfer the users NFT before this function
      * is called. This function assumes the NFT contract complies with the ERC721 standard.
      *

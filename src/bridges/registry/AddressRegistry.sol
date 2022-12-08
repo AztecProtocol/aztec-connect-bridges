@@ -28,7 +28,7 @@ contract AddressRegistry is BridgeBase {
     /**
      * @notice Function for getting VIRTUAL assets (step 1) to register an address and registering an address (step 2).
      * @dev This method can only be called from the RollupProcessor.sol. The first step to register an address is for a user to
-     * get the type(uint160).max value of VIRTUAL assets back from the bridge. The second step is for the user 
+     * get the type(uint160).max value of VIRTUAL assets back from the bridge. The second step is for the user
      * to send an amount of VIRTUAL assets back to the bridge. The amount that is sent back is equal to number of the
      * ethereum address that is being registered (e.g. uint160(0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEB)).
      *
@@ -81,7 +81,7 @@ contract AddressRegistry is BridgeBase {
      * @dev This function can be called directly from another Ethereum account. This can be done in
      * one step, in one transaction. Coming from Ethereum directly, this method is not as privacy
      * preserving as registering an address through the bridge.
-     * 
+     *
      * @param _to - ETH (step 1) or VIRTUAL (step 2)
      */
 
