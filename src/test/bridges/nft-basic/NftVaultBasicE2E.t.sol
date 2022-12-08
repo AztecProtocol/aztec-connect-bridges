@@ -35,6 +35,9 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
     AztecTypes.AztecAsset private erc20InputAsset =
         AztecTypes.AztecAsset({id: 1, erc20Address: DAI, assetType: AztecTypes.AztecAssetType.ERC20});
 
+    event NftDeposit(uint256 indexed virtualAssetId, address indexed collection, uint256 indexed tokenId);
+    event NftWithdraw(uint256 indexed virtualAssetId, address indexed collection, uint256 indexed tokenId);
+
     function setUp() public {
         registry = new AddressRegistry(address(ROLLUP_PROCESSOR));
         bridge = new NftVault(address(ROLLUP_PROCESSOR), address(registry));
@@ -89,6 +92,9 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
         assertTrue(!isAsync, "Bridge is incorrectly in an async mode");
 
         address collection = address(nftContract);
+
+        vm.expectEmit(true, true, false, false);
+        emit NftDeposit(virtualAsset100.id, collection, tokenIdToDeposit);
         bridge.matchDeposit(virtualAsset100.id, collection, tokenIdToDeposit);
         (address returnedCollection, uint256 returnedId) = bridge.tokens(virtualAsset100.id);
         assertEq(returnedId, tokenIdToDeposit, "nft token id does not match input");
@@ -98,6 +104,9 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
     function testWithdraw() public {
         testDeposit();
         uint64 auxData = registry.addressCount();
+
+        vm.expectEmit(true, true, false, false);
+        emit NftWithdraw(virtualAsset100.id, address(nftContract), tokenIdToDeposit);
         ROLLUP_ENCODER.defiInteractionL2(id, virtualAsset100, emptyAsset, ethAsset, emptyAsset, auxData, 1);
 
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
