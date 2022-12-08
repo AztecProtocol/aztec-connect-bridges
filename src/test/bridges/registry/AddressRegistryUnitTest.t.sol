@@ -116,4 +116,11 @@ contract AddressRegistryUnitTest is BridgeTestBase {
         assertEq(outputValueB, 0, "Output value B is not 0");
         assertTrue(!isAsync, "Bridge is incorrectly in an async mode");
     }
+
+    function testRegisterFromEth() public {
+        address to = address(0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA);
+        uint256 count = bridge.registerWithdrawAddress(to);
+        address registered = bridge.addresses(count);
+        assertEq(to, registered, "Address not registered");
+    }
 }
