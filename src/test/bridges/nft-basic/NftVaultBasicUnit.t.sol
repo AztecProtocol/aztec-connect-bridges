@@ -161,7 +161,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
 
     function testWithdraw() public {
         testDeposit();
-        uint64 auxData = uint64(registry.addressCount()-1);
+        uint64 auxData = uint64(registry.addressCount() - 1);
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
             virtualAsset100, // _inputAssetA
             emptyAsset, // _inputAssetB
