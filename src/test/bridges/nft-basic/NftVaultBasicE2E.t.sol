@@ -103,7 +103,7 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
 
     function testWithdraw() public {
         testDeposit();
-        uint64 auxData = uint64(registry.addressCount());
+        uint64 auxData = uint64(registry.addressCount() - 1);
 
         vm.expectEmit(true, true, false, false);
         emit NftWithdraw(virtualAsset100.id, address(nftContract), tokenIdToDeposit);
