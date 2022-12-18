@@ -52,7 +52,6 @@ contract Zora is BridgeBase {
             address _finder         <- 0x0000000000000000000000000000000000000000
         ) 
 
-
         Then we utilize the NFTVault bridge.
         virtualToken, _, _ = NftVault.convert(
             AztecTypes.AztecAsset calldata _inputAssetA,  <- ETH 
@@ -69,6 +68,9 @@ contract Zora is BridgeBase {
             address _collection,     <- inputAssetB.address
             uint256 _tokenId         <- inputAssetB.id
         )
+
+        Lastly, we return the virtual token.
+        return (1, 0, false)
         */
     }
 }
