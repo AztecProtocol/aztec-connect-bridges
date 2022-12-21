@@ -60,7 +60,6 @@ contract ZoraBridge is BridgeBase {
             uint256 _secondHalfAux = _auxData >> 32;
 
             address collection = registry.addresses(_firstHalfAux);
-            // Add error handling for if the NFT is not in the map. 
             za.fillAsk(
                 collection,
                 _secondHalfAux,
