@@ -56,13 +56,13 @@ contract ZoraBridge is BridgeBase {
             // Split _auxData into halves. 
             // First half is used to get the collection address from the registry.
             // Second half is the tokenId.
-            uint256 _firstHalfAux = _auxData & 0xffffffff;
-            uint256 _secondHalfAux = _auxData >> 32;
+            uint256 collectionKey = _auxData & 0xffffffff;
+            uint256 tokenId = _auxData >> 32;
 
-            address collection = registry.addresses(_firstHalfAux);
+            address collection = registry.addresses(collectionKey);
             za.fillAsk(
                 collection,
-                _secondHalfAux,
+                tokenId,
                 address(0x0),     // 0 address to indicate this sale is in ETH.
                 _totalInputValue, // Use the total input value to specify how much ETH to fill the ask with.
                 address(0x0)      // Leave the finder address empty.
@@ -71,7 +71,7 @@ contract ZoraBridge is BridgeBase {
             // Update the mapping with the virtual token Id.
             nftAssets[_interactionNonce] = NftAsset({
                 collection: collection,
-                tokenId: _secondHalfAux
+                tokenId: tokenId
             });
 
             // Return the virtual token.
