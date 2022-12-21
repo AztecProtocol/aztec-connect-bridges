@@ -28,10 +28,7 @@ contract ZoraBridge is BridgeBase {
     mapping(uint64 => ZoraNFT) internal zoraNFTs;
     ZoraAsk internal za;
 
-    /**
-     * @notice Set the addresses of RollupProcessor
-     * @param _rollupProcessor Address of the RollupProcessor
-     */
+    // Need to pass the zora contract address to construct the bridge.
     constructor(address _rollupProcessor, address _zora) BridgeBase(_rollupProcessor) {
         za = ZoraAsk(_zora);
     }
