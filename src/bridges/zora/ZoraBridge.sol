@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
+import {AddressRegistry} from "../registry/AddressRegistry.sol";
 
 // Get function definition from: https://github.com/ourzora/v3/blob/1d4c0c951ccd5c1d446283ce6fef3757ad97b804/contracts/modules/Asks/V1.1/AsksV1_1.sol#L302.
 contract ZoraAsk {
@@ -19,18 +20,21 @@ contract ZoraAsk {
 }
 
 contract ZoraBridge is BridgeBase {
-    struct ZoraNFT {
+    struct NftAsset {
         address collection;
         uint256 tokenId;
     }
+    // Holds the VIRTUAL token -> NFT relationship.
+    mapping(uint256 => NftAsset) public nftAssets;
 
-    uint64 internal zoraNFTCount;
-    mapping(uint64 => ZoraNFT) internal zoraNFTs;
+    // Other contracts.
     ZoraAsk internal za;
+    AddressRegistry public immutable registry;
 
-    // Need to pass the zora contract address to construct the bridge.
-    constructor(address _rollupProcessor, address _zora) BridgeBase(_rollupProcessor) {
+    // Need to pass the zora & registry addresses to construct the bridge.
+    constructor(address _rollupProcessor, address _zora, address _registry) BridgeBase(_rollupProcessor) {
         za = ZoraAsk(_zora);
+        registry = AddressRegistry(_registry);
     }
 
     // Converts ETH into a virtual token by filling an ask on the Zora contract.
@@ -40,7 +44,7 @@ contract ZoraBridge is BridgeBase {
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
         uint256 _totalInputValue,
-        uint256,
+        uint256 _interactionNonce,
         uint64 _auxData,
         address
     ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256 outputValueB, bool async) {
@@ -49,29 +53,30 @@ contract ZoraBridge is BridgeBase {
         if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
             _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL) {
 
-            // Look up the NFT details using the _auxData.
-            ZoraNFT memory nft = zoraNFTs[_auxData];
+            // Split _auxData into halves. 
+            // First half is used to get the collection address from the registry.
+            // Second half is the tokenId.
+            uint256 _firstHalfAux = _auxData & 0xffffffff;
+            uint256 _secondHalfAux = _auxData >> 32;
 
+            address collection = registry.addresses(_firstHalfAux);
             // Add error handling for if the NFT is not in the map. 
             za.fillAsk(
-                nft.collection,
-                nft.tokenId,
+                collection,
+                _secondHalfAux,
                 address(0x0),     // 0 address to indicate this sale is in ETH.
                 _totalInputValue, // Use the total input value to specify how much ETH to fill the ask with.
                 address(0x0)      // Leave the finder address empty.
             );
-            // Return a virtual token.
+
+            // Update the mapping with the virtual token Id.
+            nftAssets[_interactionNonce] = NftAsset({
+                collection: collection,
+                tokenId: _secondHalfAux
+            });
+
+            // Return the virtual token.
             return (1, 0, false);
         }
-    }
-
-    // A function to register the details of a Zora NFT.
-    function registerZoraNFT(address _collection, uint256 _tokenId) public returns (uint64) {
-        uint64 newIndex = zoraNFTCount++;
-        zoraNFTs[newIndex] = ZoraNFT({
-            collection: _collection,
-            tokenId: _tokenId
-        });
-        return newIndex;
     }
 }
