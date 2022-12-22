@@ -2,6 +2,7 @@
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
@@ -76,6 +77,23 @@ contract ZoraBridge is BridgeBase {
 
             // Return the virtual token.
             return (1, 0, false);
+        } else if (
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL &&
+            _outputAssetA.assetType == AztecTypes.AztecAssetType.ETH
+        ) {
+            // Fetch the NFT details from the mapping using the virtual token id as the key.
+            NftAsset memory token = nftAssets[_inputAssetA.id];
+            if (token.collection == address(0x0)) {
+                revert ErrorLib.InvalidInputA();
+            }
+
+            address to = registry.addresses(_auxData);
+            if (to == address(0x0)) {
+                revert ErrorLib.InvalidAuxData();
+            }
+            delete nftAssets[_inputAssetA.id];
+            IERC721(token.collection).transferFrom(address(this), to, token.tokenId);
+            return (0, 0, false);
         }
     }
 }
