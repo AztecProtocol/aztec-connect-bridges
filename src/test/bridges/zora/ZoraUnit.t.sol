@@ -156,15 +156,27 @@ contract ZoraUnitTest is BridgeTestBase {
     // Success test case -- withdraw.
     function testSuccessfulWithdraw() public {
         uint32 tokenId = 0;
-        uint32 collectionKey = 0;
+        uint32 collectionKey = 1;
         uint64 auxData = (uint64(tokenId) << 32) | uint64(collectionKey);
         uint256 inputValue = 2000;
         uint256 interactionNonce = 84;
 
         // Create test NFTS.
         nftContract = new ERC721PresetMinterPauserAutoId("test", "NFT", "");
-        nftContract.mint(REGISTER_ADDRESS);
-        nftContract.approve(address(bridge), 0);
+        nftContract.mint(address(bridge));
+
+        uint256 inputAmount = uint160(address(nftContract));
+        // Register the NFT collection address. This will have index=1.
+        registry.convert(
+            virtualAsset1,
+            emptyAsset,
+            virtualAsset1,
+            emptyAsset,
+            inputAmount,
+            0, // _interactionNonce
+            0, // _auxData
+            address(0x0)
+        );
         
         // First fill an ask.
         bridge.convert(
@@ -194,5 +206,10 @@ contract ZoraUnitTest is BridgeTestBase {
         assertEq(outputValueA, 0, "Output value A is not 0");
         assertEq(outputValueB, 0, "Output value B is not 0");
         assertTrue(!isAsync, "Bridge is incorrectly in an async mode");
+
+        // Check that the internal nftAssets mapping is deleted.
+        (address storedCollection, uint256 storedTokenId) = bridge.nftAssets(interactionNonce);
+        assertEq(storedCollection, address(0), "Unexpected collection address");
+        assertEq(storedTokenId, 0, "Unexpected tokenId");
     }
 }
