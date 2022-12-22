@@ -3,7 +3,6 @@
 pragma solidity >=0.8.4;
 
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
@@ -49,7 +48,15 @@ contract ZoraBridge is BridgeBase {
         uint64 _auxData,
         address
     ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256 outputValueB, bool async) {
-        // Add error handling for input/output types.
+        // Invalid input and output types.
+        if (_inputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED ||
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
+        ) revert ErrorLib.InvalidInputA();
+        if (
+            _outputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED ||
+            _outputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
+        ) revert ErrorLib.InvalidOutputA();
+
 
         if (_inputAssetA.assetType == AztecTypes.AztecAssetType.ETH &&
             _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL) {
@@ -61,6 +68,10 @@ contract ZoraBridge is BridgeBase {
             uint256 tokenId = _auxData >> 32;
 
             address collection = registry.addresses(collectionKey);
+            if (collection == address(0x0)) {
+                revert ErrorLib.InvalidAuxData();
+            }
+
             za.fillAsk(
                 collection,
                 tokenId,
