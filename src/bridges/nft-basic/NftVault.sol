@@ -39,16 +39,18 @@ contract NftVault is BridgeBase {
     }
 
     /**
-     * @notice Function for the first step of a NFT deposit, or a NFT withdrawal.
+     * @notice Function for the first step of a NFT deposit, a NFT withdrawal, or transfer to another NftVault.
      * @dev This method can only be called from the RollupProcessor. The first step of the
      * deposit flow returns a virutal asset note that will represent the NFT on Aztec. After the
-     * virutal asset note is received on Aztec, the user calls matchDeposit which deposits the NFT
+     * virutal asset note is received on Aztec, the user calls transferFromAndMatch which deposits the NFT
      * into Aztec and matches it with the virtual asset. When the virutal asset is sent to this function
      * it is burned and the NFT is sent to the recipient passed in _auxData.
      *
      * @param _inputAssetA - ETH (Deposit) or VIRTUAL (Withdrawal)
      * @param _outputAssetA - VIRTUAL (Deposit) or 0 ETH (Withdrawal)
      * @param _totalInputValue - must be 1 wei (Deposit) or 1 VIRTUAL (Withdrawal)
+     * @param _interactionNonce - A globally unique identifier of this interaction/`convert(...)` call
+     *                              corresponding to the returned virtual asset id
      * @param _auxData - corresponds to the Ethereum address id in the AddressRegistry.sol for withdrawals
      * @return outputValueA - 1 VIRTUAL asset (Deposit) or 0 ETH (Withdrawal)
      *
@@ -60,7 +62,7 @@ contract NftVault is BridgeBase {
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
         uint256 _totalInputValue,
-        uint256,
+        uint256 _interactionNonce,
         uint64 _auxData,
         address
     )
@@ -103,21 +105,38 @@ contract NftVault is BridgeBase {
             IERC721(token.collection).transferFrom(address(this), to, token.tokenId);
             emit NftWithdraw(_inputAssetA.id, token.collection, token.tokenId);
             return (0, 0, false);
+        } else if (
+            _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
+                && _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
+        ) {
+            NftAsset memory token = nftAssets[_inputAssetA.id];
+            if (token.collection == address(0x0)) {
+                revert ErrorLib.InvalidInputA();
+            }
+
+            address to = REGISTRY.addresses(_auxData);
+            delete nftAssets[_inputAssetA.id];
+
+            IERC721(token.collection).approve(to, token.tokenId);
+            NftVault(to).transferFromAndMatch(_interactionNonce, token.collection, token.tokenId);
+
+            return (1, 0, false);
         }
     }
 
     /**
-     * @notice Function for the second step of a NFT deposit.
-     * @dev This method is called by an Ethereum L1 account that owns the NFT to deposit.
+     * @notice Function for the second step of a NFT deposit or for transfers from other NftVaults.
+     * @dev For a deposit, this method is called by an Ethereum L1 account that owns the NFT to deposit.
      * The user must approve this bridge contract to transfer the users NFT before this function
      * is called. This function assumes the NFT contract complies with the ERC721 standard.
+     * For a transfer from another NftVault, this method is called by the NftVault that is sending the NFT.
      *
      * @param _virtualAssetId - the virutal asset id of the note returned in the deposit step of the convert function
      * @param _collection - collection address of the NFT
      * @param _tokenId - the token id of the NFT
      */
 
-    function matchDeposit(uint256 _virtualAssetId, address _collection, uint256 _tokenId) external {
+    function transferFromAndMatch(uint256 _virtualAssetId, address _collection, uint256 _tokenId) external {
         if (nftAssets[_virtualAssetId].collection != address(0x0)) {
             revert InvalidVirtualAssetId();
         }

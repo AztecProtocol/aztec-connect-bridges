@@ -22,6 +22,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
     address private rollupProcessor;
 
     NftVault private bridge;
+    NftVault private bridge2;
     ERC721PresetMinterPauserAutoId private nftContract;
     uint256 private tokenIdToDeposit = 1;
     AddressRegistry private registry;
@@ -47,6 +48,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
 
         registry = new AddressRegistry(rollupProcessor);
         bridge = new NftVault(rollupProcessor, address(registry));
+        bridge2 = new NftVault(rollupProcessor, address(registry));
         nftContract = new ERC721PresetMinterPauserAutoId("test", "NFT", "");
         nftContract.mint(address(this));
         nftContract.mint(address(this));
@@ -56,29 +58,8 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
         nftContract.approve(address(bridge), 1);
         nftContract.approve(address(bridge), 2);
 
-        // get virtual assets
-        registry.convert(
-            ethAsset,
-            emptyAsset,
-            virtualAsset1,
-            emptyAsset,
-            1, // _totalInputValue
-            0, // _interactionNonce
-            0, // _auxData
-            address(0x0)
-        );
-        uint256 inputAmount = uint160(address(REGISTER_ADDRESS));
-        // register an address
-        registry.convert(
-            virtualAsset1,
-            emptyAsset,
-            virtualAsset1,
-            emptyAsset,
-            inputAmount,
-            0, // _interactionNonce
-            0, // _auxData
-            address(0x0)
-        );
+        _registerAddress(REGISTER_ADDRESS);
+        _registerAddress(address(bridge2));
 
         // Set ETH balance of bridge to 0 for clarity (somebody sent ETH to that address on mainnet)
         vm.deal(address(bridge), 0);
@@ -143,7 +124,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
         vm.warp(block.timestamp + 1 days);
 
         address collection = address(nftContract);
-        bridge.matchDeposit(virtualAsset100.id, collection, tokenIdToDeposit);
+        bridge.transferFromAndMatch(virtualAsset100.id, collection, tokenIdToDeposit);
         (address returnedCollection, uint256 returnedId) = bridge.nftAssets(virtualAsset100.id);
         assertEq(returnedId, tokenIdToDeposit, "nft token id does not match input");
         assertEq(returnedCollection, collection, "collection data does not match");
@@ -156,12 +137,12 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
 
         address collection = address(nftContract);
         vm.expectRevert();
-        bridge.matchDeposit(virtualAsset100.id, collection, tokenIdToDeposit);
+        bridge.transferFromAndMatch(virtualAsset100.id, collection, tokenIdToDeposit);
     }
 
     function testWithdraw() public {
         testDeposit();
-        uint64 auxData = uint64(registry.addressCount() - 1);
+        uint64 auxData = uint64(registry.addressCount() - 2);
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
             virtualAsset100, // _inputAssetA
             emptyAsset, // _inputAssetB
@@ -214,6 +195,63 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
             0, // _interactionNonce
             auxData,
             address(0)
+        );
+    }
+
+    function testTransfer() public {
+        testDeposit();
+        uint64 auxData = uint64(registry.addressCount() - 1);
+        uint256 interactionNonce = 128;
+
+        (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
+            virtualAsset100, // _inputAssetA
+            emptyAsset, // _inputAssetB
+            virtualAsset100, // _outputAssetA
+            emptyAsset, // _outputAssetB
+            1, // _totalInputValue
+            interactionNonce, // _interactionNonce
+            auxData, // _auxData
+            address(0)
+        );
+        address owner = nftContract.ownerOf(tokenIdToDeposit);
+        assertEq(address(bridge2), owner, "registered address is not the owner");
+        assertEq(outputValueA, 1, "Output value A is not 1");
+        assertEq(outputValueB, 0, "Output value B is not 0");
+        assertTrue(!isAsync, "Bridge is incorrectly in an async mode");
+
+        // test that the nft was deleted from bridge 1
+        (address bridge1collection,) = bridge.nftAssets(virtualAsset100.id);
+        assertEq(bridge1collection, address(0), "collection was not deleted");
+
+        // test that the nft was added to bridge 2
+        (address _a, uint256 _id) = bridge2.nftAssets(interactionNonce);
+        assertEq(_a, address(nftContract), "collection address is not 0");
+        assertEq(_id, tokenIdToDeposit, "token id is not 0");
+    }
+
+    function _registerAddress(address _addressToRegister) internal {
+        // get virtual assets
+        registry.convert(
+            ethAsset,
+            emptyAsset,
+            virtualAsset1,
+            emptyAsset,
+            1, // _totalInputValue
+            0, // _interactionNonce
+            0, // _auxData
+            address(0x0)
+        );
+        uint256 inputAmount = uint160(address(_addressToRegister));
+        // register an address
+        registry.convert(
+            virtualAsset1,
+            emptyAsset,
+            virtualAsset1,
+            emptyAsset,
+            inputAmount,
+            0, // _interactionNonce
+            0, // _auxData
+            address(0x0)
         );
     }
 }
