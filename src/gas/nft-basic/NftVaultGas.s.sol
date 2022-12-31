@@ -19,8 +19,8 @@ interface IRead {
 
 contract NftVaultGas is NftVaultDeployment {
     GasBase internal gasBase;
-    // NftVault internal bridge;
-    // NftVault internal bridge2;
+    NftVault internal bridge;
+    NftVault internal bridge2;
     ERC721PresetMinterPauserAutoId internal nftContract;
     address internal registry;
     uint256 internal registryAddressId;
@@ -75,8 +75,6 @@ contract NftVaultGas is NftVaultDeployment {
         }
         // transfer nft
         {
-            address a = nftContract.ownerOf(0);
-            emit log_named_address("owner nft:", a);
             vm.broadcast();
             gasBase.convert(bridge, virtualAsset, empty, virtualAsset128, empty, 1, 128, 2, address(0), 400000);
         }
