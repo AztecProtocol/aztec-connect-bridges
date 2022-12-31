@@ -30,10 +30,13 @@ contract NftVaultDeployment is BaseDeployment {
     function deployAndListAddressRegistry() public returns (address) {
         emit log("Deploying AddressRegistry bridge");
 
-        vm.broadcast();
         AddressRegistry bridge = new AddressRegistry(ROLLUP_PROCESSOR);
 
-        emit log_named_address("AddressRegistry bridge deployed to", address(bridge));
+        emit log_named_address(
+            "AddressRegistry bridge deployed to",
+            address(bridge)
+        );
+
         uint256 addressId = listBridge(address(bridge), 400000);
         emit log_named_uint("AddressRegistry bridge address id", addressId);
 

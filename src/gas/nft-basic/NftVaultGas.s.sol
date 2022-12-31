@@ -17,9 +17,10 @@ interface IRead {
     function defiBridgeProxy() external view returns (address);
 }
 
-contract NftVaultGas is NftVaultDeployment, AddressRegistryDeployment {
+contract NftVaultGas is NftVaultDeployment {
     GasBase internal gasBase;
-    NftVault internal bridge;
+    // NftVault internal bridge;
+    // NftVault internal bridge2;
     ERC721PresetMinterPauserAutoId internal nftContract;
     address internal registry;
     uint256 internal registryAddressId;
@@ -56,6 +57,7 @@ contract NftVaultGas is NftVaultDeployment, AddressRegistryDeployment {
         address(gasBase).call{value: 2 ether}("");
 
         _registerAddress(addr1);
+        _registerAddress(bridge);
         _registerAddress(bridge2);
         // // get registry virtual asset
         // gasBase.convert(address(registry), eth, empty, virtualAsset, empty, 1, 0, 0, address(0), 400000);
@@ -73,6 +75,7 @@ contract NftVaultGas is NftVaultDeployment, AddressRegistryDeployment {
         //     400000
         // );
         nftContract.approve(address(bridge), 0);
+        nftContract.approve(address(bridge2), 0);
         vm.stopBroadcast();
 
         // Get virtual assets
