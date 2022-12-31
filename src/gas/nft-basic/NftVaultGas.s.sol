@@ -24,6 +24,14 @@ contract NftVaultGas is NftVaultDeployment, AddressRegistryDeployment {
     address internal registry;
     uint256 internal registryAddressId;
 
+    AztecTypes.AztecAsset private empty;
+    AztecTypes.AztecAsset private eth =
+        AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
+    AztecTypes.AztecAsset private virtualAsset =
+        AztecTypes.AztecAsset({id: 100, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
+    AztecTypes.AztecAsset private virtualAsset128 =
+        AztecTypes.AztecAsset({id: 128, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
+
     function measure() public {
         uint256 privKey1 = vm.envUint("PRIVATE_KEY");
         address addr1 = vm.addr(privKey1);
@@ -43,14 +51,6 @@ contract NftVaultGas is NftVaultDeployment, AddressRegistryDeployment {
         address bridge = deployAndList(registry);
         address bridge2 = deployAndList(registry);
         ROLLUP_PROCESSOR = temp;
-
-        AztecTypes.AztecAsset memory empty;
-        AztecTypes.AztecAsset memory eth =
-            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
-        AztecTypes.AztecAsset memory virtualAsset =
-            AztecTypes.AztecAsset({id: 100, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
-        AztecTypes.AztecAsset memory virtualAsset128 =
-            AztecTypes.AztecAsset({id: 128, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
 
         vm.startBroadcast();
         address(gasBase).call{value: 2 ether}("");
