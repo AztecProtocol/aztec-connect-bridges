@@ -54,28 +54,13 @@ contract NftVaultGas is NftVaultDeployment {
         ROLLUP_PROCESSOR = temp;
 
         vm.startBroadcast();
-        address(gasBase).call{value: 2 ether}("");
+        address(gasBase).call{value: 4 ether}("");
 
         _registerAddress(addr1);
         _registerAddress(bridge);
         _registerAddress(bridge2);
-        // // get registry virtual asset
-        // gasBase.convert(address(registry), eth, empty, virtualAsset, empty, 1, 0, 0, address(0), 400000);
-        // // register address
-        // gasBase.convert(
-        //     address(registry),
-        //     virtualAsset,
-        //     empty,
-        //     virtualAsset,
-        //     empty,
-        //     uint256(uint160(addr1)),
-        //     0,
-        //     0,
-        //     address(0),
-        //     400000
-        // );
+
         nftContract.approve(address(bridge), 0);
-        nftContract.approve(address(bridge2), 0);
         vm.stopBroadcast();
 
         // Get virtual assets
@@ -90,13 +75,15 @@ contract NftVaultGas is NftVaultDeployment {
         }
         // transfer nft
         {
+            address a = nftContract.ownerOf(0);
+            emit log_named_address("owner nft:", a);
             vm.broadcast();
-            gasBase.convert(bridge, virtualAsset, empty, virtualAsset, empty, 1, 128, 2, address(0), 400000);
+            gasBase.convert(bridge, virtualAsset, empty, virtualAsset128, empty, 1, 128, 2, address(0), 400000);
         }
         // withdraw nft
         {
             vm.broadcast();
-            gasBase.convert(bridge2, virtualAsset128, empty, eth, empty, 1, 0, 1, address(0), 400000);
+            gasBase.convert(bridge2, virtualAsset128, empty, eth, empty, 1, 0, 0, address(0), 400000);
         }
     }
 
