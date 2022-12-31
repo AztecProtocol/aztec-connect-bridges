@@ -83,7 +83,7 @@ contract NftVaultGas is NftVaultDeployment, AddressRegistryDeployment {
         // withdraw nft
         {
             vm.broadcast();
-            gasBase.convert(bridge, virtualAsset, empty, eth, empty, 1, 0, 1, address(0), 400000);
+            gasBase.convert(bridge, virtualAsset, empty, eth, empty, 1, 0, 0, address(0), 400000);
         }
     }
 }
