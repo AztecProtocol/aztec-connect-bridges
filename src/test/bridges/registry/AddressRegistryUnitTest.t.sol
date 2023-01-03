@@ -15,7 +15,12 @@ contract AddressRegistryUnitTest is BridgeTestBase {
     address private rollupProcessor;
     AddressRegistry private bridge;
     uint256 public maxInt = type(uint160).max;
-    AztecTypes.AztecAsset private ethAsset;
+    AztecTypes.AztecAsset private ethAsset =
+        AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
+    AztecTypes.AztecAsset private virtualAsset =
+        AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
+    AztecTypes.AztecAsset private daiAsset =
+        AztecTypes.AztecAsset({id: 1, erc20Address: DAI, assetType: AztecTypes.AztecAssetType.ERC20});
 
     event AddressRegistered(uint256 indexed addressCount, address indexed registeredAddress);
 
@@ -42,35 +47,37 @@ contract AddressRegistryUnitTest is BridgeTestBase {
     }
 
     function testInvalidInputAssetType() public {
-        AztecTypes.AztecAsset memory inputAsset =
-            AztecTypes.AztecAsset({id: 1, erc20Address: DAI, assetType: AztecTypes.AztecAssetType.ERC20});
-
         vm.expectRevert(ErrorLib.InvalidInputA.selector);
-        bridge.convert(inputAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
+        bridge.convert(daiAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
     }
 
     function testInvalidOutputAssetType() public {
-        AztecTypes.AztecAsset memory inputAsset =
-            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
-        AztecTypes.AztecAsset memory outputAsset =
-            AztecTypes.AztecAsset({id: 1, erc20Address: DAI, assetType: AztecTypes.AztecAssetType.ERC20});
         vm.expectRevert(ErrorLib.InvalidOutputA.selector);
-        bridge.convert(inputAsset, emptyAsset, outputAsset, emptyAsset, 0, 0, 0, address(0));
+        bridge.convert(ethAsset, emptyAsset, daiAsset, emptyAsset, 0, 0, 0, address(0));
+    }
+
+    function testInvalidInputAmount() public {
+        vm.expectRevert(ErrorLib.InvalidInputAmount.selector);
+
+        bridge.convert(
+            ethAsset,
+            emptyAsset,
+            virtualAsset,
+            emptyAsset,
+            0, // _totalInputValue
+            0, // _interactionNonce
+            0, // _auxData
+            address(0x0)
+        );
     }
 
     function testGetBackMaxVirtualAssets() public {
         vm.warp(block.timestamp + 1 days);
 
-        AztecTypes.AztecAsset memory inputAssetA =
-            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
-
-        AztecTypes.AztecAsset memory outputAssetA =
-            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
-
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
-            inputAssetA,
+            ethAsset,
             emptyAsset,
-            outputAssetA,
+            virtualAsset,
             emptyAsset,
             1, // _totalInputValue
             0, // _interactionNonce
@@ -86,21 +93,15 @@ contract AddressRegistryUnitTest is BridgeTestBase {
     function testRegistringAnAddress() public {
         vm.warp(block.timestamp + 1 days);
 
-        AztecTypes.AztecAsset memory inputAssetA =
-            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
-
-        AztecTypes.AztecAsset memory outputAssetA =
-            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
-
         uint160 inputAmount = uint160(0x2e782B05290A7fFfA137a81a2bad2446AD0DdFEA);
 
         vm.expectEmit(true, true, false, false);
         emit AddressRegistered(0, address(inputAmount));
 
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = bridge.convert(
-            inputAssetA,
+            virtualAsset,
             emptyAsset,
-            outputAssetA,
+            virtualAsset,
             emptyAsset,
             inputAmount, // _totalInputValue
             0, // _interactionNonce
