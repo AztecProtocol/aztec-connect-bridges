@@ -3,4 +3,5 @@ out/
 node_modules/
 yarn-error.log
 typechain-types/
-broadcast/ 
+broadcast/
+.env
