@@ -22,6 +22,7 @@ of collateral provided and the collateral ratio.
 The borrowing interaction would revert in case the bridge's Trove is not active.
 
 > Note: Fixed collateral ratio in this case means that no user can ever move the collateral ratio of the bridge's Trove.
+> The collateral ratio can only be affected by the market movements (change of ETH price).
 
 ### Repaying
 
