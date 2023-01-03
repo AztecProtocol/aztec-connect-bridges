@@ -139,9 +139,11 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
         (address collection, uint256 tokenId) = bridge.nftAssets(virtualAsset100.id);
         uint64 auxData = uint64(registry.addressCount() - 1);
 
+        uint256 interactionNonce = ROLLUP_ENCODER.getNextNonce();
+
         vm.expectEmit(true, true, false, false);
         // ran test and determined the interaction nonce of the tx will be 128
-        emit NftDeposit(128, collection, tokenId);
+        emit NftDeposit(interactionNonce, collection, tokenId);
         ROLLUP_ENCODER.defiInteractionL2(bridgeId, virtualAsset100, emptyAsset, virtualAsset1, emptyAsset, auxData, 1);
 
         ROLLUP_ENCODER.processRollupAndGetBridgeResult();
