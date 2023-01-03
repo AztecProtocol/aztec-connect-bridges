@@ -65,8 +65,6 @@ contract AddressRegistry is BridgeBase {
             address toRegister = address(uint160(_totalInputValue));
             registerAddress(toRegister);
             return (0, 0, false);
-        } else {
-            revert ErrorLib.InvalidInput();
         }
     }
 
