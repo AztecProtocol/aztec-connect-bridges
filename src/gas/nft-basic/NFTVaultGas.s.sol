@@ -4,10 +4,10 @@ pragma solidity >=0.8.4;
 
 import {AddressRegistry} from "../../bridges/registry/AddressRegistry.sol";
 import {AddressRegistryDeployment} from "../../deployment/registry/AddressRegistryDeployment.s.sol";
-import {NftVault} from "../../bridges/nft-basic/NftVault.sol";
+import {NFTVault} from "../../bridges/nft-basic/NFTVault.sol";
 import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
-import {NftVaultDeployment} from "../../deployment/nft-basic/NftVaultDeployment.s.sol";
+import {NFTVaultDeployment} from "../../deployment/nft-basic/NFTVaultDeployment.s.sol";
 import {GasBase} from "../base/GasBase.sol";
 
 import {ERC721PresetMinterPauserAutoId} from
@@ -17,10 +17,10 @@ interface IRead {
     function defiBridgeProxy() external view returns (address);
 }
 
-contract NftVaultGas is NftVaultDeployment {
+contract NFTVaultGas is NFTVaultDeployment {
     GasBase internal gasBase;
-    NftVault internal bridge;
-    NftVault internal bridge2;
+    NFTVault internal bridge;
+    NFTVault internal bridge2;
     ERC721PresetMinterPauserAutoId internal nftContract;
     address internal registry;
     uint256 internal registryAddressId;
@@ -29,7 +29,7 @@ contract NftVaultGas is NftVaultDeployment {
     AztecTypes.AztecAsset private eth =
         AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.ETH});
     AztecTypes.AztecAsset private virtualAsset =
-        AztecTypes.AztecAsset({id: 100, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
+        AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
     AztecTypes.AztecAsset private virtualAsset128 =
         AztecTypes.AztecAsset({id: 128, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
 
@@ -71,12 +71,13 @@ contract NftVaultGas is NftVaultDeployment {
         // deposit nft
         {
             vm.broadcast();
-            NftVault(bridge).transferFromAndMatch(virtualAsset.id, address(nftContract), 0);
+            NFTVault(bridge).matchAndPull(virtualAsset.id, address(nftContract), 0);
         }
         // transfer nft
         {
+            
             vm.broadcast();
-            gasBase.convert(bridge, virtualAsset, empty, virtualAsset128, empty, 1, 128, 2, address(0), 400000);
+            gasBase.convert(bridge, virtualAsset, empty, virtualAsset128, empty, 1, 128, 2, address(0), 4000000);
         }
         // withdraw nft
         {
@@ -87,7 +88,7 @@ contract NftVaultGas is NftVaultDeployment {
 
     function _registerAddress(address _toRegister) internal {
         // get registry virtual asset
-        gasBase.convert(address(registry), eth, empty, virtualAsset, empty, 1, 0, 0, address(0), 400000);
+        gasBase.convert(address(registry), eth, empty, virtualAsset, empty, 1, 0, 0, address(0), 4000000);
         // register address
         gasBase.convert(
             address(registry),
@@ -99,7 +100,7 @@ contract NftVaultGas is NftVaultDeployment {
             0,
             0,
             address(0),
-            400000
+            4000000
         );
     }
 }

@@ -8,12 +8,12 @@ import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 // Example-specific imports
 import {ERC721PresetMinterPauserAutoId} from
     "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol";
-import {NftVault} from "../../../bridges/nft-basic/NftVault.sol";
+import {NFTVault} from "../../../bridges/nft-basic/NFTVault.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {AddressRegistry} from "../../../bridges/registry/AddressRegistry.sol";
 
 // @notice The purpose of this test is to directly test convert functionality of the bridge.
-contract NftVaultBasicUnitTest is BridgeTestBase {
+contract NFTVaultBasicUnitTest is BridgeTestBase {
     struct NftAsset {
         address collection;
         uint256 id;
@@ -21,8 +21,8 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
 
     address private rollupProcessor;
 
-    NftVault private bridge;
-    NftVault private bridge2;
+    NFTVault private bridge;
+    NFTVault private bridge2;
     ERC721PresetMinterPauserAutoId private nftContract;
     uint256 private tokenIdToDeposit = 1;
     AddressRegistry private registry;
@@ -47,8 +47,8 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
         rollupProcessor = address(this);
 
         registry = new AddressRegistry(rollupProcessor);
-        bridge = new NftVault(rollupProcessor, address(registry));
-        bridge2 = new NftVault(rollupProcessor, address(registry));
+        bridge = new NFTVault(rollupProcessor, address(registry));
+        bridge2 = new NFTVault(rollupProcessor, address(registry));
         nftContract = new ERC721PresetMinterPauserAutoId("test", "NFT", "");
         nftContract.mint(address(this));
         nftContract.mint(address(this));
@@ -124,7 +124,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
         vm.warp(block.timestamp + 1 days);
 
         address collection = address(nftContract);
-        bridge.transferFromAndMatch(virtualAsset100.id, collection, tokenIdToDeposit);
+        bridge.matchAndPull(virtualAsset100.id, collection, tokenIdToDeposit);
         (address returnedCollection, uint256 returnedId) = bridge.nftAssets(virtualAsset100.id);
         assertEq(returnedId, tokenIdToDeposit, "nft token id does not match input");
         assertEq(returnedCollection, collection, "collection data does not match");
@@ -137,7 +137,24 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
 
         address collection = address(nftContract);
         vm.expectRevert();
-        bridge.transferFromAndMatch(virtualAsset100.id, collection, tokenIdToDeposit);
+        bridge.matchAndPull(virtualAsset100.id, collection, tokenIdToDeposit);
+    }
+
+    // should fail because no withdraw address has been registered with this id
+    function testWithdrawUnregisteredWithdrawAddress() public {
+        testDeposit();
+        uint64 auxData = 1000;
+        vm.expectRevert(ErrorLib.InvalidAuxData.selector);
+        bridge.convert(
+            virtualAsset100, // _inputAssetA
+            emptyAsset, // _inputAssetB
+            ethAsset, // _outputAssetA
+            emptyAsset, // _outputAssetB
+            1, // _totalInputValue
+            0, // _interactionNonce
+            auxData,
+            address(0)
+        );
     }
 
     function testWithdraw() public {
@@ -168,24 +185,7 @@ contract NftVaultBasicUnitTest is BridgeTestBase {
     function testWithdrawUnregisteredNft() public {
         testDeposit();
         uint64 auxData = uint64(registry.addressCount());
-        vm.expectRevert();
-        bridge.convert(
-            virtualAsset1, // _inputAssetA
-            emptyAsset, // _inputAssetB
-            ethAsset, // _outputAssetA
-            emptyAsset, // _outputAssetB
-            1, // _totalInputValue
-            0, // _interactionNonce
-            auxData,
-            address(0)
-        );
-    }
-
-    // should fail because no withdraw address has been registered with this id
-    function testWithdrawUnregisteredWithdrawAddress() public {
-        testDeposit();
-        uint64 auxData = 1000;
-        vm.expectRevert();
+        vm.expectRevert(ErrorLib.InvalidInputA.selector);
         bridge.convert(
             virtualAsset1, // _inputAssetA
             emptyAsset, // _inputAssetB

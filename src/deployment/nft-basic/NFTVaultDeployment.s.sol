@@ -3,17 +3,17 @@
 pragma solidity >=0.8.4;
 
 import {BaseDeployment} from "../base/BaseDeployment.s.sol";
-import {NftVault} from "../../bridges/nft-basic/NftVault.sol";
+import {NFTVault} from "../../bridges/nft-basic/NFTVault.sol";
 import {AddressRegistry} from "../../bridges/registry/AddressRegistry.sol";
 
-contract NftVaultDeployment is BaseDeployment {
+contract NFTVaultDeployment is BaseDeployment {
     function deploy(address _addressRegistry) public returns (address) {
-        emit log("Deploying NftVault bridge");
+        emit log("Deploying NFTVault bridge");
 
         vm.broadcast();
-        NftVault bridge = new NftVault(ROLLUP_PROCESSOR, _addressRegistry);
+        NFTVault bridge = new NFTVault(ROLLUP_PROCESSOR, _addressRegistry);
 
-        emit log_named_address("NftVault bridge deployed to", address(bridge));
+        emit log_named_address("NFTVault bridge deployed to", address(bridge));
 
         return address(bridge);
     }
@@ -21,8 +21,8 @@ contract NftVaultDeployment is BaseDeployment {
     function deployAndList(address _addressRegistry) public returns (address) {
         address bridge = deploy(_addressRegistry);
 
-        uint256 addressId = listBridge(bridge, 400000);
-        emit log_named_uint("NftVault bridge address id", addressId);
+        uint256 addressId = listBridge(bridge, 135500);
+        emit log_named_uint("NFTVault bridge address id", addressId);
 
         return bridge;
     }
@@ -34,7 +34,7 @@ contract NftVaultDeployment is BaseDeployment {
 
         emit log_named_address("AddressRegistry bridge deployed to", address(bridge));
 
-        uint256 addressId = listBridge(address(bridge), 400000);
+        uint256 addressId = listBridge(address(bridge), 120500);
         emit log_named_uint("AddressRegistry bridge address id", addressId);
 
         return address(bridge);

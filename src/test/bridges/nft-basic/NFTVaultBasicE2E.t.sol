@@ -6,7 +6,7 @@ import {BridgeTestBase} from "./../../aztec/base/BridgeTestBase.sol";
 import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
 // Example-specific imports
-import {NftVault} from "../../../bridges/nft-basic/NftVault.sol";
+import {NFTVault} from "../../../bridges/nft-basic/NFTVault.sol";
 import {AddressRegistry} from "../../../bridges/registry/AddressRegistry.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {ERC721PresetMinterPauserAutoId} from
@@ -16,9 +16,9 @@ import {ERC721PresetMinterPauserAutoId} from
  * @notice The purpose of this test is to test the bridge in an environment that is as close to the final deployment
  *         as possible without spinning up all the rollup infrastructure (sequencer, proof generator etc.).
  */
-contract NftVaultBasicE2ETest is BridgeTestBase {
-    NftVault internal bridge;
-    NftVault internal bridge2;
+contract NFTVaultBasicE2ETest is BridgeTestBase {
+    NFTVault internal bridge;
+    NFTVault internal bridge2;
     AddressRegistry private registry;
     ERC721PresetMinterPauserAutoId private nftContract;
 
@@ -37,13 +37,13 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
     AztecTypes.AztecAsset private erc20InputAsset =
         AztecTypes.AztecAsset({id: 1, erc20Address: DAI, assetType: AztecTypes.AztecAssetType.ERC20});
 
-    event NftDeposit(uint256 indexed virtualAssetId, address indexed collection, uint256 indexed tokenId);
-    event NftWithdraw(uint256 indexed virtualAssetId, address indexed collection, uint256 indexed tokenId);
+    event NFTDeposit(uint256 indexed virtualAssetId, address indexed collection, uint256 indexed tokenId);
+    event NFTWithdraw(uint256 indexed virtualAssetId, address indexed collection, uint256 indexed tokenId);
 
     function setUp() public {
         registry = new AddressRegistry(address(ROLLUP_PROCESSOR));
-        bridge = new NftVault(address(ROLLUP_PROCESSOR), address(registry));
-        bridge2 = new NftVault(address(ROLLUP_PROCESSOR), address(registry));
+        bridge = new NFTVault(address(ROLLUP_PROCESSOR), address(registry));
+        bridge2 = new NFTVault(address(ROLLUP_PROCESSOR), address(registry));
         nftContract = new ERC721PresetMinterPauserAutoId("test", "NFT", "");
         nftContract.mint(address(this));
         nftContract.mint(address(this));
@@ -56,16 +56,16 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
         ethAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
 
         vm.label(address(registry), "AddressRegistry Bridge");
-        vm.label(address(bridge), "NftVault Bridge");
+        vm.label(address(bridge), "NFTVault Bridge");
 
         // Impersonate the multi-sig to add a new bridge
         vm.startPrank(MULTI_SIG);
 
         // WARNING: If you set this value too low the interaction will fail for seemingly no reason!
         // OTOH if you se it too high bridge users will pay too much
-        ROLLUP_PROCESSOR.setSupportedBridge(address(registry), 120000);
-        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 120000);
-        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge2), 120000);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(registry), 120500);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 135500);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge2), 135500);
 
         vm.stopPrank();
 
@@ -73,21 +73,21 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
         registryBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength() - 2;
         bridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength() - 1;
         bridge2Id = ROLLUP_PROCESSOR.getSupportedBridgesLength();
-        // get virutal assets to register an address
+        // get virtual assets to register an address
         ROLLUP_ENCODER.defiInteractionL2(registryBridgeId, ethAsset, emptyAsset, virtualAsset1, emptyAsset, 0, 1);
-        ROLLUP_ENCODER.processRollupAndGetBridgeResult();
-        // get virutal assets to register 2nd NftVault
+        ROLLUP_ENCODER.processRollup();
+        // get virtual assets to register 2nd NFTVault
         ROLLUP_ENCODER.defiInteractionL2(registryBridgeId, ethAsset, emptyAsset, virtualAsset1, emptyAsset, 0, 1);
-        ROLLUP_ENCODER.processRollupAndGetBridgeResult();
+        ROLLUP_ENCODER.processRollup();
 
         // register an address
         uint160 inputAmount = uint160(REGISTER_ADDRESS);
         ROLLUP_ENCODER.defiInteractionL2(
             registryBridgeId, virtualAsset1, emptyAsset, virtualAsset1, emptyAsset, 0, inputAmount
         );
-        ROLLUP_ENCODER.processRollupAndGetBridgeResult();
+        ROLLUP_ENCODER.processRollup();
 
-        // register 2nd NftVault in AddressRegistry
+        // register 2nd NFTVault in AddressRegistry
         uint160 bridge2AddressAmount = uint160(address(bridge2));
         ROLLUP_ENCODER.defiInteractionL2(
             registryBridgeId, virtualAsset1, emptyAsset, virtualAsset1, emptyAsset, 0, bridge2AddressAmount
@@ -106,9 +106,9 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
 
         address collection = address(nftContract);
 
-        vm.expectEmit(true, true, false, false);
-        emit NftDeposit(virtualAsset100.id, collection, tokenIdToDeposit);
-        bridge.transferFromAndMatch(virtualAsset100.id, collection, tokenIdToDeposit);
+        vm.expectEmit(true, true, true, false);
+        emit NFTDeposit(virtualAsset100.id, collection, tokenIdToDeposit);
+        bridge.matchAndPull(virtualAsset100.id, collection, tokenIdToDeposit);
         (address returnedCollection, uint256 returnedId) = bridge.nftAssets(virtualAsset100.id);
         assertEq(returnedId, tokenIdToDeposit, "nft token id does not match input");
         assertEq(returnedCollection, collection, "collection data does not match");
@@ -119,7 +119,7 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
         uint64 auxData = uint64(registry.addressCount() - 2);
 
         vm.expectEmit(true, true, false, false);
-        emit NftWithdraw(virtualAsset100.id, address(nftContract), tokenIdToDeposit);
+        emit NFTWithdraw(virtualAsset100.id, address(nftContract), tokenIdToDeposit);
         ROLLUP_ENCODER.defiInteractionL2(bridgeId, virtualAsset100, emptyAsset, ethAsset, emptyAsset, auxData, 1);
 
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
@@ -141,15 +141,16 @@ contract NftVaultBasicE2ETest is BridgeTestBase {
 
         uint256 interactionNonce = ROLLUP_ENCODER.getNextNonce();
 
-        vm.expectEmit(true, true, false, false);
-        // ran test and determined the interaction nonce of the tx will be 128
-        emit NftDeposit(interactionNonce, collection, tokenId);
+        vm.expectEmit(true, true, true, false, address(bridge));
+        emit NFTWithdraw(virtualAsset100.id, collection, tokenId);
+        vm.expectEmit(true, true, true, false, address(bridge2));
+        emit NFTDeposit(interactionNonce, collection, tokenId);
         ROLLUP_ENCODER.defiInteractionL2(bridgeId, virtualAsset100, emptyAsset, virtualAsset1, emptyAsset, auxData, 1);
 
-        ROLLUP_ENCODER.processRollupAndGetBridgeResult();
+        ROLLUP_ENCODER.processRollup();
 
-        // check that the nft was transferred to the second NftVault
-        (address returnedCollection, uint256 returnedId) = bridge2.nftAssets(128);
+        // check that the nft was transferred to the second NFTVault
+        (address returnedCollection, uint256 returnedId) = bridge2.nftAssets(interactionNonce);
         assertEq(returnedId, tokenIdToDeposit, "nft token id does not match input");
         assertEq(returnedCollection, collection, "collection data does not match");
     }

@@ -20,7 +20,7 @@ contract AddressRegistryDeployment is BaseDeployment {
     function deployAndList() public returns (address) {
         address bridge = deploy();
 
-        uint256 addressId = listBridge(bridge, 400000);
+        uint256 addressId = listBridge(bridge, 120500);
         emit log_named_uint("AddressRegistry bridge address id", addressId);
 
         return bridge;
