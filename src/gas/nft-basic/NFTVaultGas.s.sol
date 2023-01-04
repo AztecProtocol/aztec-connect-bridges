@@ -75,7 +75,6 @@ contract NFTVaultGas is NFTVaultDeployment {
         }
         // transfer nft
         {
-            
             vm.broadcast();
             gasBase.convert(bridge, virtualAsset, empty, virtualAsset128, empty, 1, 128, 2, address(0), 4000000);
         }

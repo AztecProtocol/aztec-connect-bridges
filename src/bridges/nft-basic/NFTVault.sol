@@ -88,9 +88,7 @@ contract NFTVault is BridgeBase {
                 && _outputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
         ) {
             return (1, 0, false);
-        } else if (
-            _inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL
-        ) {
+        } else if (_inputAssetA.assetType == AztecTypes.AztecAssetType.VIRTUAL) {
             NFTAsset memory token = nftAssets[_inputAssetA.id];
             if (token.collection == address(0x0)) {
                 revert ErrorLib.InvalidInputA();
@@ -102,8 +100,8 @@ contract NFTVault is BridgeBase {
             }
             delete nftAssets[_inputAssetA.id];
             emit NFTWithdraw(_inputAssetA.id, token.collection, token.tokenId);
-            
-            if(_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH){
+
+            if (_outputAssetA.assetType == AztecTypes.AztecAssetType.ETH) {
                 IERC721(token.collection).transferFrom(address(this), to, token.tokenId);
                 return (0, 0, false);
             } else {
