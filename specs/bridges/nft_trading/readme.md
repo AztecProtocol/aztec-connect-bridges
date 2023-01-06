@@ -7,28 +7,36 @@ In this way, the owner of one NFT owner is in private with the power of Aztec's 
 
 
 ## What protocol(s) does the bridge interact with ?
-
-
 The bridge interacts with [OpenSea](https://opensea.io/).
 
 ## What is the flow of the bridge?
-The simple flow as below:
+
+The NFT bridge will design as a Wrap Erc721 Contract, that means everytime when the contract received a NFT, it will mint a relevant Wrapped NFT to this user, This Wrapped NFT can be transfer to Aztec L2, also can be unwrap and redeem the original NFT anytimes.
+
+The `BUY` flow as below:
 1. User A on Aztec chain bridge interface pay and buy an NFT on Opensea in Ethereum.
 2. The "Buy" order and relevant fee is send to L1 by Aztec's rollup.
 3. The bridge contract in L1 is triggered to interact with OpenSea protocol.
-4. Then the bridge contract own this NFT and record it to a private user id.
-5. The User A On Aztec can redeem this NFT anytime, with his valid signature. 
+4. Then the bridge contract own this NFT and Mint a Wrapped NFT for Aztec L2 to bridge.
+5. The User A On Aztec Owned this Wrapped NFT. 
 
-
+The `REDEEM` flow as below:
+1. User A hold an wrapped NFT in Aztec L2.
+2. He call the bridge to unwrapped and send the real NFT to a L1 address.
+3. The Bridge contract is trigged, and send the resl NFT to the user specifed address, and burn the wrapped NFT.
 
 ### General Properties of convert(...) function
+  The `AztecTypes.AztecAsset calldata _inputAssetA` should be specificed as the Bridge's wrapped NFT. 
+  And the relevant function calling is encoded into the `_auxData` Info.
+  In the Bridge contract, the function will be routed by the decoded 
+`_auxData`.
 
 - The bridge is synchronous, and will always return `isAsync = false`.
 
 - The bridge uses `_auxData` to encode the target NFT, id, price.
 
-- The Bridge perform token pre-approvals to allow the `ROLLUP_PROCESSOR` and `UNI_ROUTER` to pull tokens from it.
-  This is to reduce gas-overhead when performing the actions. It is safe to do, as the bridge is not holding the funds itself.
+- The Bridge perform token pre-approvals to allow the `ROLLUP_PROCESSOR` to pull tokens from it.
+
 
 ## Is the contract upgradeable?
 
