@@ -1,4 +1,6 @@
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec.
+pragma solidity >=0.8.4;
 
 import {Test} from "forge-std/Test.sol";
 import {BridgeBase} from "../bridges/base/BridgeBase.sol";
@@ -7,11 +9,11 @@ import {ISubsidy} from "../aztec/interfaces/ISubsidy.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
 /**
- * @title Script which list either all subsidies or subsidies which need ot be funded
+ * @title Script which logs either all subsidies or non-subsidized bridges
  * @author Aztec team
- * @dev execute with: ONLY_EMPTY=true && forge script src/scripts/SubsidyLister.sol:SubsidyLister --fork-url $RPC --ffi --private-key $PRIV  --sig "listSubsidies()"
+ * @dev execute with: ONLY_EMPTY=true && forge script src/scripts/SubsidyLogger.sol:SubsidyLogger --fork-url $RPC --sig "logSubsidies()"
  */
-contract SubsidyLister is Test {
+contract SubsidyLogger is Test {
     ISubsidy public constant SUBSIDY = ISubsidy(0xABc30E831B5Cc173A9Ed5941714A7845c909e7fA);
     // @dev A time period denominated in hours indicating after what time a call is fully subsidized
     uint256 public constant FULL_SUBSIDY_TIME = 36;
@@ -41,12 +43,12 @@ contract SubsidyLister is Test {
         onlyEmpty = vm.envBool("ONLY_EMPTY");
     }
 
-    function listSubsidies() public {
-        listERC4626Subsidies();
-        listYearnSubsidies();
+    function logSubsidies() public {
+        logERC4626Subsidies();
+        logYearnSubsidies();
     }
 
-    function listERC4626Subsidies() public {
+    function logERC4626Subsidies() public {
         BridgeBase bridge = BridgeBase(0x3578D6D5e1B4F07A48bb1c958CBfEc135bef7d98);
 
         emit log_string("\n");
@@ -104,7 +106,7 @@ contract SubsidyLister is Test {
         emit log_string("========================");
     }
 
-    function listYearnSubsidies() public {
+    function logYearnSubsidies() public {
         // bridge address asset combination gas usage subsidy
         BridgeBase bridge = BridgeBase(0xE71A50a78CcCff7e20D8349EED295F12f0C8C9eF);
 
