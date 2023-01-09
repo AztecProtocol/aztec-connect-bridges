@@ -45,7 +45,7 @@ abstract contract BaseDeployment is Test {
 
     function setUp() public virtual {
         // Read from the .env
-        string memory networkKey = "network";
+        string memory networkKey = "NETWORK";
 
         string memory envNetwork = vm.envString(networkKey);
         bytes32 envNetworkHash = keccak256(abi.encodePacked(envNetwork));
@@ -72,7 +72,7 @@ abstract contract BaseDeployment is Test {
             return;
         }
 
-        string memory modeKey = "simulateAdmin";
+        string memory modeKey = "SIMULATE_ADMIN";
         bool envMode = vm.envBool(modeKey);
         MODE = envMode ? Mode.SIMULATE_ADMIN : Mode.BROADCAST;
 
