@@ -9,7 +9,7 @@ import {ISubsidy} from "../aztec/interfaces/ISubsidy.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
 /**
- * @title Script which logs either all subsidies or non-subsidized bridges
+ * @title Script which logs either all subsidized or non-subsidized bridges
  * @author Aztec team
  * @dev execute with: ONLY_EMPTY=true && forge script src/scripts/SubsidyLogger.sol:SubsidyLogger --fork-url $RPC --sig "logSubsidies()"
  */
