@@ -41,6 +41,8 @@ contract SubsidyLogger is Test {
 
     function setUp() public {
         onlyEmpty = vm.envBool("ONLY_EMPTY");
+        emit log_named_uint("Hours for full subsidy", FULL_SUBSIDY_TIME);
+        emit log_named_decimal_uint("Gas price used in gwei", ESTIMATION_BASE_FEE, 9);
     }
 
     function logSubsidies() public {
