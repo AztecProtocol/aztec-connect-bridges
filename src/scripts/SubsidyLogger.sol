@@ -86,7 +86,7 @@ contract SubsidyLogger is Test {
                 emit log_named_uint("enterCriteria gasUsage", enterSubsidy.gasUsage);
                 emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
                 uint256 costOfMonth = enterSubsidy.gasUsage * (24 * 30) * ESTIMATION_BASE_FEE / FULL_SUBSIDY_TIME;
-                emit log_named_uint("cost of fully subsidizing for a month", costOfMonth);
+                emit log_named_decimal_uint("cost of fully subsidizing for a month", costOfMonth, 18);
             }
 
             if (exitSubsidy.available == 0 || !onlyEmpty) {
@@ -99,7 +99,7 @@ contract SubsidyLogger is Test {
                 emit log_named_uint("exitCriteria gasUsage", exitSubsidy.gasUsage);
                 emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
                 uint256 costOfMonth = exitSubsidy.gasUsage * (24 * 30) * ESTIMATION_BASE_FEE / FULL_SUBSIDY_TIME;
-                emit log_named_uint("cost of fully subsidizing for a month", costOfMonth);
+                emit log_named_decimal_uint("cost of fully subsidizing for a month", costOfMonth, 18);
             }
         }
 
@@ -128,7 +128,7 @@ contract SubsidyLogger is Test {
             emit log_named_uint("enterCriteria gasUsage", enterSubsidy.gasUsage);
             emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
             uint256 costOfMonth = enterSubsidy.gasUsage * (24 * 30) * ESTIMATION_BASE_FEE / FULL_SUBSIDY_TIME;
-            emit log_named_uint("cost of fully subsidizing for a month", costOfMonth);
+            emit log_named_decimal_uint("cost of fully subsidizing for a month", costOfMonth, 18);
         }
 
         if (exitSubsidy.available == 0 || !onlyEmpty) {
@@ -139,7 +139,7 @@ contract SubsidyLogger is Test {
             emit log_named_uint("exitCriteria gasUsage", exitSubsidy.gasUsage);
             emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
             uint256 costOfMonth = exitSubsidy.gasUsage * (24 * 30) * ESTIMATION_BASE_FEE / FULL_SUBSIDY_TIME;
-            emit log_named_uint("cost of fully subsidizing for a month", costOfMonth);
+            emit log_named_decimal_uint("cost of fully subsidizing for a month", costOfMonth, 18);
         }
 
         emit log_string("========================");
