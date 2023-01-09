@@ -109,7 +109,7 @@ contract UniswapDCABridge is BiDCABridge {
      * @dev Reverts if the price is stale or negative
      * @return Price
      */
-    function getPrice() public virtual override (BiDCABridge) returns (uint256) {
+    function getPrice() public virtual override(BiDCABridge) returns (uint256) {
         (, int256 answer,,,) = ORACLE.latestRoundData();
         if (answer < 0) {
             revert NegativePrice();

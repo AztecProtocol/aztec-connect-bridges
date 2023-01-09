@@ -28,7 +28,7 @@ contract AngleMeasure is AngleSLPDeployment {
     AztecTypes.AztecAsset internal wethAsset;
     AztecTypes.AztecAsset internal sanWethAsset;
 
-    function setUp() public override (BaseDeployment) {
+    function setUp() public override(BaseDeployment) {
         super.setUp();
 
         address defiProxy = IRead(ROLLUP_PROCESSOR).defiBridgeProxy();
