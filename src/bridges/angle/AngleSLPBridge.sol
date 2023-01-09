@@ -89,7 +89,7 @@ contract AngleSLPBridge is BridgeBase {
         uint256 _interactionNonce,
         uint64 _auxData,
         address _rollupBeneficiary
-    ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
+    ) external payable override(BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
         address inputAssetA;
         address outputAssetA;
 
@@ -144,7 +144,7 @@ contract AngleSLPBridge is BridgeBase {
         AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata,
         uint64 _auxData
-    ) public pure override (BridgeBase) returns (uint256) {
+    ) public pure override(BridgeBase) returns (uint256) {
         if (_auxData > 1) {
             revert ErrorLib.InvalidAuxData();
         }
