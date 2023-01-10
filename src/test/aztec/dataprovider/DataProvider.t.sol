@@ -238,4 +238,20 @@ contract DataProviderTest is BridgeTestBase {
         assertGe(subsidy, gasUnits * block.basefee, "Invalid gas units accrued");
         assertEq(gasUnits, subsidy / block.basefee, "Invalid gas units accrued");
     }
+
+    function testZeroBaseFee() public {
+        AztecTypes.AztecAsset memory eth = ROLLUP_ENCODER.getRealAztecAsset(address(0));
+        AztecTypes.AztecAsset memory virtualAsset =
+            AztecTypes.AztecAsset({id: 0, erc20Address: address(0), assetType: AztecTypes.AztecAssetType.VIRTUAL});
+
+        uint256 bridgeCallData = ROLLUP_ENCODER.encodeBridgeCallData(7, virtualAsset, eth, virtualAsset, eth, 0);
+
+        vm.fee(0);
+
+        (uint256 criteria, uint256 subsidy, uint256 gasUnits) = provider.getAccumulatedSubsidyAmount(bridgeCallData);
+        assertEq(criteria, 0, "Wrong criteria");
+        assertEq(subsidy, 0, "No subsidy accrued");
+        assertEq(subsidy, 0, "Invalid gas units accrued");
+        assertEq(gasUnits, 0, "Invalid gas units accrued");
+    }
 }
