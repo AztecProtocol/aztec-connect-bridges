@@ -87,7 +87,7 @@ contract ERC4626Bridge is BridgeBase {
         uint256 _interactionNonce,
         uint64 _auxData,
         address _rollupBeneficiary
-    ) external payable override(BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
+    ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
         address inputToken = _inputAssetA.erc20Address;
         address outputToken = _outputAssetA.erc20Address;
 
@@ -131,7 +131,7 @@ contract ERC4626Bridge is BridgeBase {
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
         uint64
-    ) public pure override(BridgeBase) returns (uint256) {
+    ) public pure override (BridgeBase) returns (uint256) {
         return _computeCriteria(_inputAssetA.erc20Address, _outputAssetA.erc20Address);
     }
 

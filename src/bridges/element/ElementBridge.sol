@@ -428,7 +428,7 @@ contract ElementBridge is BridgeBase {
     )
         external
         payable
-        override(BridgeBase)
+        override (BridgeBase)
         onlyRollup
         returns (uint256 outputValueA, uint256 outputValueB, bool isAsync)
     {
@@ -602,7 +602,7 @@ contract ElementBridge is BridgeBase {
     )
         external
         payable
-        override(BridgeBase)
+        override (BridgeBase)
         onlyRollup
         returns (uint256 outputValueA, uint256 outputValueB, bool interactionCompleted)
     {

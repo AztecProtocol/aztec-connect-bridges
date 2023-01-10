@@ -59,7 +59,7 @@ contract ExampleBridge is BridgeBase {
         uint256,
         uint64 _auxData,
         address _rollupBeneficiary
-    ) external payable override(BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
+    ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
         // Check the input asset is ERC20
         if (_inputAssetA.assetType != AztecTypes.AztecAssetType.ERC20) revert ErrorLib.InvalidInputA();
         if (_outputAssetA.erc20Address != _inputAssetA.erc20Address) revert ErrorLib.InvalidOutputA();
@@ -86,7 +86,7 @@ contract ExampleBridge is BridgeBase {
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata,
         uint64
-    ) public view override(BridgeBase) returns (uint256) {
+    ) public view override (BridgeBase) returns (uint256) {
         return uint256(keccak256(abi.encodePacked(_inputAssetA.erc20Address, _outputAssetA.erc20Address)));
     }
 }

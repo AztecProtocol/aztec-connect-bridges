@@ -26,7 +26,7 @@ contract TroveBridgeMeasure is LiquityTroveDeployment {
     AztecTypes.AztecAsset internal lusdAsset;
     AztecTypes.AztecAsset internal tbAsset; // Accounting token
 
-    function setUp() public override(BaseDeployment) {
+    function setUp() public override (BaseDeployment) {
         super.setUp();
 
         address defiProxy = IRead(ROLLUP_PROCESSOR).defiBridgeProxy();

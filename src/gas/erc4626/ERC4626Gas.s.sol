@@ -36,7 +36,7 @@ contract ERC4626Measure is ERC4626Deployment {
     AztecTypes.AztecAsset internal daiAsset;
     AztecTypes.AztecAsset internal wcDaiAsset; // ERC4626-Wrapped Compound Dai
 
-    function setUp() public override(BaseDeployment) {
+    function setUp() public override (BaseDeployment) {
         super.setUp();
 
         address defiProxy = IRead(ROLLUP_PROCESSOR).defiBridgeProxy();
