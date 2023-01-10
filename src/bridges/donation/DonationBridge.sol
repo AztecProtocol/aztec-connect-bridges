@@ -57,7 +57,7 @@ contract DonationBridge is BridgeBase {
         uint256,
         uint64 _auxData,
         address
-    ) external payable override (BridgeBase) onlyRollup returns (uint256, uint256, bool) {
+    ) external payable override(BridgeBase) onlyRollup returns (uint256, uint256, bool) {
         address receiver = donees[_auxData];
 
         if (receiver == address(0)) {

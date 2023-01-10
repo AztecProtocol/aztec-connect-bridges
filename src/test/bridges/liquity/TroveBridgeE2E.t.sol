@@ -34,11 +34,11 @@ contract TroveBridgeE2ETest is BridgeTestBase, TroveBridgeTestBase {
         vm.startPrank(MULTI_SIG);
 
         // List trove bridge with a gasLimit of 500k
-        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 600_000);
+        ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 700_000);
 
         // List the assets with a gasLimit of 100k
-        ROLLUP_PROCESSOR.setSupportedAsset(tokens["LUSD"].addr, 100000);
-        ROLLUP_PROCESSOR.setSupportedAsset(address(bridge), 100000);
+        ROLLUP_PROCESSOR.setSupportedAsset(tokens["LUSD"].addr, 55_000);
+        ROLLUP_PROCESSOR.setSupportedAsset(address(bridge), 55_000);
 
         vm.stopPrank();
 

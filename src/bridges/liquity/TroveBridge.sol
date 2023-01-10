@@ -193,7 +193,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
         uint256 _interactionNonce,
         uint64 _auxData,
         address _rollupBeneficiary
-    ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256 outputValueB, bool) {
+    ) external payable override(BridgeBase) onlyRollup returns (uint256 outputValueA, uint256 outputValueB, bool) {
         Status troveStatus = Status(TROVE_MANAGER.getTroveStatus(address(this)));
 
         uint256 subsidyCriteria;
@@ -283,7 +283,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     // @dev See _repayWithCollateral(...) method for more information about how this callback is entered.
     function uniswapV3SwapCallback(int256 _amount0Delta, int256 _amount1Delta, bytes calldata _data)
         external
-        override (IUniswapV3SwapCallback)
+        override(IUniswapV3SwapCallback)
     {
         // Swaps entirely within 0-liquidity regions are not supported
         if (_amount0Delta <= 0 && _amount1Delta <= 0) revert InvalidDeltaAmounts();
@@ -353,7 +353,7 @@ contract TroveBridge is BridgeBase, ERC20, Ownable, IUniswapV3SwapCallback {
     /**
      * @dev See {IERC20-totalSupply}.
      */
-    function totalSupply() public view override (ERC20) returns (uint256) {
+    function totalSupply() public view override(ERC20) returns (uint256) {
         return super.totalSupply() - DUST;
     }
 
