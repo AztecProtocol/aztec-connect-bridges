@@ -243,7 +243,7 @@ abstract contract BiDCABridge is BridgeBase {
         uint256 _interactionNonce,
         uint64 _numTicks,
         address
-    ) external payable override (BridgeBase) onlyRollup returns (uint256, uint256, bool) {
+    ) external payable override(BridgeBase) onlyRollup returns (uint256, uint256, bool) {
         address inputAssetAddress = _inputAssetA.erc20Address;
         address outputAssetAddress = _outputAssetA.erc20Address;
 
@@ -289,7 +289,7 @@ abstract contract BiDCABridge is BridgeBase {
         external
         payable
         virtual
-        override (BridgeBase)
+        override(BridgeBase)
         onlyRollup
         returns (uint256 outputValueA, uint256, bool interactionComplete)
     {

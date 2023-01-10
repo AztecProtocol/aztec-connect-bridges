@@ -39,7 +39,7 @@ abstract contract BridgeBase is IDefiBridge {
         uint256,
         uint64,
         address
-    ) external payable virtual override (IDefiBridge) returns (uint256, uint256, bool) {
+    ) external payable virtual override(IDefiBridge) returns (uint256, uint256, bool) {
         revert MissingImplementation();
     }
 
@@ -50,7 +50,7 @@ abstract contract BridgeBase is IDefiBridge {
         AztecTypes.AztecAsset calldata,
         uint256,
         uint64
-    ) external payable virtual override (IDefiBridge) returns (uint256, uint256, bool) {
+    ) external payable virtual override(IDefiBridge) returns (uint256, uint256, bool) {
         revert ErrorLib.AsyncDisabled();
     }
 

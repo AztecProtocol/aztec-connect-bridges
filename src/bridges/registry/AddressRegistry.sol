@@ -48,7 +48,7 @@ contract AddressRegistry is BridgeBase {
         uint256,
         uint64,
         address
-    ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
+    ) external payable override(BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
         if (
             _inputAssetA.assetType == AztecTypes.AztecAssetType.NOT_USED
                 || _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
