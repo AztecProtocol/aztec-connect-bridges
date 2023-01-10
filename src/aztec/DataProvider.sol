@@ -226,7 +226,7 @@ contract DataProvider is Ownable {
         uint256 criteria = abi.decode(returnData, (uint256));
         uint256 ethSub = SUBSIDY.getAccumulatedSubsidyAmount(vars.bridgeAddress, criteria);
 
-        return (criteria, ethSub, ethSub / block.basefee);
+        return (criteria, ethSub, block.basefee == 0 ? 0 : ethSub / block.basefee);
     }
 
     function _aztecAsset(uint256 _assetId) internal view returns (AztecTypes.AztecAsset memory) {
