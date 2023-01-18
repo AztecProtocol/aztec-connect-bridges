@@ -14,17 +14,16 @@
     "build": "forge build",
     "compile:typechain": "yarn clean && forge build --skip test --skip script && typechain --target ethers-v5 --out-dir ./typechain-types './out/?(DataProvider|RollupProcessor|*Bridge|I*).sol/*.json'",
     "test:pinned:14000000": "forge test --fork-block-number 14000000 --match-contract 'Element' --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c",
+    "test:pinned:14950000": "forge test --fork-block-number 14950000 --match-contract 'BiDCA' --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c",
     "test:pinned:14970000": "forge test --fork-block-number 14970000 -m 'testRedistributionSuccessfulSwap|testRedistributionExitWhenICREqualsMCR' --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c",
     "test:pinned:14972000": "forge test --fork-block-number 14972000 -m 'testRedistributionFailingSwap' --fork-url https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c",
-    "test:pinned": "yarn test:pinned:14000000 && yarn test:pinned:14970000 && yarn test:pinned:14972000",
-    "test": "forge test --no-match-contract 'Element' --no-match-test 'testRedistribution' && yarn test:pinned",
+    "test:pinned": "yarn test:pinned:14000000 && yarn test:pinned:14950000 && yarn test:pinned:14970000 && yarn test:pinned:14972000",
+    "test": "forge test --no-match-contract 'Element|BiDCA' --no-match-test 'testRedistribution' && yarn test:pinned",
     "formatting": "forge fmt",
     "formatting:check": "forge fmt --check",
     "lint": "solhint --config ./.solhint.json --fix \"src/**/*.sol\""
   },
   "devDependencies": {
-    "@typechain/ethers-v5": "^10.1.1",
-    "ethers": "^5.7.2",
     "solhint": "https://github.com/LHerskind/solhint",
     "typechain": "^8.1.1",
     "typescript": "^4.9.3"
