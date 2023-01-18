@@ -42,19 +42,34 @@ contract AggregateDeployment is BaseDeployment {
             address wrappedDai = 0x3A285cbE492cB172b78E76Cf4f15cb6Fe9f162E4;
 
             elementDeployment.registerPool(
-                elementBridge, 0x71628c66C502F988Fbb9e17081F2bD14e361FAF4, wrappedDai, 1634346845
+                elementBridge,
+                0x71628c66C502F988Fbb9e17081F2bD14e361FAF4,
+                wrappedDai,
+                1634346845
             );
             elementDeployment.registerPool(
-                elementBridge, 0xA47D1251CF21AD42685Cc6B8B3a186a73Dbd06cf, wrappedDai, 1643382446
+                elementBridge,
+                0xA47D1251CF21AD42685Cc6B8B3a186a73Dbd06cf,
+                wrappedDai,
+                1643382446
             );
             elementDeployment.registerPool(
-                elementBridge, 0xEdf085f65b4F6c155e13155502Ef925c9a756003, wrappedDai, 1651275535
+                elementBridge,
+                0xEdf085f65b4F6c155e13155502Ef925c9a756003,
+                wrappedDai,
+                1651275535
             );
             elementDeployment.registerPool(
-                elementBridge, 0x8fFD1dc7C3eF65f833CF84dbCd15b6Ad7f9C54EC, wrappedDai, 1663361092
+                elementBridge,
+                0x8fFD1dc7C3eF65f833CF84dbCd15b6Ad7f9C54EC,
+                wrappedDai,
+                1663361092
             );
             elementDeployment.registerPool(
-                elementBridge, 0x7F4A33deE068C4fA012d64677C61519a578dfA35, wrappedDai, 1677243924
+                elementBridge,
+                0x7F4A33deE068C4fA012d64677C61519a578dfA35,
+                wrappedDai,
+                1677243924
             );
         }
 
@@ -74,7 +89,10 @@ contract AggregateDeployment is BaseDeployment {
 
         emit log("--- Element 2M ---");
         {
-            uint256 element2Id = listBridge(IRollupProcessor(ROLLUP_PROCESSOR).getSupportedBridge(1), 2000000);
+            uint256 element2Id = listBridge(
+                IRollupProcessor(ROLLUP_PROCESSOR).getSupportedBridge(1),
+                2000000
+            );
             emit log_named_uint("Element 2M bridge address id", element2Id);
         }
 
@@ -85,7 +103,10 @@ contract AggregateDeployment is BaseDeployment {
             erc4626Bridge = erc4626Deployment.deploy();
 
             uint256 depositAddressId = listBridge(erc4626Bridge, 300000);
-            emit log_named_uint("ERC4626 bridge address id (300k gas)", depositAddressId);
+            emit log_named_uint(
+                "ERC4626 bridge address id (300k gas)",
+                depositAddressId
+            );
         }
 
         emit log("--- Euler ---");
@@ -119,10 +140,16 @@ contract AggregateDeployment is BaseDeployment {
         emit log("--- ERC4626 400k and 500k gas configurations ---");
         {
             uint256 depositAddressId = listBridge(erc4626Bridge, 500000);
-            emit log_named_uint("ERC4626 bridge address id (500k gas)", depositAddressId);
+            emit log_named_uint(
+                "ERC4626 bridge address id (500k gas)",
+                depositAddressId
+            );
 
             depositAddressId = listBridge(erc4626Bridge, 400000);
-            emit log_named_uint("ERC4626 bridge address id (400k gas)", depositAddressId);
+            emit log_named_uint(
+                "ERC4626 bridge address id (400k gas)",
+                depositAddressId
+            );
         }
 
         emit log("--- AAVE v2 ---");
@@ -205,21 +232,35 @@ contract AggregateDeployment is BaseDeployment {
             address tb275 = liquityTroveDeployment.deploy(275);
             address tb400 = liquityTroveDeployment.deploy(400);
 
-            // Open the troves
-            liquityTroveDeployment.openTrove(tb275);
-            liquityTroveDeployment.openTrove(tb400);
+            // Open the troves after rest of listing. Their require a lot of eth, so we do it last.
+            // liquityTroveDeployment.openTrove(tb275);
+            // liquityTroveDeployment.openTrove(tb400);
 
-            bytes memory listLiquity275Bridge =
-                abi.encodeWithSelector(IRollupProcessor.setSupportedBridge.selector, tb275, 700_000);
-            bytes memory listLiquity400Bridge =
-                abi.encodeWithSelector(IRollupProcessor.setSupportedBridge.selector, tb400, 700_000);
-            bytes memory listLUSD = abi.encodeWithSelector(
-                IRollupProcessor.setSupportedAsset.selector, 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0, 55_000
+            bytes memory listLiquity275Bridge = abi.encodeWithSelector(
+                IRollupProcessor.setSupportedBridge.selector,
+                tb275,
+                700_000
             );
-            bytes memory listLiquity275Asset =
-                abi.encodeWithSelector(IRollupProcessor.setSupportedAsset.selector, tb275, 55_000);
-            bytes memory listLiquity400Asset =
-                abi.encodeWithSelector(IRollupProcessor.setSupportedAsset.selector, tb400, 55_000);
+            bytes memory listLiquity400Bridge = abi.encodeWithSelector(
+                IRollupProcessor.setSupportedBridge.selector,
+                tb400,
+                700_000
+            );
+            bytes memory listLUSD = abi.encodeWithSelector(
+                IRollupProcessor.setSupportedAsset.selector,
+                0x5f98805A4E8be255a32880FDeC7F6728C6568bA0,
+                55_000
+            );
+            bytes memory listLiquity275Asset = abi.encodeWithSelector(
+                IRollupProcessor.setSupportedAsset.selector,
+                tb275,
+                55_000
+            );
+            bytes memory listLiquity400Asset = abi.encodeWithSelector(
+                IRollupProcessor.setSupportedAsset.selector,
+                tb400,
+                55_000
+            );
 
             deployData[0] = listLiquity275Bridge;
             deployData[1] = listLiquity400Bridge;
@@ -234,21 +275,28 @@ contract AggregateDeployment is BaseDeployment {
             lister.setUp();
 
             address erc4626CompoundDai = 0x6D088fe2500Da41D7fA7ab39c76a506D7c91f53b;
-            bytes memory listCompoundDai =
-                abi.encodeWithSelector(IRollupProcessor.setSupportedAsset.selector, erc4626CompoundDai, 55_000);
+            bytes memory listCompoundDai = abi.encodeWithSelector(
+                IRollupProcessor.setSupportedAsset.selector,
+                erc4626CompoundDai,
+                55_000
+            );
             deployData[5] = listCompoundDai;
         }
 
         emit log("--- Uniswap ---");
         {
-            UniswapDeployment uniswapDeployment = new UniswapDeployment();
-            uniswapDeployment.setUp();
-            address uniswapBridge = uniswapDeployment.deploy();
+            address uniswapBridge = 0x5594808e8A7b44da9D2382E6d72ad50a3e2571E0;
 
-            bytes memory listUniswap =
-                abi.encodeWithSelector(IRollupProcessor.setSupportedBridge.selector, uniswapBridge, 500_000);
-            bytes memory listLargeUniswap =
-                abi.encodeWithSelector(IRollupProcessor.setSupportedBridge.selector, uniswapBridge, 800_000);
+            bytes memory listUniswap = abi.encodeWithSelector(
+                IRollupProcessor.setSupportedBridge.selector,
+                uniswapBridge,
+                500_000
+            );
+            bytes memory listLargeUniswap = abi.encodeWithSelector(
+                IRollupProcessor.setSupportedBridge.selector,
+                uniswapBridge,
+                800_000
+            );
 
             deployData[6] = listUniswap;
             deployData[7] = listLargeUniswap;
@@ -257,7 +305,11 @@ contract AggregateDeployment is BaseDeployment {
         emit log("--- Set ---");
         {
             address iceth = 0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84;
-            bytes memory listIceth = abi.encodeWithSelector(IRollupProcessor.setSupportedAsset.selector, iceth, 55_000);
+            bytes memory listIceth = abi.encodeWithSelector(
+                IRollupProcessor.setSupportedAsset.selector,
+                iceth,
+                55_000
+            );
             deployData[8] = listIceth;
         }
 
@@ -276,7 +328,9 @@ contract AggregateDeployment is BaseDeployment {
     function updateDataProvider() public {
         // This should be run after we have already deployed the bridges and assets.
         IRollupProcessor rp = IRollupProcessor(ROLLUP_PROCESSOR);
-        DataProvider dataProvider = DataProvider(0x8B2E54fa4398C8f7502f30aC94Cb1f354390c8ab);
+        DataProvider dataProvider = DataProvider(
+            0x8B2E54fa4398C8f7502f30aC94Cb1f354390c8ab
+        );
 
         uint256[] memory assetIds = new uint256[](5);
         string[] memory assetNames = new string[](5);
@@ -285,7 +339,8 @@ contract AggregateDeployment is BaseDeployment {
         // Start at index 10. The first 10 are already listed.
         for (uint256 i = 10; i <= assetCount; i++) {
             assetIds[i - 10] = i;
-            assetNames[i - 10] = IERC20Metadata(rp.getSupportedAsset(i)).symbol();
+            assetNames[i - 10] = IERC20Metadata(rp.getSupportedAsset(i))
+                .symbol();
         }
 
         // Bridges
@@ -302,7 +357,12 @@ contract AggregateDeployment is BaseDeployment {
         bridgeTags[3] = "Uniswap_800K";
 
         vm.prank(dataProvider.owner());
-        dataProvider.addAssetsAndBridges(assetIds, assetNames, bridgeIds, bridgeTags);
+        dataProvider.addAssetsAndBridges(
+            assetIds,
+            assetNames,
+            bridgeIds,
+            bridgeTags
+        );
 
         DataProviderDeployment dataProviderDeployment = new DataProviderDeployment();
         dataProviderDeployment.readProvider(address(dataProvider));
@@ -321,12 +381,14 @@ contract AggregateDeployment is BaseDeployment {
         uint256 assetCount = assetLength();
         emit log_named_uint("Assets", assetCount + 1);
         for (uint256 i = 0; i <= assetCount; i++) {
-            string memory symbol = i > 0 ? IERC20Metadata(rp.getSupportedAsset(i)).symbol() : "Eth";
+            string memory symbol = i > 0
+                ? IERC20Metadata(rp.getSupportedAsset(i)).symbol()
+                : "Eth";
             uint256 gas = i > 0 ? rp.assetGasLimits(i) : 30000;
             emit log_named_string(
                 string(abi.encodePacked("  Asset ", Strings.toString(i))),
                 string(abi.encodePacked(symbol, ", ", Strings.toString(gas)))
-                );
+            );
         }
 
         uint256 bridgeCount = bridgesLength();
@@ -336,8 +398,14 @@ contract AggregateDeployment is BaseDeployment {
             uint256 gas = rp.bridgeGasLimits(i);
             emit log_named_string(
                 string(abi.encodePacked("  Bridge ", Strings.toString(i))),
-                string(abi.encodePacked(Strings.toHexString(bridge), ", ", Strings.toString(gas)))
-                );
+                string(
+                    abi.encodePacked(
+                        Strings.toHexString(bridge),
+                        ", ",
+                        Strings.toString(gas)
+                    )
+                )
+            );
         }
     }
 }
