@@ -124,8 +124,8 @@ contract DataProviderDeployment is BaseDeployment {
         bridgeTags[6] = "DCA_400K";
         bridgeTags[7] = "ERC4626_500K";
         bridgeTags[8] = "ERC4626_400K";
-        bridgeTags[9] = "Liquity275_550K";
-        bridgeTags[10] = "Liquity400_550K";
+        bridgeTags[9] = "Liquity275_700K";
+        bridgeTags[10] = "Liquity400_700K";
         bridgeTags[11] = "Uniswap_500K";
         bridgeTags[12] = "Uniswap_800K";
 
