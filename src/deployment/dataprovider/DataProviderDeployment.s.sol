@@ -20,16 +20,6 @@ contract DataProviderDeployment is BaseDeployment {
         return address(provider);
     }
 
-    function read() public {
-        address provider = 0x8B2E54fa4398C8f7502f30aC94Cb1f354390c8ab;
-        if (block.chainid == 3567) {
-            provider = 0xD25B8B044CE58eaBF41288E223609726A6c98e44;
-        } else if (block.chainid == 0xa57ec) {
-            provider = 0xA33B20Ba45cA9C265bbF7b35a75717590EDfc868;
-        }
-        readProvider(provider);
-    }
-
     function readProvider(address _provider) public {
         DataProvider provider = DataProvider(_provider);
 
