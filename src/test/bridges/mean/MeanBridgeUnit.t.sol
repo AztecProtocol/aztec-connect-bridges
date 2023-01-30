@@ -36,7 +36,7 @@ contract MeanBridgeUnitTest is Test {
     }
 
     function testSetup() public {
-        assertEq(address(bridge.dcaHub()), address(DCA_HUB));
+        assertEq(address(bridge.DCA_HUB()), address(DCA_HUB));
         assertEq(bridge.owner(), OWNER);
     }
 

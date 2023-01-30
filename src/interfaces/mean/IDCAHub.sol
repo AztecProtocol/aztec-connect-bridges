@@ -53,6 +53,12 @@ interface IDCAHub {
   function paused() external view returns (bool isPaused);
 
   /**
+   * @notice Returns if a token is currently allowed or not
+   * @return Allowed state of token
+   */
+  function allowedTokens(address token) external view returns (bool);
+
+  /**
    * @notice Creates a new position
    * @param from The address of the "from" token
    * @param to The address of the "to" token

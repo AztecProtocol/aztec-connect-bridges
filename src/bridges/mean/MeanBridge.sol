@@ -18,12 +18,12 @@ import {BridgeBase} from "../base/BridgeBase.sol";
  * @notice You can use this contract to deposit and withdraw on Mean Finance
  */
 contract MeanBridge is BridgeBase, Ownable2Step {
-    
+
     using SafeERC20 for IERC20;
 
     IWETH public constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    IDCAHub public immutable dcaHub;
-    address private immutable thisAddress;
+    IDCAHub public immutable DCA_HUB;
+    address private immutable THIS_ADDRESS;
 
     /**
      * @notice Sets address of rollup processor and Subsidy-related info
@@ -33,8 +33,8 @@ contract MeanBridge is BridgeBase, Ownable2Step {
      */
     constructor(IDCAHub _hub, address _owner, address _rollupProcessor) BridgeBase(_rollupProcessor) {
         _transferOwnership(_owner);
-        dcaHub = _hub;
-        thisAddress = address(this);
+        DCA_HUB = _hub;
+        THIS_ADDRESS = address(this);
     }
 
     // Note: we need to be able to receive ETH to deposit as WETH
