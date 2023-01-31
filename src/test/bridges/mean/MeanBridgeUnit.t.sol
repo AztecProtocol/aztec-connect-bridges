@@ -18,7 +18,7 @@ contract MeanBridgeUnitTest is Test {
     IERC20 public constant DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     IERC20 public constant DAI_WRAPPER = IERC20(0x4169Df1B7820702f566cc10938DA51F6F597d264);
     address public constant OWNER = 0x0000000000000000000000000000000000000001;
-    address public constant NOT_OWNER = 0x0000000000000000000000000000000000000002;
+    address public constant RANDOM_ADDRESS = 0x0000000000000000000000000000000000000002;
     IDCAHub public constant DCA_HUB = IDCAHub(0x0000000000000000000000000000000000000003);
     ITransformerRegistry public constant TRANSFORMER_REGISTRY = ITransformerRegistry(0x0000000000000000000000000000000000000003);
 
@@ -52,12 +52,36 @@ contract MeanBridgeUnitTest is Test {
         assertEq(bridge.getWrapperId(address(DAI_WRAPPER)), 0);
     }
 
+    function testInvalidCallerOnConvert() public {
+        vm.prank(RANDOM_ADDRESS);
+        vm.expectRevert(ErrorLib.InvalidCaller.selector);
+        bridge.convert(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0, 0, address(0));
+    }
+
+    function testInvalidOutputAssetTypeOnConvert() public {
+        AztecTypes.AztecAsset memory inputAssetA =
+            AztecTypes.AztecAsset({id: 1, erc20Address: address(DAI), assetType: AztecTypes.AztecAssetType.ERC20});
+        AztecTypes.AztecAsset memory outputAssetB =
+            AztecTypes.AztecAsset({id: 1, erc20Address: address(DAI), assetType: AztecTypes.AztecAssetType.ETH});
+        vm.expectRevert(ErrorLib.InvalidOutputB.selector);
+        bridge.convert(inputAssetA, emptyAsset, emptyAsset, outputAssetB, 0, 0, 0, address(0));
+    }
+
+    function testInvalidOutputAssetAddressOnConvert() public {
+        AztecTypes.AztecAsset memory inputAssetA =
+            AztecTypes.AztecAsset({id: 1, erc20Address: address(DAI), assetType: AztecTypes.AztecAssetType.ERC20});
+        AztecTypes.AztecAsset memory outputAssetB =
+            AztecTypes.AztecAsset({id: 1, erc20Address: address(DAI_WRAPPER), assetType: AztecTypes.AztecAssetType.ERC20});
+        vm.expectRevert(ErrorLib.InvalidOutputB.selector);
+        bridge.convert(inputAssetA, emptyAsset, emptyAsset, outputAssetB, 0, 0, 0, address(0));
+    }
+
     function testInvalidCallerOnSetSubsidies() public {        
         uint256[] memory _criteria = new uint256[](0);
         uint32[] memory _gasUsage = new uint32[](0);
         uint32[] memory _minGasPerMinute  = new uint32[](0);
 
-        vm.prank(NOT_OWNER);
+        vm.prank(RANDOM_ADDRESS);
         vm.expectRevert(bytes("Ownable: caller is not the owner"));
         
         bridge.setSubsidies(_criteria, _gasUsage, _minGasPerMinute);
@@ -78,7 +102,6 @@ contract MeanBridgeUnitTest is Test {
         assertEq(_subsidy.gasUsage, _gasUsage[0]);
         assertEq(_subsidy.minGasPerMinute, _minGasPerMinute[0]);
     }
-
 
     function testMaxApprove() public {
         IERC20[] memory _tokens = new IERC20[](1);
