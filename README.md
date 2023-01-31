@@ -52,16 +52,21 @@ To get started follow the steps below:
    Use the env variables `SIMULATE_ADMIN=false|true` and `NETWORK=mainnet|devnet|testnet|DONT_CARE` to specify how to run it. (Note: DONT_CARE is relevant when deploying to the local devnet, more information on this is outlined below)  
    With `SIMULATE_ADMIN=true`, the `listBridge` and `listAsset` helpers will be impersonating an account with access to list, otherwise they are broadcasted. See the example scripts from other bridges for inspiration on how to write the scripts.
 
-7. Using the local devnet takes a few more steps to get up and running. This section will guide you through it. If you are a grantee and have received access to the partner testnet you can find details of that in section 8.
+7. Using the local devnet is the default integration testing environment, it can take a bit of effort to set up but this section will guide you through it! If you are a grantee and have received access to the partner testnet you can find details of that in section 8.
 
    ### Getting the local devnet up and running
 
-   In the majority of cases you will want to run the local devnet as a mainnet fork, as doing so will allow you to test against mainnet protocols.
+   In the majority of cases you will want to run the local devnet as a mainnet fork, to allow you to test against mainnet protocols.
 
-   Inside this repo there is a `/local_devnet` folder that contains some required resources. The `docker-compose.fork.yml` contains a configuration that will launch a local node (anvil), deploy our contracts and run our sequencer.
+   Inside this repo there is a `/local_devnet` folder that contains the required resources. The `docker-compose.fork.yml` contains a compose configuration that will launch:
+
+   1. A local node (anvil).
+   2. Deploy our contracts.
+   3. Run a local sequencer.
+
    If you do not have docker installed please follow the instructions [here](https://docs.docker.com/compose/).
 
-   To run the devnet run the following commands.
+   To run the devnet please execute the following commands.
 
    > Note: A more in-depth overview of the local devnet can be found over at our [documentation](https://docs.aztec.network/developers/local-devnet).
 
@@ -79,26 +84,34 @@ To get started follow the steps below:
 
    ### Deploying a bridge
 
-   Open up another shell and enter:
+   Open up another terminal and enter:
 
    ```bash
    # Setup env
+   # ---------
    # For the below script you will need to have both `curl` and `jq` installed.
-   source ./local_devnet/export_addresses.sh # This script will load the ROLLUP_PROVIDER_ADDRESS etc into your BASH_ENV a brief explainer for this script can be found below
+   # It loads required ENV_VARS (the ROLLUP_PROCESSOR_ADDRESS) into your ENV an explainer for this script can be found
+   # in the collapsed section below
+   source ./local_devnet/export_addresses.sh
+   # Deploy to our local fork
    export RPC=http://localhost:8545
-   export PRIV_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 # Default anvil private key
+   # Deploy using the default anvil key as anvil is our current local node
+   export PRIV_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+   # DONT_CARE means we are not targeting any development environments
    export NETWORK=DONT_CARE
+   # Do not run the deploy scripts in simulation mode
    export SIMULATE_ADMIN=false
 
+   # Example deployment script
    forge script --fork-url $RPC --private-key $PRIV_KEY <NAME_OF_DEPLOYMENT_SCRIPT> --sig "<FUNCTION_SIF>" --broadcast
 
    # Example script reading the current assets and bridges
    forge script --fork-url $RPC AggregateDeployment --sig "readStats()"
    ```
 
-   Note any deployments will need to be made from the default anvil deployer key. For simplicity the fork uses anvil's default address as the deployer and permissioned addresses.
+   Note any deployments will need to be made from the default anvil deployer key. For simplicity the fork uses anvil's default address has all admin roles on the deployed rollup.
 
-   Anytime that you need to view the addresses you can use the export addresses script.
+   If you need to view the contract addresses of the core rollup contracts in your local devnet you can run the `./local_devnet/export_addresses.sh` script and it will print them.
 
    <details>
    <summary> Click here to read about how export_addresses.sh works under the hood </summary>
