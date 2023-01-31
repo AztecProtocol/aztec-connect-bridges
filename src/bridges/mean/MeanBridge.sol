@@ -14,6 +14,7 @@ import {ITransformer} from "../../interfaces/mean/ITransformer.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
 import {MeanErrorLib} from "./MeanErrorLib.sol";
+import {MeanSwapIntervalDecodingLib} from "./MeanSwapIntervalDecodingLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 
 /**
@@ -31,11 +32,11 @@ contract MeanBridge is BridgeBase, Ownable2Step {
     ITransformerRegistry public immutable TRANSFORMER_REGISTRY;
     address private immutable THIS_ADDRESS;
 
-    // Note: Mean supports yield-while-DCAing and we want to support it here to. The thing
+    // Note: Mean supports yield-while-DCAing and we want to support it here too. The thing
     // is that a specific token (for example DAI) can have multiple source platforms. Each platform
     // is supported by a ERC4626 wrapper. Since we can't pass the wrapper's address, we have created a
     // a wrapper registry. This will allow us to assign a unique id to each address, and we can pass 
-    // said if as part of the aux data
+    // said id as part of the aux data
     EnumerableSet.AddressSet internal tokenWrapperRegistry;
 
     event NewWrappersSupported(address[] wrappers);
@@ -111,11 +112,63 @@ contract MeanBridge is BridgeBase, Ownable2Step {
         return uint16(tokenWrapperRegistry._inner._indexes[bytes32(uint256(uint160(_wrapper)))]);
     }
 
+    /**
+     * @notice Computes the criteria that is passed when claiming subsidy
+     * @param _inputAssetA - ETH or ERC20 token to deposit and start swapping
+     * @param _outputAssetA - ETH or ERC20 token to swap funds into
+     * @param _auxData - The amount of swaps, swap interval and wrappers encoded together
+     * @return The criteria
+     */
+    function computeCriteria(
+        AztecTypes.AztecAsset calldata _inputAssetA,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata _outputAssetA,
+        AztecTypes.AztecAsset calldata,
+        uint64 _auxData
+    ) public view override(BridgeBase) returns (uint256) {
+        (address _from, address _to, uint32 _amountOfSwaps, uint32 _swapInterval) = _mapToPositionData(_inputAssetA, _outputAssetA, _auxData);
+        return computeCriteriaForPosition(_from, _to, _amountOfSwaps, _swapInterval);
+    }
+
+    /**
+     * @notice Computes the criteria that for a given position
+     * @param _from - The "from" token
+     * @param _to - The "to" token
+     * @param _amountOfSwaps - The amount to swaps for the position
+     * @param _swapInterval - The positions's swap interval
+     * @return The criteria
+     */
+    function computeCriteriaForPosition(address _from, address _to, uint32 _amountOfSwaps, uint32 _swapInterval) public pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(_from, _to, _amountOfSwaps, _swapInterval)));
+    }    
+
     function _maxApprove(IERC20 _token, address _target) internal {
         // Using safeApprove(...) instead of approve(...) and first setting the allowance to 0 because underlying
         // can be Tether
         IERC20(_token).safeApprove(_target, 0);
         IERC20(_token).safeApprove(_target, type(uint256).max);
     }
+
+    function _mapToPositionData(
+        AztecTypes.AztecAsset memory _inputAsset,
+        AztecTypes.AztecAsset memory _outputAsset,
+        uint64 _auxData
+    ) internal view returns (address _from, address _to, uint32 _amountOfSwaps, uint32 _swapInterval) {
+        _amountOfSwaps = uint24(_auxData);
+        _swapInterval = MeanSwapIntervalDecodingLib.calculateSwapInterval(uint8(_auxData >> 24));
+        _from = _mapAssetToAddress(_inputAsset, _auxData, 32);
+        _to = _mapAssetToAddress(_outputAsset, _auxData, 48);
+    }
+
+    function _mapAssetToAddress(AztecTypes.AztecAsset memory _asset, uint64 _auxData, uint256 _shift) internal view returns(address _address) {
+        if (_asset.assetType == AztecTypes.AztecAssetType.ETH) {
+            return address(WETH);
+        } else {
+            uint256 _wrapperId = uint16(_auxData >> _shift);
+            return _wrapperId == 0 
+                ? _asset.erc20Address
+                : tokenWrapperRegistry.at(_wrapperId - 1);
+        }
+    }    
 
 }
