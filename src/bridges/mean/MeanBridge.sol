@@ -58,6 +58,17 @@ contract MeanBridge is BridgeBase, Ownable2Step {
     receive() external payable {}
 
     /**
+     * @notice Defines subsidies for DCA pairs
+     * @dev Can only be called by the contract's owner
+     */
+    function setSubsidies(
+        uint256[] calldata _criteria,
+        uint32[] calldata _gasUsage,
+        uint32[] calldata _minGasPerMinute) external onlyOwner {
+        SUBSIDY.setGasUsageAndMinGasPerMinute(_criteria, _gasUsage, _minGasPerMinute);
+    }
+
+    /**
      * @notice Registers wrappers internally, so that they can be referenced by an index instead of the full address
      * @dev Anyone can call this method, it's not permissioned
      * @param _wrappers The wrappers to register
