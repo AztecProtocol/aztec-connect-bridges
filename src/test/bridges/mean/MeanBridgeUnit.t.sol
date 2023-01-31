@@ -7,6 +7,7 @@ import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MeanBridge} from "../../../bridges/mean/MeanBridge.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
+import {MeanErrorLib} from "../../../bridges/mean/MeanErrorLib.sol";
 import {IDCAHub} from "../../../interfaces/mean/IDCAHub.sol";
 import {ITransformerRegistry} from "../../../interfaces/mean/ITransformerRegistry.sol";
 
@@ -21,6 +22,8 @@ contract MeanBridgeUnitTest is Test {
 
     address private rollupProcessor;
     MeanBridge private bridge;
+
+    event NewWrappersSupported(address[] wrappers);
 
     function setUp() public {
         // In unit tests we set address of rollupProcessor to the address of this test contract
@@ -42,6 +45,7 @@ contract MeanBridgeUnitTest is Test {
         assertEq(address(bridge.DCA_HUB()), address(DCA_HUB));
         assertEq(address(bridge.TRANSFORMER_REGISTRY()), address(TRANSFORMER_REGISTRY));
         assertEq(bridge.owner(), OWNER);
+        assertFalse(bridge.isWrapperSupported(address(DAI)));
     }
 
     function testMaxApprove() public {
@@ -51,6 +55,60 @@ contract MeanBridgeUnitTest is Test {
         assertEq(DAI.allowance(address(bridge), address(DCA_HUB)), type(uint256).max);
         assertEq(DAI.allowance(address(bridge), address(TRANSFORMER_REGISTRY)), type(uint256).max);
         assertEq(DAI.allowance(address(bridge), rollupProcessor), type(uint256).max);
+    }
+
+    function testRevetsWhenRegisteringWrapperThatIsNotAllowed() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                MeanErrorLib.TokenNotAllowed.selector, 
+                address(DAI)
+            )
+        );
+        
+        address[] memory _tokens = new address[](1);
+        _tokens[0] = address(DAI);
+        _mockIsTokenAllowed(DAI, false);
+        bridge.registerWrappers(_tokens);
+    }
+
+    function testRevertsWhenRegisteringWrapperThatWasAlreadyRegistered() public {        
+        address[] memory _tokens = new address[](1);
+        _tokens[0] = address(DAI);
+        _mockIsTokenAllowed(DAI, true);
+        bridge.registerWrappers(_tokens);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                MeanErrorLib.TokenAlreadyRegistered.selector, 
+                address(DAI)
+            )
+        );
+        bridge.registerWrappers(_tokens);
+    }
+
+    function testRegisterWrappers() public {
+        address[] memory _tokens = new address[](1);
+        _tokens[0] = address(DAI);
+        
+        vm.expectEmit(true, false, false, false, address(bridge));
+        emit NewWrappersSupported(_tokens);
+        
+        _mockIsTokenAllowed(DAI, true);
+        bridge.registerWrappers(_tokens);
+        
+        assertEq(DAI.allowance(address(bridge), address(DCA_HUB)), type(uint256).max);
+        assertEq(DAI.allowance(address(bridge), address(TRANSFORMER_REGISTRY)), type(uint256).max);
+        assertTrue(bridge.isWrapperSupported(address(DAI)));
+    }
+
+    function _mockIsTokenAllowed(IERC20 _token, bool _isAllowed) internal {
+        vm.mockCall(
+            address(DCA_HUB),
+            abi.encodeWithSelector(
+                DCA_HUB.allowedTokens.selector,
+                address(_token)
+            ),
+            abi.encode(_isAllowed)
+        );
     }
 
 }

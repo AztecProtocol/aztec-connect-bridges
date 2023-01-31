@@ -13,6 +13,7 @@ import {ITransformerRegistry} from "../../interfaces/mean/ITransformerRegistry.s
 import {ITransformer} from "../../interfaces/mean/ITransformer.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
 import {ErrorLib} from "../base/ErrorLib.sol";
+import {MeanErrorLib} from "./MeanErrorLib.sol";
 import {BridgeBase} from "../base/BridgeBase.sol";
 
 /**
@@ -23,11 +24,15 @@ import {BridgeBase} from "../base/BridgeBase.sol";
 contract MeanBridge is BridgeBase, Ownable2Step {
 
     using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     IWETH public constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     IDCAHub public immutable DCA_HUB;
     ITransformerRegistry public immutable TRANSFORMER_REGISTRY;
     address private immutable THIS_ADDRESS;
+    EnumerableSet.AddressSet internal tokenWrapperRegistry;
+
+    event NewWrappersSupported(address[] wrappers);
 
     /**
      * @notice Sets address of rollup processor and Subsidy-related info
@@ -46,6 +51,35 @@ contract MeanBridge is BridgeBase, Ownable2Step {
     receive() external payable {}
 
     /**
+     * @notice Registers wrappers internally, so that they can be referenced by an index instead of the full address
+     * @dev Anyone can call this method, it's not permissioned
+     * @param _wrappers The wrappers to register
+     */
+    function registerWrappers(address[] calldata _wrappers) external {
+        for (uint i; i < _wrappers.length; ) {
+            address _wrapper = _wrappers[i];
+            if (!DCA_HUB.allowedTokens(_wrapper)) {
+                revert MeanErrorLib.TokenNotAllowed(_wrapper);
+            } 
+            // Note: we could check that the address is indeed a wrapper, but we don't think it's necessary
+            //       We check that the addresses are wrappers when we use them, and we have enough slots to 
+            //       add non-wrapper tokens. So we just don't check it here and save gas
+            bool _added = tokenWrapperRegistry.add(_wrapper);
+            if (!_added) {
+                revert MeanErrorLib.TokenAlreadyRegistered(_wrapper);
+            }
+
+            _maxApprove(IERC20(_wrapper), address(DCA_HUB));
+            _maxApprove(IERC20(_wrapper), address(TRANSFORMER_REGISTRY));
+
+            unchecked{
+                ++i;
+            }
+        }
+        emit NewWrappersSupported(_wrappers);
+    }    
+
+    /**
      * @notice Set all the necessary approvals for the DCA hub, the transformer registry and the rollup processor
      * @param _tokens - The tokens to approve
      */
@@ -59,6 +93,14 @@ contract MeanBridge is BridgeBase, Ownable2Step {
                 ++i;
             }
         }
+    }
+
+    /**
+     * @notice Returns whether one wrapper 
+     * @return All registered wrappers
+     */
+    function isWrapperSupported(address _wrapper) external view returns(bool) {
+        return tokenWrapperRegistry.contains(_wrapper);
     }
 
     function _maxApprove(IERC20 _token, address _target) internal {
