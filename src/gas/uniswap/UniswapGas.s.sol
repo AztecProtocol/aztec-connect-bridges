@@ -33,7 +33,7 @@ contract UniswapMeasure is UniswapDeployment {
 
     UniswapBridge.SplitPath internal emptySplitPath;
 
-    function setUp() public override (BaseDeployment) {
+    function setUp() public override(BaseDeployment) {
         super.setUp();
 
         address defiProxy = IRead(ROLLUP_PROCESSOR).defiBridgeProxy();

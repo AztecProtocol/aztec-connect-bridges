@@ -101,7 +101,7 @@ contract ElementBridge is BridgeBase {
      * @param quantityTokensHeld total quantity of principal tokens purchased for the tranche
      * @param quantityAssetRedeemed total quantity of underlying tokens received from the element tranche on expiry
      * @param quantityAssetRemaining the current remainning quantity of underlying tokens held by the contract
-     * @param numDeposits the total number of deposits (interactions) against the give tranche
+     * @param numDeposits the total number of deposits (interactions) against the given tranche
      * @param numFinalised the current number of interactions against this tranche that have been finalised
      * @param redemptionStatus value describing the redemption status of the tranche
      */
@@ -129,7 +129,7 @@ contract ElementBridge is BridgeBase {
     // cache of all pools we have been configured to interact with
     mapping(uint256 => Pool) public pools;
 
-    // cahce of all of our tranche accounts
+    // cache of all of our tranche accounts
     mapping(address => TrancheAccount) private trancheAccounts;
 
     // mapping containing the block number in which a tranche was configured
@@ -145,7 +145,7 @@ contract ElementBridge is BridgeBase {
     MinHeap.MinHeapData private heap;
     mapping(uint64 => uint256[]) private expiryToNonce;
 
-    // 48 hours in seconds, usd for calculating speeedbump expiries
+    // 48 hours in seconds, usd for calculating speedbump expiries
     uint256 internal constant FORTY_EIGHT_HOURS = 172800;
 
     uint256 internal constant MAX_UINT = type(uint256).max;
@@ -167,7 +167,7 @@ contract ElementBridge is BridgeBase {
     /**
      * @dev Constructor
      * @param _rollupProcessor the address of the rollup contract
-     * @param _trancheFactory the address of the element tranche factor contract
+     * @param _trancheFactory the address of the element tranche factory contract
      * @param _trancheBytecodeHash the hash of the bytecode of the tranche contract, used for tranche contract address derivation
      * @param _balancerVaultAddress the address of the balancer router contract
      * @param _elementDeploymentValidatorAddress the address of the element deployment validator contract
@@ -428,7 +428,7 @@ contract ElementBridge is BridgeBase {
     )
         external
         payable
-        override (BridgeBase)
+        override(BridgeBase)
         onlyRollup
         returns (uint256 outputValueA, uint256 outputValueB, bool isAsync)
     {
@@ -602,7 +602,7 @@ contract ElementBridge is BridgeBase {
     )
         external
         payable
-        override (BridgeBase)
+        override(BridgeBase)
         onlyRollup
         returns (uint256 outputValueA, uint256 outputValueB, bool interactionCompleted)
     {

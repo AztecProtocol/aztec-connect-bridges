@@ -71,7 +71,7 @@ contract CurveStEthBridge is BridgeBase {
         uint256 _interactionNonce,
         uint64 _auxData,
         address
-    ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
+    ) external payable override(BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
         bool isETHInput = _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
         bool isWstETHInput = _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
             && _inputAssetA.erc20Address == address(WRAPPED_STETH);

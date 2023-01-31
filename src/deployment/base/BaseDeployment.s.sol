@@ -41,19 +41,11 @@ abstract contract BaseDeployment is Test {
     address internal ROLLUP_PROCESSOR;
     address internal LISTER;
 
-    function setRollupProcessor(address _rollupProcessor) public {
-        ROLLUP_PROCESSOR = _rollupProcessor;
-    }
-
-    function setLister(address _lister) public {
-        LISTER = _lister;
-    }
-
     /* solhint-enable var-name-mixedcase */
 
     function setUp() public virtual {
         // Read from the .env
-        string memory networkKey = "network";
+        string memory networkKey = "NETWORK";
 
         string memory envNetwork = vm.envString(networkKey);
         bytes32 envNetworkHash = keccak256(abi.encodePacked(envNetwork));
@@ -67,14 +59,20 @@ abstract contract BaseDeployment is Test {
         } else {
             NETWORK = Network.DONT_CARE;
             MODE = Mode.BROADCAST;
+            /* solhint-disable var-name-mixedcase */
+            string memory rollup_processor_key = "ROLLUP_PROCESSOR_ADDRESS";
+            string memory lister_key = "LISTER_ADDRESS";
+            /* solhint-enable var-name-mixedcase */
+
+            ROLLUP_PROCESSOR = vm.envAddress(rollup_processor_key);
+            LISTER = vm.envAddress(lister_key);
+
             require(ROLLUP_PROCESSOR != address(0), "RollupProcessor address resolved to 0");
             require(LISTER != address(0), "Lister address resolved to 0");
-            emit log_named_address("Rollup at", ROLLUP_PROCESSOR);
-            emit log_named_address("Lister at", LISTER);
             return;
         }
 
-        string memory modeKey = "simulateAdmin";
+        string memory modeKey = "SIMULATE_ADMIN";
         bool envMode = vm.envBool(modeKey);
         MODE = envMode ? Mode.SIMULATE_ADMIN : Mode.BROADCAST;
 
@@ -88,8 +86,6 @@ abstract contract BaseDeployment is Test {
         /* solhint-disable custom-error-over-require */
         require(ROLLUP_PROCESSOR != address(0), "RollupProcessor address resolved to 0");
         require(LISTER != address(0), "Lister address resolved to 0");
-        emit log_named_address("Rollup at", ROLLUP_PROCESSOR);
-        emit log_named_address("Lister at", LISTER);
     }
 
     /**

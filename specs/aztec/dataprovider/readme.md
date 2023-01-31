@@ -19,17 +19,17 @@ function getAssets() public view returns (AssetData[] memory);
 function getBridges() public view returns (BridgeData[] memory);
 ```
 
-The easiest way to access it, if already using this repository is to execute the `read()` script in the DataProviderDeployment solidity file. It holds addresses for mainnet, testnet and devnet. 
+The easiest way to access it, if already using this repository is to execute the `readProvider(address _provider)` script in the DataProviderDeployment solidity file. To get the address of the data provider, you can query the falafel status endpoint `https://api.aztec.network/<DEPLOY_TAG>/falafel/status` with `DEPLOY_TAG=<aztec-connect-prod|aztec-connect-testnet|aztec-connect-dev>`.
 
 ```bash
-export network=<mainnet|testnet|devnet> && export simulateAdmin=false
+export NETWORK=<mainnet|testnet|devnet> && export SIMULATE_ADMIN=false
 export ETH_RPC_URL=<INSERT_URL>
-forge script DataProviderDeployment --rpc-url $ETH_RPC_URL --sig "read()"
+forge script DataProviderDeployment --rpc-url $ETH_RPC_URL --sig "readProvider(address)" DATA_PROVIDER_ADDRESS
 ```
 
 ## Usage by owner
 
-Updating values stored in the data provider is only possible by the owner of the contract. 
+Updating values stored in the data provider is only possible by the owner of the contract.
 
 Before running the commands bellow export relevant environment variables:
 

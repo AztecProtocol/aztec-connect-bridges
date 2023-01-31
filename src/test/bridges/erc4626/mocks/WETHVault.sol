@@ -10,7 +10,7 @@ contract WETHVault is
     ERC20("WETH vault", "vWETH"),
     ERC4626(IERC20Metadata(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2))
 {
-    function decimals() public pure override (ERC20, ERC4626) returns (uint8) {
+    function decimals() public pure override(ERC20, ERC4626) returns (uint8) {
         return 18;
     }
 }

@@ -56,7 +56,7 @@ contract LidoBridge is BridgeBase {
         uint256 _interactionNonce,
         uint64,
         address
-    ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool isAsync) {
+    ) external payable override(BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool isAsync) {
         bool isETHInput = _inputAssetA.assetType == AztecTypes.AztecAssetType.ETH;
         bool isWstETHInput = _inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20
             && _inputAssetA.erc20Address == address(WRAPPED_STETH);

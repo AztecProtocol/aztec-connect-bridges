@@ -113,7 +113,7 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
         uint256,
         uint64 _auxData,
         address
-    ) external payable override (BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
+    ) external payable override(BridgeBase) onlyRollup returns (uint256 outputValueA, uint256, bool) {
         if (_inputAssetA.erc20Address == LUSD && _outputAssetA.erc20Address == address(this)) {
             // Deposit
             // Provides LUSD to the pool and claim rewards.
@@ -151,7 +151,7 @@ contract StabilityPoolBridge is BridgeBase, ERC20("StabilityPoolBridge", "SPB") 
     /**
      * @dev See {IERC20-totalSupply}.
      */
-    function totalSupply() public view override (ERC20) returns (uint256) {
+    function totalSupply() public view override(ERC20) returns (uint256) {
         return super.totalSupply() - DUST;
     }
 

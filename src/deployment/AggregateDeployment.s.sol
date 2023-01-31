@@ -9,6 +9,7 @@ import {BaseDeployment} from "./base/BaseDeployment.s.sol";
 import {IRollupProcessor} from "rollup-encoder/interfaces/IRollupProcessor.sol";
 import {DataProvider} from "../aztec/DataProvider.sol";
 
+import {ElementDeployment} from "./element/ElementDeployment.s.sol";
 import {CurveDeployment} from "./curve/CurveDeployment.s.sol";
 import {DonationDeployment} from "./donation/DonationDeployment.s.sol";
 import {ERC4626Deployment} from "./erc4626/ERC4626Deployment.s.sol";
@@ -27,10 +28,35 @@ import {CurveStethLpDeployment} from "./curve/CurveStethLpDeployment.s.sol";
 contract AggregateDeployment is BaseDeployment {
     address internal erc4626Bridge;
 
-    function deployAndListAll() public {
+    function deployAndListAll() public returns (address) {
         DataProviderDeployment dataProviderDeploy = new DataProviderDeployment();
         dataProviderDeploy.setUp();
         address dataProvider = dataProviderDeploy.deploy();
+
+        emit log("--- Element ---");
+        {
+            ElementDeployment elementDeployment = new ElementDeployment();
+            elementDeployment.setUp();
+            address elementBridge = elementDeployment.deployAndList();
+
+            address wrappedDai = 0x3A285cbE492cB172b78E76Cf4f15cb6Fe9f162E4;
+
+            elementDeployment.registerPool(
+                elementBridge, 0x71628c66C502F988Fbb9e17081F2bD14e361FAF4, wrappedDai, 1634346845
+            );
+            elementDeployment.registerPool(
+                elementBridge, 0xA47D1251CF21AD42685Cc6B8B3a186a73Dbd06cf, wrappedDai, 1643382446
+            );
+            elementDeployment.registerPool(
+                elementBridge, 0xEdf085f65b4F6c155e13155502Ef925c9a756003, wrappedDai, 1651275535
+            );
+            elementDeployment.registerPool(
+                elementBridge, 0x8fFD1dc7C3eF65f833CF84dbCd15b6Ad7f9C54EC, wrappedDai, 1663361092
+            );
+            elementDeployment.registerPool(
+                elementBridge, 0x7F4A33deE068C4fA012d64677C61519a578dfA35, wrappedDai, 1677243924
+            );
+        }
 
         emit log("--- Curve ---");
         {
@@ -162,6 +188,8 @@ contract AggregateDeployment is BaseDeployment {
         {
             dataProviderDeploy.updateNames(dataProvider);
         }
+
+        return dataProvider;
     }
 
     function readStats() public {
