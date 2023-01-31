@@ -30,6 +30,12 @@ contract MeanBridge is BridgeBase, Ownable2Step {
     IDCAHub public immutable DCA_HUB;
     ITransformerRegistry public immutable TRANSFORMER_REGISTRY;
     address private immutable THIS_ADDRESS;
+
+    // Note: Mean supports yield-while-DCAing and we want to support it here to. The thing
+    // is that a specific token (for example DAI) can have multiple source platforms. Each platform
+    // is supported by a ERC4626 wrapper. Since we can't pass the wrapper's address, we have created a
+    // a wrapper registry. This will allow us to assign a unique id to each address, and we can pass 
+    // said if as part of the aux data
     EnumerableSet.AddressSet internal tokenWrapperRegistry;
 
     event NewWrappersSupported(address[] wrappers);
@@ -62,8 +68,10 @@ contract MeanBridge is BridgeBase, Ownable2Step {
                 revert MeanErrorLib.TokenNotAllowed(_wrapper);
             } 
             // Note: we could check that the address is indeed a wrapper, but we don't think it's necessary
-            //       We check that the addresses are wrappers when we use them, and we have enough slots to 
-            //       add non-wrapper tokens. So we just don't check it here and save gas
+            // We check that the addresses are wrappers when we use them, and we have enough slots to add 
+            // non-wrapper tokens. So we just don't check it here and save gas
+            // Also, we know that we can only support 2**16 tokens on the registry, but we are not checking that
+            // here. We won't ever support that many tokens on our contract
             bool _added = tokenWrapperRegistry.add(_wrapper);
             if (!_added) {
                 revert MeanErrorLib.TokenAlreadyRegistered(_wrapper);
@@ -96,11 +104,11 @@ contract MeanBridge is BridgeBase, Ownable2Step {
     }
 
     /**
-     * @notice Returns whether one wrapper 
-     * @return All registered wrappers
+     * @notice Returns the id of the given wrapper, or zero if it has no id
+     * @return The id of the given wrapper, or zero if it has no id
      */
-    function isWrapperSupported(address _wrapper) external view returns(bool) {
-        return tokenWrapperRegistry.contains(_wrapper);
+    function getWrapperId(address _wrapper) external view returns(uint16) {
+        return uint16(tokenWrapperRegistry._inner._indexes[bytes32(uint256(uint160(_wrapper)))]);
     }
 
     function _maxApprove(IERC20 _token, address _target) internal {

@@ -45,7 +45,7 @@ contract MeanBridgeUnitTest is Test {
         assertEq(address(bridge.DCA_HUB()), address(DCA_HUB));
         assertEq(address(bridge.TRANSFORMER_REGISTRY()), address(TRANSFORMER_REGISTRY));
         assertEq(bridge.owner(), OWNER);
-        assertFalse(bridge.isWrapperSupported(address(DAI)));
+        assertEq(bridge.getWrapperId(address(DAI)), 0);
     }
 
     function testMaxApprove() public {
@@ -57,7 +57,7 @@ contract MeanBridgeUnitTest is Test {
         assertEq(DAI.allowance(address(bridge), rollupProcessor), type(uint256).max);
     }
 
-    function testRevetsWhenRegisteringWrapperThatIsNotAllowed() public {
+    function testRevertsWhenRegisteringWrapperThatIsNotAllowed() public {
         vm.expectRevert(
             abi.encodeWithSelector(
                 MeanErrorLib.TokenNotAllowed.selector, 
@@ -97,7 +97,7 @@ contract MeanBridgeUnitTest is Test {
         
         assertEq(DAI.allowance(address(bridge), address(DCA_HUB)), type(uint256).max);
         assertEq(DAI.allowance(address(bridge), address(TRANSFORMER_REGISTRY)), type(uint256).max);
-        assertTrue(bridge.isWrapperSupported(address(DAI)));
+        assertEq(bridge.getWrapperId(address(DAI)), 1);
     }
 
     function _mockIsTokenAllowed(IERC20 _token, bool _isAllowed) internal {
