@@ -124,8 +124,8 @@ contract MeanBridge is BridgeBase, Ownable2Step {
         (address _from, address _to) = _getTokensFromAuxData(_inputAssetA, _outputAssetA, _auxData);
 
         // Terminate position and clean things up
-        delete positionByNonce[_interactionNonce];
         uint256 _positionId = positionByNonce[_interactionNonce];
+        delete positionByNonce[_interactionNonce];
         (uint256 _unswapped, uint256 _swapped) = DCA_HUB.terminate(_positionId, THIS_ADDRESS, THIS_ADDRESS);
 
         if (_unswapped > 0) {
