@@ -10,6 +10,7 @@ import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {MeanErrorLib} from "../../../bridges/mean/MeanErrorLib.sol";
 import {MeanSwapIntervalDecodingLib} from "../../../bridges/mean/MeanSwapIntervalDecodingLib.sol";
 import {IDCAHub} from "../../../interfaces/mean/IDCAHub.sol";
+import {ITransformer} from "../../../interfaces/mean/ITransformer.sol";
 import {ISubsidy} from "../../../aztec/interfaces/ISubsidy.sol";
 import {ITransformerRegistry} from "../../../interfaces/mean/ITransformerRegistry.sol";
 
@@ -74,6 +75,50 @@ contract MeanBridgeUnitTest is Test {
             AztecTypes.AztecAsset({id: 1, erc20Address: address(DAI_WRAPPER), assetType: AztecTypes.AztecAssetType.ERC20});
         vm.expectRevert(ErrorLib.InvalidOutputB.selector);
         bridge.convert(inputAssetA, emptyAsset, emptyAsset, outputAssetB, 0, 0, 0, address(0));
+    }
+
+    function testInvalidCallerOnFinalise() public {
+        vm.prank(RANDOM_ADDRESS);
+        vm.expectRevert(ErrorLib.InvalidCaller.selector);
+        bridge.finalise(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0);
+    }
+
+    function testRevertWithOngoingPositionOnFinalise() public {
+        vm.expectRevert(MeanErrorLib.PositionStillOngoing.selector);
+        
+        _returnPositionWithTokens(WETH, DAI);
+        _returnOnTerminate(100, 0);
+        _setDCAPaused(false);
+
+        vm.prank(rollupProcessor);
+        bridge.finalise(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0);
+    }   
+
+    function testRevertWithOutputAssetAOnFinalise() public {
+        vm.expectRevert(ErrorLib.InvalidOutputA.selector);
+        
+        _returnPositionWithTokens(WETH, DAI_WRAPPER);
+        _returnUnderlying(DAI);
+        _returnOnTerminate(0, 100);
+
+        AztecTypes.AztecAsset memory _outputAssetA = _erc20Asset(address(WETH));
+
+        vm.prank(rollupProcessor);
+        bridge.finalise(emptyAsset, emptyAsset, _outputAssetA, emptyAsset, 0, 0);
+    }
+
+    function testRevertWithOutputAssetBOnFinalise() public {
+        vm.expectRevert(ErrorLib.InvalidOutputB.selector);
+        
+        _returnPositionWithTokens(DAI_WRAPPER, WETH);
+        _returnUnderlying(DAI);
+        _returnOnTerminate(100, 0);
+        _setDCAPaused(true);
+
+        AztecTypes.AztecAsset memory _outputAssetB = _erc20Asset(address(WETH));
+
+        vm.prank(rollupProcessor);
+        bridge.finalise(emptyAsset, emptyAsset, emptyAsset, _outputAssetB, 0, 0);
     }
 
     function testInvalidCallerOnSetSubsidies() public {        
@@ -216,6 +261,50 @@ contract MeanBridgeUnitTest is Test {
                 address(_token)
             ),
             abi.encode(_isAllowed)
+        );
+    }
+
+    function _returnPositionWithTokens(IERC20 _from, IERC20 _to) internal {
+        IDCAHub.UserPosition memory _userPosition = IDCAHub.UserPosition({
+            from: address(_from),
+            to: address(_to),
+            swapInterval: 100,
+            swapsExecuted: 100,
+            swapped: 100,
+            swapsLeft: 100,
+            remaining: 100,
+            rate: 100
+        });
+        vm.mockCall(
+            address(DCA_HUB),
+            abi.encodeWithSelector(DCA_HUB.userPosition.selector),
+            abi.encode(_userPosition)
+        );
+    }
+
+    function _returnOnTerminate(uint256 _unswapped, uint256 _swapped) internal {
+        vm.mockCall(
+            address(DCA_HUB),
+            abi.encodeWithSelector(DCA_HUB.terminate.selector),
+            abi.encode(_unswapped, _swapped)
+        );
+    }
+
+    function _setDCAPaused(bool _isPaused) internal {
+        vm.mockCall(
+            address(DCA_HUB),
+            abi.encodeWithSelector(DCA_HUB.paused.selector),
+            abi.encode(_isPaused)
+        );
+    }
+
+    function _returnUnderlying(IERC20 _underlying) internal {
+        ITransformer.UnderlyingAmount[] memory _underlyingArray = new ITransformer.UnderlyingAmount[](1);
+        _underlyingArray[0] = ITransformer.UnderlyingAmount(address(_underlying), 100);
+        vm.mockCall(
+            address(TRANSFORMER_REGISTRY),
+            abi.encodeWithSelector(TRANSFORMER_REGISTRY.transformToUnderlying.selector),
+            abi.encode(_underlyingArray)
         );
     }
 

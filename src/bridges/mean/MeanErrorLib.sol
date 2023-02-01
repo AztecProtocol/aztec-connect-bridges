@@ -9,5 +9,8 @@ library MeanErrorLib {
 
     /// @notice Thrown when trying to register a token that is already registered
     error TokenAlreadyRegistered(address token);
+
+    /// @notice Thrown when trying to close a position that is still ongoing
+    error PositionStillOngoing();
     
 }

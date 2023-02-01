@@ -62,6 +62,7 @@ contract MeanBridge is BridgeBase, Ownable2Step {
      * @notice A function which will allow the user to create DCA positions on Mean Finance
      * @param _inputAssetA - ETH or ERC20 token to deposit and start swapping
      * @param _outputAssetA - ETH or ERC20 token to swap funds into
+     * @param _outputAssetB - Same as input asset A
      * @param _inputValue - Amount to deposit
      * @param _interactionNonce - Unique identifier for this DeFi interaction
      * @param _auxData - The amount of swaps, swap interval and wrappers encoded together
@@ -93,6 +94,53 @@ contract MeanBridge is BridgeBase, Ownable2Step {
         SUBSIDY.claimSubsidy(_criteria, _rollupBeneficiary);
         
         return (0, 0, true);
+    }
+
+    /**
+     * @notice A function which will allow the users to close their DCA positions on Mean Finance
+     * @param _outputAssetA - ETH or ERC20 token that the position had swapped funds into
+     * @param _outputAssetB - ETH or ERC20 token that had been deposited by the user
+     * @param _interactionNonce - Unique identifier for this DeFi interaction
+     * @return _outputValueA - The amount of swapped funds
+     * @return _outputValueB - The amount of unswapped funds
+     * @return _interactionComplete - This will always be true
+     */
+    function finalise(
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata _outputAssetA,
+        AztecTypes.AztecAsset calldata _outputAssetB,
+        uint256 _interactionNonce,
+        uint64
+    )
+        external
+        payable
+        virtual
+        override(BridgeBase)
+        onlyRollup
+        returns (uint256 _outputValueA, uint256 _outputValueB, bool _interactionComplete)
+    {
+        // Get position from nonce
+        uint256 _positionId = positionByNonce[_interactionNonce];
+        IDCAHub.UserPosition memory _position = DCA_HUB.userPosition(_positionId);
+
+        // Terminate position and clean things up
+        delete positionByNonce[_interactionNonce];
+        (uint256 _unswapped, uint256 _swapped) = DCA_HUB.terminate(_positionId, THIS_ADDRESS, THIS_ADDRESS);
+
+        if (_unswapped > 0) {
+            if (!DCA_HUB.paused()) {
+                // If there are still unswapped funds, then we will only allow closing the DCA position
+                // if swaps have been paused
+                revert MeanErrorLib.PositionStillOngoing();
+            }
+
+            _unwrapIfNeeded(_outputAssetB, _unswapped, _position.from, _interactionNonce, false);
+        }
+
+        _unwrapIfNeeded(_outputAssetA, _swapped, _position.to, _interactionNonce, true);
+        
+        return (_swapped, _unswapped, true);
     }
 
     /**
@@ -233,6 +281,36 @@ contract MeanBridge is BridgeBase, Ownable2Step {
             );        
         }
         return _amountToWrap;
+    }
+
+    function _unwrapIfNeeded(
+        AztecTypes.AztecAsset memory _outputAsset, 
+        uint256 _amountToUnwrap, 
+        address _hubToken, 
+        uint256 _interactionNonce,
+        bool _isOutputAssetA
+    ) internal returns (uint256 _unwrappedAmount) {
+        if (_outputAsset.assetType == AztecTypes.AztecAssetType.ETH) {
+            WETH.withdraw(_amountToUnwrap);
+            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: _amountToUnwrap}(_interactionNonce);
+        } else if (_outputAsset.erc20Address != _hubToken) {
+            ITransformer.UnderlyingAmount[] memory _underlying = TRANSFORMER_REGISTRY.transformToUnderlying(
+                _hubToken, 
+                _amountToUnwrap, 
+                THIS_ADDRESS,
+                new ITransformer.UnderlyingAmount[](1), // We can't set slippage amount through Aztec, so we set the min to zero. Would be the same as calling `redeem` on a ERC4626
+                block.timestamp
+            );        
+            if (_outputAsset.erc20Address != _underlying[0].underlying) {
+                if (_isOutputAssetA) {
+                    revert ErrorLib.InvalidOutputA();
+                } else {
+                    revert ErrorLib.InvalidOutputB();
+                }
+            }
+            return _underlying[0].amount;
+        }
+        return _amountToUnwrap;
     }
 
     function _maxApprove(IERC20 _token, address _target) internal {
