@@ -129,9 +129,10 @@ contract MeanBridge is BridgeBase, Ownable2Step {
         (uint256 _unswapped, uint256 _swapped) = DCA_HUB.terminate(_positionId, THIS_ADDRESS, THIS_ADDRESS);
 
         if (_unswapped > 0) {
-            if (!DCA_HUB.paused()) {
-                // If there are still unswapped funds, then we will only allow closing the DCA position
-                // if swaps have been paused
+            // If there are still unswapped funds, then we will only allow users to close their DCA position if:
+            // - Swaps have been paused
+            // - One of the tokens is no longer allowed on the platform
+            if (!DCA_HUB.paused() && DCA_HUB.allowedTokens(_from) && DCA_HUB.allowedTokens(_to)) {                
                 revert MeanErrorLib.PositionStillOngoing();
             }
 

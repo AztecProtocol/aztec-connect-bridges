@@ -88,6 +88,7 @@ contract MeanBridgeUnitTest is Test {
         
         _returnOnTerminate(100, 0);
         _setDCAPaused(false);
+        _mockIsTokenAllowed(true);
 
         vm.prank(rollupProcessor);
         bridge.finalise(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0, 0);
@@ -100,6 +101,7 @@ contract MeanBridgeUnitTest is Test {
         _registerDAIWrapper();
         _returnUnderlying(WETH);
         _returnOnTerminate(0, 100);
+        _mockIsTokenAllowed(true);
 
         vm.expectRevert(ErrorLib.InvalidOutputA.selector);
         vm.prank(rollupProcessor);
@@ -113,6 +115,7 @@ contract MeanBridgeUnitTest is Test {
         _returnUnderlying(WETH);
         _returnOnTerminate(100, 0);
         _setDCAPaused(true);
+        _mockIsTokenAllowed(true);
         
         AztecTypes.AztecAsset memory _inputAssetA = _erc20Asset(address(DAI));
 
@@ -167,14 +170,14 @@ contract MeanBridgeUnitTest is Test {
         
         address[] memory _tokens = new address[](1);
         _tokens[0] = address(DAI_WRAPPER);
-        _mockIsTokenAllowed(DAI_WRAPPER, false);
+        _mockIsTokenAllowed(false);
         bridge.registerWrappers(_tokens);
     }
 
     function testRevertsWhenRegisteringWrapperThatWasAlreadyRegistered() public {        
         address[] memory _tokens = new address[](1);
         _tokens[0] = address(DAI_WRAPPER);
-        _mockIsTokenAllowed(DAI_WRAPPER, true);
+        _mockIsTokenAllowed(true);
         bridge.registerWrappers(_tokens);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -192,7 +195,7 @@ contract MeanBridgeUnitTest is Test {
         vm.expectEmit(true, false, false, false, address(bridge));
         emit NewWrappersSupported(_tokens);
         
-        _mockIsTokenAllowed(DAI_WRAPPER, true);
+        _mockIsTokenAllowed(true);
         bridge.registerWrappers(_tokens);
         
         assertEq(DAI_WRAPPER.allowance(address(bridge), address(DCA_HUB)), type(uint256).max);
@@ -253,13 +256,10 @@ contract MeanBridgeUnitTest is Test {
         assertEq(_actual, _expected);
     }
 
-    function _mockIsTokenAllowed(IERC20 _token, bool _isAllowed) internal {
+    function _mockIsTokenAllowed(bool _isAllowed) internal {
         vm.mockCall(
             address(DCA_HUB),
-            abi.encodeWithSelector(
-                DCA_HUB.allowedTokens.selector,
-                address(_token)
-            ),
+            abi.encodeWithSelector(DCA_HUB.allowedTokens.selector),
             abi.encode(_isAllowed)
         );
     }
@@ -293,7 +293,7 @@ contract MeanBridgeUnitTest is Test {
     function _registerDAIWrapper() internal {
         address[] memory _tokens = new address[](1);
         _tokens[0] = address(DAI_WRAPPER);
-        _mockIsTokenAllowed(DAI_WRAPPER, true);
+        _mockIsTokenAllowed(true);
         bridge.registerWrappers(_tokens);
     }
 
