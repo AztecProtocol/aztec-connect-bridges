@@ -181,8 +181,8 @@ contract AggregateDeployment is BaseDeployment {
             YearnDeployment yearnDeployment = new YearnDeployment();
             yearnDeployment.setUp();
 
-            address LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
-            address yvLUSD = yearnDeployment.approveAsset(yearnBridge, LUSD);
+            address lusd = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
+            address yvLUSD = yearnDeployment.approveAsset(yearnBridge, lusd);
 
             uint256 yvLUSDId = listAsset(yvLUSD, 55000);
             emit log_named_uint("yvLUSD id", yvLUSDId);
