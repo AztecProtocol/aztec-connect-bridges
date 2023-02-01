@@ -106,12 +106,12 @@ contract MeanBridge is BridgeBase, Ownable2Step {
      * @return _interactionComplete - This will always be true
      */
     function finalise(
-        AztecTypes.AztecAsset calldata,
+        AztecTypes.AztecAsset calldata _inputAssetA,
         AztecTypes.AztecAsset calldata,
         AztecTypes.AztecAsset calldata _outputAssetA,
         AztecTypes.AztecAsset calldata _outputAssetB,
         uint256 _interactionNonce,
-        uint64
+        uint64 _auxData
     )
         external
         payable
@@ -120,12 +120,12 @@ contract MeanBridge is BridgeBase, Ownable2Step {
         onlyRollup
         returns (uint256 _outputValueA, uint256 _outputValueB, bool _interactionComplete)
     {
-        // Get position from nonce
-        uint256 _positionId = positionByNonce[_interactionNonce];
-        IDCAHub.UserPosition memory _position = DCA_HUB.userPosition(_positionId);
+        // Get tokens from assets and aux data
+        (address _from, address _to) = _getTokensFromAuxData(_inputAssetA, _outputAssetA, _auxData);
 
         // Terminate position and clean things up
         delete positionByNonce[_interactionNonce];
+        uint256 _positionId = positionByNonce[_interactionNonce];
         (uint256 _unswapped, uint256 _swapped) = DCA_HUB.terminate(_positionId, THIS_ADDRESS, THIS_ADDRESS);
 
         if (_unswapped > 0) {
@@ -135,10 +135,10 @@ contract MeanBridge is BridgeBase, Ownable2Step {
                 revert MeanErrorLib.PositionStillOngoing();
             }
 
-            _unwrapIfNeeded(_outputAssetB, _unswapped, _position.from, _interactionNonce, false);
+            _unwrapIfNeeded(_outputAssetB, _unswapped, _from, _interactionNonce, false);
         }
 
-        _unwrapIfNeeded(_outputAssetA, _swapped, _position.to, _interactionNonce, true);
+        _unwrapIfNeeded(_outputAssetA, _swapped, _to, _interactionNonce, true);
         
         return (_swapped, _unswapped, true);
     }
@@ -325,8 +325,16 @@ contract MeanBridge is BridgeBase, Ownable2Step {
         AztecTypes.AztecAsset memory _outputAsset,
         uint64 _auxData
     ) internal view returns (address _from, address _to, uint32 _amountOfSwaps, uint32 _swapInterval) {
+        (_from, _to) = _getTokensFromAuxData(_inputAsset, _outputAsset, _auxData);
         _amountOfSwaps = uint24(_auxData);
         _swapInterval = MeanSwapIntervalDecodingLib.calculateSwapInterval(uint8(_auxData >> 24));
+    }
+
+    function _getTokensFromAuxData(
+        AztecTypes.AztecAsset memory _inputAsset,
+        AztecTypes.AztecAsset memory _outputAsset,
+        uint64 _auxData
+    ) internal view returns (address _from, address _to) {
         _from = _mapAssetToAddress(_inputAsset, _auxData, 32);
         _to = _mapAssetToAddress(_outputAsset, _auxData, 48);
     }

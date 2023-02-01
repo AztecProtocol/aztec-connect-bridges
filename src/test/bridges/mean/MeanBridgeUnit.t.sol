@@ -86,7 +86,6 @@ contract MeanBridgeUnitTest is Test {
     function testRevertWithOngoingPositionOnFinalise() public {
         vm.expectRevert(MeanErrorLib.PositionStillOngoing.selector);
         
-        _returnPositionWithTokens(WETH, DAI);
         _returnOnTerminate(100, 0);
         _setDCAPaused(false);
 
@@ -95,30 +94,31 @@ contract MeanBridgeUnitTest is Test {
     }   
 
     function testRevertWithOutputAssetAOnFinalise() public {
-        vm.expectRevert(ErrorLib.InvalidOutputA.selector);
-        
-        _returnPositionWithTokens(WETH, DAI_WRAPPER);
-        _returnUnderlying(DAI);
+        // Output asset A is DAI, "to" is DAI_WRAPPER but underlying will be WETH, so revert
+        AztecTypes.AztecAsset memory _outputAssetA = _erc20Asset(address(DAI));
+        uint64 _auxData = _buildAuxData(0, 0, 0, 1);
+        _registerDAIWrapper();
+        _returnUnderlying(WETH);
         _returnOnTerminate(0, 100);
 
-        AztecTypes.AztecAsset memory _outputAssetA = _erc20Asset(address(WETH));
-
+        vm.expectRevert(ErrorLib.InvalidOutputA.selector);
         vm.prank(rollupProcessor);
-        bridge.finalise(emptyAsset, emptyAsset, _outputAssetA, emptyAsset, 0, 0);
+        bridge.finalise(emptyAsset, emptyAsset, _outputAssetA, emptyAsset, 0, _auxData);
     }
 
     function testRevertWithOutputAssetBOnFinalise() public {
-        vm.expectRevert(ErrorLib.InvalidOutputB.selector);
-        
-        _returnPositionWithTokens(DAI_WRAPPER, WETH);
-        _returnUnderlying(DAI);
+        // Output asset B is DAI, "from" is DAI_WRAPPER but underlying will be WETH, so revert
+        uint64 _auxData = _buildAuxData(0, 0, 1, 0);
+        _registerDAIWrapper();
+        _returnUnderlying(WETH);
         _returnOnTerminate(100, 0);
         _setDCAPaused(true);
+        
+        AztecTypes.AztecAsset memory _inputAssetA = _erc20Asset(address(DAI));
 
-        AztecTypes.AztecAsset memory _outputAssetB = _erc20Asset(address(WETH));
-
+        vm.expectRevert(ErrorLib.InvalidOutputB.selector);
         vm.prank(rollupProcessor);
-        bridge.finalise(emptyAsset, emptyAsset, emptyAsset, _outputAssetB, 0, 0);
+        bridge.finalise(_inputAssetA, emptyAsset, emptyAsset, _inputAssetA, 0, _auxData);
     }
 
     function testInvalidCallerOnSetSubsidies() public {        
@@ -261,24 +261,6 @@ contract MeanBridgeUnitTest is Test {
                 address(_token)
             ),
             abi.encode(_isAllowed)
-        );
-    }
-
-    function _returnPositionWithTokens(IERC20 _from, IERC20 _to) internal {
-        IDCAHub.UserPosition memory _userPosition = IDCAHub.UserPosition({
-            from: address(_from),
-            to: address(_to),
-            swapInterval: 100,
-            swapsExecuted: 100,
-            swapped: 100,
-            swapsLeft: 100,
-            remaining: 100,
-            rate: 100
-        });
-        vm.mockCall(
-            address(DCA_HUB),
-            abi.encodeWithSelector(DCA_HUB.userPosition.selector),
-            abi.encode(_userPosition)
         );
     }
 

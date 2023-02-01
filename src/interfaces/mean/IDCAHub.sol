@@ -3,26 +3,6 @@ pragma solidity >=0.8.4;
 
 interface IDCAHub {
 
-  /// @notice The position of a certain user
-  struct UserPosition {
-    // The token that the user deposited and will be swapped in exchange for "to"
-    address from;
-    // The token that the user will get in exchange for their "from" tokens in each swap
-    address to;
-    // How frequently the position's swaps should be executed
-    uint32 swapInterval;
-    // How many swaps were executed since deposit, last modification, or last withdraw
-    uint32 swapsExecuted;
-    // How many "to" tokens can currently be withdrawn
-    uint256 swapped;
-    // How many swaps left the position has to execute
-    uint32 swapsLeft;
-    // How many "from" tokens there are left to swap
-    uint256 remaining;
-    // How many "from" tokens need to be traded in each swap
-    uint120 rate;
-  }
-
   /// @notice Set of possible permissions
   enum Permission {
     INCREASE,
@@ -39,13 +19,6 @@ interface IDCAHub {
     Permission[] permissions;
   }
   
-  /**
-   * @notice Returns a user position
-   * @param positionId The id of the position
-   * @return position The position itself
-   */
-  function userPosition(uint256 positionId) external view returns (UserPosition memory position);
-
   /**
    * @notice Returns whether swaps and deposits are currently paused
    * @return isPaused Whether swaps and deposits are currently paused
