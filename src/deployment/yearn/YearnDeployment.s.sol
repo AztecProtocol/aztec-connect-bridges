@@ -24,6 +24,16 @@ contract YearnDeployment is BaseDeployment {
         return address(bridge);
     }
 
+    function approveAsset(address _bridge, address _asset) public returns (address) {
+        YearnBridge bridge = YearnBridge(payable(_bridge));
+        address latestVault = YEARN_REGISTRY.latestVault(_asset);
+
+        vm.broadcast();
+        bridge.preApprove(latestVault);
+
+        return latestVault;
+    }
+
     function approveAssets(address _bridge) public {
         YearnBridge bridge = YearnBridge(payable(_bridge));
 
