@@ -27,6 +27,7 @@ import {CurveStethLpDeployment} from "./curve/CurveStethLpDeployment.s.sol";
  */
 contract AggregateDeployment is BaseDeployment {
     address internal erc4626Bridge;
+    address internal yearnBridge;
 
     function deployAndListAll() public returns (address) {
         DataProviderDeployment dataProviderDeploy = new DataProviderDeployment();
@@ -69,7 +70,7 @@ contract AggregateDeployment is BaseDeployment {
         {
             YearnDeployment yearnDeployment = new YearnDeployment();
             yearnDeployment.setUp();
-            yearnDeployment.deployAndList();
+            yearnBridge = yearnDeployment.deployAndList();
         }
 
         emit log("--- Element 2M ---");
@@ -173,6 +174,18 @@ contract AggregateDeployment is BaseDeployment {
             address iceth = 0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84;
             uint256 icethId = listAsset(iceth, 55000);
             emit log_named_uint("Set protocol icEth id", icethId);
+        }
+
+        emit log("--- yvLUSD ---");
+        {
+            YearnDeployment yearnDeployment = new YearnDeployment();
+            yearnDeployment.setUp();
+
+            address lusd = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
+            address yvLUSD = yearnDeployment.approveAsset(yearnBridge, lusd);
+
+            uint256 yvLUSDId = listAsset(yvLUSD, 55000);
+            emit log_named_uint("yvLUSD id", yvLUSDId);
         }
 
         emit log("--- Let anyone deploy ---");
