@@ -34,23 +34,11 @@ contract YearnDeployment is BaseDeployment {
         return latestVault;
     }
 
-    function approveAssets(address _bridge) public {
-        YearnBridge bridge = YearnBridge(payable(_bridge));
-
-        address latestDaiVault = YEARN_REGISTRY.latestVault(DAI);
-        address latestWethVault = YEARN_REGISTRY.latestVault(WETH);
-
-        vm.broadcast();
-        YearnBridge(payable(bridge)).preApprove(latestDaiVault);
-
-        vm.broadcast();
-        YearnBridge(payable(bridge)).preApprove(latestWethVault);
-    }
-
     function deployAndList() public returns (address) {
         address bridge = deploy();
 
-        approveAssets(bridge);
+        approveAsset(bridge, DAI);
+        approveAsset(bridge, WETH);
 
         uint256 depositAddressId = listBridge(bridge, 200000);
         emit log_named_uint("Yearn deposit bridge address id", depositAddressId);
