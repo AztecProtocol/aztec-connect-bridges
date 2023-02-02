@@ -80,7 +80,7 @@ To get started follow the steps below:
    docker-compose -f local_devnet/docker-compose.fork.yml up
    ```
 
-   Once your sequencer up and running (you will know this as the rollup logs will output `falafel-1 | [Timestamp] Server: Ready to receive txs.`).
+   Once your sequencer is up and running it will output `falafel-1 | [Timestamp] Server: Ready to receive txs.` to the logs.
 
    ### Deploying a bridge
 
@@ -90,7 +90,7 @@ To get started follow the steps below:
    # Setup env
    # ---------
    # For the below script you will need to have both `curl` and `jq` installed.
-   # It loads required ENV_VARS (the ROLLUP_PROCESSOR_ADDRESS) into your ENV an explainer for this script can be found
+   # It loads required ENV_VARS (the ROLLUP_PROCESSOR_ADDRESS) into your ENV. An explainer for this script can be found
    # in the collapsed section below
    source ./local_devnet/export_addresses.sh
    # Deploy to our local fork
@@ -117,7 +117,7 @@ To get started follow the steps below:
    <summary> Click here to read about how export_addresses.sh works under the hood </summary>
    In your deployment scripts you will want to know the address that the rollup processor has been deployed to on your fork. You can easily get this information by querying the contracts container. After a successful deployment, it will serve the deployed contract addresses on port `8547`. Curling this endpoint will yield the following json with all of the deployment addresses.
 
-   ```
+   ```bash
    curl http://localhost:8547
    {
      "PROXY_ADMIN_ADDRESS": "0x3E661784267F128e5f706De17Fac1Fc1c9d56f30",
