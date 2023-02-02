@@ -49,22 +49,121 @@ To get started follow the steps below:
 
 6. Write a deployment script.
    Make a script that inherits from the `BaseDeployment.s.sol` file. The base provides helper functions for listing assets/bridges and a getter for the rollup address.  
-   Use the env variables `SIMULATE_ADMIN=false|true` and `NETWORK=mainnet|devnet|testnet` to specify how to run it.  
+   Use the env variables `SIMULATE_ADMIN=false|true` and `NETWORK=mainnet|devnet|testnet|DONT_CARE` to specify how to run it. (Note: DONT_CARE is relevant when deploying to the local devnet, more information on this is outlined below)  
    With `SIMULATE_ADMIN=true`, the `listBridge` and `listAsset` helpers will be impersonating an account with access to list, otherwise they are broadcasted. See the example scripts from other bridges for inspiration on how to write the scripts.
 
-7. Testing/using your deployment script
+7. Using the local devnet is the default integration testing environment, it can take a bit of effort to set up but this section will guide you through it! If you are a grantee and have received access to the partner testnet you can find details of that in section 8.
+
+   ### Getting the local devnet up and running
+
+   In the majority of cases you will want to run the local devnet as a mainnet fork, to allow you to test against mainnet protocols.
+
+   Inside this repo there is a `/local_devnet` folder that contains the required resources. The `docker-compose.fork.yml` contains a compose configuration that will launch:
+
+   1. A local node (anvil).
+   2. Deploy our contracts.
+   3. Run a local sequencer.
+
+   If you do not have docker installed please follow the instructions [here](https://docs.docker.com/compose/).
+
+   To run the devnet please execute the following commands.
+
+   > Note: A more in-depth overview of the local devnet can be found over at our [documentation](https://docs.aztec.network/developers/local-devnet).
+
+   ```bash
+   # Setup env
+   export FORK_URL={A mainnet RPC url} # Get one of these from infura / alchemy
+   export CHAIN_ID=3567
+   export NETWORK=DONT_CARE # DONT_CARE means you are not targeting existing deployments (devnet, testnet etc.)
+
+   # Run devnet
+   docker-compose -f local_devnet/docker-compose.fork.yml up
+   ```
+
+   Once your sequencer is up and running it will output `falafel-1 | [Timestamp] Server: Ready to receive txs.` to the logs.
+
+   ### Deploying a bridge
+
+   Open up another terminal and enter:
+
+   ```bash
+   # Setup env
+   # ---------
+   # For the below script you will need to have both `curl` and `jq` installed.
+   # It loads required ENV_VARS (the ROLLUP_PROCESSOR_ADDRESS) into your ENV. An explainer for this script can be found
+   # in the collapsed section below
+   source ./local_devnet/export_addresses.sh
+   # Deploy to our local fork
+   export RPC=http://localhost:8545
+   # Deploy using the default anvil key as anvil is our current local node
+   export PRIV_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+   # DONT_CARE means we are not targeting any development environments
+   export NETWORK=DONT_CARE
+   # Do not run the deploy scripts in simulation mode
+   export SIMULATE_ADMIN=false
+
+   # Example deployment script
+   forge script --fork-url $RPC --private-key $PRIV_KEY <NAME_OF_DEPLOYMENT_SCRIPT> --sig "<FUNCTION_SIF>" --broadcast
+
+   # Example script reading the current assets and bridges
+   forge script --fork-url $RPC AggregateDeployment --sig "readStats()"
+   ```
+
+   Note any deployments will need to be made from the default anvil deployer key. For simplicity the fork uses anvil's default address has all admin roles on the deployed rollup.
+
+   If you need to view the contract addresses of the core rollup contracts in your local devnet you can run the `./local_devnet/export_addresses.sh` script and it will print them.
+
+   <details>
+   <summary> Click here to read about how export_addresses.sh works under the hood </summary>
+   In your deployment scripts you will want to know the address that the rollup processor has been deployed to on your fork. You can easily get this information by querying the contracts container. After a successful deployment, it will serve the deployed contract addresses on port `8547`. Curling this endpoint will yield the following json with all of the deployment addresses.
+
+   ```bash
+   curl http://localhost:8547
+   {
+     "PROXY_ADMIN_ADDRESS": "0x3E661784267F128e5f706De17Fac1Fc1c9d56f30",
+     "DAI_CONTRACT_ADDRESS": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+     "PERMIT_HELPER_CONTRACT_ADDRESS": "0xAe9Ed85dE2670e3112590a2BB17b7283ddF44d9c",
+     "DEPLOYER_ADDRESS": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+     "BTC_CONTRACT_ADDRESS": "0x0000000000000000000000000000000000000000",
+     "GAS_PRICE_FEED_CONTRACT_ADDRESS": "0x169E633A2D1E6c10dD91238Ba11c4A708dfEF37C",
+     "DEFI_PROXY_CONTRACT_ADDRESS": "0xF6a8aD553b265405526030c2102fda2bDcdDC177",
+     "VERIFIER_CONTRACT_ADDRESS": "0xeC1BB74f5799811c0c1Bff94Ef76Fb40abccbE4a",
+     "PROXY_DEPLOYER_CONTRACT_ADDRESS": "0x6732128F9cc0c4344b2d4DC6285BCd516b7E59E6",
+     "VERSION": 2,
+     "FAUCET_CONTRACT_ADDRESS": "0xc0c5618f0F3Fa66b496F2940f373DC366d765BAe",
+     "BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS": "0xe14058B1c3def306e2cb37535647A04De03Db092",
+     "DAI_PRICE_FEED_CONTRACT_ADDRESS": "0x773616E4d11A78F511299002da57A0a94577F1f4",
+     "SAFE_ADDRESS": "0x7095057A08879e09DC1c0a85520e3160A0F67C96",
+     "ROLLUP_CONTRACT_ADDRESS": "0x7F2498c7073D143094cA6Ea5ABe58DaA56DBfF2E",
+     "FEE_DISTRIBUTOR_ADDRESS": "0x8f119cd256a0FfFeed643E830ADCD9767a1d517F"
+   }%
+   ```
+
+   The export_addresses.sh script will poll each of the addresses with `jq` and add them to your path.
+   The step is required when performing subsequent bridge deployments to your fork, as the base deployment script will look for the `ROLLUP_PROCESSOR_ADDRESS` inside your environment variables.
+
+   </details>
+
+   For more information about how to configure the sequencer to run your bridge, please visit our [documentation](https://docs.aztec.network/developers/local-devnet).
+
+8) Testing/using your deployment script against testnet
+
+   > **Info**
+   > Due to extreme load our testnet environment have become reserved for partners. Please reach out to `devrel@aztecprotocol.com` if you wish to receive access. Thank you for understanding!
+   >
+   > To get the local devnet up and running please consult our [documentation](https://docs.aztec.network/developers/local-devnet). Note that if you are building against an existing protocol (e.g. aave, compound, uniswap) you will want to run the [fork](https://docs.aztec.network/developers/local-devnet#mainnet-fork-with-bridge-contracts) version of the local devnet (details can be found in the section above).
+
    To run your deployment script, you need to set the environment up first, this include specifying the RPC you will be sending the transactions to and the environment variables from above. You can do it using a private key, or even with a Ledger or Trezor, see the foundry book for more info on using hardware wallets.
 
    ```bash
    # Use --broadcast when you intend to broadcast the tx's, otherwise it will just simulate
-   # When using the testnet, add --legacy, Ganache and EIP-1559 is not the best friends
    # --ffi is used to allow outside calls, which is used to fetch the latest Rollup address
    # on testnet this will fetch from the Aztec endpoints, on mainnet, this will lookup the `rollup.aztec.eth` ens
-   export RPC=https://aztec-connect-testnet-eth-host.aztec.network:8545
+   export RPC=https://aztec-connect-testnet-eth-host.aztec.network:8545/{TESTNET_API_KEY}
    export PRIV_KEY=<DEV_KEY> # If using a private-key directly
    export NETWORK=testnet # When using the testnet
    export SIMULATE_ADMIN=false # When you want to broadcast, use `true` if simulating admin
-   forge script --fork-url $RPC --ffi --legacy --private-key $PRIV <NAME_OF_DEPLOYMENT_SCRIPT> --sig "<FUNCTION_SIG>" --broadcast
+   forge script --fork-url $RPC --ffi --private-key $PRIV_KEY <NAME_OF_DEPLOYMENT_SCRIPT> --sig "<FUNCTION_SIG>" --broadcast
 
    # Example script reading the current assets and bridges:
    forge script --fork-url $RPC --ffi AggregateDeployment --sig "readStats()"
