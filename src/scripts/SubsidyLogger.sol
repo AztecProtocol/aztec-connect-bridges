@@ -6,6 +6,7 @@ import {Test} from "forge-std/Test.sol";
 import {BridgeBase} from "../bridges/base/BridgeBase.sol";
 import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {ISubsidy} from "../aztec/interfaces/ISubsidy.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
 /**
@@ -48,6 +49,8 @@ contract SubsidyLogger is Test {
     function logSubsidies() public {
         logERC4626Subsidies();
         logYearnSubsidies();
+        logLiquityTroveSubsidies(0x998650bf01A6424F9B11debd85a29090906cB559); // TB-275
+        logLiquityTroveSubsidies(0x646Df2Dc98741a0Ab5798DeAC6Fc62411dA41D96); // TB-400
     }
 
     function logERC4626Subsidies() public {
@@ -121,6 +124,43 @@ contract SubsidyLogger is Test {
 
         ISubsidy.Subsidy memory enterSubsidy = SUBSIDY.getSubsidy(address(bridge), enterCriteria);
         ISubsidy.Subsidy memory exitSubsidy = SUBSIDY.getSubsidy(address(bridge), exitCriteria);
+
+        if (enterSubsidy.available == 0 || !onlyEmpty) {
+            uint256 gasPerMinute = enterSubsidy.gasUsage / (FULL_SUBSIDY_TIME * 60);
+            emit log_string("========================");
+            emit log_named_uint("enterCriteria", enterCriteria);
+            emit log_named_uint("enterCriteria available", enterSubsidy.available);
+            emit log_named_uint("enterCriteria gasUsage", enterSubsidy.gasUsage);
+            emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
+            uint256 costOfMonth = enterSubsidy.gasUsage * (24 * 30) * ESTIMATION_BASE_FEE / FULL_SUBSIDY_TIME;
+            emit log_named_decimal_uint("cost of fully subsidizing for a month", costOfMonth, 18);
+        }
+
+        if (exitSubsidy.available == 0 || !onlyEmpty) {
+            uint256 gasPerMinute = exitSubsidy.gasUsage / (FULL_SUBSIDY_TIME * 60);
+            emit log_string("========================");
+            emit log_named_uint("exitCriteria", exitCriteria);
+            emit log_named_uint("exitCriteria available", exitSubsidy.available);
+            emit log_named_uint("exitCriteria gasUsage", exitSubsidy.gasUsage);
+            emit log_named_uint("recommended minGasPerMinute", gasPerMinute);
+            uint256 costOfMonth = exitSubsidy.gasUsage * (24 * 30) * ESTIMATION_BASE_FEE / FULL_SUBSIDY_TIME;
+            emit log_named_decimal_uint("cost of fully subsidizing for a month", costOfMonth, 18);
+        }
+
+        emit log_string("========================");
+    }
+
+    function logLiquityTroveSubsidies(address _bridge) public {
+        emit log_string("\n");
+        emit log_string("=========== Trove Bridge =============");
+        emit log_named_address("Bridge address", _bridge);
+        emit log_named_string("Bridge symbol", IERC20Metadata(_bridge).symbol());
+
+        uint256 enterCriteria = 0;
+        uint256 exitCriteria = 1;
+
+        ISubsidy.Subsidy memory enterSubsidy = SUBSIDY.getSubsidy(_bridge, enterCriteria);
+        ISubsidy.Subsidy memory exitSubsidy = SUBSIDY.getSubsidy(_bridge, exitCriteria);
 
         if (enterSubsidy.available == 0 || !onlyEmpty) {
             uint256 gasPerMinute = enterSubsidy.gasUsage / (FULL_SUBSIDY_TIME * 60);
