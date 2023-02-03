@@ -26,7 +26,8 @@ contract SubsidyLogger is Test {
         0x4169Df1B7820702f566cc10938DA51F6F597d264, //  ERC4626-Wrapped Euler DAI (weDAI)
         0x60897720AA966452e8706e74296B018990aEc527, //  ERC4626-Wrapped Euler wstETH (wewstETH)
         0xbcb91e0B4Ad56b0d41e0C168E3090361c0039abC, //  ERC4626-Wrapped AAVE V2 DAI (wa2DAI)
-        0xc21F107933612eCF5677894d45fc060767479A9b //  ERC4626-Wrapped AAVE V2 WETH (wa2WETH)
+        0xc21F107933612eCF5677894d45fc060767479A9b, //  ERC4626-Wrapped AAVE V2 WETH (wa2WETH)
+        0x6D088fe2500Da41D7fA7ab39c76a506D7c91f53b //  ERC4626-Wrapped Compound DAI (wcDAI)
     ];
 
     string[] private erc4626Tags = [
@@ -34,7 +35,8 @@ contract SubsidyLogger is Test {
         "ERC4626-Wrapped Euler DAI (weDAI)",
         "ERC4626-Wrapped Euler wstETH (wewstETH)",
         "ERC4626-Wrapped AAVE V2 DAI (wa2DAI)",
-        "ERC4626-Wrapped AAVE V2 WETH (wa2WETH)"
+        "ERC4626-Wrapped AAVE V2 WETH (wa2WETH)",
+        "ERC4626-Wrapped Compound DAI (wcDAI)"
     ];
 
     // @dev if set to true only subsidies which need to be funded get displayed
@@ -61,8 +63,8 @@ contract SubsidyLogger is Test {
         logERC4626Subsidies();
         logYearnSubsidies();
         logLiquityTroveSubsidies(0x998650bf01A6424F9B11debd85a29090906cB559); // TB-275
-        logLiquityTroveSubsidies(0x646Df2Dc98741a0Ab5798DeAC6Fc62411dA41D96); // TB-400
-        logUniswapSubsidies(ethAsset, icEthAsset);
+        //        logLiquityTroveSubsidies(0x646Df2Dc98741a0Ab5798DeAC6Fc62411dA41D96); // TB-400
+        //        logUniswapSubsidies(ethAsset, icEthAsset);
     }
 
     function logERC4626Subsidies() public {
