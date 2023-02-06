@@ -98,6 +98,11 @@ contract MeanBridge is BridgeBase, Ownable2Step {
 
     /**
      * @notice A function which will allow the users to close their DCA positions on Mean Finance
+     * @dev Positions can only be finalised if one of the following is true:
+     *      - Position has been fully swapped
+     *      - Swaps are paused
+     *      - "From" token is no longer supported
+     *      - "To" token is no longer supported
      * @param _outputAssetA - ETH or ERC20 token that the position had swapped funds into
      * @param _outputAssetB - ETH or ERC20 token that had been deposited by the user
      * @param _interactionNonce - Unique identifier for this DeFi interaction
