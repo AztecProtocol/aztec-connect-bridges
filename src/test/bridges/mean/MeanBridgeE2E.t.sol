@@ -2,6 +2,7 @@
 // Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
+import {console} from "forge-std/console.sol";
 import {BridgeTestBase} from "../../aztec/base/BridgeTestBase.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
@@ -10,7 +11,7 @@ import {IDCAHub} from "../../../interfaces/mean/IDCAHub.sol";
 import {ITransformerRegistry} from "../../../interfaces/mean/ITransformerRegistry.sol";
 import {ITransformer} from "../../../interfaces/mean/ITransformer.sol";
 import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
-import {DCAHubSwapperMock} from './mocks/Swapper.sol';
+import {DCAHubSwapperMock} from "./mocks/Swapper.sol";
 
 contract MeanBridgeE2eTest is BridgeTestBase {
 
@@ -20,6 +21,7 @@ contract MeanBridgeE2eTest is BridgeTestBase {
     address public constant YIELD_BEARING_WETH = 0xd4dE9D2Fc1607d1DF63E1c95ecBfa8d7946f5457;
     address private constant BRIDGE_OWNER = 0x0000000000000000000000000000000000000001;
     address private constant HUB_OWNER = 0xEC864BE26084ba3bbF3cAAcF8F6961A9263319C4;
+    address private constant BENEFICIARY = address(11);
     ExtendedHub private constant HUB = ExtendedHub(0xA5AdC5484f9997fBF7D405b9AA62A7d88883C345);
     ITransformerRegistry private constant TRANSFORMER_REGISTRY = ITransformerRegistry(0xC0136591Df365611B1452B5F8823dEF69Ff3A685);
     MeanBridge private bridge;
@@ -48,13 +50,16 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         bridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
         swapper = new DCAHubSwapperMock();
 
+        ROLLUP_ENCODER.setRollupBeneficiary(BENEFICIARY);
+        SUBSIDY.registerBeneficiary(BENEFICIARY);
+
         vm.label(address(bridge), "MeanBridge");
         vm.label(address(HUB), "DCAHub");
         vm.label(address(TRANSFORMER_REGISTRY), "TRANSFORMER_REGISTRY");
-        vm.label(DAI, 'DAI');
-        vm.label(WETH, 'WETH');
-        vm.label(YIELD_BEARING_DAI, 'YIELD_BEARING_DAI');
-        vm.label(YIELD_BEARING_WETH, 'YIELD_BEARING_WETH');
+        vm.label(DAI, "DAI");
+        vm.label(WETH, "WETH");
+        vm.label(YIELD_BEARING_DAI, "YIELD_BEARING_DAI");
+        vm.label(YIELD_BEARING_WETH, "YIELD_BEARING_WETH");        
     }
 
     function testEthToERC20(uint120 _inputAmount) public {
@@ -87,7 +92,41 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         _assertPositionWasTerminated(_positionId);
         _assertBalance(_inputAsset, _initialBalanceInput, 0);
         _assertBalance(_outputAsset, _initialBalanceOutput, _swappedAmount);
-    }  
+
+        // Nothing to claim since pair was not subsidized
+        assertEq(SUBSIDY.claimableAmount(BENEFICIARY), 0);
+    }
+
+    function testEthToERC20WithSubsidy(uint120 _inputAmount) public {
+        vm.assume(0 < _inputAmount && _inputAmount <= uint120(type(int120).max));
+
+        // Setup subsidy
+        uint256 _positionCriteria = bridge.computeCriteriaForPosition(WETH, DAI, 1, 1 hours);
+        _setUpSubsidy(_positionCriteria);
+
+        // Warp time in order to accumulate claimable subsidy        
+        vm.warp(block.timestamp + 1 minutes);
+
+        AztecTypes.AztecAsset memory _inputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
+        AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(DAI);
+        address _hubFrom = WETH;
+        address _hubTo = DAI;
+
+        // Deposit to rollup processor
+        _dealToRollup(_inputAsset, _inputAmount);
+
+        // Create DCA position
+        _convert(_inputAsset, _outputAsset, _hubFrom, _hubTo, _inputAmount);        
+
+        // Perform swap
+        _swap(_hubFrom, _hubTo);
+        
+        // Close position
+        _finalise();
+
+        // There is something to claim
+        assertGt(SUBSIDY.claimableAmount(BENEFICIARY), 0);
+    }
 
     function testYieldToETH(uint120 _inputAmount) public {
         vm.assume(1 ether <= _inputAmount && _inputAmount <= 15 ether);
@@ -184,7 +223,7 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         // Perform checks
         _assertPositionWasTerminated(_positionId);
         _assertBalance(_inputAsset, _initialBalanceInput, 0);
-        // Note: Euler returns some wei less that expected, so we don't test it here
+        // Note: Euler returns some wei less that expected, so we don"t test it here
     }
 
     function testFinaliseIfSwapsPaused(uint120 _inputAmount) public {
@@ -296,15 +335,6 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         _positionId = bridge.positionByNonce(0); 
     }
 
-    function _buildAuxData(address _from, address _to, uint24 _amountOfSwaps, uint8 _swapIntervalCode) internal view returns (uint64) {
-        uint32 _wrapperIdFrom = bridge.getWrapperId(_from);
-        uint32 _wrapperIdTo = bridge.getWrapperId(_to);
-        return _amountOfSwaps 
-            + (uint64(_swapIntervalCode) << 24)
-            + (uint64(_wrapperIdFrom) << 32) 
-            + (uint64(_wrapperIdTo) << 48);
-    }
-
     function _validatePosition(
         uint256 _positionId,
         address _expectedFrom, 
@@ -331,7 +361,7 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         _tokens[1] = _tokenB;
         ExtendedHub.PairIndexes[] memory _pairs = new ExtendedHub.PairIndexes[](1);
         _pairs[0] = ExtendedHub.PairIndexes(0, 1);
-        ExtendedHub.SwapInfo memory _swapInfo = HUB.getNextSwapInfo(_tokens, _pairs, true, '');
+        ExtendedHub.SwapInfo memory _swapInfo = HUB.getNextSwapInfo(_tokens, _pairs, true, "");
         uint256 _toProvide = _swapInfo.tokens[0].toProvide + _swapInfo.tokens[1].toProvide;
         deal(_to, address(swapper), _toProvide);
         HUB.swap(
@@ -340,29 +370,60 @@ contract MeanBridgeE2eTest is BridgeTestBase {
             address(swapper),
             address(swapper),
             new uint256[](2),
-            '',
-            ''
-        );
-        
-    }
-    function _calculateSwapped(uint256 _positionId) internal view returns (uint256 _swapped) {
-        ExtendedHub.UserPosition memory _position = HUB.userPosition(_positionId);
-        return _position.swapped;
-    }
+            "",
+            ""
+        );        
+    }        
 
     function _finalise() internal {
         bool interactionCompleted = ROLLUP_PROCESSOR.processAsyncDefiInteraction(0);
         assertEq(interactionCompleted, true);
     }
 
+    function _setUpSubsidy(uint256 _positionCriteria) internal {
+        uint256[] memory _criteria = new uint256[](1);
+        _criteria[0] = _positionCriteria;
+        uint32[] memory _gasUsage = new uint32[](1);
+        _gasUsage[0] = 98765;
+        uint32[] memory _minGasPerMinute  = new uint32[](1);
+        _minGasPerMinute[0] = 600_000;
+        vm.prank(BRIDGE_OWNER);
+        bridge.setSubsidies(_criteria, _gasUsage, _minGasPerMinute);
+        SUBSIDY.subsidize{value: 1 ether}(address(bridge), _positionCriteria, 600_000);
+    }
+
     function _assertPositionWasTerminated(uint256 _positionId) internal {
         bool _isTerminated = HUB.userPosition(_positionId).swapInterval == 0;
-        assertTrue(_isTerminated, 'Position was not terminated');
+        assertTrue(_isTerminated, "Position was not terminated");
     }
 
     function _assertBalance(AztecTypes.AztecAsset memory _asset, uint256 _initial, uint256 _diff) internal {
         uint256 _current = _calculateBalance(_asset);
-        assertEq(_current - _initial, _diff, 'Balance check failed');
+        assertEq(_current - _initial, _diff, "Balance check failed");
+    }
+
+    function _unallow(address _token) internal {
+        address[] memory _tokens = new address[](1);
+        _tokens[0] = _token;
+
+        bool[] memory _allowed = new bool[](1);
+        _allowed[0] = false;
+        vm.prank(HUB_OWNER);
+        HUB.setAllowedTokens(_tokens, _allowed);
+    }
+
+    function _buildAuxData(address _from, address _to, uint24 _amountOfSwaps, uint8 _swapIntervalCode) internal view returns (uint64) {
+        uint32 _wrapperIdFrom = bridge.getWrapperId(_from);
+        uint32 _wrapperIdTo = bridge.getWrapperId(_to);
+        return _amountOfSwaps 
+            + (uint64(_swapIntervalCode) << 24)
+            + (uint64(_wrapperIdFrom) << 32) 
+            + (uint64(_wrapperIdTo) << 48);
+    }
+    
+    function _calculateSwapped(uint256 _positionId) internal view returns (uint256 _swapped) {
+        ExtendedHub.UserPosition memory _position = HUB.userPosition(_positionId);
+        return _position.swapped;
     }
 
     function _calculateBalance(AztecTypes.AztecAsset memory _asset) internal view returns(uint256) {
@@ -381,19 +442,10 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         ITransformer.UnderlyingAmount[] memory _result = TRANSFORMER_REGISTRY.calculateTransformToUnderlying(_yieldBearing, _amount);
         return _result[0].amount;
     }
-
-    function _unallow(address _token) internal {
-        address[] memory _tokens = new address[](1);
-        _tokens[0] = _token;
-
-        bool[] memory _allowed = new bool[](1);
-        _allowed[0] = false;
-        vm.prank(HUB_OWNER);
-        HUB.setAllowedTokens(_tokens, _allowed);
-    }
 }
 
 // An extended version of the DCA Hub
+/* solhint-disable */
 interface ExtendedHub {
 
     struct UserPosition {
@@ -457,3 +509,4 @@ interface ExtendedHub {
 
     function setAllowedTokens(address[] calldata _tokens, bool[] calldata _allowed) external;
 }
+/* solhint-enable */

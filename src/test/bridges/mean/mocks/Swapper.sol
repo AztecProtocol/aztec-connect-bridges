@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.7;
 
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
 contract DCAHubSwapperMock {
@@ -13,6 +13,7 @@ contract DCAHubSwapperMock {
     uint256 platformFee;
   }
 
+  // solhint-disable-next-line func-name-mixedcase
   function DCAHubSwapCall(
     address,
     TokenInSwap[] calldata _tokens,
