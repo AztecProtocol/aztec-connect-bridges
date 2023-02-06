@@ -218,11 +218,22 @@ contract AggregateDeployment is BaseDeployment {
         uint256 assetCount = assetLength();
         emit log_named_uint("Assets", assetCount + 1);
         for (uint256 i = 0; i <= assetCount; i++) {
-            string memory symbol = i > 0 ? IERC20Metadata(rp.getSupportedAsset(i)).symbol() : "Eth";
+            address asset = rp.getSupportedAsset(i);
+            string memory symbol = i > 0 ? IERC20Metadata(asset).symbol() : "Eth";
             uint256 gas = i > 0 ? rp.assetGasLimits(i) : 30000;
-            emit log_named_string(
-                string(abi.encodePacked("  Asset ", Strings.toString(i))),
-                string(abi.encodePacked(symbol, ", ", Strings.toString(gas)))
+            emit log_string(
+                string(
+                    abi.encodePacked(
+                        "  Asset - id: ",
+                        Strings.toString(i),
+                        ", address: ",
+                        Strings.toHexString(asset),
+                        ", symbol: ",
+                        symbol,
+                        ", ",
+                        Strings.toString(gas)
+                    )
+                )
                 );
         }
 
