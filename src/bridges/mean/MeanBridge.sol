@@ -31,10 +31,9 @@ contract MeanBridge is BridgeBase, Ownable2Step {
     IDCAHub public immutable DCA_HUB;
     ITransformerRegistry public immutable TRANSFORMER_REGISTRY;
     mapping(uint256 => uint256) public positionByNonce;
-    address private immutable THIS_ADDRESS;
 
     // Note: Mean supports yield-while-DCAing and we want to support it here too. The thing
-    // is that a specific token (for example DAI) can have multiple source platforms. Each platform
+    // is that a specific token (for example DAI) can have multiple yield platforms. Each platform
     // is supported by a ERC4626 wrapper. Since we can't pass the wrapper's address, we have created a
     // a wrapper registry. This will allow us to assign a unique id to each address, and we can pass 
     // said id as part of the aux data
@@ -43,7 +42,7 @@ contract MeanBridge is BridgeBase, Ownable2Step {
     event NewWrappersSupported(address[] wrappers);
 
     /**
-     * @notice Sets address of rollup processor and Subsidy-related info
+     * @notice Sets address of rollup processor and Mean contracts
      * @param _hub The address of the DCA Hub
      * @param _owner The account that will own the bridge
      * @param _rollupProcessor Address of rollup processor
@@ -52,7 +51,6 @@ contract MeanBridge is BridgeBase, Ownable2Step {
         _transferOwnership(_owner);
         DCA_HUB = _hub;
         TRANSFORMER_REGISTRY = _transformerRegistry;
-        THIS_ADDRESS = address(this);
     }
 
     // Note: we need to be able to receive ETH to deposit as WETH
@@ -131,7 +129,7 @@ contract MeanBridge is BridgeBase, Ownable2Step {
         // Terminate position and clean things up
         uint256 _positionId = positionByNonce[_interactionNonce];
         delete positionByNonce[_interactionNonce];
-        (uint256 _unswapped, uint256 _swapped) = DCA_HUB.terminate(_positionId, THIS_ADDRESS, THIS_ADDRESS);
+        (uint256 _unswapped, uint256 _swapped) = DCA_HUB.terminate(_positionId, address(this), address(this));
 
         if (_unswapped > 0) {
             // If there are still unswapped funds, then we will only allow users to close their DCA position 
@@ -142,12 +140,11 @@ contract MeanBridge is BridgeBase, Ownable2Step {
                 revert MeanErrorLib.PositionStillOngoing();
             }
 
-            _unwrapIfNeeded(_outputAssetB, _unswapped, _from, _interactionNonce, false);
+            _outputValueB = _unwrapIfNeeded(_outputAssetB, _unswapped, _from, _interactionNonce, false);
         }
 
-        _unwrapIfNeeded(_outputAssetA, _swapped, _to, _interactionNonce, true);
-        
-        return (_swapped, _unswapped, true);
+        _outputValueA = _unwrapIfNeeded(_outputAssetA, _swapped, _to, _interactionNonce, true);
+        _interactionComplete = true;
     }
 
     /**
@@ -246,6 +243,15 @@ contract MeanBridge is BridgeBase, Ownable2Step {
         return uint256(keccak256(abi.encodePacked(_from, _to, _amountOfSwaps, _swapInterval)));
     }
 
+    /**
+     * @notice Wraps the input asset (if necessary) and deposits the funds into mean Finance
+     * @param _inputAssetA - ETH or ERC20 token to deposit and start swapping
+     * @param _outputAssetA - ETH or ERC20 token to swap funds into
+     * @param _inputValue - Amount to wrap and deposit
+     * @param _auxData - The amount of swaps, swap interval and wrappers encoded together
+     * @return _positionId The created position's id
+     * @return _criteria The subsidy criteria for the created position
+     */
     function _wrapAndDeposit(
         AztecTypes.AztecAsset memory _inputAssetA, 
         AztecTypes.AztecAsset memory _outputAssetA,
@@ -265,7 +271,7 @@ contract MeanBridge is BridgeBase, Ownable2Step {
             _amountToDeposit,
             _amountOfSwaps,
             _swapInterval,
-            THIS_ADDRESS,
+            address(this),
             new IDCAHub.PermissionSet[](0)
         );
 
@@ -273,6 +279,12 @@ contract MeanBridge is BridgeBase, Ownable2Step {
         _criteria = computeCriteriaForPosition(_from, _to, _amountOfSwaps, _swapInterval);
     }
 
+    /**
+     * @notice Wraps the input asset, if needed
+     * @param _inputAsset - The input asset
+     * @param _hubToken - The token that needs to be deposited into Mean Finance
+     * @param _amountToWrap - How much to wrap
+     */
     function _wrapIfNeeded(AztecTypes.AztecAsset memory _inputAsset, address _hubToken, uint256 _amountToWrap) internal returns (uint256 _wrappedAmount) {
         if (_inputAsset.assetType == AztecTypes.AztecAssetType.ETH) {
             WETH.deposit{value: _amountToWrap}();            
@@ -284,7 +296,7 @@ contract MeanBridge is BridgeBase, Ownable2Step {
             return TRANSFORMER_REGISTRY.transformToDependent(
                 _hubToken,
                 _underlying,
-                THIS_ADDRESS,
+                address(this),
                 0, // We can't set slippage amount through Aztec, so we set the min to zero. Would be the same as calling `deposit` on a ERC4626
                 block.timestamp
             );        
@@ -292,6 +304,14 @@ contract MeanBridge is BridgeBase, Ownable2Step {
         return _amountToWrap;
     }
 
+    /**
+     * Unwraps the position's "to" token into the output asset, if necessary
+     * @param _outputAsset - The expected asset
+     * @param _amountToUnwrap - How much to unwrap
+     * @param _hubToken - The position's "to" token
+     * @param _interactionNonce - The nonce
+     * @param _isOutputAssetA - If the asset if output A or output B
+     */
     function _unwrapIfNeeded(
         AztecTypes.AztecAsset memory _outputAsset, 
         uint256 _amountToUnwrap, 
@@ -307,7 +327,7 @@ contract MeanBridge is BridgeBase, Ownable2Step {
             ITransformer.UnderlyingAmount[] memory _underlying = TRANSFORMER_REGISTRY.transformToUnderlying(
                 _hubToken, 
                 _amountToUnwrap, 
-                THIS_ADDRESS,
+                address(this),
                 new ITransformer.UnderlyingAmount[](1), // We can't set slippage amount through Aztec, so we set the min to zero. Would be the same as calling `redeem` on a ERC4626
                 block.timestamp
             );        
@@ -318,17 +338,22 @@ contract MeanBridge is BridgeBase, Ownable2Step {
                     revert ErrorLib.InvalidOutputB();
                 }
             }
-            _amountToUnwrap = _underlying[0].amount;
+            _unwrappedAmount = _underlying[0].amount;
+        } else {
+            _unwrappedAmount = _amountToUnwrap;
         }
 
         if (_outputAsset.assetType == AztecTypes.AztecAssetType.ETH) {
-            WETH.withdraw(_amountToUnwrap);
-            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: _amountToUnwrap}(_interactionNonce);
-        }
-
-        return _amountToUnwrap;
+            WETH.withdraw(_unwrappedAmount);
+            IRollupProcessor(ROLLUP_PROCESSOR).receiveEthFromBridge{value: _unwrappedAmount}(_interactionNonce);
+        }        
     }
 
+    /**
+     * @notice Executed a max approve for the given target
+     * @param _token - The token to approve
+     * @param _target - The spender
+     */
     function _maxApprove(IERC20 _token, address _target) internal {
         // Using safeApprove(...) instead of approve(...) and first setting the allowance to 0 because underlying
         // can be Tether
@@ -336,6 +361,9 @@ contract MeanBridge is BridgeBase, Ownable2Step {
         IERC20(_token).safeApprove(_target, type(uint256).max);
     }
 
+    /**
+     * @notice Maps the given bridge data into the data needed to create a position     
+     */
     function _mapToPositionData(
         AztecTypes.AztecAsset memory _inputAsset,
         AztecTypes.AztecAsset memory _outputAsset,
@@ -346,6 +374,9 @@ contract MeanBridge is BridgeBase, Ownable2Step {
         _swapInterval = MeanSwapIntervalDecodingLib.calculateSwapInterval(uint8(_auxData >> 24));
     }
 
+    /**
+     * @notice Calculates the position's tokens based on the bridge data
+     */
     function _getTokensFromAuxData(
         AztecTypes.AztecAsset memory _inputAsset,
         AztecTypes.AztecAsset memory _outputAsset,
@@ -355,6 +386,9 @@ contract MeanBridge is BridgeBase, Ownable2Step {
         _to = _mapAssetToAddress(_outputAsset, _auxData, 48);
     }
 
+    /**
+     * @notice Calculates the DCAHub's token based on the given asset and aux data
+     */
     function _mapAssetToAddress(AztecTypes.AztecAsset memory _asset, uint64 _auxData, uint256 _shift) internal view returns(address _address) {
         uint256 _wrapperId = uint16(_auxData >> _shift);
         return _wrapperId == 0 

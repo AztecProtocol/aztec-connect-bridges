@@ -6,7 +6,11 @@ The bridge allows a user to enter a DCA (Dollar Cost Average) position, selling 
 
 ## What protocol(s) does the bridge interact with?
 
-The bridge interacts only with Mean Finance.
+The bridge interacts only with Mean Finance. In particular, we interact with two different contracts:
+1. The DCA Hub: does everything related to DCAing
+2. The Transformer Registry: can transform between wrapped tokens and their underlying tokens
+
+Both are immutable. However, the Transformer Registry is in fact a registry and the Mean Finance team has the ability to modify entries
 
 ## What is the flow of the bridge?
 
@@ -28,6 +32,24 @@ Also, the bridge supports the ability to generate yield while the DCA position i
 A position needs to be finalised before it can be exited.
 For a position to be ready to be finalised, all its available funds must have been sold for the opposite asset.
 When finalised, the accumulated funds will be returned to the bridge and the user may claim them on L2.
+
+### Technical details
+This is how we expect the data to be passed to the bridge:
+- `inputAssetA` will represent the token that the user will deposit (for example DAI)
+- `outputAssetA` will represent the token that the user will withdraw (for example ETH)
+- `outputAssetB` will be the same as output `inputAssetA` (to support withdrawing unswapped funds)
+- `auxData` will encode:
+  - The amount of swaps
+  - The swap interval
+  - The wrapper for the "from" token
+  - The wrapper for the "to" token
+
+#### AuxData
+The `auxData` field is 64bits long:
+- First 24 bits: amount of swaps
+- Next 8 bits: swap interval code (we map the values between 0 and 7 to a swap interval)
+- Next 16 bits: wrapper id for the "from" token
+- Last 16 bits: wrapper id for the "to" token
 
 ## Please list any edge cases that may restrict the usefulness of the bridge or that the bridge explicitly prevents.
 

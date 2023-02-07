@@ -7,8 +7,7 @@ import {ITransformerRegistry} from "../../interfaces/mean/ITransformerRegistry.s
 import {BaseDeployment} from "../base/BaseDeployment.s.sol";
 import {MeanBridge} from "../../bridges/mean/MeanBridge.sol";
 
-contract ERC4626Deployment is BaseDeployment {
-
+contract MeanDeployment is BaseDeployment {
 
     IDCAHub private constant HUB = IDCAHub(0xA5AdC5484f9997fBF7D405b9AA62A7d88883C345);
     ITransformerRegistry private constant TRANSFORMER_REGISTRY = ITransformerRegistry(0xC0136591Df365611B1452B5F8823dEF69Ff3A685);

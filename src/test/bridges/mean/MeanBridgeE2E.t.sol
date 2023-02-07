@@ -63,7 +63,7 @@ contract MeanBridgeE2eTest is BridgeTestBase {
     }
 
     function testEthToERC20(uint120 _inputAmount) public {
-        vm.assume(0 < _inputAmount && _inputAmount <= uint120(type(int120).max));
+        _inputAmount = uint120(bound(_inputAmount, 1, uint120(type(int120).max)));
 
         AztecTypes.AztecAsset memory _inputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
         AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(DAI);
@@ -84,8 +84,8 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         uint256 _swappedAmount = _calculateSwapped(_positionId);
         
         // Close position
-        uint256 _initialBalanceInput = _calculateBalance(_inputAsset);
-        uint256 _initialBalanceOutput = _calculateBalance(_outputAsset);
+        uint256 _initialBalanceInput = _readRollupBalance(_inputAsset);
+        uint256 _initialBalanceOutput = _readRollupBalance(_outputAsset);
         _finalise();
 
         // Perform checks
@@ -98,7 +98,7 @@ contract MeanBridgeE2eTest is BridgeTestBase {
     }
 
     function testEthToERC20WithSubsidy(uint120 _inputAmount) public {
-        vm.assume(0 < _inputAmount && _inputAmount <= uint120(type(int120).max));
+        _inputAmount = uint120(bound(_inputAmount, 1, uint120(type(int120).max)));
 
         // Setup subsidy
         uint256 _positionCriteria = bridge.computeCriteriaForPosition(WETH, DAI, 1, 1 hours);
@@ -129,7 +129,7 @@ contract MeanBridgeE2eTest is BridgeTestBase {
     }
 
     function testYieldToETH(uint120 _inputAmount) public {
-        vm.assume(1 ether <= _inputAmount && _inputAmount <= 15 ether);
+        _inputAmount = uint120(bound(_inputAmount, 1 ether, 15 ether));
 
         AztecTypes.AztecAsset memory _inputAsset = ROLLUP_ENCODER.getRealAztecAsset(DAI);
         AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
@@ -151,8 +151,8 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         uint256 _swappedAmount = _calculateSwapped(_positionId);
         
         // Close position
-        uint256 _initialBalanceInput = _calculateBalance(_inputAsset);
-        uint256 _initialBalanceOutput = _calculateBalance(_outputAsset);
+        uint256 _initialBalanceInput = _readRollupBalance(_inputAsset);
+        uint256 _initialBalanceOutput = _readRollupBalance(_outputAsset);
         _finalise();
 
         // Perform checks
@@ -162,7 +162,7 @@ contract MeanBridgeE2eTest is BridgeTestBase {
     }
 
     function testERC20ToYieldETH(uint120 _inputAmount) public {
-        vm.assume(0.5 ether <= _inputAmount && _inputAmount <= 10_000 ether);
+        _inputAmount = uint120(bound(_inputAmount, 0.5 ether, 10_000 ether));
 
         AztecTypes.AztecAsset memory _inputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(DAI));
         AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
@@ -185,8 +185,8 @@ contract MeanBridgeE2eTest is BridgeTestBase {
 
         
         // Close position
-        uint256 _initialBalanceInput = _calculateBalance(_inputAsset);
-        uint256 _initialBalanceOutput = _calculateBalance(_outputAsset);
+        uint256 _initialBalanceInput = _readRollupBalance(_inputAsset);
+        uint256 _initialBalanceOutput = _readRollupBalance(_outputAsset);
         _finalise();
 
         // Perform checks
@@ -215,19 +215,22 @@ contract MeanBridgeE2eTest is BridgeTestBase {
 
         // Perform swap
         _swap(_hubFrom, _hubTo);
+        uint256 _swappedAmount = _calculateSwapped(_positionId);
+        uint256 _swappedUnderlying = _calculateToUnderlying(YIELD_BEARING_DAI, _swappedAmount);
         
         // Close position
-        uint256 _initialBalanceInput = _calculateBalance(_inputAsset);
+        uint256 _initialBalanceInput = _readRollupBalance(_inputAsset);
+        uint256 _initialBalanceOutput = _readRollupBalance(_outputAsset);
         _finalise();
 
         // Perform checks
         _assertPositionWasTerminated(_positionId);
         _assertBalance(_inputAsset, _initialBalanceInput, 0);
-        // Note: Euler returns some wei less that expected, so we don"t test it here
+        _assertBalance(_outputAsset, _initialBalanceOutput, _swappedUnderlying);
     }
 
     function testFinaliseIfSwapsPaused(uint120 _inputAmount) public {
-        vm.assume(0 < _inputAmount && _inputAmount <= uint120(type(int120).max));
+        _inputAmount = uint120(bound(_inputAmount, 1, uint120(type(int120).max)));
 
         AztecTypes.AztecAsset memory _inputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
         AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(DAI);
@@ -245,8 +248,8 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         HUB.pause();
 
         // Close position
-        uint256 _initialBalanceInput = _calculateBalance(_inputAsset);
-        uint256 _initialBalanceOutput = _calculateBalance(_outputAsset);
+        uint256 _initialBalanceInput = _readRollupBalance(_inputAsset);
+        uint256 _initialBalanceOutput = _readRollupBalance(_outputAsset);
         _finalise();
 
         // Perform checks
@@ -256,7 +259,7 @@ contract MeanBridgeE2eTest is BridgeTestBase {
     }
 
     function testFinaliseIfFromIsNotAllowed(uint120 _inputAmount) public {
-        vm.assume(0 < _inputAmount && _inputAmount <= uint120(type(int120).max));
+        _inputAmount = uint120(bound(_inputAmount, 1, uint120(type(int120).max)));
 
         AztecTypes.AztecAsset memory _inputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
         AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(DAI);
@@ -270,11 +273,11 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         uint256 _positionId = _convert(_inputAsset, _outputAsset, _hubFrom, _hubTo, _inputAmount);        
 
         // Unallow from
-        _unallow(_hubFrom);
+        _mockUnallow(_hubFrom);
 
         // Close position
-        uint256 _initialBalanceInput = _calculateBalance(_inputAsset);
-        uint256 _initialBalanceOutput = _calculateBalance(_outputAsset);
+        uint256 _initialBalanceInput = _readRollupBalance(_inputAsset);
+        uint256 _initialBalanceOutput = _readRollupBalance(_outputAsset);
         _finalise();
 
         // Perform checks
@@ -284,7 +287,7 @@ contract MeanBridgeE2eTest is BridgeTestBase {
     }   
 
     function testFinaliseIfToIsNotAllowed(uint120 _inputAmount) public {
-        vm.assume(0 < _inputAmount && _inputAmount <= uint120(type(int120).max));
+        _inputAmount = uint120(bound(_inputAmount, 1, uint120(type(int120).max)));
 
         AztecTypes.AztecAsset memory _inputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
         AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(DAI);
@@ -298,11 +301,11 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         uint256 _positionId = _convert(_inputAsset, _outputAsset, _hubFrom, _hubTo, _inputAmount);        
 
         // Unallow to
-        _unallow(_hubTo);
+        _mockUnallow(_hubTo);
 
         // Close position
-        uint256 _initialBalanceInput = _calculateBalance(_inputAsset);
-        uint256 _initialBalanceOutput = _calculateBalance(_outputAsset);
+        uint256 _initialBalanceInput = _readRollupBalance(_inputAsset);
+        uint256 _initialBalanceOutput = _readRollupBalance(_outputAsset);
         _finalise();
 
         // Perform checks
@@ -398,11 +401,11 @@ contract MeanBridgeE2eTest is BridgeTestBase {
     }
 
     function _assertBalance(AztecTypes.AztecAsset memory _asset, uint256 _initial, uint256 _diff) internal {
-        uint256 _current = _calculateBalance(_asset);
+        uint256 _current = _readRollupBalance(_asset);
         assertEq(_current - _initial, _diff, "Balance check failed");
     }
 
-    function _unallow(address _token) internal {
+    function _mockUnallow(address _token) internal {
         address[] memory _tokens = new address[](1);
         _tokens[0] = _token;
 
@@ -426,7 +429,7 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         return _position.swapped;
     }
 
-    function _calculateBalance(AztecTypes.AztecAsset memory _asset) internal view returns(uint256) {
+    function _readRollupBalance(AztecTypes.AztecAsset memory _asset) internal view returns(uint256) {
         return (_asset.assetType == AztecTypes.AztecAssetType.ETH)
             ? address(ROLLUP_PROCESSOR).balance
             : IERC20(_asset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
