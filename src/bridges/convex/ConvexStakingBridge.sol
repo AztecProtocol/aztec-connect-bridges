@@ -37,6 +37,42 @@ import {RepresentingConvexToken} from "./RepresentingConvexToken.sol";
 contract ConvexStakingBridge is BridgeBase {
     using SafeERC20 for IERC20;
 
+    // Convex Finance Booster
+    IConvexBooster public constant BOOSTER = IConvexBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
+
+    // Reward tokens
+    address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
+    address public constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
+
+    // Exchange tokens
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    address public constant CRV3 = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
+
+    // Exchange pools
+    address public constant CRV_TO_ETH_POOL = 0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
+    address public constant CVX_TO_ETH_POOL = 0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4;
+    address public constant WETH_TO_USDT_POOL = 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46;
+    address public constant USDT_TO_3CRV_POOL = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
+
+    // Liquidity pools
+    address public constant ST_ETH_POOL = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
+    address public constant FRAX_POOL = 0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B;
+    address public constant TRI_CRYPTO_2_POOL = 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46;
+    address public constant MIM_POOL = 0x5a6A4D54456819380173272A5E8E9B9904BdF41B;
+    address public constant CRV_ETH_POOL = 0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
+    address public constant CVX_ETH_POOL = 0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4;
+    address public constant AL_ETH_POOL = 0xC4C319E2D4d66CcA4464C0c2B32c9Bd23ebe784e;
+    address public constant S_ETH_POOL = 0xc5424B857f758E906013F3555Dad202e4bdB4567;
+    address public constant LUSD_POOL = 0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA;
+    address public constant P_ETH_POOL = 0x9848482da3Ee3076165ce6497eDA906E66bB85C5;
+
+    // Smallest amounts of rewards to swap (gas optimizations)
+    uint256 private constant MIN_SWAP_AMT = 2e20; // $100 for CRV, $67 for CVX
+
+    // Representing Convex Token implementation address
+    address public immutable RCT_IMPLEMENTATION;
+
     /**
      * @param poolId Id of the staking pool
      * @param convexLpToken Token minted for Convex Finance to track ownership and amount of staked Curve LP tokens
@@ -91,17 +127,8 @@ contract ConvexStakingBridge is BridgeBase {
         address tokenToApprove;
     }
 
-    // Convex Finance Booster
-    IConvexBooster public constant BOOSTER = IConvexBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
-
-    // Representing Convex Token implementation address
-    address public immutable RCT_IMPLEMENTATION;
-
     // Deployed RCT clones, mapping(CurveLpToken => RCT)
     mapping(address => address) public deployedClones;
-
-    // Convex pools that the contract can interact with
-    uint256[10] public supportedPools = [23, 25, 32, 33, 38, 40, 49, 61, 64, 122];
 
     // Exchange pools and a liquidity pool for different pool ids,
     mapping(uint256 => ExchangePools) public exchangePools;
@@ -109,15 +136,8 @@ contract ConvexStakingBridge is BridgeBase {
     // (loaded) Convex pools, mapping(CurveLpToken => PoolInfo)
     mapping(address => PoolInfo) public pools;
 
-    // Smallest amounts of rewards to swap (gas optimizations)
-    uint256 private constant MIN_CRV_SWAP_AMT = 2e20; // $100
-    uint256 private constant MIN_CVX_SWAP_AMT = 3e20; // $100
+    event ExchangePoolsSetUpSuccessfully();
 
-    // Reward tokens
-    address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
-    address public constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
-
-    error SwapFailed();
     error PoolAlreadyLoaded(uint256 poolId);
     error UnsupportedPool(uint256 poolId);
 
@@ -131,7 +151,7 @@ contract ConvexStakingBridge is BridgeBase {
     }
 
     /**
-     * @notice Empty receive function so the bridge can receive ether. Used for subsidy and possible swap of rewards for ether.
+     * @notice Empty receive function so the bridge can receive ether. Used by some reward swaps.
      */
     receive() external payable {}
 
@@ -255,86 +275,79 @@ contract ConvexStakingBridge is BridgeBase {
     }
 
     /**
-     * @notice Loads pool specific exchange pools and liquidity pool. Unsupported pools will revert.
-     * @dev usdtTo3Crv had to be tweaked to fit the Exchange Pool interface because it uses a different method to get the 3CRV token than the rest
+     * @notice Loads pool specific exchange pools and liquidity pool. Unsupported pools and already loaded pools will revert.
+     * @dev USDT -> 3Crv had to be tweaked to fit the Exchange Pool interface because it uses a different method to get the 3Crv token than the rest
+     * @dev ExchangePool(exchange pool address, coin in, coin out, exchange interface, get underlying asset, token the exchange pool will manipulate)
+     * @dev LiquidityPool(liquidity pool address, array length, index of the deposited coin in the array, is deposit ETH or a token, token the liquidity pool will manipulate)
      */
     function _loadExchangePools(uint256 _poolId) internal {
-        ExchangePool[3] memory crvPath;
-        ExchangePool[3] memory cvxPath;
-        LiquidityPool memory liquidityPool;
-
-        address weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-        address usdt = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
-        address crv3 = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
-
-        ExchangePool memory crvToEth = ExchangePool(0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511, 1, 0, 1, true, CRV); // CRV -> ETH
-        ExchangePool memory crvToWeth = ExchangePool(0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511, 1, 0, 1, false, CRV); // CRV -> WETH
-        ExchangePool memory cvxToEth = ExchangePool(0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4, 1, 0, 1, true, CVX); // CVX -> ETH
-        ExchangePool memory cvxToWeth = ExchangePool(0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4, 1, 0, 1, false, CVX); // CVX -> WETH
-        ExchangePool memory wethToUsdt = ExchangePool(0xD51a44d3FaE010294C616388b506AcdA1bfAAE46, 2, 0, 2, false, weth); // WETH -> USDT
-        ExchangePool memory usdtTo3Crv = ExchangePool(0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7, 2, 0, 3, false, usdt); // Deposit USDT, earn 3Crv
-
-        if (_poolId == 25) {
-            crvPath[0] = crvToEth;
-            cvxPath[0] = cvxToEth;
-            liquidityPool = LiquidityPool(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022, 2, 0, true, address(0));
-        } else if (_poolId == 32) {
-            crvPath[0] = crvToWeth;
-            crvPath[1] = wethToUsdt;
-            crvPath[2] = usdtTo3Crv;
-            cvxPath[0] = cvxToWeth;
-            cvxPath[1] = wethToUsdt;
-            cvxPath[2] = usdtTo3Crv;
-            liquidityPool = LiquidityPool(0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B, 2, 1, false, crv3);
-        } else if (_poolId == 38) {
-            crvPath[0] = crvToWeth;
-            cvxPath[0] = cvxToWeth;
-            liquidityPool = LiquidityPool(0xD51a44d3FaE010294C616388b506AcdA1bfAAE46, 3, 2, false, weth);
-        } else if (_poolId == 40) {
-            crvPath[0] = crvToWeth;
-            crvPath[1] = wethToUsdt;
-            crvPath[2] = usdtTo3Crv;
-            cvxPath[0] = cvxToWeth;
-            cvxPath[1] = wethToUsdt;
-            cvxPath[2] = usdtTo3Crv;
-            liquidityPool = LiquidityPool(0x5a6A4D54456819380173272A5E8E9B9904BdF41B, 2, 1, false, crv3);
-        } else if (_poolId == 61) {
-            crvPath[0] = crvToWeth;
-            cvxPath[0] = cvxToWeth;
-            liquidityPool = LiquidityPool(0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511, 2, 0, false, weth);
-        } else if (_poolId == 64) {
-            crvPath[0] = crvToWeth;
-            cvxPath[0] = cvxToWeth;
-            liquidityPool = LiquidityPool(0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4, 2, 0, false, weth);
-        } else if (_poolId == 49) {
-            crvPath[0] = crvToEth;
-            cvxPath[0] = cvxToEth;
-            liquidityPool = LiquidityPool(0xC4C319E2D4d66CcA4464C0c2B32c9Bd23ebe784e, 2, 0, true, address(0));
-        } else if (_poolId == 23) {
-            crvPath[0] = crvToEth;
-            cvxPath[0] = cvxToEth;
-            liquidityPool = LiquidityPool(0xc5424B857f758E906013F3555Dad202e4bdB4567, 2, 0, true, address(0));
-        } else if (_poolId == 33) {
-            crvPath[0] = crvToWeth;
-            crvPath[1] = wethToUsdt;
-            crvPath[2] = usdtTo3Crv;
-            cvxPath[0] = cvxToWeth;
-            cvxPath[1] = wethToUsdt;
-            cvxPath[2] = usdtTo3Crv;
-            liquidityPool = LiquidityPool(0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA, 2, 1, false, crv3);
-        } else if (_poolId == 122) {
-            crvPath[0] = crvToEth;
-            cvxPath[0] = cvxToEth;
-            liquidityPool = LiquidityPool(0x9848482da3Ee3076165ce6497eDA906E66bB85C5, 2, 0, true, address(0));
-        } else {
-            revert UnsupportedPool(_poolId);
-        }
-
         if (exchangePools[_poolId].liquidityPool.liquidityPool != address(0)) {
             revert PoolAlreadyLoaded(_poolId);
         }
 
+        ExchangePool[3] memory crvPath;
+        ExchangePool[3] memory cvxPath;
+        LiquidityPool memory liquidityPool;
+
+        if (_poolId == 25) {
+            crvPath[0] = ExchangePool(CRV_TO_ETH_POOL, 1, 0, 1, true, CRV); // CRV -> ETH
+            cvxPath[0] = ExchangePool(CVX_TO_ETH_POOL, 1, 0, 1, true, CVX); // CVX -> ETH
+            liquidityPool = LiquidityPool(ST_ETH_POOL, 2, 0, true, address(0)); // Deposit ETH, earn Curve LP token
+        } else if (_poolId == 32) {
+            crvPath[0] = ExchangePool(CRV_TO_ETH_POOL, 1, 0, 1, false, CRV); // CRV -> WETH
+            crvPath[1] = ExchangePool(WETH_TO_USDT_POOL, 2, 0, 2, false, WETH); // WETH -> USDT
+            crvPath[2] = ExchangePool(USDT_TO_3CRV_POOL, 2, 0, 3, false, USDT); // Deposit USDT, earn 3Crv
+            cvxPath[0] = ExchangePool(CVX_TO_ETH_POOL, 1, 0, 1, false, CVX); // CVX -> WETH
+            cvxPath[1] = ExchangePool(WETH_TO_USDT_POOL, 2, 0, 2, false, WETH); // WETH -> USDT
+            cvxPath[2] = ExchangePool(USDT_TO_3CRV_POOL, 2, 0, 3, false, USDT); // Deposit USDT, earn 3Crv
+            liquidityPool = LiquidityPool(FRAX_POOL, 2, 1, false, CRV3); // Deposit 3Crv, earn Curve LP token
+        } else if (_poolId == 38) {
+            crvPath[0] = ExchangePool(CRV_TO_ETH_POOL, 1, 0, 1, false, CRV); // CRV -> WETH
+            cvxPath[0] = ExchangePool(CVX_TO_ETH_POOL, 1, 0, 1, false, CVX); // CVX -> WETH
+            liquidityPool = LiquidityPool(TRI_CRYPTO_2_POOL, 3, 2, false, WETH); // Deposit WETH, earn Curve LP token
+        } else if (_poolId == 40) {
+            crvPath[0] = ExchangePool(CRV_TO_ETH_POOL, 1, 0, 1, false, CRV); // CRV -> WETH
+            crvPath[1] = ExchangePool(WETH_TO_USDT_POOL, 2, 0, 2, false, WETH); // WETH -> USDT
+            crvPath[2] = ExchangePool(USDT_TO_3CRV_POOL, 2, 0, 3, false, USDT); // Deposit USDT, earn 3Crv
+            cvxPath[0] = ExchangePool(CVX_TO_ETH_POOL, 1, 0, 1, false, CVX); // CVX -> WETH
+            cvxPath[1] = ExchangePool(WETH_TO_USDT_POOL, 2, 0, 2, false, WETH); // WETH -> USDT
+            cvxPath[2] = ExchangePool(USDT_TO_3CRV_POOL, 2, 0, 3, false, USDT); // Deposit USDT, earn 3Crv
+            liquidityPool = LiquidityPool(MIM_POOL, 2, 1, false, CRV3); // Deposit 3Crv, earn Curve LP token
+        } else if (_poolId == 61) {
+            crvPath[0] = ExchangePool(CRV_TO_ETH_POOL, 1, 0, 1, false, CRV); // CRV -> WETH
+            cvxPath[0] = ExchangePool(CVX_TO_ETH_POOL, 1, 0, 1, false, CVX); // CVX -> WETH
+            liquidityPool = LiquidityPool(CRV_ETH_POOL, 2, 0, false, WETH); // Deposit WETH, earn Curve LP token
+        } else if (_poolId == 64) {
+            crvPath[0] = ExchangePool(CRV_TO_ETH_POOL, 1, 0, 1, false, CRV); // CRV -> WETH
+            cvxPath[0] = ExchangePool(CVX_TO_ETH_POOL, 1, 0, 1, false, CVX); // CVX -> WETH
+            liquidityPool = LiquidityPool(CVX_ETH_POOL, 2, 0, false, WETH); // Deposit WETH, earn Curve LP token
+        } else if (_poolId == 49) {
+            crvPath[0] = ExchangePool(CRV_TO_ETH_POOL, 1, 0, 1, true, CRV); // CRV -> ETH
+            cvxPath[0] = ExchangePool(CVX_TO_ETH_POOL, 1, 0, 1, true, CVX); // CVX -> ETH
+            liquidityPool = LiquidityPool(AL_ETH_POOL, 2, 0, true, address(0)); // Deposit ETH, earn Curve LP token
+        } else if (_poolId == 23) {
+            crvPath[0] = ExchangePool(CRV_TO_ETH_POOL, 1, 0, 1, true, CRV); // CRV -> ETH
+            cvxPath[0] = ExchangePool(CVX_TO_ETH_POOL, 1, 0, 1, true, CVX); // CVX -> ETH
+            liquidityPool = LiquidityPool(S_ETH_POOL, 2, 0, true, address(0)); // Deposit ETH, earn Curve LP token
+        } else if (_poolId == 33) {
+            crvPath[0] = ExchangePool(CRV_TO_ETH_POOL, 1, 0, 1, false, CRV); // CRV -> WETH
+            crvPath[1] = ExchangePool(WETH_TO_USDT_POOL, 2, 0, 2, false, WETH); // WETH -> USDT
+            crvPath[2] = ExchangePool(USDT_TO_3CRV_POOL, 2, 0, 3, false, USDT); // Deposit USDT, earn 3Crv
+            cvxPath[0] = ExchangePool(CVX_TO_ETH_POOL, 1, 0, 1, false, CVX); // CVX -> WETH
+            cvxPath[1] = ExchangePool(WETH_TO_USDT_POOL, 2, 0, 2, false, WETH); // WETH -> USDT
+            cvxPath[2] = ExchangePool(USDT_TO_3CRV_POOL, 2, 0, 3, false, USDT); // Deposit USDT, earn 3Crv
+            liquidityPool = LiquidityPool(LUSD_POOL, 2, 1, false, CRV3); // Deposit 3Crv, earn Curve LP token
+        } else if (_poolId == 122) {
+            crvPath[0] = ExchangePool(CRV_TO_ETH_POOL, 1, 0, 1, true, CRV); // CRV -> ETH
+            cvxPath[0] = ExchangePool(CVX_TO_ETH_POOL, 1, 0, 1, true, CVX); // CVX -> ETH
+            liquidityPool = LiquidityPool(P_ETH_POOL, 2, 0, true, address(0)); // Deposit ETH, earn Curve LP token
+        } else {
+            revert UnsupportedPool(_poolId);
+        }
+
         exchangePools[_poolId] = ExchangePools(abi.encode(crvPath), abi.encode(cvxPath), liquidityPool);
+
+        emit ExchangePoolsSetUpSuccessfully();
     }
 
     /**
@@ -423,42 +436,26 @@ contract ConvexStakingBridge is BridgeBase {
      * @notice Exchanges x amount of token A for y amount of token B via Curve pools
      * @param _pool Exchange pool
      * @param _amount Amount of token A to exchange
-     * @return totalExchangedAmt Amount of token B received
+     * @return exchangedAmt Amount of token B received
      * @dev Exchange pool is set up at pool loading
      * @dev Exchange pool determines which interface is going to be used
      */
-    function _exchangeCoins(ExchangePool memory _pool, uint256 _amount) internal returns (uint256 totalExchangedAmt) {
+    function _exchangeCoins(ExchangePool memory _pool, uint256 _amount) internal returns (uint256 exchangedAmt) {
         if (_pool.exchangeInterface == 1 && _pool.underlying) {
-            try ICurveExchangeV1(_pool.pool).exchange_underlying(_pool.coinIn, _pool.coinOut, _amount, 0) returns (
-                uint256 exchangedTokensAmt
-            ) {
-                totalExchangedAmt = exchangedTokensAmt;
-            } catch (bytes memory) {
-                revert SwapFailed();
-            }
+            exchangedAmt = ICurveExchangeV1(_pool.pool).exchange_underlying(_pool.coinIn, _pool.coinOut, _amount, 0);
         } else if (_pool.exchangeInterface == 1) {
-            try ICurveExchangeV1(_pool.pool).exchange(_pool.coinIn, _pool.coinOut, _amount, 0) returns (
-                uint256 exchangedTokensAmt
-            ) {
-                totalExchangedAmt = exchangedTokensAmt;
-            } catch (bytes memory) {
-                revert SwapFailed();
-            }
+            exchangedAmt = ICurveExchangeV1(_pool.pool).exchange(_pool.coinIn, _pool.coinOut, _amount, 0);
         } else if (_pool.exchangeInterface == 2) {
-            uint256 usdtBalanceBefore = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7).balanceOf(address(this));
-            try ICurveExchangeV2(_pool.pool).exchange(_pool.coinIn, _pool.coinOut, _amount, 0, false) {
-                uint256 usdtBalanceAfter = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7).balanceOf(address(this));
-                totalExchangedAmt = usdtBalanceAfter - usdtBalanceBefore;
-            } catch (bytes memory) {
-                revert SwapFailed();
-            }
+            uint256 usdtBalanceBefore = IERC20(USDT).balanceOf(address(this));
+            ICurveExchangeV2(_pool.pool).exchange(_pool.coinIn, _pool.coinOut, _amount, 0, false);
+            uint256 usdtBalanceAfter = IERC20(USDT).balanceOf(address(this));
+            exchangedAmt = usdtBalanceAfter - usdtBalanceBefore;
         } else if (_pool.exchangeInterface == 3) {
             uint256[3] memory amounts;
             amounts[_pool.coinIn] = _amount;
-            uint256 crv3BalanceBefore = IERC20(0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490).balanceOf(address(this));
+            uint256 crv3BalanceBefore = IERC20(CRV3).balanceOf(address(this));
             ICurveLiquidityPool(_pool.pool).add_liquidity(amounts, 0);
-            totalExchangedAmt =
-                IERC20(0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490).balanceOf(address(this)) - crv3BalanceBefore;
+            exchangedAmt = IERC20(CRV3).balanceOf(address(this)) - crv3BalanceBefore;
         }
     }
 
@@ -473,70 +470,53 @@ contract ConvexStakingBridge is BridgeBase {
     {
         ICurveRewards(_selectedPool.curveRewards).getReward(address(this), true); // claim rewards
 
-        uint256 totalExchangedAmt;
-        bool exchangePoolsLoaded;
-
-        ExchangePools memory exchangePool;
-
         uint256 crvBalance = IERC20(CRV).balanceOf(address(this));
-        if (crvBalance > MIN_CRV_SWAP_AMT) {
-            exchangePool = exchangePools[_selectedPool.poolId];
-            exchangePoolsLoaded = true;
-            ExchangePool[3] memory crvExchangePools = abi.decode(exchangePool.crvExchangePools, (ExchangePool[3]));
-
-            uint256 exchangedAmt;
-
-            for (uint256 i = 0; i < 3; i++) {
-                if (crvExchangePools[i].pool != address(0) && i == 0) {
-                    exchangedAmt = _exchangeCoins(crvExchangePools[i], crvBalance);
-                } else if (crvExchangePools[i].pool != address(0)) {
-                    exchangedAmt = _exchangeCoins(crvExchangePools[i], exchangedAmt);
-                }
-            }
-
-            totalExchangedAmt = exchangedAmt;
-        }
-
         uint256 cvxBalance = IERC20(CVX).balanceOf(address(this));
-        if (cvxBalance > MIN_CVX_SWAP_AMT) {
-            if (!exchangePoolsLoaded) {
-                exchangePool = exchangePools[_selectedPool.poolId];
-            }
 
-            ExchangePool[3] memory cvxExchangePools = abi.decode(exchangePool.cvxExchangePools, (ExchangePool[3]));
-
-            uint256 exchangedAmt;
-
-            for (uint256 i = 0; i < 3; i++) {
-                if (cvxExchangePools[i].pool != address(0) && i == 0) {
-                    exchangedAmt = _exchangeCoins(cvxExchangePools[i], cvxBalance);
-                } else if (cvxExchangePools[i].pool != address(0)) {
-                    exchangedAmt = _exchangeCoins(cvxExchangePools[i], exchangedAmt);
-                }
-            }
-
-            totalExchangedAmt += exchangedAmt;
+        if (crvBalance < MIN_SWAP_AMT || cvxBalance < MIN_SWAP_AMT) {
+            return 0;
         }
 
-        // deposit exchanged tokens (ETH) to liquidity pool to receive Curve LP token
-        if (totalExchangedAmt != 0) {
-            LiquidityPool memory lp = exchangePool.liquidityPool;
+        ExchangePools memory exchangePool = exchangePools[_selectedPool.poolId];
 
-            if (lp.amountsLength == 2) {
-                uint256[2] memory amounts;
-                amounts[lp.amountsIndex] = totalExchangedAmt;
+        ExchangePool[3] memory crvExchangePools = abi.decode(exchangePool.crvExchangePools, (ExchangePool[3]));
+        ExchangePool[3] memory cvxExchangePools = abi.decode(exchangePool.cvxExchangePools, (ExchangePool[3]));
 
-                lpTokenAmt = lp.depositEth
-                    ? ICurveLiquidityPool(lp.liquidityPool).add_liquidity{value: amounts[lp.amountsIndex]}(amounts, 0)
-                    : ICurveLiquidityPool(lp.liquidityPool).add_liquidity(amounts, 0);
-            } else if (lp.amountsLength == 3) {
-                uint256[3] memory amounts;
-                amounts[lp.amountsIndex] = totalExchangedAmt;
+        uint256 exchangedAmtFromCRV;
+        uint256 exchangedAmtFromCVX;
 
-                uint256 curveLpTokensBeforeDeposit = IERC20(_curveLpToken).totalSupply();
-                ICurveLiquidityPool(lp.liquidityPool).add_liquidity(amounts, 0);
-                lpTokenAmt = IERC20(_curveLpToken).totalSupply() - curveLpTokensBeforeDeposit;
+        for (uint256 i = 0; i < 3; i++) {
+            if (crvExchangePools[i].pool != address(0)) {
+                exchangedAmtFromCRV = i == 0
+                    ? _exchangeCoins(crvExchangePools[i], crvBalance)
+                    : _exchangeCoins(crvExchangePools[i], exchangedAmtFromCRV);
             }
+            if (cvxExchangePools[i].pool != address(0)) {
+                exchangedAmtFromCVX = i == 0
+                    ? _exchangeCoins(cvxExchangePools[i], cvxBalance)
+                    : _exchangeCoins(cvxExchangePools[i], exchangedAmtFromCVX);
+            }
+        }
+
+        uint256 totalExchangedAmt = exchangedAmtFromCRV + exchangedAmtFromCVX;
+
+        // deposit exchanged tokens / ETH to liquidity pool to receive Curve LP token
+        LiquidityPool memory lp = exchangePool.liquidityPool;
+
+        if (lp.amountsLength == 2) {
+            uint256[2] memory amounts;
+            amounts[lp.amountsIndex] = totalExchangedAmt;
+
+            lpTokenAmt = lp.depositEth
+                ? ICurveLiquidityPool(lp.liquidityPool).add_liquidity{value: amounts[lp.amountsIndex]}(amounts, 0)
+                : ICurveLiquidityPool(lp.liquidityPool).add_liquidity(amounts, 0);
+        } else if (lp.amountsLength == 3) {
+            uint256[3] memory amounts;
+            amounts[lp.amountsIndex] = totalExchangedAmt;
+
+            uint256 curveLpTokensBeforeDeposit = IERC20(_curveLpToken).totalSupply();
+            ICurveLiquidityPool(lp.liquidityPool).add_liquidity(amounts, 0);
+            lpTokenAmt = IERC20(_curveLpToken).totalSupply() - curveLpTokensBeforeDeposit;
         }
     }
 

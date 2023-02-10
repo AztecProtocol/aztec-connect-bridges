@@ -18,6 +18,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
     address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
     address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address private constant BENEFICIARY = address(777);
+    address private constant BOOSTER_POOL_MANAGER = 0x5F47010F230cE1568BeA53a06eBAF528D05c5c1B;
 
     address private curveLpToken;
     address private convexLpToken;
@@ -393,29 +394,6 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
         }
     }
 
-    function testDepositWithdrawalFlowExchangeOnlyCVX() public {
-        uint256 depositAmount = 1e24;
-        uint256 withdrawalAmount = 1e10;
-
-        for (uint256 i = 0; i < supportedPids.length; i++) {
-            uint256 poolId = supportedPids[i];
-
-            _setupBridge(poolId);
-            _mockInitialRewardBalances(false, true);
-
-            _loadPool(poolId);
-            _setupRepresentingConvexTokenClone();
-            _setupSubsidy();
-
-            // CRV rewards will NOT be exchanged
-            vm.mockCall(CRV, abi.encodeWithSelector(IERC20.balanceOf.selector, address(bridge)), abi.encode(0));
-            _deposit(depositAmount);
-            _withdraw(withdrawalAmount);
-            rewind(10 days);
-            vm.clearMockedCalls();
-        }
-    }
-
     function testSwapNotEnoughRewards(uint96 _depositAmount, uint256 _poolId) public {
         vm.assume(_depositAmount > 0);
 
@@ -437,6 +415,31 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
         rewind(10 days);
 
         vm.clearMockedCalls();
+    }
+
+    function testWithdrawalWhenPoolShutdown(uint256 _poolId) public {
+        uint256 depositAmount = 1e24;
+        uint256 withdrawalAmount = 1e10;
+
+        uint256 poolId = _getPoolId(_poolId);
+
+            _setupBridge(poolId);
+        _mockInitialRewardBalances(false, false);
+
+            _loadPool(poolId);
+            _setupRepresentingConvexTokenClone();
+            _setupSubsidy();
+
+            _deposit(depositAmount);
+
+        // shut down pool
+        vm.startPrank(BOOSTER_POOL_MANAGER);
+        bool isPoolShutdown = IConvexBooster(BOOSTER).shutdownPool(poolId);
+        vm.stopPrank();
+
+        assert(isPoolShutdown == true);
+
+            _withdraw(withdrawalAmount);
     }
 
     /**

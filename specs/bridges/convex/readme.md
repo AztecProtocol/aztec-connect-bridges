@@ -78,7 +78,7 @@ Gas cost of a withdrawal varies based on the pool. Withdrawal costs about 1.4M w
 
 - A single pool can be shut down by Booster's Pool Manager contract (0x5F47010F230cE1568BeA53a06eBAF528D05c5c1B)
   Any interaction with a pool supported by Convex Finance can be shut down by Convex pool manager contract.
-  Pool shutdown will force all tokens from Staker and Gauge contracts to be transferred to Booster. Withdrawals will no get impaired.
+  Pool shutdown will force all tokens from Staker and Gauge contracts to be transferred to Booster. Withdrawals will not get impaired.
   Only the Staker's and Gauge's balances (including your share) are displaced.
   Note: Deposit will not be possible.
 
