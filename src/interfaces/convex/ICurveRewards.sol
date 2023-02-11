@@ -2,7 +2,7 @@
 pragma solidity >=0.8.4;
 
 interface ICurveRewards {
-    // Transfer ownership of staked Convex LP tokens from CrvRewards contract to the bridge
+    // Transfer ownership of staked Convex LP tokens from CurveRewards contract to the bridge
     function withdraw(uint256 amount, bool claim) external returns (bool);
 
     // Claim the earned rewards

@@ -31,47 +31,11 @@ import {RepresentingConvexToken} from "./RepresentingConvexToken.sol";
  * RCT ERC20 token is deployed for each loaded pool.
  * RCT is minted proportionally to all, staked and bridge owned, Curve LP tokens.
  * Main purpose of RCT tokens is that they can be owned by the bridge and recovered by the Rollup Processor.
- * @dev Synchronous and stateless bridge
+ * @dev Synchronous and stateful bridge
  * @author Vojtech Kaiser (VojtaKai on GitHub)
  */
 contract ConvexStakingBridge is BridgeBase {
     using SafeERC20 for IERC20;
-
-    // Convex Finance Booster
-    IConvexBooster public constant BOOSTER = IConvexBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
-
-    // Reward tokens
-    address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
-    address public constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
-
-    // Exchange tokens
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
-    address public constant CRV3 = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
-
-    // Exchange pools
-    address public constant CRV_TO_ETH_POOL = 0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
-    address public constant CVX_TO_ETH_POOL = 0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4;
-    address public constant WETH_TO_USDT_POOL = 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46;
-    address public constant USDT_TO_3CRV_POOL = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
-
-    // Liquidity pools
-    address public constant ST_ETH_POOL = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-    address public constant FRAX_POOL = 0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B;
-    address public constant TRI_CRYPTO_2_POOL = 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46;
-    address public constant MIM_POOL = 0x5a6A4D54456819380173272A5E8E9B9904BdF41B;
-    address public constant CRV_ETH_POOL = 0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
-    address public constant CVX_ETH_POOL = 0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4;
-    address public constant AL_ETH_POOL = 0xC4C319E2D4d66CcA4464C0c2B32c9Bd23ebe784e;
-    address public constant S_ETH_POOL = 0xc5424B857f758E906013F3555Dad202e4bdB4567;
-    address public constant LUSD_POOL = 0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA;
-    address public constant P_ETH_POOL = 0x9848482da3Ee3076165ce6497eDA906E66bB85C5;
-
-    // Smallest amounts of rewards to swap (gas optimizations)
-    uint256 private constant MIN_SWAP_AMT = 2e20; // $100 for CRV, $67 for CVX
-
-    // Representing Convex Token implementation address
-    address public immutable RCT_IMPLEMENTATION;
 
     /**
      * @param poolId Id of the staking pool
@@ -127,6 +91,42 @@ contract ConvexStakingBridge is BridgeBase {
         address tokenToApprove;
     }
 
+    // Convex Finance Booster
+    IConvexBooster public constant BOOSTER = IConvexBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
+
+    // Reward tokens
+    address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
+    address public constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
+
+    // Exchange tokens
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    address public constant CRV3 = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
+
+    // Exchange pools
+    address public constant CRV_TO_ETH_POOL = 0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
+    address public constant CVX_TO_ETH_POOL = 0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4;
+    address public constant WETH_TO_USDT_POOL = 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46;
+    address public constant USDT_TO_3CRV_POOL = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
+
+    // Liquidity pools
+    address public constant ST_ETH_POOL = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
+    address public constant FRAX_POOL = 0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B;
+    address public constant TRI_CRYPTO_2_POOL = 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46;
+    address public constant MIM_POOL = 0x5a6A4D54456819380173272A5E8E9B9904BdF41B;
+    address public constant CRV_ETH_POOL = 0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
+    address public constant CVX_ETH_POOL = 0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4;
+    address public constant AL_ETH_POOL = 0xC4C319E2D4d66CcA4464C0c2B32c9Bd23ebe784e;
+    address public constant S_ETH_POOL = 0xc5424B857f758E906013F3555Dad202e4bdB4567;
+    address public constant LUSD_POOL = 0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA;
+    address public constant P_ETH_POOL = 0x9848482da3Ee3076165ce6497eDA906E66bB85C5;
+
+    // Smallest amounts of rewards to swap (gas optimizations)
+    uint256 private constant MIN_SWAP_AMT = 2e20; // $100 for CRV, $67 for CVX
+
+    // Representing Convex Token implementation address
+    address public immutable RCT_IMPLEMENTATION;
+
     // Deployed RCT clones, mapping(CurveLpToken => RCT)
     mapping(address => address) public deployedClones;
 
@@ -136,7 +136,7 @@ contract ConvexStakingBridge is BridgeBase {
     // (loaded) Convex pools, mapping(CurveLpToken => PoolInfo)
     mapping(address => PoolInfo) public pools;
 
-    event ExchangePoolsSetUpSuccessfully();
+    event ExchangePoolsSetup(uint256 poolId);
 
     error PoolAlreadyLoaded(uint256 poolId);
     error UnsupportedPool(uint256 poolId);
@@ -277,8 +277,8 @@ contract ConvexStakingBridge is BridgeBase {
     /**
      * @notice Loads pool specific exchange pools and liquidity pool. Unsupported pools and already loaded pools will revert.
      * @dev USDT -> 3Crv had to be tweaked to fit the Exchange Pool interface because it uses a different method to get the 3Crv token than the rest
-     * @dev ExchangePool(exchange pool address, coin in, coin out, exchange interface, get underlying asset, token the exchange pool will manipulate)
-     * @dev LiquidityPool(liquidity pool address, array length, index of the deposited coin in the array, is deposit ETH or a token, token the liquidity pool will manipulate)
+     * @dev ExchangePool(exchange pool address, coin in, coin out, exchange interface, get underlying asset, token the exchange pool will transfer if exchange takes place)
+     * @dev LiquidityPool(liquidity pool address, array length, index of the deposited coin in the array, is deposit ETH or a token, token the liquidity pool will transfer if exchange takes place)
      */
     function _loadExchangePools(uint256 _poolId) internal {
         if (exchangePools[_poolId].liquidityPool.liquidityPool != address(0)) {
@@ -347,7 +347,7 @@ contract ConvexStakingBridge is BridgeBase {
 
         exchangePools[_poolId] = ExchangePools(abi.encode(crvPath), abi.encode(cvxPath), liquidityPool);
 
-        emit ExchangePoolsSetUpSuccessfully();
+        emit ExchangePoolsSetup(_poolId);
     }
 
     /**
@@ -424,39 +424,12 @@ contract ConvexStakingBridge is BridgeBase {
         outputValueA = (
             ICurveRewards(selectedPool.curveRewards).balanceOf(address(this)) + rewardLpTokens + unstakedRewardLpTokens
         ) * _totalInputValue / totalSupplyRCT;
-        // Transfer Convex LP tokens from CrvRewards back to the bridge
+        // Transfer Convex LP tokens from CurveRewards back to the bridge
         ICurveRewards(selectedPool.curveRewards).withdraw(outputValueA, false); // rewards are not claimed again
 
         BOOSTER.withdraw(selectedPool.poolId, outputValueA);
 
         IRepConvexToken(_inputAssetA.erc20Address).burn(_totalInputValue);
-    }
-
-    /**
-     * @notice Exchanges x amount of token A for y amount of token B via Curve pools
-     * @param _pool Exchange pool
-     * @param _amount Amount of token A to exchange
-     * @return exchangedAmt Amount of token B received
-     * @dev Exchange pool is set up at pool loading
-     * @dev Exchange pool determines which interface is going to be used
-     */
-    function _exchangeCoins(ExchangePool memory _pool, uint256 _amount) internal returns (uint256 exchangedAmt) {
-        if (_pool.exchangeInterface == 1 && _pool.underlying) {
-            exchangedAmt = ICurveExchangeV1(_pool.pool).exchange_underlying(_pool.coinIn, _pool.coinOut, _amount, 0);
-        } else if (_pool.exchangeInterface == 1) {
-            exchangedAmt = ICurveExchangeV1(_pool.pool).exchange(_pool.coinIn, _pool.coinOut, _amount, 0);
-        } else if (_pool.exchangeInterface == 2) {
-            uint256 usdtBalanceBefore = IERC20(USDT).balanceOf(address(this));
-            ICurveExchangeV2(_pool.pool).exchange(_pool.coinIn, _pool.coinOut, _amount, 0, false);
-            uint256 usdtBalanceAfter = IERC20(USDT).balanceOf(address(this));
-            exchangedAmt = usdtBalanceAfter - usdtBalanceBefore;
-        } else if (_pool.exchangeInterface == 3) {
-            uint256[3] memory amounts;
-            amounts[_pool.coinIn] = _amount;
-            uint256 crv3BalanceBefore = IERC20(CRV3).balanceOf(address(this));
-            ICurveLiquidityPool(_pool.pool).add_liquidity(amounts, 0);
-            exchangedAmt = IERC20(CRV3).balanceOf(address(this)) - crv3BalanceBefore;
-        }
     }
 
     /**
@@ -517,6 +490,33 @@ contract ConvexStakingBridge is BridgeBase {
             uint256 curveLpTokensBeforeDeposit = IERC20(_curveLpToken).totalSupply();
             ICurveLiquidityPool(lp.liquidityPool).add_liquidity(amounts, 0);
             lpTokenAmt = IERC20(_curveLpToken).totalSupply() - curveLpTokensBeforeDeposit;
+        }
+    }
+
+    /**
+     * @notice Exchanges x amount of token A for y amount of token B via Curve pools
+     * @param _pool Exchange pool
+     * @param _amount Amount of token A to exchange
+     * @return exchangedAmt Amount of token B received
+     * @dev Exchange pool is set up at pool loading
+     * @dev Exchange pool determines which interface is going to be used
+     */
+    function _exchangeCoins(ExchangePool memory _pool, uint256 _amount) internal returns (uint256 exchangedAmt) {
+        if (_pool.exchangeInterface == 1 && _pool.underlying) {
+            exchangedAmt = ICurveExchangeV1(_pool.pool).exchange_underlying(_pool.coinIn, _pool.coinOut, _amount, 0);
+        } else if (_pool.exchangeInterface == 1) {
+            exchangedAmt = ICurveExchangeV1(_pool.pool).exchange(_pool.coinIn, _pool.coinOut, _amount, 0);
+        } else if (_pool.exchangeInterface == 2) {
+            uint256 usdtBalanceBefore = IERC20(USDT).balanceOf(address(this));
+            ICurveExchangeV2(_pool.pool).exchange(_pool.coinIn, _pool.coinOut, _amount, 0, false);
+            uint256 usdtBalanceAfter = IERC20(USDT).balanceOf(address(this));
+            exchangedAmt = usdtBalanceAfter - usdtBalanceBefore;
+        } else if (_pool.exchangeInterface == 3) {
+            uint256[3] memory amounts;
+            amounts[_pool.coinIn] = _amount;
+            uint256 crv3BalanceBefore = IERC20(CRV3).balanceOf(address(this));
+            ICurveLiquidityPool(_pool.pool).add_liquidity(amounts, 0);
+            exchangedAmt = IERC20(CRV3).balanceOf(address(this)) - crv3BalanceBefore;
         }
     }
 

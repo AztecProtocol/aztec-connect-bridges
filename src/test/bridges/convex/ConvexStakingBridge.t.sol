@@ -285,7 +285,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
             uint256 poolId = supportedPids[i];
 
             _setupBridge(poolId);
-            _mockInitialRewardBalances(false, false);
+            _mockInitialRewardBalances(false);
 
             _loadPool(poolId);
             _setupRepresentingConvexTokenClone();
@@ -307,7 +307,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
             uint256 poolId = supportedPids[i];
 
             _setupBridge(poolId);
-            _mockInitialRewardBalances(false, false);
+            _mockInitialRewardBalances(false);
 
             _loadPool(poolId);
             _setupRepresentingConvexTokenClone();
@@ -331,7 +331,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
             uint256 poolId = supportedPids[i];
 
             _setupBridge(poolId);
-            _mockInitialRewardBalances(true, true);
+            _mockInitialRewardBalances(true);
 
             _loadPool(poolId);
             _setupRepresentingConvexTokenClone();
@@ -354,7 +354,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
             uint256 poolId = supportedPids[i];
 
             _setupBridge(poolId);
-            _mockInitialRewardBalances(true, true);
+            _mockInitialRewardBalances(true);
 
             _loadPool(poolId);
             _setupRepresentingConvexTokenClone();
@@ -378,7 +378,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
             uint256 poolId = supportedPids[i];
 
             _setupBridge(poolId);
-            _mockInitialRewardBalances(true, true);
+            _mockInitialRewardBalances(true);
 
             _loadPool(poolId);
             _setupRepresentingConvexTokenClone();
@@ -400,7 +400,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
         uint256 poolId = _getPoolId(_poolId);
 
         _setupBridge(poolId);
-        _mockInitialRewardBalances(false, false);
+        _mockInitialRewardBalances(false);
 
         _loadPool(poolId);
         _setupRepresentingConvexTokenClone();
@@ -423,23 +423,23 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
 
         uint256 poolId = _getPoolId(_poolId);
 
-            _setupBridge(poolId);
-        _mockInitialRewardBalances(false, false);
+        _setupBridge(poolId);
+        _mockInitialRewardBalances(false);
 
-            _loadPool(poolId);
-            _setupRepresentingConvexTokenClone();
-            _setupSubsidy();
+        _loadPool(poolId);
+        _setupRepresentingConvexTokenClone();
+        _setupSubsidy();
 
-            _deposit(depositAmount);
+        _deposit(depositAmount);
 
         // shut down pool
         vm.startPrank(BOOSTER_POOL_MANAGER);
         bool isPoolShutdown = IConvexBooster(BOOSTER).shutdownPool(poolId);
         vm.stopPrank();
 
-        assert(isPoolShutdown == true);
+        assertTrue(isPoolShutdown);
 
-            _withdraw(withdrawalAmount);
+        _withdraw(withdrawalAmount);
     }
 
     /**
@@ -573,11 +573,9 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
      * @dev Sets reward balances which will force rewards to be exchanged, if set to true
      * @dev These balances are not taken into consideration by the curveRewards contract which affects the calculation of outputValueA and may prevent withdrawing of all deposited funds
      */
-    function _mockInitialRewardBalances(bool _mockCrv, bool _mockCvx) internal {
-        if (_mockCrv) {
+    function _mockInitialRewardBalances(bool _isMockActive) internal {
+        if (_isMockActive) {
             deal(CRV, address(bridge), 3e22);
-        }
-        if (_mockCvx) {
             deal(CVX, address(bridge), 3e22);
         }
     }

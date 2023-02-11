@@ -9,7 +9,7 @@ interface IConvexBooster {
     function withdraw(uint256 _pid, uint256 _amount) external returns (bool);
 
     // Booster's pool manager can shut down individual pools
-    function shutdownPool(uint256 _pid) external returns(bool);
+    function shutdownPool(uint256 _pid) external returns (bool);
 
     // Number of Convex pools available
     function poolLength() external view returns (uint256);

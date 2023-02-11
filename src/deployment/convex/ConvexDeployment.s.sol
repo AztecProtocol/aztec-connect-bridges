@@ -8,7 +8,7 @@ import {IConvexBooster} from "../../interfaces/convex/IConvexBooster.sol";
 import {IConvexStakingBridge} from "../../interfaces/convex/IConvexStakingBridge.sol";
 
 contract ConvexStakingBridgeDeployment is BaseDeployment {
-    uint256[] private poolIds = [10, 110]; // e.g. [10, 110] for pools 10 and 110
+    uint256[] private poolIds = [23, 25]; // supported pool ids [23, 25, 32, 33, 38, 40, 49, 61, 64, 122];
 
     /**
      * @notice Deploys and lists the bridge
