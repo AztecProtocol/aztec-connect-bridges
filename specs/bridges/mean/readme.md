@@ -33,6 +33,9 @@ A position needs to be finalised before it can be exited.
 For a position to be ready to be finalised, all its available funds must have been sold for the opposite asset.
 When finalised, the accumulated funds will be returned to the bridge and the user may claim them on L2.
 
+### Diagram
+![Flow diagram](FlowDiagram.png)
+
 ### Technical details
 This is how we expect the data to be passed to the bridge:
 - `inputAssetA` will represent the token that the user will deposit (for example DAI)

@@ -44,6 +44,7 @@ contract MeanBridge is BridgeBase, Ownable2Step {
     /**
      * @notice Sets address of rollup processor and Mean contracts
      * @param _hub The address of the DCA Hub
+     * @param _transformerRegistry The address of the Transformer Registry
      * @param _owner The account that will own the bridge
      * @param _rollupProcessor Address of rollup processor
      */
@@ -306,6 +307,7 @@ contract MeanBridge is BridgeBase, Ownable2Step {
 
     /**
      * Unwraps the position's "to" token into the output asset, if necessary
+     * @dev If the output asset is ETH, then it will transferred to the rollup
      * @param _outputAsset - The expected asset
      * @param _amountToUnwrap - How much to unwrap
      * @param _hubToken - The position's "to" token
