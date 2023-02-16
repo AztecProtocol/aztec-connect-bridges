@@ -264,7 +264,6 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
             0,
             BENEFICIARY
         );
-
     }
 
     function testLoadSamePoolTwice(uint256 _poolId) public {

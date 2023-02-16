@@ -391,7 +391,6 @@ contract ConvexStakingBridge is BridgeBase {
 
         BOOSTER.deposit(_selectedPool.poolId, _totalInputValue + rewardLpTokens + unstakedRewardLpTokens, true);
 
-        uint256 totalSupplyRCT = IRepConvexToken(_outputAssetA.erc20Address).totalSupply();
         if (totalSupplyRCT == 0) {
             // Initial `RCT/Curve LP token` staking ratio is set to 1
             outputValueA = _totalInputValue;
