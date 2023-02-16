@@ -140,6 +140,7 @@ contract ConvexStakingBridge is BridgeBase {
 
     error PoolAlreadyLoaded(uint256 poolId);
     error UnsupportedPool(uint256 poolId);
+    error InsufficientFirstDepositAmount();
 
     /**
      * @notice Sets the address of the RollupProcessor and deploys RCT token
@@ -381,6 +382,10 @@ contract ConvexStakingBridge is BridgeBase {
         uint256 _totalInputValue,
         PoolInfo memory _selectedPool
     ) internal returns (uint256 outputValueA) {
+        uint256 totalSupplyRCT = IRepConvexToken(_outputAssetA.erc20Address).totalSupply();
+        if (totalSupplyRCT == 0 && _totalInputValue < 1e18) {
+            revert InsufficientFirstDepositAmount();
+        }
         uint256 unstakedRewardLpTokens = IERC20(_inputAssetA.erc20Address).balanceOf(address(this)) - _totalInputValue;
         uint256 rewardLpTokens = _swapRewardsToCurveLpToken(_selectedPool, _inputAssetA.erc20Address);
 

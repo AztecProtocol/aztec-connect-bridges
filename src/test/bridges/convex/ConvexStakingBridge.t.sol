@@ -36,6 +36,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
 
     error UnsupportedPool(uint256 poolId);
     error PoolAlreadyLoaded(uint256 poolId);
+    error InsufficientFirstDepositAmount();
 
     function receiveEthFromBridge(uint256 _interactionNonce) external payable {}
 
@@ -153,7 +154,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
 
     // Curve LP token of another pool is tried to be withdrawn -> pool "Curve LP token - RCT" mismatch
     function testInvalidOutput2() public {
-        uint256 withdrawalAmount = 10;
+        uint256 depositAmount = 1e18;
 
         uint256 selectedPool = 25;
         uint256 anotherPoolId = 23;
@@ -168,7 +169,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
         _setupRepresentingConvexTokenClone();
 
         // make deposit for a pool at index `lastPoolId`
-        uint256 rctMinted = _deposit(withdrawalAmount);
+        uint256 rctMinted = _deposit(depositAmount);
 
         // withdraw using incorrect pool - RCT Asset address won't match deployed RCT clone address of the provided Curve LP token
         (incorrectCurveLpToken,,,,,) = IConvexBooster(BOOSTER).poolInfo(anotherPoolId);
@@ -188,7 +189,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
     }
 
     function testInvalidOutputEth(uint256 _poolId) public {
-        uint256 depositAmount = 10;
+        uint256 depositAmount = 1e18;
         uint256 poolId = _getPoolId(_poolId);
 
         _setupBridge(poolId);
@@ -213,7 +214,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
 
     function testConvertInvalidCaller(uint256 _poolId) public {
         address invalidCaller = address(123);
-        uint256 depositAmount = 10;
+        uint256 depositAmount = 1e18;
         uint256 poolId = _getPoolId(_poolId);
 
         _setupBridge(poolId);
@@ -241,6 +242,31 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
         _loadPool(100);
     }
 
+    function testInsufficientFirstDepositAmount(uint256 _poolId) public {
+        uint256 depositAmount = 1e18 - 1;
+        uint256 poolId = _getPoolId(_poolId);
+
+        _setupBridge(poolId);
+        _mockInitialRewardBalances(false);
+
+        _loadPool(poolId);
+        _setupRepresentingConvexTokenClone();
+        _setupSubsidy();
+
+        vm.expectRevert(InsufficientFirstDepositAmount.selector);
+        bridge.convert(
+            AztecTypes.AztecAsset(1, curveLpToken, AztecTypes.AztecAssetType.ERC20),
+            emptyAsset,
+            AztecTypes.AztecAsset(100, rctClone, AztecTypes.AztecAssetType.ERC20),
+            emptyAsset,
+            depositAmount,
+            0,
+            0,
+            BENEFICIARY
+        );
+
+    }
+
     function testLoadSamePoolTwice(uint256 _poolId) public {
         uint256 poolId = _getPoolId(_poolId);
         _setupBridge(poolId);
@@ -252,8 +278,8 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
     }
 
     // pool not loaded yet, RCT not deployed yet
-    function testPoolNotLoadedYet(uint96 _depositAmount, uint256 _poolId) public {
-        vm.assume(_depositAmount > 1);
+    function testPoolNotLoadedYet(uint256 _poolId) public {
+        uint96 depositAmount = 1e18;
 
         uint256 poolId = _getPoolId(_poolId);
 
@@ -261,9 +287,9 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
         _setupRepresentingConvexTokenClone();
 
         // Mock initial balance of CURVE LP Token for Rollup Processor
-        deal(curveLpToken, rollupProcessor, _depositAmount);
+        deal(curveLpToken, rollupProcessor, depositAmount);
         // transfer CURVE LP Tokens from RollUpProcessor to the bridge
-        IERC20(curveLpToken).transfer(address(bridge), _depositAmount);
+        IERC20(curveLpToken).transfer(address(bridge), depositAmount);
 
         vm.expectRevert(bytes(""));
         bridge.convert(
@@ -271,7 +297,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
             emptyAsset,
             AztecTypes.AztecAsset(100, rctClone, AztecTypes.AztecAssetType.ERC20),
             emptyAsset,
-            _depositAmount,
+            depositAmount,
             0,
             0,
             BENEFICIARY
@@ -279,7 +305,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
     }
 
     function testSingleDeposit(uint96 _depositAmount) public {
-        vm.assume(_depositAmount > 0);
+        vm.assume(_depositAmount > 1e18);
 
         for (uint256 i = 0; i < supportedPids.length; i++) {
             uint256 poolId = supportedPids[i];
@@ -300,7 +326,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
     }
 
     function testSingleDepositSingleWithdrawal(uint96 _depositAmount) public {
-        vm.assume(_depositAmount > 10);
+        vm.assume(_depositAmount > 1e18);
         uint256 withdrawalAmount = uint256(_depositAmount) * uint256(4) / uint256(10);
 
         for (uint256 i = 0; i < supportedPids.length; i++) {
@@ -395,7 +421,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
     }
 
     function testSwapNotEnoughRewards(uint96 _depositAmount, uint256 _poolId) public {
-        vm.assume(_depositAmount > 0);
+        vm.assume(_depositAmount > 1e18);
 
         uint256 poolId = _getPoolId(_poolId);
 
