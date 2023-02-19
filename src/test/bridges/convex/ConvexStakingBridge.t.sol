@@ -476,9 +476,9 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
         _attackResistanceFirstDeposits(userDeposit);
     }
 
-    /** 
+    /**
      * @dev Earning is negligable so this kind of attack is unlikely. The whole attack would be likely unsuccessful as anyone depositing a regular amount would thwart the attack causing the attacker to lose significant portion of their tokens.
-    */
+     */
     function testFailAttackResistanceFirstDeposits() public {
         // Deposit is not greater than 1e2 -> inflation protection mechanism fails -> exploit will succeed
         uint256 userDeposit = 1e2;
@@ -488,16 +488,16 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
 
     function testAttackResistanceRatioResetProtection() public {
         uint256 anotherUsersDeposit = 1e18; // has to be greater than 1e18 (in this case) (attackAmount / 1e10 / RCTTotalAmount) ~ (1e28 / 1e10 / ~1), otherwise exploit will be successful
-        
+
         _attackResistanceRatioResetProtection(anotherUsersDeposit);
     }
 
-    /** 
-    * @dev Exploit of generally smaller deposits possible. Still very risky for the attacker, as soon as a regular amount is deposited, attacker will lose significant portion of his tokens.
-    */
+    /**
+     * @dev Exploit of generally smaller deposits possible. Still very risky for the attacker, as soon as a regular amount is deposited, attacker will lose significant portion of his tokens.
+     */
     function testFailAttackResistanceRatioResetProtection() public {
         uint256 anotherUsersDeposit = 1e17; // if deposit less than ca. 1e16 (in this case) (attackAmount / 1e10 / RCTTotalAmount) ~ (1e28 / 1e10 / ~1) -> inflation protection mechanism may fail -> exploit of smaller deposits possible
-        
+
         _attackResistanceRatioResetProtection(anotherUsersDeposit);
     }
 
@@ -629,7 +629,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
             _loadPool(poolId);
             _setupRepresentingConvexTokenClone();
             _setupSubsidy();
-            
+
             // Attacker performs first deposit
             uint256 rctMintedForAttacker = _deposit(minInitDeposit);
 
@@ -670,7 +670,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
             _loadPool(poolId);
             _setupRepresentingConvexTokenClone();
             _setupSubsidy();
-            
+
             // Regular user performs first deposit
             uint256 rctMinted = _deposit(minInitDeposit);
 
