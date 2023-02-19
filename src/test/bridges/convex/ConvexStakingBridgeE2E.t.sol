@@ -223,31 +223,20 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         uint256 totalSupplyRCTBeforeMintingNew = IRepConvexToken(rctClone).totalSupply() - outputValueA;
-        uint256 curveLpTokensBeforeDepositing = ICurveRewards(curveRewards).balanceOf(address(bridge)) - IERC20(curveLpToken).balanceOf(address(bridge)) - _depositAmount; // this also includes staked rewards
-        // uint256 curveLpTokensBeforeDepositing = ICurveRewards(curveRewards).balanceOf(address(bridge))
-        //     - IERC20(curveLpToken).balanceOf(address(bridge)) - _depositAmount;
+        uint256 curveLpTokensBeforeDepositing = ICurveRewards(curveRewards).balanceOf(address(bridge))
+            - IERC20(curveLpToken).balanceOf(address(bridge)) - _depositAmount; // this also includes staked rewards
         if (totalSupplyRCTBeforeMintingNew == 0) {
-            assertEq(outputValueA, InflationProtection._toShares(_depositAmount, 0, 0, true), "RCT amt not equal to Curve LP");
+            assertEq(
+                outputValueA, InflationProtection._toShares(_depositAmount, 0, 0, true), "RCT amt not equal to Curve LP"
+            );
         } else {
             assertEq(
                 outputValueA,
-                InflationProtection._toShares(_depositAmount, totalSupplyRCTBeforeMintingNew, curveLpTokensBeforeDepositing, false),
+                InflationProtection._toShares(
+                    _depositAmount, totalSupplyRCTBeforeMintingNew, curveLpTokensBeforeDepositing, false
+                ),
                 "RCT amount does not match"
             );
-
-            // WORKS
-            // assertEq(
-            //     outputValueA,
-            //     _depositAmount * (totalSupplyRCTBeforeMintingNew + SHARE_AMOUNT_RATIO) / (curveLpTokensBeforeDepositing + 1),
-            //     "RCT amount does not match"
-            // );
-
-            // OLD
-            // assertEq(
-            //     outputValueA,
-            //     _depositAmount * totalSupplyRCTBeforeMintingNew / curveLpTokensBeforeDepositing,
-            //     "RCT amount does not match"
-            // );
         }
 
         assertEq(outputValueB, 0, "Output value B is not 0");
@@ -276,15 +265,13 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
         uint256 stakedCurveLpTokensEnd = ICurveRewards(curveRewards).balanceOf(address(bridge));
         uint256 unstakedRewardLpTokensAfter = IERC20(curveLpToken).balanceOf(address(bridge));
         uint256 totalSupplyRCTBeforeBurning = IRepConvexToken(rctClone).totalSupply() + _withdrawalAmount;
-        // OLD
-        // uint256 curveLpTokenAmt = (stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA)
-        //     * _withdrawalAmount / totalSupplyRCTBeforeBurning;
 
-        // NEW
-        // uint256 curveLpTokenAmt = (stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA)
-        //     * (_withdrawalAmount + 1) / (totalSupplyRCTBeforeBurning + SHARE_AMOUNT_RATIO);
-
-        uint256 curveLpTokenAmt = InflationProtection._toAmount(_withdrawalAmount, totalSupplyRCTBeforeBurning, stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA, false);
+        uint256 curveLpTokenAmt = InflationProtection._toAmount(
+            _withdrawalAmount,
+            totalSupplyRCTBeforeBurning,
+            stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA,
+            false
+        );
 
         assertEq(outputValueA, curveLpTokenAmt, "Curve LP amount does not match");
         assertEq(outputValueB, 0, "Output value B is greater than 0");

@@ -8,7 +8,7 @@ interface ICurveRewards {
     // Claim the earned rewards
     function getReward(address _account, bool _claimExtras) external returns (bool);
 
-    function stakeFor(address _for, uint256 _amount) external returns(bool);
+    function stakeFor(address _for, uint256 _amount) external returns (bool);
 
     function balanceOf(address account) external view returns (uint256);
 }

@@ -534,11 +534,15 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
             - IERC20(curveLpToken).balanceOf(address(bridge)) - _depositAmount;
 
         if (totalSupplyRCTBeforeMintingNew == 0) {
-            assertEq(outputValueA, InflationProtection._toShares(_depositAmount, 0, 0, true), "RCT amt not equal to Curve LP");
+            assertEq(
+                outputValueA, InflationProtection._toShares(_depositAmount, 0, 0, true), "RCT amt not equal to Curve LP"
+            );
         } else {
             assertEq(
                 outputValueA,
-                InflationProtection._toShares(_depositAmount, totalSupplyRCTBeforeMintingNew, curveLpTokensBeforeDepositing, false),
+                InflationProtection._toShares(
+                    _depositAmount, totalSupplyRCTBeforeMintingNew, curveLpTokensBeforeDepositing, false
+                ),
                 "RCT amount does not match"
             );
         }
@@ -590,7 +594,12 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
 
         uint256 unstakedRewardLpTokensAfter = IERC20(curveLpToken).balanceOf(address(bridge));
         uint256 stakedCurveLpTokensEnd = ICurveRewards(curveRewards).balanceOf(address(bridge));
-        uint256 curveLpTokenAmt = InflationProtection._toAmount(_withdrawalAmount, totalSupplyRCTBeforeBurning, stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA, false);
+        uint256 curveLpTokenAmt = InflationProtection._toAmount(
+            _withdrawalAmount,
+            totalSupplyRCTBeforeBurning,
+            stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA,
+            false
+        );
 
         assertEq(outputValueA, curveLpTokenAmt);
 
@@ -605,8 +614,6 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
     }
 
     function _attackResistanceFirstDeposits(uint256 _userDeposit) internal {
-        // uint256 poolId = _getPoolId(_poolId);
-        
         // Miminal initial deposit
         uint256 minInitDeposit = 1e16;
 

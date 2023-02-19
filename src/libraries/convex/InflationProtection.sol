@@ -3,12 +3,11 @@ pragma solidity >=0.8.4;
 
 library InflationProtection {
     /// @notice Calculates the base value in relationship to `elastic` and `total`.
-    function _toShares(
-        uint256 amount,
-        uint256 totalShares_,
-        uint256 totalAmount,
-        bool roundUp
-    ) internal pure returns (uint256 share) {
+    function _toShares(uint256 amount, uint256 totalShares_, uint256 totalAmount, bool roundUp)
+        internal
+        pure
+        returns (uint256 share)
+    {
         // To prevent reseting the ratio due to withdrawal of all shares, we start with
         // 1 amount/1e10 shares already burned. This also starts with a 1 : 1e10 ratio which
         // functions like 10 decimal fixed point math. This prevents ratio attacks or inaccuracy
@@ -26,12 +25,11 @@ library InflationProtection {
     }
 
     /// @notice Calculates the elastic value in relationship to `base` and `total`.
-    function _toAmount(
-        uint256 share,
-        uint256 totalShares_,
-        uint256 totalAmount,
-        bool roundUp
-    ) internal pure returns (uint256 amount) {
+    function _toAmount(uint256 share, uint256 totalShares_, uint256 totalAmount, bool roundUp)
+        internal
+        pure
+        returns (uint256 amount)
+    {
         // To prevent reseting the ratio due to withdrawal of all shares, we start with
         // 1 amount/1e10 shares already burned. This also starts with a 1 : 1e10 ratio which
         // functions like 10 decimal fixed point math. This prevents ratio attacks or inaccuracy
