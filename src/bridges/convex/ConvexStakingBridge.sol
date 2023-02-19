@@ -19,6 +19,7 @@ import {ICurveExchangeV2} from "../../interfaces/convex/ICurveExchangeV2.sol";
 import {ICurveLiquidityPool} from "../../interfaces/convex/ICurveLiquidityPool.sol";
 import {IRollupProcessor} from "rollup-encoder/interfaces/IRollupProcessor.sol";
 import {RepresentingConvexToken} from "./RepresentingConvexToken.sol";
+import {InflationProtection} from "../../libraries/convex/InflationProtection.sol";
 
 /**
  * @notice Bridge allows users stake their Curve LP tokens and earn rewards on them.
@@ -29,7 +30,7 @@ import {RepresentingConvexToken} from "./RepresentingConvexToken.sol";
  * User can withdraw (unstake) any time.
  * @dev Convex Finance mints pool specific Convex LP token but not for the staking user (the bridge) directly.
  * RCT ERC20 token is deployed for each loaded pool.
- * RCT is minted proportionally to all, staked and bridge owned, Curve LP tokens.
+ * RCT is minted proportionally to all, staked and bridge owned, Curve LP tokens in 1e10 : 1 ratio.
  * Main purpose of RCT tokens is that they can be owned by the bridge and recovered by the Rollup Processor.
  * @dev Synchronous and stateful bridge
  * @author Vojtech Kaiser (VojtaKai on GitHub)
@@ -383,7 +384,7 @@ contract ConvexStakingBridge is BridgeBase {
         PoolInfo memory _selectedPool
     ) internal returns (uint256 outputValueA) {
         uint256 totalSupplyRCT = IRepConvexToken(_outputAssetA.erc20Address).totalSupply();
-        if (totalSupplyRCT == 0 && _totalInputValue < 1e18) {
+        if (totalSupplyRCT == 0 && _totalInputValue < 1e16) {
             revert InsufficientFirstDepositAmount();
         }
         uint256 unstakedRewardLpTokens = IERC20(_inputAssetA.erc20Address).balanceOf(address(this)) - _totalInputValue;
@@ -392,14 +393,13 @@ contract ConvexStakingBridge is BridgeBase {
         BOOSTER.deposit(_selectedPool.poolId, _totalInputValue + rewardLpTokens + unstakedRewardLpTokens, true);
 
         if (totalSupplyRCT == 0) {
-            // Initial `RCT/Curve LP token` staking ratio is set to 1
-            outputValueA = _totalInputValue;
+            // Initial `RCT/Curve LP token` staking ratio is set to 1e10:1
+            outputValueA = InflationProtection._toShares(_totalInputValue, totalSupplyRCT, 0, true);
         } else {
             uint256 totalCurveLpTokensOwnedBeforeDeposit =
                 ICurveRewards(_selectedPool.curveRewards).balanceOf(address(this)) - _totalInputValue;
             // totalSupplyRCT / totalCurveLpTokensOwnedBeforeDeposit = how many RCT is one Curve LP token worth
-            // When this ^ is multiplied by the amount of Curve LP tokens deposited in this tx alone, you get the amount of RCT to be minted.
-            outputValueA = (totalSupplyRCT * _totalInputValue) / totalCurveLpTokensOwnedBeforeDeposit;
+            outputValueA = InflationProtection._toShares(_totalInputValue, totalSupplyRCT, totalCurveLpTokensOwnedBeforeDeposit, false);
         }
 
         IRepConvexToken(_outputAssetA.erc20Address).mint(outputValueA);
@@ -424,10 +424,10 @@ contract ConvexStakingBridge is BridgeBase {
 
         uint256 totalSupplyRCT = IRepConvexToken(_inputAssetA.erc20Address).totalSupply();
 
-        // How many Curve LP tokens to withdraw. How many Curve LP tokens is 1 RCT worth, times number of RCT to withdraw
-        outputValueA = (
-            ICurveRewards(selectedPool.curveRewards).balanceOf(address(this)) + rewardLpTokens + unstakedRewardLpTokens
-        ) * _totalInputValue / totalSupplyRCT;
+        // How many Curve LP tokens to withdraw.
+        // totalCurveLpTokens / totalSupplyRCT = how many Curve LP tokens is one RCT worth
+        uint256 totalCurveLpTokens = ICurveRewards(selectedPool.curveRewards).balanceOf(address(this)) + rewardLpTokens + unstakedRewardLpTokens;
+        outputValueA = InflationProtection._toAmount(_totalInputValue, totalSupplyRCT, totalCurveLpTokens, false);
         // Transfer Convex LP tokens from CurveRewards back to the bridge
         ICurveRewards(selectedPool.curveRewards).withdraw(outputValueA, false); // rewards are not claimed again
 

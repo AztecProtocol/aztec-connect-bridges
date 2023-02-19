@@ -12,6 +12,8 @@ import {ErrorLib} from "../../../bridges/base/ErrorLib.sol";
 import {IConvexBooster} from "../../../interfaces/convex/IConvexBooster.sol";
 import {ICurveRewards} from "../../../interfaces/convex/ICurveRewards.sol";
 import {IRepConvexToken} from "../../../interfaces/convex/IRepConvexToken.sol";
+import {ICurveLiquidityPool} from "../../../interfaces/convex/ICurveLiquidityPool.sol";
+import {InflationProtection} from "../../../libraries/convex/InflationProtection.sol";
 
 contract ConvexStakingBridgeTest is BridgeTestBase {
     address private constant BOOSTER = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
@@ -58,7 +60,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
 
     function testInvalidInput(uint256 _poolId) public {
         address invalidCurveLpToken = address(123);
-        uint256 depositAmount = 1e18;
+        uint256 depositAmount = 1e16;
         uint256 poolId = _getPoolId(_poolId);
 
         // labels
@@ -83,7 +85,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
 
     function testInvalidInputAssetType(uint256 _poolId) public {
         address invalidCurveLpToken = address(123);
-        uint256 depositAmount = 1e18;
+        uint256 depositAmount = 1e16;
         uint256 poolId = _getPoolId(_poolId);
 
         // labels
@@ -107,7 +109,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
     }
 
     function testInvalidInputAssetTypeEth(uint256 _poolId) public {
-        uint256 depositAmount = 1e18;
+        uint256 depositAmount = 1e16;
         uint256 poolId = _getPoolId(_poolId);
 
         _setupBridge(poolId);
@@ -128,7 +130,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
     }
 
     function testInvalidOutput1(uint256 _poolId) public {
-        uint256 depositAmount = 1e18;
+        uint256 depositAmount = 1e16;
         address invalidLpToken = address(123);
         uint256 poolId = _getPoolId(_poolId);
 
@@ -154,7 +156,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
 
     // Curve LP token of another pool is tried to be withdrawn -> pool "Curve LP token - RCT" mismatch
     function testInvalidOutput2() public {
-        uint256 depositAmount = 1e18;
+        uint256 depositAmount = 1e16;
 
         uint256 selectedPool = 25;
         uint256 anotherPoolId = 23;
@@ -189,7 +191,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
     }
 
     function testInvalidOutputEth(uint256 _poolId) public {
-        uint256 depositAmount = 1e18;
+        uint256 depositAmount = 1e16;
         uint256 poolId = _getPoolId(_poolId);
 
         _setupBridge(poolId);
@@ -214,7 +216,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
 
     function testConvertInvalidCaller(uint256 _poolId) public {
         address invalidCaller = address(123);
-        uint256 depositAmount = 1e18;
+        uint256 depositAmount = 1e16;
         uint256 poolId = _getPoolId(_poolId);
 
         _setupBridge(poolId);
@@ -243,7 +245,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
     }
 
     function testInsufficientFirstDepositAmount(uint256 _poolId) public {
-        uint256 depositAmount = 1e18 - 1;
+        uint256 depositAmount = 1e16 - 1;
         uint256 poolId = _getPoolId(_poolId);
 
         _setupBridge(poolId);
@@ -278,7 +280,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
 
     // pool not loaded yet, RCT not deployed yet
     function testPoolNotLoadedYet(uint256 _poolId) public {
-        uint96 depositAmount = 1e18;
+        uint96 depositAmount = 1e16;
 
         uint256 poolId = _getPoolId(_poolId);
 
@@ -304,7 +306,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
     }
 
     function testSingleDeposit(uint96 _depositAmount) public {
-        vm.assume(_depositAmount > 1e18);
+        vm.assume(_depositAmount > 1e16);
 
         for (uint256 i = 0; i < supportedPids.length; i++) {
             uint256 poolId = supportedPids[i];
@@ -325,7 +327,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
     }
 
     function testSingleDepositSingleWithdrawal(uint96 _depositAmount) public {
-        vm.assume(_depositAmount > 1e18);
+        vm.assume(_depositAmount > 1e16);
         uint256 withdrawalAmount = uint256(_depositAmount) * uint256(4) / uint256(10);
 
         for (uint256 i = 0; i < supportedPids.length; i++) {
@@ -420,7 +422,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
     }
 
     function testSwapNotEnoughRewards(uint96 _depositAmount, uint256 _poolId) public {
-        vm.assume(_depositAmount > 1e18);
+        vm.assume(_depositAmount > 1e16);
 
         uint256 poolId = _getPoolId(_poolId);
 
@@ -467,6 +469,38 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
         _withdraw(withdrawalAmount);
     }
 
+    function testAttackResistanceFirstDeposits() public {
+        // Has to be greater than 1e2 (attackAmount / 1e10 / RCT token supply) (1e28 / 1e10 / 1e16) for the inflation resistance mechanism to work
+        uint256 userDeposit = 1e2 + 1;
+
+        _attackResistanceFirstDeposits(userDeposit);
+    }
+
+    /** 
+     * @dev Earning is negligable so this kind of attack is unlikely. The whole attack would be likely unsuccessful as anyone depositing a regular amount would thwart the attack causing the attacker to lose significant portion of their tokens.
+    */
+    function testFailAttackResistanceFirstDeposits() public {
+        // Deposit is not greater than 1e2 -> inflation protection mechanism fails -> exploit will succeed
+        uint256 userDeposit = 1e2;
+
+        _attackResistanceFirstDeposits(userDeposit);
+    }
+
+    function testAttackResistanceRatioResetProtection() public {
+        uint256 anotherUsersDeposit = 1e18; // has to be greater than 1e18 (in this case) (attackAmount / 1e10 / RCTTotalAmount) ~ (1e28 / 1e10 / ~1), otherwise exploit will be successful
+        
+        _attackResistanceRatioResetProtection(anotherUsersDeposit);
+    }
+
+    /** 
+    * @dev Exploit of generally smaller deposits possible. Still very risky for the attacker, as soon as a regular amount is deposited, attacker will lose significant portion of his tokens.
+    */
+    function testFailAttackResistanceRatioResetProtection() public {
+        uint256 anotherUsersDeposit = 1e17; // if deposit less than ca. 1e16 (in this case) (attackAmount / 1e10 / RCTTotalAmount) ~ (1e28 / 1e10 / ~1) -> inflation protection mechanism may fail -> exploit of smaller deposits possible
+        
+        _attackResistanceRatioResetProtection(anotherUsersDeposit);
+    }
+
     /**
      * @notice Performs deposit of Curve LP tokens and checks.
      * @dev Mocking of Curve LP token balance.
@@ -500,11 +534,11 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
             - IERC20(curveLpToken).balanceOf(address(bridge)) - _depositAmount;
 
         if (totalSupplyRCTBeforeMintingNew == 0) {
-            assertEq(outputValueA, _depositAmount, "RCT amt not equal to Curve LP");
+            assertEq(outputValueA, InflationProtection._toShares(_depositAmount, 0, 0, true), "RCT amt not equal to Curve LP");
         } else {
             assertEq(
                 outputValueA,
-                _depositAmount * totalSupplyRCTBeforeMintingNew / curveLpTokensBeforeDepositing,
+                InflationProtection._toShares(_depositAmount, totalSupplyRCTBeforeMintingNew, curveLpTokensBeforeDepositing, false),
                 "RCT amount does not match"
             );
         }
@@ -527,7 +561,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
      * @dev Checks of unstaked Curve LP tokens, earned rewards and claimed subsidy.
      * @param _withdrawalAmount Number of RCT tokens to exchange for Curve LP tokens
      */
-    function _withdraw(uint256 _withdrawalAmount) internal {
+    function _withdraw(uint256 _withdrawalAmount) internal returns (uint256) {
         // transfer representing Convex tokens to the bridge
         uint256 startCurveLpTokenAmt = IERC20(curveLpToken).balanceOf(rollupProcessor);
         uint256 startRctAmt = IERC20(rctClone).balanceOf(rollupProcessor);
@@ -556,8 +590,7 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
 
         uint256 unstakedRewardLpTokensAfter = IERC20(curveLpToken).balanceOf(address(bridge));
         uint256 stakedCurveLpTokensEnd = ICurveRewards(curveRewards).balanceOf(address(bridge));
-        uint256 curveLpTokenAmt = (stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA)
-            * _withdrawalAmount / totalSupplyRCTBeforeBurning;
+        uint256 curveLpTokenAmt = InflationProtection._toAmount(_withdrawalAmount, totalSupplyRCTBeforeBurning, stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA, false);
 
         assertEq(outputValueA, curveLpTokenAmt);
 
@@ -567,6 +600,115 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
         // Claim subsidy at withdrawal
         SUBSIDY.withdraw(BENEFICIARY);
         assertGt(BENEFICIARY.balance, 0, "Claimable subsidy amount was 0");
+
+        return outputValueA;
+    }
+
+    function _attackResistanceFirstDeposits(uint256 _userDeposit) internal {
+        // uint256 poolId = _getPoolId(_poolId);
+        
+        // Miminal initial deposit
+        uint256 minInitDeposit = 1e16;
+
+        address attacker = address(666);
+        uint256 attackAmount = 1e28;
+
+        for (uint256 i = 0; i < supportedPids.length; i++) {
+            uint256 poolId = supportedPids[i];
+
+            _setupBridge(poolId);
+            _mockInitialRewardBalances(false);
+
+            _loadPool(poolId);
+            _setupRepresentingConvexTokenClone();
+            _setupSubsidy();
+            
+            // Attacker performs first deposit
+            uint256 rctMintedForAttacker = _deposit(minInitDeposit);
+
+            // Attack
+            _airdropAttack(poolId, attacker, attackAmount);
+
+            // Regular user
+            uint256 rctMinted = _deposit(_userDeposit);
+
+            // Inflation protection mechanism ensures that user will not lose his deposit due to inflation attack -> non-zero value
+            assertGt(rctMinted, 0);
+
+            uint256 stakedCurveLpTokenBeforeWithdrawal = IERC20(curveRewards).balanceOf(address(bridge));
+
+            // Attacker withdraws their initial deposit
+            uint256 retrievedCurveLp = _withdraw(rctMintedForAttacker);
+
+            rewind(15 days);
+
+            // Attacker is unable to steal all the funds
+            assertLt(retrievedCurveLp, stakedCurveLpTokenBeforeWithdrawal);
+        }
+    }
+
+    function _attackResistanceRatioResetProtection(uint256 _anotherUsersDeposit) internal {
+        uint256 minInitDeposit = 1e16;
+
+        address attacker = address(666);
+        uint256 attackerMinDeposit = 1;
+        uint256 attackAmount = 1e28;
+
+        for (uint256 i = 0; i < supportedPids.length; i++) {
+            uint256 poolId = supportedPids[i];
+
+            _setupBridge(poolId);
+            _mockInitialRewardBalances(false);
+
+            _loadPool(poolId);
+            _setupRepresentingConvexTokenClone();
+            _setupSubsidy();
+            
+            // Regular user performs first deposit
+            uint256 rctMinted = _deposit(minInitDeposit);
+
+            // Same user withdraws almost all of his funds, effectivelly resetting inflation ratio and exposing contract to inflation attack again
+            _withdraw(rctMinted - 1);
+
+            // Attacker notices it and performs a deposit
+            uint256 rctMintedForAttacker = _deposit(attackerMinDeposit);
+
+            // Attack
+            _airdropAttack(poolId, attacker, attackAmount);
+
+            // Another regular user
+            uint256 rctMintedAnotherUser = _deposit(_anotherUsersDeposit);
+
+            // Inflation protection mechanism ensures that user will not lose his deposit due to inflation attack -> non-zero value
+            assertGt(rctMintedAnotherUser, 0);
+
+            uint256 stakedCurveLpTokenBeforeWithdrawal = IERC20(curveRewards).balanceOf(address(bridge));
+
+            // Attacker withdraws their initial deposit
+            uint256 attackerRetrievedCurveLp = _withdraw(rctMintedForAttacker);
+
+            // another user withdraws their deposit
+            uint256 userRetrievedCurveLp = _withdraw(rctMintedAnotherUser);
+
+            // Attacker is unable to steal all the funds
+            assertLt(attackerRetrievedCurveLp, stakedCurveLpTokenBeforeWithdrawal);
+
+            // Other user is didn't lose access to his deposit
+            assertGt(userRetrievedCurveLp, 0);
+
+            rewind(30 days);
+        }
+    }
+
+    function _airdropAttack(uint256 _poolId, address _attacker, uint256 _attackAmount) internal {
+        vm.startPrank(_attacker);
+        deal(curveLpToken, _attacker, _attackAmount);
+        IERC20(curveLpToken).approve(BOOSTER, _attackAmount);
+        IConvexBooster(BOOSTER).deposit(_poolId, _attackAmount, false);
+        uint256 balance = IERC20(convexLpToken).balanceOf(_attacker);
+        IERC20(convexLpToken).approve(curveRewards, type(uint256).max);
+        ICurveRewards(curveRewards).stakeFor(address(bridge), balance);
+        vm.stopPrank();
     }
 
     function _setupRepresentingConvexTokenClone() internal {

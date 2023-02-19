@@ -26,7 +26,7 @@ Interesting fact is that both flows work with different number of assets. Deposi
 
 ### Deposit (Staking)
 
-TL;DR: Bridge stakes Curve LP tokens into Curve pool liquidity gauge contract via Convex Finance Booster. Subsequently new Convex LP tokens of the corresponding pool are minted in 1:1 ratio and transferred to curveRewards contract. Bridge mints pool specific RCT token proportionally to the user's staked Curve LP tokens. RCT tokens are recoved by Rollup Processor.
+TL;DR: Bridge stakes Curve LP tokens into Curve pool liquidity gauge contract via Convex Finance Booster. Subsequently new Convex LP tokens of the corresponding pool are minted in 1:1 ratio and transferred to curveRewards contract. Bridge mints pool specific RCT token proportionally to the user's staked Curve LP tokens in 1e10 : 1 ratio. RCT tokens are recoved by Rollup Processor.
 
 Before user starts with the deposit, it is necessary to ensure that the pool for the given assets has already been loaded.
 
@@ -35,7 +35,9 @@ Next, bridge checks if there are any Curve LP tokens owned by the bridge that we
 
 Note 1: On each deposit, the bridge pulls earned rewards and if there is sufficient amount accumulated, it will convert them to Curve LP tokens that are staked along with the user's about to be deposited Curve LP tokens and Curve LP tokens present in the bridge from before the interaction. If not sufficient amount of rewards has accumulated, the rewards are owned by the bridge until they can be exchanged for Curve LP tokens and staked again. What this does is that rewards are proportionally paid out to the user on withdrawal and it reflects the staked amount by the user and the length of staked tokens. 
 
-Note 2: RCT starts off to represent the minted Convex LP tokens (staked Curve LP tokens) in 1:1 ratio, however, as rewards are converted to Curve LP tokens and staked, this ratio slightly changes. Nevertheless, the RCT tokens still represent the exact amount of the user's deposit to all Curve LP tokens (already minted and potentially minted Convex LP tokens when converted rewards are staked). So RCT still in a way represents Convex LP token.
+Note 2: RCT starts off to represent the minted Convex LP tokens (staked Curve LP tokens) in 1e10:1 ratio (Note 3), however, as rewards are converted to Curve LP tokens and staked, this ratio slightly changes. Nevertheless, the RCT tokens still represent the exact amount of the user's deposit to all Curve LP tokens (already minted and potentially minted Convex LP tokens when converted rewards are staked). So RCT still in a way represents Convex LP token.
+
+Note 3: Read more about the reason for 1e10 : 1 ratio in "Introduction of inflation protection mechanism" section
 
 RCT exists to enable Rollup Processor to properly perform deposits and withdrawals for different users at different times. Rollup Processor expects to work with at least one input and one output asset and both assets need to be able to be owned by it. Because minted Convex LP tokens are only indirectly owned by the bridge and the actual ownership is given to curveRewards contract, Convex LP token cannot be transferred back to the Rollup Provider. Contrary to this, RCT token is fully owned by the bridge and can be transferred elsewhere.
 
@@ -54,9 +56,9 @@ TL;DR: Rollup Processor transfers RCT tokens to the bridge. Bridge claims reward
 
 Before user starts with withdrawal, it is necessary to ensure that the pool for the given assets has already been loaded.
 
-Bridge expects RCT token on input and Curve LP token on output to perform withdrawal. Rollup Processor transfers RCT tokens to the bridge. Then a check is performed whether the pool for the given assets has already been loaded and the RCT token has already been deployed. Next check assures that the input and output tokens belongs to the same pool. If the check passes, it searches for the right pool. In the next step, the bridge claims earned rewards and exchanges them for Curve LP token if sufficient amount is present. Followed by a calculation of how many Curve LP tokens is represented by the amount of RCT tokens on input and will be withdrawn. It continues with withdrawal of Curve LP tokens. The bridge calls curveRewards contract to transfer the Convex LP tokens to the bridge. Next, the bridge calls the Booster to withdraw the deposited Curve LP tokens. It starts by burning the Convex LP tokens, then retrieves Curve LP tokens from Staker contract. If sufficient funds are not available, Staker pulls more deposited Curve LP tokens from the specific Curve pool liquidity gauge contract. Desired amount of Curve LP tokens is then retrieved and transferred back to the bridge (Note 3). Finally, RCT tokens are burned and Rollup Processor recovers the Curve LP tokens.
+Bridge expects RCT token on input and Curve LP token on output to perform withdrawal. Rollup Processor transfers RCT tokens to the bridge. Then a check is performed whether the pool for the given assets has already been loaded and the RCT token has already been deployed. Next check assures that the input and output tokens belong to the same pool. If the check passes, it searches for the right pool. In the next step, the bridge claims earned rewards and exchanges them for Curve LP token if sufficient amount is present. Followed by a calculation of how many Curve LP tokens is represented by the amount of RCT tokens on input and will be withdrawn. It continues with withdrawal of Curve LP tokens. The bridge calls curveRewards contract to transfer the Convex LP tokens to the bridge. Next, the bridge calls the Booster to withdraw the deposited Curve LP tokens. It starts by burning the Convex LP tokens, then retrieves Curve LP tokens from Staker contract. If sufficient funds are not available, Staker pulls more deposited Curve LP tokens from the specific Curve pool liquidity gauge contract. Desired amount of Curve LP tokens is then retrieved and transferred back to the bridge (Note 4). Finally, RCT tokens are burned and Rollup Processor recovers the Curve LP tokens.
 
-Note 3: Caveat - read section Swapping and staking rewards and drawbacks of the solution
+Note 4: Caveat - read section Swapping and staking rewards and drawbacks of the solution
 
 Claimed rewards are the boosted CRV tokens, CVX tokens and for some pools some additional rewards. The most notable reward tokens - CRV and CVX - are swapped for Curve LP tokens and staked by the next deposit. Minimum amount required for the conversion to happen is set to 200 tokens, about $160 worth of rewards. If rewards cannot be converted, the rewards are still owned by the bridge sufficient amount has accumulated. Only CRV and CVX rewards are processed, additional rewards are not for their insignificance. 
 
@@ -96,6 +98,16 @@ Gas cost of a withdrawal varies based on the pool. Withdrawal costs about 1.4M w
 - All pools can be single handedly shut down by Booster's Owner contract (0x3cE6408F923326f81A7D7929952947748180f1E6)
   Does and allows exactly the same thing as shut down of a single pool described above, only for all the pools.
 
+## Introduction of inflation protection mechanism
+- SC is opened for `ERC4626 share price inflation` vulnerability in case of mixed accounting - internal (controlled by the bridge alone) and external (not controlled by the bridge, other entities can influence balances). Taken two precausions - setting minimum value for inital deposit and inflation of ratio between input and output token.
+- Minimum initial value set to 1e16
+- Inflation of ratio reduces the chance for attacker to dispose with sufficient financial means to take advantage of the users. Inflation was set to 1e10, meaning attacker would need to have, in the worse case scenario, 1e10 times more resources than what an average and minimum user's deposit is.
+- RCT : Curve LP token = 1e10 : 1
+- Both precausions work on the same basis, decreasing the chance of this attack by setting the necessary amount of tokens (money) to abuse this vulnerability very high (in other words attacker will not have enough money to exploit the vulnerability). In a combination with a devastating loss for the attacker, when a user deposits a regular amount. High risk of losing money and a potential of stealing very little is a great deterrent for most attackers.
+- Initial deposit seriously affects inflation ratio for the first couple of deposits. For this reason, it is necessary to set it reasonably high to protect all users from the vulnerability
+- It protects all users up to a certain degree. Most affected users by a potential attack are those staking significantly (and almost suspiciously) low deposits.
+- Resetting inflation ratio -> vulnerability reopens - this can happen when a lot of staked tokens are withdrawn. Best strategy -> stake reasonably high amounts (bare minimum is 1 token (1e18) but ideally hundreds or thousands)
+
 ## Is the contract upgradeable?
 
 No, the bridge is immutable without any admin role.
@@ -103,4 +115,4 @@ No, the bridge is immutable without any admin role.
 ## Does the bridge maintain state?
 
 Yes, it does. The bridge maintains state for Curve LP tokens and earned rewards. Curve LP tokens are owned by the bridge only after withdrawal if succifient amount of earned rewards has been accumulated for the conversion to Curve LP tokens via designated Curve pools tailored for each pool. 
-Bridge also temporarily holds state for user's Curve LP token and minted RCT tokens.
+Bridge also holds state for user's Curve LP token and minted RCT tokens during the interaction.

@@ -12,10 +12,13 @@ import {ConvexStakingBridge} from "../../../bridges/convex/ConvexStakingBridge.s
 import {IConvexBooster} from "../../../interfaces/convex/IConvexBooster.sol";
 import {ICurveRewards} from "../../../interfaces/convex/ICurveRewards.sol";
 import {IRepConvexToken} from "../../../interfaces/convex/IRepConvexToken.sol";
+import {InflationProtection} from "../../../libraries/convex/InflationProtection.sol";
 
 contract ConvexStakingBridgeE2ETest is BridgeTestBase {
     address private constant BOOSTER = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
     address private constant BENEFICIARY = address(777);
+    address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
+    address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
 
     address private curveLpToken;
     address private convexLpToken;
@@ -43,20 +46,18 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
         vm.label(BENEFICIARY, "Beneficiary");
         vm.label(rctClone, "RCT");
 
-        address crv = 0xD533a949740bb3306d119CC777fa900bA034cd52;
-        address cvx = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
-        vm.label(crv, "CRV token");
-        vm.label(cvx, "CVX token");
+        vm.label(CRV, "CRV token");
+        vm.label(CVX, "CVX token");
     }
 
     function testSingleDepositSingleWithdrawalFlow(uint96 _depositAmount) public {
-        vm.assume(_depositAmount > 4e22);
+        vm.assume(_depositAmount > 1e16);
 
         for (uint256 i = 0; i < supportedPids.length; i++) {
             uint256 poolId = supportedPids[i];
 
             _setupBridge(poolId);
-            _mockInitialRewardBalances(false, false);
+            _mockInitialRewardBalances(false);
 
             _loadPool(poolId);
             _setupRepresentingConvexTokenClone();
@@ -85,12 +86,13 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
     }
 
     function testAlternatingDepositWithdrawalFlow(uint96 _depositAmount) public {
-        vm.assume(_depositAmount > 4e22);
+        vm.assume(_depositAmount > 1e16);
+
         for (uint256 i = 0; i < supportedPids.length; i++) {
             uint256 poolId = supportedPids[i];
 
             _setupBridge(poolId);
-            _mockInitialRewardBalances(false, false);
+            _mockInitialRewardBalances(false);
 
             _loadPool(poolId);
             _setupRepresentingConvexTokenClone();
@@ -122,13 +124,13 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
     }
 
     function testDoubleDepositDoubleWithdrawalFlow(uint96 _depositAmount) public {
-        vm.assume(_depositAmount > 4e22);
+        vm.assume(_depositAmount > 1e16);
 
         for (uint256 i = 0; i < supportedPids.length; i++) {
             uint256 poolId = supportedPids[i];
 
             _setupBridge(poolId);
-            _mockInitialRewardBalances(false, false);
+            _mockInitialRewardBalances(false);
 
             _loadPool(poolId);
             _setupRepresentingConvexTokenClone();
@@ -171,7 +173,7 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
             uint256 poolId = supportedPids[i];
 
             _setupBridge(poolId);
-            _mockInitialRewardBalances(true, true);
+            _mockInitialRewardBalances(true);
 
             _loadPool(poolId);
             _setupRepresentingConvexTokenClone();
@@ -221,15 +223,31 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
         (uint256 outputValueA, uint256 outputValueB, bool isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
 
         uint256 totalSupplyRCTBeforeMintingNew = IRepConvexToken(rctClone).totalSupply() - outputValueA;
-        uint256 curveLpTokensBeforeDepositing = ICurveRewards(curveRewards).balanceOf(address(bridge)) - _depositAmount; // this also includes staked rewards
+        uint256 curveLpTokensBeforeDepositing = ICurveRewards(curveRewards).balanceOf(address(bridge)) - IERC20(curveLpToken).balanceOf(address(bridge)) - _depositAmount; // this also includes staked rewards
+        // uint256 curveLpTokensBeforeDepositing = ICurveRewards(curveRewards).balanceOf(address(bridge))
+        //     - IERC20(curveLpToken).balanceOf(address(bridge)) - _depositAmount;
         if (totalSupplyRCTBeforeMintingNew == 0) {
-            assertEq(outputValueA, _depositAmount, "RCT amt not equal to Curve LP");
+            assertEq(outputValueA, InflationProtection._toShares(_depositAmount, 0, 0, true), "RCT amt not equal to Curve LP");
         } else {
             assertEq(
                 outputValueA,
-                _depositAmount * totalSupplyRCTBeforeMintingNew / curveLpTokensBeforeDepositing,
+                InflationProtection._toShares(_depositAmount, totalSupplyRCTBeforeMintingNew, curveLpTokensBeforeDepositing, false),
                 "RCT amount does not match"
             );
+
+            // WORKS
+            // assertEq(
+            //     outputValueA,
+            //     _depositAmount * (totalSupplyRCTBeforeMintingNew + SHARE_AMOUNT_RATIO) / (curveLpTokensBeforeDepositing + 1),
+            //     "RCT amount does not match"
+            // );
+
+            // OLD
+            // assertEq(
+            //     outputValueA,
+            //     _depositAmount * totalSupplyRCTBeforeMintingNew / curveLpTokensBeforeDepositing,
+            //     "RCT amount does not match"
+            // );
         }
 
         assertEq(outputValueB, 0, "Output value B is not 0");
@@ -258,8 +276,15 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
         uint256 stakedCurveLpTokensEnd = ICurveRewards(curveRewards).balanceOf(address(bridge));
         uint256 unstakedRewardLpTokensAfter = IERC20(curveLpToken).balanceOf(address(bridge));
         uint256 totalSupplyRCTBeforeBurning = IRepConvexToken(rctClone).totalSupply() + _withdrawalAmount;
-        uint256 curveLpTokenAmt = (stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA)
-            * _withdrawalAmount / totalSupplyRCTBeforeBurning;
+        // OLD
+        // uint256 curveLpTokenAmt = (stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA)
+        //     * _withdrawalAmount / totalSupplyRCTBeforeBurning;
+
+        // NEW
+        // uint256 curveLpTokenAmt = (stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA)
+        //     * (_withdrawalAmount + 1) / (totalSupplyRCTBeforeBurning + SHARE_AMOUNT_RATIO);
+
+        uint256 curveLpTokenAmt = InflationProtection._toAmount(_withdrawalAmount, totalSupplyRCTBeforeBurning, stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA, false);
 
         assertEq(outputValueA, curveLpTokenAmt, "Curve LP amount does not match");
         assertEq(outputValueB, 0, "Output value B is greater than 0");
@@ -323,14 +348,10 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
      * @dev Sets reward balances high enough to guarantee that rewards are going to be exchanged
      * @dev These balances are not taken into consideration by the curveRewards contract which prevents withdrawing of all deposited funds
      */
-    function _mockInitialRewardBalances(bool _mockCrv, bool _mockCvx) internal {
-        address crv = 0xD533a949740bb3306d119CC777fa900bA034cd52;
-        address cvx = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
-        if (_mockCrv) {
-            deal(crv, address(bridge), 3e22);
-        }
-        if (_mockCvx) {
-            deal(cvx, address(bridge), 3e22);
+    function _mockInitialRewardBalances(bool _isMockActive) internal {
+        if (_isMockActive) {
+            deal(CRV, address(bridge), 3e22);
+            deal(CVX, address(bridge), 3e22);
         }
     }
 
