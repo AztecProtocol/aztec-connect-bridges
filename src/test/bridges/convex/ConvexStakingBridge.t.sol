@@ -535,13 +535,15 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
 
         if (totalSupplyRCTBeforeMintingNew == 0) {
             assertEq(
-                outputValueA, InflationProtection._toShares(_depositAmount, 0, 0, true), "RCT amt not equal to Curve LP"
+                outputValueA,
+                InflationProtection._convertToShares(_depositAmount, 0, 0),
+                "RCT amt not equal to Curve LP"
             );
         } else {
             assertEq(
                 outputValueA,
-                InflationProtection._toShares(
-                    _depositAmount, totalSupplyRCTBeforeMintingNew, curveLpTokensBeforeDepositing, false
+                InflationProtection._convertToShares(
+                    _depositAmount, totalSupplyRCTBeforeMintingNew, curveLpTokensBeforeDepositing
                 ),
                 "RCT amount does not match"
             );
@@ -594,11 +596,10 @@ contract ConvexStakingBridgeTest is BridgeTestBase {
 
         uint256 unstakedRewardLpTokensAfter = IERC20(curveLpToken).balanceOf(address(bridge));
         uint256 stakedCurveLpTokensEnd = ICurveRewards(curveRewards).balanceOf(address(bridge));
-        uint256 curveLpTokenAmt = InflationProtection._toAmount(
+        uint256 curveLpTokenAmt = InflationProtection._convertToAssets(
             _withdrawalAmount,
             totalSupplyRCTBeforeBurning,
-            stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA,
-            false
+            stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA
         );
 
         assertEq(outputValueA, curveLpTokenAmt);

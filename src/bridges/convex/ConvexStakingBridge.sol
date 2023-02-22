@@ -122,6 +122,9 @@ contract ConvexStakingBridge is BridgeBase {
     address public constant LUSD_POOL = 0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA;
     address public constant P_ETH_POOL = 0x9848482da3Ee3076165ce6497eDA906E66bB85C5;
 
+    // Init deposit limit
+    uint256 private constant INIT_DEPOSIT_LIMIT = 1e16;
+
     // Smallest amounts of rewards to swap (gas optimizations)
     uint256 private constant MIN_SWAP_AMT = 2e20; // $100 for CRV, $67 for CVX
 
@@ -384,7 +387,7 @@ contract ConvexStakingBridge is BridgeBase {
         PoolInfo memory _selectedPool
     ) internal returns (uint256 outputValueA) {
         uint256 totalSupplyRCT = IRepConvexToken(_outputAssetA.erc20Address).totalSupply();
-        if (totalSupplyRCT == 0 && _totalInputValue < 1e16) {
+        if (totalSupplyRCT == 0 && _totalInputValue < INIT_DEPOSIT_LIMIT) {
             revert InsufficientFirstDepositAmount();
         }
         uint256 unstakedRewardLpTokens = IERC20(_inputAssetA.erc20Address).balanceOf(address(this)) - _totalInputValue;
@@ -394,13 +397,13 @@ contract ConvexStakingBridge is BridgeBase {
 
         if (totalSupplyRCT == 0) {
             // Initial `RCT/Curve LP token` staking ratio is set to 1e10:1
-            outputValueA = InflationProtection._toShares(_totalInputValue, totalSupplyRCT, 0, true);
+            outputValueA = InflationProtection._convertToShares(_totalInputValue, 0, 0);
         } else {
             uint256 totalCurveLpTokensOwnedBeforeDeposit =
                 ICurveRewards(_selectedPool.curveRewards).balanceOf(address(this)) - _totalInputValue;
             // totalSupplyRCT / totalCurveLpTokensOwnedBeforeDeposit = how many RCT is one Curve LP token worth
-            outputValueA = InflationProtection._toShares(
-                _totalInputValue, totalSupplyRCT, totalCurveLpTokensOwnedBeforeDeposit, false
+            outputValueA = InflationProtection._convertToShares(
+                _totalInputValue, totalSupplyRCT, totalCurveLpTokensOwnedBeforeDeposit
             );
         }
 
@@ -430,7 +433,7 @@ contract ConvexStakingBridge is BridgeBase {
         // totalCurveLpTokens / totalSupplyRCT = how many Curve LP tokens is one RCT worth
         uint256 totalCurveLpTokens =
             ICurveRewards(selectedPool.curveRewards).balanceOf(address(this)) + rewardLpTokens + unstakedRewardLpTokens;
-        outputValueA = InflationProtection._toAmount(_totalInputValue, totalSupplyRCT, totalCurveLpTokens, false);
+        outputValueA = InflationProtection._convertToAssets(_totalInputValue, totalSupplyRCT, totalCurveLpTokens);
         // Transfer Convex LP tokens from CurveRewards back to the bridge
         ICurveRewards(selectedPool.curveRewards).withdraw(outputValueA, false); // rewards are not claimed again
 

@@ -64,22 +64,26 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
             _setupSubsidy();
 
             vm.startPrank(MULTI_SIG);
-            // Add the new bridge and set its initial gasLimit
-            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 2500000);
+            // Add the new bridge twice - once for deposit, once for withdrawal - and set their initial gasLimits
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 4000000); // deposits
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 3300000); // withdrawals
             // Add assets and set their initial gasLimits
             ROLLUP_PROCESSOR.setSupportedAsset(curveLpToken, 100000);
             ROLLUP_PROCESSOR.setSupportedAsset(rctClone, 100000);
             vm.stopPrank();
 
-            // Fetch the id of the Convex Staking bridge
-            uint256 bridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
+            // Fetch the ids of the Convex Staking bridge
+            uint256 depositBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength() - 1;
+            uint256 withdrawalBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
             // get Aztec assets
             AztecTypes.AztecAsset memory curveLpAsset = ROLLUP_ENCODER.getRealAztecAsset(curveLpToken);
             AztecTypes.AztecAsset memory representingConvexAsset = ROLLUP_ENCODER.getRealAztecAsset(rctClone);
 
-            _deposit(bridgeId, curveLpAsset, representingConvexAsset, _depositAmount);
-            _withdraw(bridgeId, representingConvexAsset, curveLpAsset, _depositAmount * uint256(6) / uint256(10));
+            _deposit(depositBridgeId, curveLpAsset, representingConvexAsset, _depositAmount);
+            _withdraw(
+                withdrawalBridgeId, representingConvexAsset, curveLpAsset, _depositAmount * uint256(6) / uint256(10)
+            );
 
             rewind(10 days);
         }
@@ -99,25 +103,31 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
             _setupSubsidy();
 
             vm.startPrank(MULTI_SIG);
-            // Add the new bridge and set its initial gasLimit
-            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 2500000);
+            // Add the new bridge twice - once for deposit, once for withdrawal - and set their initial gasLimits
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 4000000); // deposits
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 3300000); // withdrawals
             // Add assets and set their initial gasLimits
             ROLLUP_PROCESSOR.setSupportedAsset(curveLpToken, 100000);
             ROLLUP_PROCESSOR.setSupportedAsset(rctClone, 100000);
             vm.stopPrank();
 
-            // Fetch the id of the Convex Staking bridge
-            uint256 bridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
+            // Fetch the ids of the Convex Staking bridge
+            uint256 depositBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength() - 1;
+            uint256 withdrawalBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
             // get Aztec assets
             AztecTypes.AztecAsset memory curveLpAsset = ROLLUP_ENCODER.getRealAztecAsset(curveLpToken);
             AztecTypes.AztecAsset memory representingConvexAsset = ROLLUP_ENCODER.getRealAztecAsset(rctClone);
 
             // // Mint depositAmount of Curve LP tokens for RollUp Processor
-            _deposit(bridgeId, curveLpAsset, representingConvexAsset, _depositAmount);
-            _withdraw(bridgeId, representingConvexAsset, curveLpAsset, _depositAmount * uint256(6) / uint256(10));
-            _deposit(bridgeId, curveLpAsset, representingConvexAsset, _depositAmount);
-            _withdraw(bridgeId, representingConvexAsset, curveLpAsset, _depositAmount * uint256(6) / uint256(10));
+            _deposit(depositBridgeId, curveLpAsset, representingConvexAsset, _depositAmount);
+            _withdraw(
+                withdrawalBridgeId, representingConvexAsset, curveLpAsset, _depositAmount * uint256(6) / uint256(10)
+            );
+            _deposit(depositBridgeId, curveLpAsset, representingConvexAsset, _depositAmount);
+            _withdraw(
+                withdrawalBridgeId, representingConvexAsset, curveLpAsset, _depositAmount * uint256(6) / uint256(10)
+            );
 
             rewind(20 days);
         }
@@ -137,15 +147,17 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
             _setupSubsidy();
 
             vm.startPrank(MULTI_SIG);
-            // Add the new bridge and set its initial gasLimit
-            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 2500000);
+            // Add the new bridge twice - once for deposit, once for withdrawal - and set their initial gasLimits
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 4000000); // deposits
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 3300000); // withdrawals
             // Add assets and set their initial gasLimits
             ROLLUP_PROCESSOR.setSupportedAsset(curveLpToken, 100000);
             ROLLUP_PROCESSOR.setSupportedAsset(rctClone, 100000);
             vm.stopPrank();
 
-            // Fetch the id of the Convex Staking bridge
-            uint256 bridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
+            // Fetch the ids of the Convex Staking bridge
+            uint256 depositBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength() - 1;
+            uint256 withdrawalBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
             // get Aztec assets
             AztecTypes.AztecAsset memory curveLpAsset = ROLLUP_ENCODER.getRealAztecAsset(curveLpToken);
@@ -153,11 +165,15 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
 
             // // Mint depositAmount of Curve LP tokens for RollUp Processor
 
-            _deposit(bridgeId, curveLpAsset, representingConvexAsset, _depositAmount);
-            _deposit(bridgeId, curveLpAsset, representingConvexAsset, _depositAmount);
+            _deposit(depositBridgeId, curveLpAsset, representingConvexAsset, _depositAmount);
+            _deposit(depositBridgeId, curveLpAsset, representingConvexAsset, _depositAmount);
 
-            _withdraw(bridgeId, representingConvexAsset, curveLpAsset, _depositAmount * uint256(6) / uint256(10));
-            _withdraw(bridgeId, representingConvexAsset, curveLpAsset, _depositAmount * uint256(6) / uint256(10));
+            _withdraw(
+                withdrawalBridgeId, representingConvexAsset, curveLpAsset, _depositAmount * uint256(6) / uint256(10)
+            );
+            _withdraw(
+                withdrawalBridgeId, representingConvexAsset, curveLpAsset, _depositAmount * uint256(6) / uint256(10)
+            );
 
             rewind(20 days);
         }
@@ -180,25 +196,27 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
             _setupSubsidy();
 
             vm.startPrank(MULTI_SIG);
-            // Add the new bridge and set its initial gasLimit
-            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 2500000);
+            // Add the new bridge twice - once for deposit, once for withdrawal - and set their initial gasLimits
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 4000000); // deposits
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 3300000); // withdrawals
             // Add assets and set their initial gasLimits
             ROLLUP_PROCESSOR.setSupportedAsset(curveLpToken, 100000);
             ROLLUP_PROCESSOR.setSupportedAsset(rctClone, 100000);
             vm.stopPrank();
 
-            // Fetch the id of the Convex Staking bridge
-            uint256 bridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
+            // Fetch the ids of the Convex Staking bridge
+            uint256 depositBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength() - 1;
+            uint256 withdrawalBridgeId = ROLLUP_PROCESSOR.getSupportedBridgesLength();
 
             // get Aztec assets
             AztecTypes.AztecAsset memory curveLpAsset = ROLLUP_ENCODER.getRealAztecAsset(curveLpToken);
             AztecTypes.AztecAsset memory representingConvexAsset = ROLLUP_ENCODER.getRealAztecAsset(rctClone);
 
-            _deposit(bridgeId, curveLpAsset, representingConvexAsset, depositAmount1);
-            _deposit(bridgeId, curveLpAsset, representingConvexAsset, depositAmount2);
+            _deposit(depositBridgeId, curveLpAsset, representingConvexAsset, depositAmount1);
+            _deposit(depositBridgeId, curveLpAsset, representingConvexAsset, depositAmount2);
 
-            _withdraw(bridgeId, representingConvexAsset, curveLpAsset, withdrawalAmount1);
-            _withdraw(bridgeId, representingConvexAsset, curveLpAsset, withdrawalAmount2);
+            _withdraw(withdrawalBridgeId, representingConvexAsset, curveLpAsset, withdrawalAmount1);
+            _withdraw(withdrawalBridgeId, representingConvexAsset, curveLpAsset, withdrawalAmount2);
 
             rewind(20 days);
         }
@@ -227,13 +245,15 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
             - IERC20(curveLpToken).balanceOf(address(bridge)) - _depositAmount; // this also includes staked rewards
         if (totalSupplyRCTBeforeMintingNew == 0) {
             assertEq(
-                outputValueA, InflationProtection._toShares(_depositAmount, 0, 0, true), "RCT amt not equal to Curve LP"
+                outputValueA,
+                InflationProtection._convertToShares(_depositAmount, 0, 0),
+                "RCT amt not equal to Curve LP"
             );
         } else {
             assertEq(
                 outputValueA,
-                InflationProtection._toShares(
-                    _depositAmount, totalSupplyRCTBeforeMintingNew, curveLpTokensBeforeDepositing, false
+                InflationProtection._convertToShares(
+                    _depositAmount, totalSupplyRCTBeforeMintingNew, curveLpTokensBeforeDepositing
                 ),
                 "RCT amount does not match"
             );
@@ -266,11 +286,10 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
         uint256 unstakedRewardLpTokensAfter = IERC20(curveLpToken).balanceOf(address(bridge));
         uint256 totalSupplyRCTBeforeBurning = IRepConvexToken(rctClone).totalSupply() + _withdrawalAmount;
 
-        uint256 curveLpTokenAmt = InflationProtection._toAmount(
+        uint256 curveLpTokenAmt = InflationProtection._convertToAssets(
             _withdrawalAmount,
             totalSupplyRCTBeforeBurning,
-            stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA,
-            false
+            stakedCurveLpTokensEnd + unstakedRewardLpTokensAfter + outputValueA
         );
 
         assertEq(outputValueA, curveLpTokenAmt, "Curve LP amount does not match");

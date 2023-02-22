@@ -1,48 +1,42 @@
 // SPDX-License-Identifier: agpl-3.0
 pragma solidity >=0.8.4;
 
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+
 library InflationProtection {
-    /// @notice Calculates the base value in relationship to `elastic` and `total`.
-    function _toShares(uint256 amount, uint256 totalShares_, uint256 totalAmount, bool roundUp)
+    using Math for uint256;
+
+    /**
+     * @notice Calculate the shares using the current assets to shares ratio (offset)
+     * @dev To prevent reseting the ratio due to withdrawal of all shares, we start with
+     * 1 asset/1e10 shares already burned. This also starts with a 1 : 1e10 ratio which
+     * functions like 10 decimal fixed point math. This prevents ratio attacks or inaccuracy
+     * due to 'gifting' or rebasing tokens. (Up to a certain degree)
+     */
+    function _convertToShares(uint256 _assets, uint256 _totalShares, uint256 _totalAssets)
         internal
         pure
-        returns (uint256 share)
+        returns (uint256 shares)
     {
-        // To prevent reseting the ratio due to withdrawal of all shares, we start with
-        // 1 amount/1e10 shares already burned. This also starts with a 1 : 1e10 ratio which
-        // functions like 10 decimal fixed point math. This prevents ratio attacks or inaccuracy
-        // due to 'gifting' or rebasing tokens. (Up to a certain degree)
-        totalAmount++;
-        totalShares_ += 1e10;
+        uint256 offset = 1e10;
 
-        // Calculte the shares using te current amount to share ratio
-        share = (amount * totalShares_) / totalAmount;
-
-        // Default is to round down (Solidity), round up if required
-        if (roundUp && ((share * totalAmount) / totalShares_ < amount)) {
-            share++;
-        }
+        shares = _assets.mulDiv(_totalShares + offset, _totalAssets + 1);
     }
 
-    /// @notice Calculates the elastic value in relationship to `base` and `total`.
-    function _toAmount(uint256 share, uint256 totalShares_, uint256 totalAmount, bool roundUp)
+    /**
+     * @notice Calculate the assets using the current assets to shares ratio (offset)
+     * @dev To prevent reseting the ratio due to withdrawal of all shares, we start with
+     * 1 asset/1e10 shares already burned. This also starts with a 1 : 1e10 ratio which
+     * functions like 10 decimal fixed point math. This prevents ratio attacks or inaccuracy
+     * due to 'gifting' or rebasing tokens. (Up to a certain degree)
+     */
+    function _convertToAssets(uint256 _shares, uint256 _totalShares, uint256 _totalAssets)
         internal
         pure
-        returns (uint256 amount)
+        returns (uint256 assets)
     {
-        // To prevent reseting the ratio due to withdrawal of all shares, we start with
-        // 1 amount/1e10 shares already burned. This also starts with a 1 : 1e10 ratio which
-        // functions like 10 decimal fixed point math. This prevents ratio attacks or inaccuracy
-        // due to 'gifting' or rebasing tokens. (Up to a certain degree)
-        totalAmount++;
-        totalShares_ += 1e10;
+        uint256 offset = 1e10;
 
-        // Calculte the amount using te current amount to share ratio
-        amount = (share * totalAmount) / totalShares_;
-
-        // Default is to round down (Solidity), round up if required
-        if (roundUp && (amount * totalShares_) / totalAmount < share) {
-            amount++;
-        }
+        assets = _shares.mulDiv(_totalAssets + 1, _totalShares + offset);
     }
 }
