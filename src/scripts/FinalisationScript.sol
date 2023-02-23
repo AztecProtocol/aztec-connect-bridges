@@ -10,12 +10,12 @@ interface IMulticall {
         bytes callData;
     }
 
-    function aggregate(Call[] memory calls) external returns (uint256 blockNumber, bytes[] memory returnData);
+    function aggregate(Call[] memory _calls) external returns (uint256 blockNumber, bytes[] memory returnData);
 }
 
 contract FinalisationScript is Test {
-    IMulticall constant MULTI_CALL = IMulticall(0xeefBa1e63905eF1D7ACbA5a8513c70307C1cE441);
-    address constant ROLLUP_PROCESSOR = 0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455;
+    IMulticall private constant MULTI_CALL = IMulticall(0xeefBa1e63905eF1D7ACbA5a8513c70307C1cE441);
+    address private constant ROLLUP_PROCESSOR = 0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455;
 
     // TODO: update the array with actual nonces
     uint256[] private interactionNonces = [100, 101, 102];
