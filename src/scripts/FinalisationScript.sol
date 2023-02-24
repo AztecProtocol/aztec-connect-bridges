@@ -20,13 +20,14 @@ contract FinalisationScript is Test {
     // TODO: update the array with actual nonces
     uint256[] private interactionNonces = [100, 101, 102];
 
-    function testFinaliseAll() public {
+    function finaliseAll() public {
         IMulticall.Call[] memory calls = new IMulticall.Call[](interactionNonces.length);
         for (uint256 i = 0; i < interactionNonces.length; i++) {
             bytes memory callData =
                 abi.encodeWithSignature("processAsyncDefiInteraction(uint256)", interactionNonces[i]);
             calls[i] = IMulticall.Call(ROLLUP_PROCESSOR, callData);
         }
+        vm.broadcast();
         MULTI_CALL.aggregate(calls);
     }
 }
