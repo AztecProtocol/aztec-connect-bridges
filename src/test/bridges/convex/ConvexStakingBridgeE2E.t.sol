@@ -65,8 +65,8 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
 
             vm.startPrank(MULTI_SIG);
             // Add the new bridge twice - once for deposit, once for withdrawal - and set their initial gasLimits
-            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 4000000); // deposits
-            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 3300000); // withdrawals
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 3500000); // deposits
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 2500000); // withdrawals
             // Add assets and set their initial gasLimits
             ROLLUP_PROCESSOR.setSupportedAsset(curveLpToken, 100000);
             ROLLUP_PROCESSOR.setSupportedAsset(rctClone, 100000);
@@ -104,8 +104,8 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
 
             vm.startPrank(MULTI_SIG);
             // Add the new bridge twice - once for deposit, once for withdrawal - and set their initial gasLimits
-            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 4000000); // deposits
-            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 3300000); // withdrawals
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 3500000); // deposits
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 2500000); // withdrawals
             // Add assets and set their initial gasLimits
             ROLLUP_PROCESSOR.setSupportedAsset(curveLpToken, 100000);
             ROLLUP_PROCESSOR.setSupportedAsset(rctClone, 100000);
@@ -148,8 +148,8 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
 
             vm.startPrank(MULTI_SIG);
             // Add the new bridge twice - once for deposit, once for withdrawal - and set their initial gasLimits
-            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 4000000); // deposits
-            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 3300000); // withdrawals
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 3500000); // deposits
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 2500000); // withdrawals
             // Add assets and set their initial gasLimits
             ROLLUP_PROCESSOR.setSupportedAsset(curveLpToken, 100000);
             ROLLUP_PROCESSOR.setSupportedAsset(rctClone, 100000);
@@ -197,8 +197,8 @@ contract ConvexStakingBridgeE2ETest is BridgeTestBase {
 
             vm.startPrank(MULTI_SIG);
             // Add the new bridge twice - once for deposit, once for withdrawal - and set their initial gasLimits
-            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 4000000); // deposits
-            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 3300000); // withdrawals
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 3500000); // deposits
+            ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 2500000); // withdrawals
             // Add assets and set their initial gasLimits
             ROLLUP_PROCESSOR.setSupportedAsset(curveLpToken, 100000);
             ROLLUP_PROCESSOR.setSupportedAsset(rctClone, 100000);

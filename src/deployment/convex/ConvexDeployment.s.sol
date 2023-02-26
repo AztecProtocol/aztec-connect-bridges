@@ -20,8 +20,8 @@ contract ConvexStakingBridgeDeployment is BaseDeployment {
         ConvexStakingBridge bridge = new ConvexStakingBridge(ROLLUP_PROCESSOR);
         emit log_named_address("Convex staking bridge deployed to", address(bridge));
 
-        uint256 depositBridgeId = listBridge(address(bridge), 4000000); // deposits
-        uint256 withdrawalBridgeId = listBridge(address(bridge), 3300000); // withdrawals
+        uint256 depositBridgeId = listBridge(address(bridge), 3500000); // deposits
+        uint256 withdrawalBridgeId = listBridge(address(bridge), 2500000); // withdrawals
 
         emit log_named_uint("Convex staking bridge address id for deposits", depositBridgeId);
         emit log_named_uint("Convex staking bridge address id for withdrawals", withdrawalBridgeId);

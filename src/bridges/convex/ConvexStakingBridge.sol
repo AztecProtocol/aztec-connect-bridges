@@ -30,11 +30,12 @@ import {InflationProtection} from "../../libraries/convex/InflationProtection.so
  * User can withdraw (unstake) any time.
  * @dev Convex Finance mints pool specific Convex LP token but not for the staking user (the bridge) directly.
  * RCT ERC20 token is deployed for each loaded pool.
- * RCT is minted proportionally to all, staked and bridge owned, Curve LP tokens in 1e10 : 1 ratio.
+ * RCT (share) is minted proportionally to all, staked and bridge owned, Curve LP tokens (assets) in 1e10 : 1 ratio.
  * Main purpose of RCT tokens is that they can be owned by the bridge and recovered by the Rollup Processor.
  * @dev Synchronous and stateful bridge
  * @author Vojtech Kaiser (VojtaKai on GitHub)
  */
+
 contract ConvexStakingBridge is BridgeBase {
     using SafeERC20 for IERC20;
 
@@ -126,7 +127,7 @@ contract ConvexStakingBridge is BridgeBase {
     uint256 private constant INIT_DEPOSIT_LIMIT = 1e16;
 
     // Smallest amounts of rewards to swap (gas optimizations)
-    uint256 private constant MIN_SWAP_AMT = 2e20; // $100 for CRV, $67 for CVX
+    uint256 private constant MIN_SWAP_AMT = 25e18; // $25 for CRV, $145 for CVX
 
     // Representing Convex Token implementation address
     address public immutable RCT_IMPLEMENTATION;
@@ -162,6 +163,7 @@ contract ConvexStakingBridge is BridgeBase {
 
     /**
      * @notice Stakes Curve LP tokens and earns rewards on them. Gets back RCT token.
+     * @dev Curve LP token = asset, RCT token = share
      * @dev Convert rate between Curve LP token and corresponding Convex LP token is 1:1.
      * Stake == Deposit, Unstake == Withdraw
      * RCT (Representing Convex Token) is a representation of Convex LP token minted for bridge but fully owned by the bridge.
@@ -372,8 +374,8 @@ contract ConvexStakingBridge is BridgeBase {
     }
 
     /**
-     * @notice Deposits Curve LP tokens
-     * @dev Proportional amount of RCT is minted for the staked amount of Curve LP tokens.
+     * @notice Deposits assets (Curve LP tokens)
+     * @dev Shares (RCT) minted for the staked assets (Curve LP tokens)
      * @param _inputAssetA Asset for the Curve LP token
      * @param _outputAssetA Asset for the RCT token
      * @param _totalInputValue Number of Curve LP tokens to stake
@@ -411,8 +413,8 @@ contract ConvexStakingBridge is BridgeBase {
     }
 
     /**
-     * @notice Withdraws Curve LP tokens
-     * @dev RCT is burned for the bridge. Proportional amount of Curve LP tokens is withdrawn
+     * @notice Withdraws assets (Curve LP tokens)
+     * @dev Shares (RCT) are burned for the bridge. Corresponding amount of assets (Curve LP tokens) is withdrawn.
      * @param _inputAssetA Asset for the RCT token
      * @param _outputAssetA Asset for the Curve LP token
      * @param _totalInputValue Number of RCT to burn
@@ -428,11 +430,9 @@ contract ConvexStakingBridge is BridgeBase {
         uint256 rewardLpTokens = _swapRewardsToCurveLpToken(selectedPool, _outputAssetA.erc20Address); // will not be staked now, will be staked with next deposit
 
         uint256 totalSupplyRCT = IRepConvexToken(_inputAssetA.erc20Address).totalSupply();
-
-        // How many Curve LP tokens to withdraw.
-        // totalCurveLpTokens / totalSupplyRCT = how many Curve LP tokens is one RCT worth
         uint256 totalCurveLpTokens =
             ICurveRewards(selectedPool.curveRewards).balanceOf(address(this)) + rewardLpTokens + unstakedRewardLpTokens;
+        // How many Curve LP tokens to withdraw.
         outputValueA = InflationProtection._convertToAssets(_totalInputValue, totalSupplyRCT, totalCurveLpTokens);
         // Transfer Convex LP tokens from CurveRewards back to the bridge
         ICurveRewards(selectedPool.curveRewards).withdraw(outputValueA, false); // rewards are not claimed again
