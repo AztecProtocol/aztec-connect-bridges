@@ -153,7 +153,7 @@ contract RollupProcessor {
 
         emit DefiBridgeProcessed(
             0, interaction.interactionNonce, interaction.totalInputValue, outputValueA, outputValueB, true
-            );
+        );
         interaction.finalised = true;
         interaction.outputValueA = outputValueA;
         interaction.outputValueB = outputValueB;
@@ -217,7 +217,7 @@ contract RollupProcessor {
             if (!isAsync) {
                 emit DefiBridgeProcessed(
                     0, convertArgs.interactionNonce, convertArgs.totalInputValue, outputValueA, outputValueB, true
-                    );
+                );
             } else {
                 emit AsyncDefiBridgeProcessed(0, convertArgs.interactionNonce, convertArgs.totalInputValue);
             }

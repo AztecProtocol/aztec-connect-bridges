@@ -144,7 +144,7 @@ contract ERC4626Measure is ERC4626Deployment {
             );
             emit log_named_uint(
                 "weweth balance of gasBase", IERC20(wewethAsset.erc20Address).balanceOf(address(gasBase))
-                );
+            );
         }
 
         uint256 claimableSubsidyAfterWithdrawal = SUBSIDY.claimableAmount(BENEFICIARY);
@@ -195,7 +195,7 @@ contract ERC4626Measure is ERC4626Deployment {
             );
             emit log_named_uint(
                 "weweth balance of gasBase", IERC20(wewethAsset.erc20Address).balanceOf(address(gasBase))
-                );
+            );
         }
 
         uint256 claimableSubsidyAfterWithdrawal = SUBSIDY.claimableAmount(BENEFICIARY);
@@ -255,7 +255,7 @@ contract ERC4626Measure is ERC4626Deployment {
             );
             emit log_named_uint(
                 "wewstethBalance balance of gasBase", IERC20(wewstethAsset.erc20Address).balanceOf(address(gasBase))
-                );
+            );
         }
 
         uint256 claimableSubsidyAfterWithdrawal = SUBSIDY.claimableAmount(BENEFICIARY);
