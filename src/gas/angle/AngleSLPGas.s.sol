@@ -100,7 +100,7 @@ contract AngleMeasure is AngleSLPDeployment {
             );
             emit log_named_uint(
                 "sanWeth balance of gasBase", IERC20(sanWethAsset.erc20Address).balanceOf(address(gasBase))
-                );
+            );
         }
 
         uint256 claimableSubsidyAfterWithdrawal = SUBSIDY.claimableAmount(BENEFICIARY);
@@ -151,7 +151,7 @@ contract AngleMeasure is AngleSLPDeployment {
             );
             emit log_named_uint(
                 "sanWeth balance of gasBase", IERC20(sanWethAsset.erc20Address).balanceOf(address(gasBase))
-                );
+            );
         }
 
         uint256 claimableSubsidyAfterWithdrawal = SUBSIDY.claimableAmount(BENEFICIARY);
