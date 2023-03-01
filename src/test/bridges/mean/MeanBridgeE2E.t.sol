@@ -271,7 +271,7 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         _assertReturnedIsCorrect(_sharesSecondWithdraw, _unswappedSecond, _swappedSecond, 0, _swappedUnderlying);
         _assertFundsWereStoredCorrectly(_positionId, 0, _swappedAmount);
         assertEq(_unswappedFirst + _unswappedSecond, 0);
-        assertEqThreshold(_swappedFirst + _swappedSecond, _swappedUnderlying, 2, 0, 'Not all swapped');
+        _assertEqThreshold(_swappedFirst + _swappedSecond, _swappedUnderlying, 2, 0, "Not all swapped");
     }
 
     function testFinaliseIfSwapsPaused(uint120 _inputAmount, uint128 _shares) public {
@@ -432,12 +432,7 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         assertFalse(_isAsync);
         return (_outputValueB, _outputValueA);
     }
-
-    function _virtualAsset(uint256 _nonce) internal pure returns(AztecTypes.AztecAsset memory _asset) {
-        _asset.assetType = AztecTypes.AztecAssetType.VIRTUAL;
-        _asset.id = _nonce;
-    }
-
+    
     function _setUpSubsidy(uint256 _positionCriteria) internal {
         uint256[] memory _criteria = new uint256[](1);
         _criteria[0] = _positionCriteria;
@@ -466,20 +461,20 @@ contract MeanBridgeE2eTest is BridgeTestBase {
     }
 
     function _assertReturnedIsCorrect(uint256 _shares, uint256 _unswapped, uint256 _swapped, uint256 _totalUnswapped, uint256 _totalSwapped) internal {
-        assertEqThreshold(_unswapped, Math.mulDiv(_totalUnswapped, _shares, totalShares), 1, 1, 'Wrong returned unswapped');
-        assertEqThreshold(_swapped, Math.mulDiv(_totalSwapped, _shares, totalShares), 1, 1, 'Wrong returned swapped');
+        _assertEqThreshold(_unswapped, Math.mulDiv(_totalUnswapped, _shares, totalShares), 1, 1, "Wrong returned unswapped");
+        _assertEqThreshold(_swapped, Math.mulDiv(_totalSwapped, _shares, totalShares), 1, 1, "Wrong returned swapped");
     }
 
-    function assertEqThreshold(uint256 _actual, uint256 _expected, uint256 _lowerThreshold, uint256 _upperThreshold, string memory err) internal {
-        assertLe(_actual, _expected + _upperThreshold, err);
-        assertGe(_actual, _expected > _lowerThreshold ? _expected - _lowerThreshold : 0, err);
+    function _assertEqThreshold(uint256 _actual, uint256 _expected, uint256 _lowerThreshold, uint256 _upperThreshold, string memory _err) internal {
+        assertLe(_actual, _expected + _upperThreshold, _err);
+        assertGe(_actual, _expected > _lowerThreshold ? _expected - _lowerThreshold : 0, _err);
     }
 
     function _assertFundsWereStoredCorrectly(uint256 _positionId, uint256 _unswapped, uint256 _swapped) internal {
         (bool wereFundsExtracted, uint248 swappedFunds, uint256 unswappedFunds) = bridge.fundsByPositionId(_positionId);
         assertTrue(wereFundsExtracted);
-        assertEq(unswappedFunds, _unswapped, 'Wrong stored unswapped funds');
-        assertEq(swappedFunds, _swapped, 'Wrong stored swapped funds');
+        assertEq(unswappedFunds, _unswapped, "Wrong stored unswapped funds");
+        assertEq(swappedFunds, _swapped, "Wrong stored swapped funds");
     }
 
     function _buildAuxData(address _from, address _to) internal view returns (uint64) {
@@ -510,6 +505,12 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         ITransformer.UnderlyingAmount[] memory _result = TRANSFORMER_REGISTRY.calculateTransformToUnderlying(_yieldBearing, _amount);
         return _result[0].amount;
     }
+
+    function _virtualAsset(uint256 _nonce) internal pure returns(AztecTypes.AztecAsset memory _asset) {
+        _asset.assetType = AztecTypes.AztecAssetType.VIRTUAL;
+        _asset.id = _nonce;
+    }
+
 }
 
 // An extended version of the DCA Hub
