@@ -5,6 +5,7 @@ pragma solidity >=0.8.4;
 import {console} from "forge-std/console.sol";
 import {BridgeTestBase} from "../../aztec/base/BridgeTestBase.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {MeanBridge} from "../../../bridges/mean/MeanBridge.sol";
 import {IDCAHub} from "../../../interfaces/mean/IDCAHub.sol";
@@ -24,6 +25,7 @@ contract MeanBridgeE2eTest is BridgeTestBase {
     address private constant BENEFICIARY = address(11);
     ExtendedHub private constant HUB = ExtendedHub(0xA5AdC5484f9997fBF7D405b9AA62A7d88883C345);
     ITransformerRegistry private constant TRANSFORMER_REGISTRY = ITransformerRegistry(0xC0136591Df365611B1452B5F8823dEF69Ff3A685);
+    uint256 private totalShares;
     MeanBridge private bridge;
     DCAHubSwapperMock private swapper;
     uint256 private bridgeId;
@@ -32,18 +34,16 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         bridge = new MeanBridge(IDCAHub(address(HUB)), TRANSFORMER_REGISTRY, BRIDGE_OWNER, address(ROLLUP_PROCESSOR));
         bridge = new MeanBridge(IDCAHub(address(HUB)), TRANSFORMER_REGISTRY, BRIDGE_OWNER, address(ROLLUP_PROCESSOR));
 
-        // Approve tokens
-        IERC20[] memory _toApprove = new IERC20[](2);
-        _toApprove[0] = IERC20(DAI);
-        _toApprove[1] = IERC20(WETH);
-        bridge.maxApprove(_toApprove);
-
-        // Register yield-bearing-wrappers
-        address[] memory _yieldBearing = new address[](2);
-        _yieldBearing[0] = YIELD_BEARING_DAI;
-        _yieldBearing[1] = YIELD_BEARING_WETH;
+        // Register tokens
+        address[] memory _tokens = new address[](4);
+        _tokens[0] = DAI;
+        _tokens[1] = WETH;
+        _tokens[2] = YIELD_BEARING_DAI;
+        _tokens[3] = YIELD_BEARING_WETH;
         vm.prank(BRIDGE_OWNER);
-        bridge.registerWrappers(_yieldBearing);
+        bridge.registerTokens(_tokens);
+
+        totalShares = bridge.VIRTUAL_SHARES_PER_POSITION();
 
         vm.prank(MULTI_SIG);
         ROLLUP_PROCESSOR.setSupportedBridge(address(bridge), 600_000);
@@ -62,19 +62,21 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         vm.label(YIELD_BEARING_WETH, "YIELD_BEARING_WETH");        
     }
 
-    function testEthToERC20(uint120 _inputAmount) public {
+    function testEthToERC20(uint120 _inputAmount, uint128 _shares) public {
         _inputAmount = uint120(bound(_inputAmount, 1, uint120(type(int120).max)));
+        _shares = uint128(bound(_shares, 1, totalShares));
 
         AztecTypes.AztecAsset memory _inputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
         AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(DAI);
         address _hubFrom = WETH;
         address _hubTo = DAI;
+        uint64 _auxData = _buildAuxData(_hubFrom, _hubTo);
 
         // Deposit to rollup processor
         _dealToRollup(_inputAsset, _inputAmount);
 
         // Create DCA position
-        uint256 _positionId = _convert(_inputAsset, _outputAsset, _hubFrom, _hubTo, _inputAmount);        
+        uint256 _positionId = _convert(_inputAsset, _auxData, _inputAmount);        
 
         // Validate position
         _validatePosition(_positionId, _hubFrom, _hubTo, _inputAmount);
@@ -84,24 +86,23 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         uint256 _swappedAmount = _calculateSwapped(_positionId);
         
         // Close position
-        uint256 _initialBalanceInput = _readRollupBalance(_inputAsset);
-        uint256 _initialBalanceOutput = _readRollupBalance(_outputAsset);
-        _finalise();
+        (uint256 _unswapped, uint256 _swapped) = _withdraw(_outputAsset, _shares, _auxData);
 
         // Perform checks
         _assertPositionWasTerminated(_positionId);
-        _assertBalance(_inputAsset, _initialBalanceInput, 0);
-        _assertBalance(_outputAsset, _initialBalanceOutput, _swappedAmount);
+        _assertReturnedIsCorrect(_shares, _unswapped, _swapped, 0, _swappedAmount);
+        _assertFundsWereStoredCorrectly(_positionId, 0, _swappedAmount);
 
         // Nothing to claim since pair was not subsidized
         assertEq(SUBSIDY.claimableAmount(BENEFICIARY), 0);
-    }
+    }    
 
-    function testEthToERC20WithSubsidy(uint120 _inputAmount) public {
+    function testEthToERC20WithSubsidy(uint120 _inputAmount, uint128 _shares) public {
         _inputAmount = uint120(bound(_inputAmount, 1, uint120(type(int120).max)));
+        _shares = uint128(bound(_shares, 1, totalShares));
 
         // Setup subsidy
-        uint256 _positionCriteria = bridge.computeCriteriaForPosition(WETH, DAI, 1, 1 hours);
+        uint256 _positionCriteria = bridge.computeCriteriaForPosition(MeanBridge.Action.DEPOSIT, WETH, DAI, 1, 1 hours);
         _setUpSubsidy(_positionCriteria);
 
         // Warp time in order to accumulate claimable subsidy        
@@ -111,36 +112,39 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(DAI);
         address _hubFrom = WETH;
         address _hubTo = DAI;
+        uint64 _auxData = _buildAuxData(_hubFrom, _hubTo);
 
         // Deposit to rollup processor
         _dealToRollup(_inputAsset, _inputAmount);
 
         // Create DCA position
-        _convert(_inputAsset, _outputAsset, _hubFrom, _hubTo, _inputAmount);        
+        _convert(_inputAsset, _auxData, _inputAmount);
 
         // Perform swap
         _swap(_hubFrom, _hubTo);
         
         // Close position
-        _finalise();
+        _withdraw(_outputAsset, _shares, _auxData);
 
         // There is something to claim
         assertGt(SUBSIDY.claimableAmount(BENEFICIARY), 0);
     }
 
-    function testYieldToETH(uint120 _inputAmount) public {
+    function testYieldToETH(uint120 _inputAmount, uint128 _shares) public {
         _inputAmount = uint120(bound(_inputAmount, 1 ether, 15 ether));
+        _shares = uint128(bound(_shares, 1, totalShares));
 
         AztecTypes.AztecAsset memory _inputAsset = ROLLUP_ENCODER.getRealAztecAsset(DAI);
         AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
         address _hubFrom = YIELD_BEARING_DAI;
         address _hubTo = WETH;
+        uint64 _auxData = _buildAuxData(_hubFrom, _hubTo);
 
         // Deposit to rollup processor
         _dealToRollup(_inputAsset, _inputAmount);
 
         // Create DCA position
-        uint256 _positionId = _convert(_inputAsset, _outputAsset, _hubFrom, _hubTo, _inputAmount);        
+        uint256 _positionId = _convert(_inputAsset, _auxData, _inputAmount);
 
         // Validate position
         uint256 _depositAmount = _calculateToYieldBearing(YIELD_BEARING_DAI, DAI, _inputAmount);
@@ -151,29 +155,29 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         uint256 _swappedAmount = _calculateSwapped(_positionId);
         
         // Close position
-        uint256 _initialBalanceInput = _readRollupBalance(_inputAsset);
-        uint256 _initialBalanceOutput = _readRollupBalance(_outputAsset);
-        _finalise();
+        (uint256 _unswapped, uint256 _swapped) = _withdraw(_outputAsset, _shares, _auxData);
 
         // Perform checks
         _assertPositionWasTerminated(_positionId);
-        _assertBalance(_inputAsset, _initialBalanceInput, 0);
-        _assertBalance(_outputAsset, _initialBalanceOutput, _swappedAmount);
+        _assertReturnedIsCorrect(_shares, _unswapped, _swapped, 0, _swappedAmount);
+        _assertFundsWereStoredCorrectly(_positionId, 0, _swappedAmount);
     }
 
-    function testERC20ToYieldETH(uint120 _inputAmount) public {
+    function testERC20ToYieldETH(uint120 _inputAmount, uint128 _shares) public {
         _inputAmount = uint120(bound(_inputAmount, 0.5 ether, 10_000 ether));
+        _shares = uint128(bound(_shares, 1, totalShares));
 
         AztecTypes.AztecAsset memory _inputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(DAI));
         AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
         address _hubFrom = DAI;
         address _hubTo = YIELD_BEARING_WETH;
+        uint64 _auxData = _buildAuxData(_hubFrom, _hubTo);
 
         // Deposit to rollup processor
         _dealToRollup(_inputAsset, _inputAmount);
 
         // Create DCA position
-        uint256 _positionId = _convert(_inputAsset, _outputAsset, _hubFrom, _hubTo, _inputAmount);        
+        uint256 _positionId = _convert(_inputAsset, _auxData, _inputAmount);
 
         // Validate position
         _validatePosition(_positionId, _hubFrom, _hubTo, _inputAmount);
@@ -183,31 +187,30 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         uint256 _swappedAmount = _calculateSwapped(_positionId);
         uint256 _swappedUnderlying = _calculateToUnderlying(YIELD_BEARING_WETH, _swappedAmount);
 
-        
         // Close position
-        uint256 _initialBalanceInput = _readRollupBalance(_inputAsset);
-        uint256 _initialBalanceOutput = _readRollupBalance(_outputAsset);
-        _finalise();
+        (uint256 _unswapped, uint256 _swapped) = _withdraw(_outputAsset, _shares, _auxData);
 
         // Perform checks
         _assertPositionWasTerminated(_positionId);
-        _assertBalance(_inputAsset, _initialBalanceInput, 0);
-        _assertBalance(_outputAsset, _initialBalanceOutput, _swappedUnderlying);
+        _assertReturnedIsCorrect(_shares, _unswapped, _swapped, 0, _swappedUnderlying);
+        _assertFundsWereStoredCorrectly(_positionId, 0, _swappedAmount);
     }
 
-    function testYieldETHToYieldERC20() public {
+    function testYieldETHToYieldERC20(uint128 _shares) public {
         uint120 _inputAmount = 1 ether;
+        _shares = uint128(bound(_shares, 1, totalShares));
 
         AztecTypes.AztecAsset memory _inputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
         AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(DAI));
         address _hubFrom = YIELD_BEARING_WETH;
         address _hubTo = YIELD_BEARING_DAI;
+        uint64 _auxData = _buildAuxData(_hubFrom, _hubTo);
 
         // Deposit to rollup processor
         _dealToRollup(_inputAsset, _inputAmount);
 
         // Create DCA position
-        uint256 _positionId = _convert(_inputAsset, _outputAsset, _hubFrom, _hubTo, _inputAmount);   
+        uint256 _positionId = _convert(_inputAsset, _auxData, _inputAmount);
         uint256 _depositAmount = _calculateToYieldBearing(YIELD_BEARING_WETH, WETH, _inputAmount);
 
         // Validate position
@@ -219,99 +222,141 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         uint256 _swappedUnderlying = _calculateToUnderlying(YIELD_BEARING_DAI, _swappedAmount);
         
         // Close position
-        uint256 _initialBalanceInput = _readRollupBalance(_inputAsset);
-        uint256 _initialBalanceOutput = _readRollupBalance(_outputAsset);
-        _finalise();
+        (uint256 _unswapped, uint256 _swapped) = _withdraw(_outputAsset, _shares, _auxData);
 
         // Perform checks
         _assertPositionWasTerminated(_positionId);
-        _assertBalance(_inputAsset, _initialBalanceInput, 0);
-        _assertBalance(_outputAsset, _initialBalanceOutput, _swappedUnderlying);
+        _assertReturnedIsCorrect(_shares, _unswapped, _swapped, 0, _swappedUnderlying);
+        _assertFundsWereStoredCorrectly(_positionId, 0, _swappedAmount);
     }
 
-    function testFinaliseIfSwapsPaused(uint120 _inputAmount) public {
-        _inputAmount = uint120(bound(_inputAmount, 1, uint120(type(int120).max)));
+    function testYieldETHToYieldERC20WithMultipleWithdraws(uint128 _sharesFirstWithdraw) public {
+        uint120 _inputAmount = 1 ether;
+        _sharesFirstWithdraw = uint128(bound(_sharesFirstWithdraw, 1, totalShares * 3 / 4));
+        uint256 _sharesSecondWithdraw = totalShares - _sharesFirstWithdraw;
 
         AztecTypes.AztecAsset memory _inputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
-        AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(DAI);
-        address _hubFrom = WETH;
-        address _hubTo = DAI;
+        AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(DAI));
+        address _hubFrom = YIELD_BEARING_WETH;
+        address _hubTo = YIELD_BEARING_DAI;
+        uint64 _auxData = _buildAuxData(_hubFrom, _hubTo);
 
         // Deposit to rollup processor
         _dealToRollup(_inputAsset, _inputAmount);
 
         // Create DCA position
-        uint256 _positionId = _convert(_inputAsset, _outputAsset, _hubFrom, _hubTo, _inputAmount);        
+        uint256 _positionId = _convert(_inputAsset, _auxData, _inputAmount);
+        uint256 _depositAmount = _calculateToYieldBearing(YIELD_BEARING_WETH, WETH, _inputAmount);
+
+        // Validate position
+        _validatePosition(_positionId, _hubFrom, _hubTo, _depositAmount);
+
+        // Perform swap
+        _swap(_hubFrom, _hubTo);
+        uint256 _swappedAmount = _calculateSwapped(_positionId);
+        uint256 _swappedUnderlying = _calculateToUnderlying(YIELD_BEARING_DAI, _swappedAmount);
+        
+        // Close position
+        (uint256 _unswappedFirst, uint256 _swappedFirst) = _withdraw(_outputAsset, _sharesFirstWithdraw, _auxData);
+
+        // Perform checks
+        _assertPositionWasTerminated(_positionId);
+        _assertReturnedIsCorrect(_sharesFirstWithdraw, _unswappedFirst, _swappedFirst, 0, _swappedUnderlying);
+        _assertFundsWereStoredCorrectly(_positionId, 0, _swappedAmount);
+
+        // Withdraw second time
+        (uint256 _unswappedSecond, uint256 _swappedSecond) = _withdraw(_outputAsset, _sharesSecondWithdraw, _auxData);
+
+        // Perform checks
+        _assertReturnedIsCorrect(_sharesSecondWithdraw, _unswappedSecond, _swappedSecond, 0, _swappedUnderlying);
+        _assertFundsWereStoredCorrectly(_positionId, 0, _swappedAmount);
+        assertEq(_unswappedFirst + _unswappedSecond, 0);
+        assertEqThreshold(_swappedFirst + _swappedSecond, _swappedUnderlying, 2, 0, 'Not all swapped');
+    }
+
+    function testFinaliseIfSwapsPaused(uint120 _inputAmount, uint128 _shares) public {
+        _inputAmount = uint120(bound(_inputAmount, 1, uint120(type(int120).max)));
+        _shares = uint128(bound(_shares, 1, totalShares));
+
+        AztecTypes.AztecAsset memory _inputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
+        AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(DAI);
+        address _hubFrom = WETH;
+        address _hubTo = DAI;
+        uint64 _auxData = _buildAuxData(_hubFrom, _hubTo);
+
+        // Deposit to rollup processor
+        _dealToRollup(_inputAsset, _inputAmount);
+
+        // Create DCA position
+        uint256 _positionId = _convert(_inputAsset, _auxData, _inputAmount);
 
         // Pause swaps
         vm.prank(HUB_OWNER);
         HUB.pause();
 
         // Close position
-        uint256 _initialBalanceInput = _readRollupBalance(_inputAsset);
-        uint256 _initialBalanceOutput = _readRollupBalance(_outputAsset);
-        _finalise();
+        (uint256 _unswapped, uint256 _swapped) = _withdraw(_outputAsset, _inputAsset, _shares, _auxData);
 
         // Perform checks
         _assertPositionWasTerminated(_positionId);
-        _assertBalance(_inputAsset, _initialBalanceInput, _inputAmount);
-        _assertBalance(_outputAsset, _initialBalanceOutput, 0);
+        _assertReturnedIsCorrect(_shares, _unswapped, _swapped, _inputAmount, 0);
+        _assertFundsWereStoredCorrectly(_positionId, _inputAmount, 0);
     }
 
-    function testFinaliseIfFromIsNotAllowed(uint120 _inputAmount) public {
+    function testFinaliseIfFromIsNotAllowed(uint120 _inputAmount, uint128 _shares) public {
         _inputAmount = uint120(bound(_inputAmount, 1, uint120(type(int120).max)));
+        _shares = uint128(bound(_shares, 1, totalShares));
 
         AztecTypes.AztecAsset memory _inputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
         AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(DAI);
         address _hubFrom = WETH;
         address _hubTo = DAI;
+        uint64 _auxData = _buildAuxData(_hubFrom, _hubTo);
 
         // Deposit to rollup processor
         _dealToRollup(_inputAsset, _inputAmount);
 
         // Create DCA position
-        uint256 _positionId = _convert(_inputAsset, _outputAsset, _hubFrom, _hubTo, _inputAmount);        
+        uint256 _positionId = _convert(_inputAsset, _auxData, _inputAmount);
 
         // Unallow from
         _mockUnallow(_hubFrom);
 
         // Close position
-        uint256 _initialBalanceInput = _readRollupBalance(_inputAsset);
-        uint256 _initialBalanceOutput = _readRollupBalance(_outputAsset);
-        _finalise();
+        (uint256 _unswapped, uint256 _swapped) = _withdraw(_outputAsset, _inputAsset, _shares, _auxData);
 
         // Perform checks
         _assertPositionWasTerminated(_positionId);
-        _assertBalance(_inputAsset, _initialBalanceInput, _inputAmount);
-        _assertBalance(_outputAsset, _initialBalanceOutput, 0);
+        _assertReturnedIsCorrect(_shares, _unswapped, _swapped, _inputAmount, 0);
+        _assertFundsWereStoredCorrectly(_positionId, _inputAmount, 0);
     }   
 
-    function testFinaliseIfToIsNotAllowed(uint120 _inputAmount) public {
+    function testFinaliseIfToIsNotAllowed(uint120 _inputAmount, uint128 _shares) public {
         _inputAmount = uint120(bound(_inputAmount, 1, uint120(type(int120).max)));
+        _shares = uint128(bound(_shares, 1, totalShares));
 
         AztecTypes.AztecAsset memory _inputAsset = ROLLUP_ENCODER.getRealAztecAsset(address(0));
         AztecTypes.AztecAsset memory _outputAsset = ROLLUP_ENCODER.getRealAztecAsset(DAI);
         address _hubFrom = WETH;
         address _hubTo = DAI;
+        uint64 _auxData = _buildAuxData(_hubFrom, _hubTo);
 
         // Deposit to rollup processor
         _dealToRollup(_inputAsset, _inputAmount);
 
         // Create DCA position
-        uint256 _positionId = _convert(_inputAsset, _outputAsset, _hubFrom, _hubTo, _inputAmount);        
+        uint256 _positionId = _convert(_inputAsset, _auxData, _inputAmount);
 
         // Unallow to
         _mockUnallow(_hubTo);
 
         // Close position
-        uint256 _initialBalanceInput = _readRollupBalance(_inputAsset);
-        uint256 _initialBalanceOutput = _readRollupBalance(_outputAsset);
-        _finalise();
+        (uint256 _unswapped, uint256 _swapped) = _withdraw(_outputAsset, _inputAsset, _shares, _auxData);
 
         // Perform checks
         _assertPositionWasTerminated(_positionId);
-        _assertBalance(_inputAsset, _initialBalanceInput, _inputAmount);
-        _assertBalance(_outputAsset, _initialBalanceOutput, 0);
+        _assertReturnedIsCorrect(_shares, _unswapped, _swapped, _inputAmount, 0);
+        _assertFundsWereStoredCorrectly(_positionId, _inputAmount, 0);
     }    
 
     function _dealToRollup(AztecTypes.AztecAsset memory _asset, uint256 _amount) internal {
@@ -324,18 +369,17 @@ contract MeanBridgeE2eTest is BridgeTestBase {
 
     function _convert(
         AztecTypes.AztecAsset memory _input,
-        AztecTypes.AztecAsset memory _output,
-        address _from, 
-        address _to, 
+        uint64 _auxData, 
         uint256 _inputAmount        
-    ) internal returns (uint256 _positionId) {
-        uint64 _auxData =_buildAuxData(_from, _to, 1, 3);
-        ROLLUP_ENCODER.defiInteractionL2(bridgeId, _input, emptyAsset, _output, _input, _auxData, _inputAmount);
+    ) internal returns (uint256) {
+        ROLLUP_ENCODER.defiInteractionL2(bridgeId, _input, emptyAsset, _virtualAsset(0), emptyAsset, _auxData, _inputAmount);
         (uint256 _outputValueA, uint256 _outputValueB, bool _isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
-        assertEq(_outputValueA, 0);
+        assertEq(_outputValueA, bridge.VIRTUAL_SHARES_PER_POSITION());
         assertEq(_outputValueB, 0);
-        assertTrue(_isAsync);
-        _positionId = bridge.positionByNonce(0); 
+        assertFalse(_isAsync);
+        (uint192 _positionId, uint64 _storedAuxData) = bridge.positionByNonce(0); 
+        assertEq(_storedAuxData, _auxData);
+        return _positionId;
     }
 
     function _validatePosition(
@@ -375,12 +419,23 @@ contract MeanBridgeE2eTest is BridgeTestBase {
             new uint256[](2),
             "",
             ""
-        );        
+        );
     }        
 
-    function _finalise() internal {
-        bool interactionCompleted = ROLLUP_PROCESSOR.processAsyncDefiInteraction(0);
-        assertEq(interactionCompleted, true);
+    function _withdraw(AztecTypes.AztecAsset memory _outputA, uint256 _inputAmount, uint64 _auxData) internal returns (uint256, uint256) {
+        return _withdraw(_outputA, emptyAsset, _inputAmount, _auxData);
+    }
+
+    function _withdraw(AztecTypes.AztecAsset memory _outputA, AztecTypes.AztecAsset memory _outputB, uint256 _inputAmount, uint64 _auxData) internal returns (uint256, uint256) {
+        ROLLUP_ENCODER.defiInteractionL2(bridgeId, _virtualAsset(0), emptyAsset, _outputA, _outputB, _auxData, _inputAmount);
+        (uint256 _outputValueA, uint256 _outputValueB, bool _isAsync) = ROLLUP_ENCODER.processRollupAndGetBridgeResult();
+        assertFalse(_isAsync);
+        return (_outputValueB, _outputValueA);
+    }
+
+    function _virtualAsset(uint256 _nonce) internal pure returns(AztecTypes.AztecAsset memory _asset) {
+        _asset.assetType = AztecTypes.AztecAssetType.VIRTUAL;
+        _asset.id = _nonce;
     }
 
     function _setUpSubsidy(uint256 _positionCriteria) internal {
@@ -400,11 +455,6 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         assertTrue(_isTerminated, "Position was not terminated");
     }
 
-    function _assertBalance(AztecTypes.AztecAsset memory _asset, uint256 _initial, uint256 _diff) internal {
-        uint256 _current = _readRollupBalance(_asset);
-        assertEq(_current - _initial, _diff, "Balance check failed");
-    }
-
     function _mockUnallow(address _token) internal {
         address[] memory _tokens = new address[](1);
         _tokens[0] = _token;
@@ -415,24 +465,39 @@ contract MeanBridgeE2eTest is BridgeTestBase {
         HUB.setAllowedTokens(_tokens, _allowed);
     }
 
+    function _assertReturnedIsCorrect(uint256 _shares, uint256 _unswapped, uint256 _swapped, uint256 _totalUnswapped, uint256 _totalSwapped) internal {
+        assertEqThreshold(_unswapped, Math.mulDiv(_totalUnswapped, _shares, totalShares), 1, 1, 'Wrong returned unswapped');
+        assertEqThreshold(_swapped, Math.mulDiv(_totalSwapped, _shares, totalShares), 1, 1, 'Wrong returned swapped');
+    }
+
+    function assertEqThreshold(uint256 _actual, uint256 _expected, uint256 _lowerThreshold, uint256 _upperThreshold, string memory err) internal {
+        assertLe(_actual, _expected + _upperThreshold, err);
+        assertGe(_actual, _expected > _lowerThreshold ? _expected - _lowerThreshold : 0, err);
+    }
+
+    function _assertFundsWereStoredCorrectly(uint256 _positionId, uint256 _unswapped, uint256 _swapped) internal {
+        (bool wereFundsExtracted, uint248 swappedFunds, uint256 unswappedFunds) = bridge.fundsByPositionId(_positionId);
+        assertTrue(wereFundsExtracted);
+        assertEq(unswappedFunds, _unswapped, 'Wrong stored unswapped funds');
+        assertEq(swappedFunds, _swapped, 'Wrong stored swapped funds');
+    }
+
+    function _buildAuxData(address _from, address _to) internal view returns (uint64) {
+        return _buildAuxData(_from, _to, 1, 3);
+    }
+
     function _buildAuxData(address _from, address _to, uint24 _amountOfSwaps, uint8 _swapIntervalCode) internal view returns (uint64) {
-        uint32 _wrapperIdFrom = bridge.getWrapperId(_from);
-        uint32 _wrapperIdTo = bridge.getWrapperId(_to);
+        uint32 _tokenIdFrom = bridge.getTokenId(_from);
+        uint32 _tokenIdTo = bridge.getTokenId(_to);
         return _amountOfSwaps 
             + (uint64(_swapIntervalCode) << 24)
-            + (uint64(_wrapperIdFrom) << 32) 
-            + (uint64(_wrapperIdTo) << 48);
+            + (uint64(_tokenIdFrom) << 32) 
+            + (uint64(_tokenIdTo) << 48);
     }
     
     function _calculateSwapped(uint256 _positionId) internal view returns (uint256 _swapped) {
         ExtendedHub.UserPosition memory _position = HUB.userPosition(_positionId);
         return _position.swapped;
-    }
-
-    function _readRollupBalance(AztecTypes.AztecAsset memory _asset) internal view returns(uint256) {
-        return (_asset.assetType == AztecTypes.AztecAssetType.ETH)
-            ? address(ROLLUP_PROCESSOR).balance
-            : IERC20(_asset.erc20Address).balanceOf(address(ROLLUP_PROCESSOR));
     }
 
     function _calculateToYieldBearing(address _yieldBearing, address _underlying, uint256 _amount) internal view returns (uint256) {

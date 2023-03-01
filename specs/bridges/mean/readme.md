@@ -14,7 +14,7 @@ Both are immutable. However, the Transformer Registry is in fact a registry and 
 
 ## What is the flow of the bridge?
 
-The bridge is asynchronous and has two flows: the deposit + the withdraw.
+The bridge is synchronous, and it has two possible actions: the deposit, and the withdraw.
 
 ### Deposit (L2)
 
@@ -27,41 +27,42 @@ When users create a DCA position, they must specify:
 
 Also, the bridge supports the ability to generate yield while the DCA position is executed (both on the "from" and "to" tokens)
 
-### Withdraw/finalise (L1)
+When a deposit is executed, the user will get back a virtual asset that represents the created position. The amount of "virtual asset" that they get will represent their share in the batch they were a part of.
 
-A position needs to be finalised before it can be exited.
-For a position to be ready to be finalised, all its available funds must have been sold for the opposite asset.
-When finalised, the accumulated funds will be returned to the bridge and the user may claim them on L2.
+### Withdraw (L2)
+
+For a position to be withdrawn, all its available funds must have been sold for the opposite asset (there are some exceptions described below). When withdrawn, the swapped funds will be returned to the bridge and the user may claim them on L2. 
+
+Until all funds of the batch are claimed, they will remain on the bridge. In the case of yield-bearing tokens, they will remain wrapped (and continue to earn yield) until they are claimed by the owner
 
 ### Diagram
 ![Flow diagram](FlowDiagram.png)
 
 ### Technical details
+#### In the case of deposit
 This is how we expect the data to be passed to the bridge:
 - `inputAssetA` will represent the token that the user will deposit (for example DAI)
-- `outputAssetA` will represent the token that the user will withdraw (for example ETH)
-- `outputAssetB` will be the same as output `inputAssetA` (to support withdrawing unswapped funds)
-- `auxData` will encode:
-  - The amount of swaps
-  - The swap interval
-  - The wrapper for the "from" token
-  - The wrapper for the "to" token
+- `outputAssetA` will be the virtual asset
 
-#### AuxData
+#### In the case of withdraw
+This is how we expect the data to be passed to the bridge:
+- `inputAssetA` will be the virtual asset
+- `outputAssetA` will be asset that the tokens were swapped for
+- `outputAssetB` will be asset that was originally deposited
+
+#### In both cases 
 The `auxData` field is 64bits long:
 - First 24 bits: amount of swaps
 - Next 8 bits: swap interval code (we map the values between 0 and 7 to a swap interval)
-- Next 16 bits: wrapper id for the "from" token
-- Last 16 bits: wrapper id for the "to" token
+- Next 16 bits: token id for the "from" token
+- Last 16 bits: token id for the "to" token
 
 ## Please list any edge cases that may restrict the usefulness of the bridge or that the bridge explicitly prevents.
 
 ### Preparation
-* In order for swaps to work, tokens need to be pre-approved on the smart contract. This will give the rollup and the DCA Hub max allowance to work correctly.
+In order for swaps to work, tokens need to be registered on the smart contract. This will give the rollup and the DCA Hub max allowance to work correctly.
 
-* Also, yield bearing wrappers need to be properly registered on the bridge.
-
-Both these configurations are permissionless and anyone can execute them.
+This configuration is permissionless and anyone can execute them.
 
 ### Edge cases
 There are two scenarios where the swaps might not be executed:
@@ -82,5 +83,6 @@ The contract is immutable, but there is an owner. The owner can only set and mod
 ## Does this bridge maintain state? If so, what is stored and why?
 
 The bridge maintains the following state:
+- A registry for supported tokens
 - The association between user interaction and DCA position
-- A registry for supported yield-bearing wrappers
+- The amount of funds for each terminated position
