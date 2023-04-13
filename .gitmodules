@@ -8,9 +8,9 @@
 	path = lib/openzeppelin-contracts
 	url = https://github.com/openzeppelin/openzeppelin-contracts
 	branch = v4.8.0
-[submodule "lib/euler-4626-redemption"]
-	path = lib/euler-4626-redemption
-	url = https://github.com/lherskind/euler-4626-redemption
 [submodule "lib/solmate"]
 	path = lib/solmate
 	url = https://github.com/transmissions11/solmate
+[submodule "lib/euler-4626-redemption"]
+	path = lib/euler-4626-redemption
+	url = https://github.com/kasperpawlowski/euler-4626-redemption
