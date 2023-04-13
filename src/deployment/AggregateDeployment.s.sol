@@ -234,7 +234,7 @@ contract AggregateDeployment is BaseDeployment {
                         Strings.toString(gas)
                     )
                 )
-                );
+            );
         }
 
         uint256 bridgeCount = bridgesLength();
@@ -245,7 +245,7 @@ contract AggregateDeployment is BaseDeployment {
             emit log_named_string(
                 string(abi.encodePacked("  Bridge ", Strings.toString(i))),
                 string(abi.encodePacked(Strings.toHexString(bridge), ", ", Strings.toString(gas)))
-                );
+            );
         }
     }
 }

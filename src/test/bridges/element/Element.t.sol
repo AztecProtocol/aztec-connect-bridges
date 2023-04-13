@@ -257,7 +257,7 @@ contract ElementTest is Test {
         vm.expectEmit(false, false, false, true);
         emit LogPoolAdded(
             trancheConfigs["USDC"][0].poolAddress, wrappedPositions["USDC"], trancheConfigs["USDC"][0].expiry
-            );
+        );
 
         elementBridge.registerConvergentPoolAddress(
             trancheConfigs["USDC"][0].poolAddress, wrappedPositions["USDC"], trancheConfigs["USDC"][0].expiry

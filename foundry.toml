@@ -2,11 +2,11 @@
 src = 'src'
 out = 'out'
 libs = ['lib']
-remappings = ['@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/', 'forge-std/=lib/forge-std/src', 'rollup-encoder/=lib/rollup-encoder/src']
+remappings = ['@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/', 'forge-std/=lib/forge-std/src', 'rollup-encoder/=lib/rollup-encoder/src', 'euler-redemption/=lib/euler-4626-redemption/src', 'solmate/=lib/solmate/src']
 fuzz_runs = 256
 gas_reports = ["*"]
 eth-rpc-url = 'https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c'
-solc_version = '0.8.10'
+solc_version = '0.8.18'
 ffi = true
 optimizer = true
 optimizer_runs = 100000

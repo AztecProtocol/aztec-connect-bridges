@@ -53,7 +53,7 @@ contract DataProviderDeployment is BaseDeployment {
                             " gas)"
                         )
                     )
-                    );
+                );
             }
         }
         emit log(" - Bridges");
@@ -76,7 +76,7 @@ contract DataProviderDeployment is BaseDeployment {
                             " gas)"
                         )
                     )
-                    );
+                );
             }
         }
     }
