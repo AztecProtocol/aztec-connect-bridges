@@ -50,13 +50,13 @@ To get started follow the steps below:
 6. Write a deployment script.
    Make a script that inherits from the `BaseDeployment.s.sol` file. The base provides helper functions for listing assets/bridges and a getter for the rollup address.  
    Use the env variables `SIMULATE_ADMIN=false|true` and `NETWORK=mainnet|devnet|testnet|DONT_CARE` to specify how to run it. (Note: DONT_CARE is relevant when deploying to the local devnet, more information on this is outlined below)  
-   With `SIMULATE_ADMIN=true`, the `listBridge` and `listAsset` helpers will be impersonating an account with access to list, otherwise they are broadcasted. See the example scripts from other bridges for inspiration on how to write the scripts.
+   With `SIMULATE_ADMIN=true`, the `listBridge` and `listAsset` helpers will be impersonating an account with access to the list, otherwise, they are broadcasted. See the example scripts from other bridges for inspiration on how to write the scripts.
 
 7. Using the local devnet is the default integration testing environment, it can take a bit of effort to set up but this section will guide you through it! If you are a grantee and have received access to the partner testnet you can find details of that in section 8.
 
    ### Getting the local devnet up and running
 
-   In the majority of cases you will want to run the local devnet as a mainnet fork, to allow you to test against mainnet protocols.
+   In the majority of cases, you will want to run the local devnet as a mainnet fork, to allow you to test against mainnet protocols.
 
    Inside this repo there is a `/local_devnet` folder that contains the required resources. The `docker-compose.fork.yml` contains a compose configuration that will launch:
 
