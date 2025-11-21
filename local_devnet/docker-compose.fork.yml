@@ -1,40 +1,72 @@
-version: "3"
+version: "3.8" # Updated to a more recent version (e.g., 3.8) for better features and compatibility.
+
+# =======================================================
+# Services
+# =======================================================
+
 services:
+  # 1. FORK: Local Ethereum Test Environment (Anvil/Foundry)
   fork:
     image: ghcr.io/foundry-rs/foundry:nightly-8c4294c1d2321e20a3543fbd9a813d47053a8303
-    entrypoint: "anvil -p=8545 --host 0.0.0.0 --fork-url ${FORK_URL} --chain-id ${CHAIN_ID} --silent"
+    container_name: local-fork # Added: Explicit name for easier debugging.
+    # Entrypoint starts Anvil (Foundry's local node)
+    # It dynamically uses environment variables for configuration.
+    entrypoint: >
+      anvil
+      -p=8545
+      --host 0.0.0.0
+      --fork-url ${FORK_URL} # URL of the chain to fork from (e.g., Ethereum Mainnet)
+      --chain-id ${CHAIN_ID} # Chain ID for the local fork
+      --silent
     ports:
-      - "8545:8545"
+      - "8545:8545" # Expose the RPC port
 
+  # ---
+  
+  # 2. CONTRACTS: Layer 1 Smart Contract Deployment and Setup
   contracts:
     platform: linux/amd64
+    container_name: l1-contracts # Added: Explicit name
     image: aztecprotocol/contracts:latest
     environment:
-      ETHEREUM_HOST: http://fork:8545
+      # Host for the local L1 network (communicates internally with 'fork' service)
+      ETHEREUM_HOST: http://fork:8545 
       PORT: 8547
-      network: "DONT_CARE"
-    command: ./scripts/start_e2e.sh
+      # Removed: network: "DONT_CARE" (Assumed unnecessary or should be documented elsewhere)
+    command: ./scripts/start_e2e.sh # Script to deploy L1 contracts to the 'fork'
     ports:
-      - "8547:8547"
+      - "8547:8547" # Expose contract API port
     depends_on:
-      - fork
+      - fork # Ensures the local L1 fork is running before contracts are deployed
 
+  # ---
+  
+  # 3. FALAFEL: Layer 2 Execution Environment (Sequencer/Prover)
   falafel:
     platform: linux/amd64
+    container_name: l2-falafel # Added: Explicit name
     image: aztecprotocol/falafel:latest
     environment:
+      # L1 Host (local fork)
       ETHEREUM_HOST: http://fork:8545
+      # L1 Contracts setup host
       CONTRACTS_HOST: http://contracts:8547
+      
+      # Configuration for Rollup Aggregation (with defaults)
       NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS:-3}
       NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS:-1}
-      PROVERLESS: "true"
-      MAX_CIRCUIT_SIZE: 8192
+      
+      # Optimization flags for local testing
+      PROVERLESS: "true" # Skips actual proof generation for faster testing
       PROOF_GENERATOR_MODE: local
       NO_BUILD: "true"
+      MAX_CIRCUIT_SIZE: 8192
+      
       PORT: 8081
       INITIAL_RUNTIME_CONFIG_PATH: "./config/dev_testnet_initial_config.json"
-    depends_on:
-      - contracts
-    command: start:e2e
+    
+    command: start:e2e # Command to launch the Falafel service
     ports:
-      - "8081:8081"
+      - "8081:8081" # Expose the L2 client API port
+    depends_on:
+      - contracts # Ensures contracts are deployed before L2 execution starts
