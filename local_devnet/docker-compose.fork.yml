@@ -1,40 +1,58 @@
-version: "3"
+# Using the modern, versionless Docker Compose format (recommended for Docker Engine 20.10+).
+
+# Define the set of services for the Aztec E2E environment.
 services:
+  # 1. Ethereum Fork Service (Anvil by Foundry)
   fork:
+    # Use a specific, pinned image tag for stability.
     image: ghcr.io/foundry-rs/foundry:nightly-8c4294c1d2321e20a3543fbd9a813d47053a8303
-    entrypoint: "anvil -p=8545 --host 0.0.0.0 --fork-url ${FORK_URL} --chain-id ${CHAIN_ID} --silent"
+    # Start the Anvil EVM node, forking from an external URL.
+    entrypoint: anvil -p 8545 --host 0.0.0.0 --fork-url ${FORK_URL} --chain-id ${CHAIN_ID} --silent
+    # Map the container port to the host machine.
     ports:
       - "8545:8545"
 
+  # 2. Aztec Contracts Service (Deployment and Proxy)
   contracts:
+    # Explicitly specify platform for consistency, especially in cross-arch build environments.
     platform: linux/amd64
     image: aztecprotocol/contracts:latest
     environment:
+      # Hostnames resolve via Docker's internal network (fork:8545).
       ETHEREUM_HOST: http://fork:8545
       PORT: 8547
+      # The 'network' variable is often used internally; DONT_CARE signals a dev environment.
       network: "DONT_CARE"
+    # This script likely deploys the Aztec contracts to the 'fork' chain.
     command: ./scripts/start_e2e.sh
     ports:
       - "8547:8547"
+    # Ensure the fork is ready before attempting contract deployment.
     depends_on:
       - fork
 
+  # 3. Falafel Service (Sequencer/Rollup Provider)
   falafel:
     platform: linux/amd64
     image: aztecprotocol/falafel:latest
     environment:
       ETHEREUM_HOST: http://fork:8545
+      # Dependency on the contracts service, which exposes the Aztec contract addresses.
       CONTRACTS_HOST: http://contracts:8547
+      # Set default values for rollup parameters.
       NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS:-3}
       NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS:-1}
+      # Configuration for proverless/development mode.
       PROVERLESS: "true"
       MAX_CIRCUIT_SIZE: 8192
       PROOF_GENERATOR_MODE: local
       NO_BUILD: "true"
       PORT: 8081
       INITIAL_RUNTIME_CONFIG_PATH: "./config/dev_testnet_initial_config.json"
-    depends_on:
-      - contracts
     command: start:e2e
     ports:
       - "8081:8081"
+    # Explicitly depend on both upstream services to ensure reliable startup order.
+    depends_on:
+      - contracts
+      - fork
