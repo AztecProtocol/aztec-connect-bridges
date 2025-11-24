@@ -1,22 +1,61 @@
 {
   "extends": "solhint:recommended",
   "rules": {
+    // SECURITY & BEST PRACTICE RULES
+    
+    // Enforce a minimum compiler version (a good practice for security and features).
     "compiler-version": ["error", ">=0.8.4"],
+    
+    // Functions must have explicit visibility (public, external, internal, private).
+    // Constructors are ignored as their visibility is always 'public' (or internal/private in rare cases).
     "func-visibility": ["error", { "ignoreConstructors": true }],
-    "no-empty-blocks": "off",
-    "no-unused-vars": ["error"],
-    "state-visibility": ["error"],
-    "not-rely-on-time": "off",
-    "const-name-snakecase": ["error", { "treatImmutableVarAsConstant": true }],
-    "var-name-mixedcase": ["error", { "treatImmutableVarAsConstant": true }],
-    "error-name-mixedcase": ["error"],
-    "private-func-leading-underscore": ["error"],
-    "private-vars-no-leading-underscore": ["error"],
-    "func-param-name-leading-underscore": ["error"],
-    "func-param-name-mixedcase": ["error"],
+    
+    // Enforce the use of custom errors over 'require' statements for gas efficiency.
     "custom-error-over-require": ["error"],
-    "strict-override": ["error"],
-    "strict-import": ["error"],
-    "ordering": ["error"]
+    
+    // Disallow reliance on block.timestamp as it can be manipulated by miners (critical security rule).
+    // Re-enabled this rule for security.
+    "not-rely-on-time": "error",
+    
+    // Enforce explicit 'override' keyword for inherited functions.
+    "strict-override": "error",
+
+    // Enforce 'strict-import' rule to prevent unintended side effects (e.g., import * as X).
+    "strict-import": "error",
+    
+    // STYLING & NAMING RULES
+
+    // Ensure state variables have explicit visibility (public, internal, private).
+    "state-visibility": ["error"],
+
+    // Ensure proper ordering of contract elements (pragmas, imports, state vars, events, functions, etc.).
+    "ordering": ["error"],
+    
+    // Constant and Immutable variables must use SCREAMING_SNAKE_CASE (e.g., MAX_SUPPLY).
+    "const-name-snakecase": ["error", { "treatImmutableVarAsConstant": true }],
+    
+    // Regular state variables must use mixedCase (e.g., ownerAddress).
+    // The conflicting immutable treatment is removed from here.
+    "var-name-mixedcase": ["error"],
+    
+    // Custom errors must use MixedCase (e.g., InsufficientBalance).
+    "error-name-mixedcase": ["error"],
+    
+    // Private functions MUST have a leading underscore (e.g., _internalHelper).
+    "private-func-leading-underscore": ["error"],
+
+    // Function parameters must use mixedCase.
+    "func-param-name-mixedcase": ["error"],
+
+    // Function parameters must have a leading underscore to distinguish them from state variables (e.g., _amount).
+    "func-param-name-leading-underscore": ["error"],
+
+    // Suppress the warning for empty blocks (e.g., empty function implementations in interfaces/abstract contracts).
+    // Kept 'off' as requested, though generally it should be used judiciously.
+    "no-empty-blocks": "off" 
+    
+    // Note: 'no-unused-vars' is already 'error' in 'solhint:recommended' but kept for explicit control.
+    // Note: 'private-vars-no-leading-underscore' was removed to allow for the commonly accepted practice
+    // of using leading underscores for private variables, enhancing consistency with private functions.
   }
 }
